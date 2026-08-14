@@ -26,7 +26,7 @@ jobs:
       # `defaults.run.working-directory` governs `run:` steps only, so an action
       # step still resolves paths from the workspace root — which holds the two
       # checkouts and no manifest of its own.
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           package_json_file: yxl-vscode/package.json
 
