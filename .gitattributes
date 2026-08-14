@@ -1,0 +1,3 @@
+# The byte-identity harness asserts on the exact bytes of these files, so git
+# must not normalize their line endings or encoding on the way in or out.
+tests/fixtures/** -text

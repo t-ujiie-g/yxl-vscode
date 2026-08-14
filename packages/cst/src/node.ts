@@ -31,15 +31,22 @@ export interface Entry {
   readonly span: Span;
 }
 
+/**
+ * `flow` distinguishes `{ bold: true }` from the indented block form. It is not
+ * decoration: a block edit inserts a line and a flow edit inserts inside
+ * brackets, so a writer that cannot tell them apart will corrupt one of them.
+ */
 export interface Mapping {
   readonly kind: 'map';
   readonly entries: readonly Entry[];
+  readonly flow: boolean;
   readonly span: Span;
 }
 
 export interface Sequence {
   readonly kind: 'seq';
   readonly items: readonly Node[];
+  readonly flow: boolean;
   readonly span: Span;
 }
 

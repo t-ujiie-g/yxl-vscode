@@ -48,9 +48,9 @@ class Reader {
   node(token: CST.Token): Node | null {
     switch (token.type) {
       case 'block-map':
-        return this.mapping(token.items, token.offset);
+        return this.mapping(token.items, token.offset, false);
       case 'block-seq':
-        return this.sequence(token.items, token.offset);
+        return this.sequence(token.items, token.offset, false);
       case 'flow-collection':
         return this.flow(token);
       case 'scalar':
@@ -90,7 +90,7 @@ class Reader {
     };
   }
 
-  mapping(items: readonly CST.CollectionItem[], offset: number): Node {
+  mapping(items: readonly CST.CollectionItem[], offset: number, flow: boolean): Node {
     const entries: Entry[] = [];
 
     for (const item of items) {
@@ -104,14 +104,14 @@ class Reader {
       }
 
       const value = item.value ? this.node(item.value) : null;
-      const resolved = value ?? emptyAt(key.span.end);
+      const resolved = value ?? emptyAt(afterSeparator(item, key.span.end));
       entries.push({ key, value: resolved, span: union(key.span, resolved.span) });
     }
 
-    return { kind: 'map', entries, span: cover(offset, entries) };
+    return { kind: 'map', entries, flow, span: cover(offset, entries) };
   }
 
-  sequence(items: readonly CST.CollectionItem[], offset: number): Sequence {
+  sequence(items: readonly CST.CollectionItem[], offset: number, flow: boolean): Sequence {
     const collected: Node[] = [];
 
     for (const item of items) {
@@ -120,14 +120,14 @@ class Reader {
       if (value) collected.push(value);
     }
 
-    return { kind: 'seq', items: collected, span: cover(offset, collected) };
+    return { kind: 'seq', items: collected, flow, span: cover(offset, collected) };
   }
 
   /** `{a: 1}` and `[1, 2]` differ only by their opening token. */
   flow(token: CST.FlowCollection): Node {
     return token.start.source === '{'
-      ? this.mapping(token.items, token.offset)
-      : this.sequence(token.items, token.offset);
+      ? this.mapping(token.items, token.offset, true)
+      : this.sequence(token.items, token.offset, true);
   }
 }
 
@@ -149,6 +149,20 @@ function cover(offset: number, members: readonly { span: Span }[]): Span {
 /** A key written with no value — `sheets:` on its own line — reads as null. */
 function emptyAt(offset: number): Scalar {
   return { kind: 'scalar', value: null, source: '', style: 'plain', span: span(offset, offset) };
+}
+
+/**
+ * Where an absent value sits: immediately after the `:`, not after the key. An
+ * empty span before the separator would put a written value on the wrong side
+ * of it.
+ *
+ * `sep` runs on past the indicator through the whitespace and the line break,
+ * so the indicator has to be picked out by type rather than taken as the last
+ * token — otherwise the position lands on the next line.
+ */
+function afterSeparator(item: CST.CollectionItem, fallback: number): number {
+  const indicator = item.sep?.find((token) => token.type === 'map-value-ind');
+  return indicator ? indicator.offset + indicator.source.length : fallback;
 }
 
 function extent(token: CST.Token): Span {

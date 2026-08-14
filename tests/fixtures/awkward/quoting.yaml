@@ -1,0 +1,14 @@
+values:
+  plain: APAC
+  single: 'it''s quoted'
+  double: "a \"quoted\" word"
+  code: "007"
+  looks_numeric: "1.50"
+  looks_boolean: "true"
+  colon_inside: "a: b"
+  hash_inside: "a # b"
+  empty: ""
+  tilde: ~
+  explicit_null: null
+  unicode: "日本語のテキスト"
+  emoji: "📊"

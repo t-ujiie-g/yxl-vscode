@@ -361,14 +361,49 @@ Phases land in order. Each is releasable or explicitly marked otherwise. The
 ### Phase 1 — L0: the CST seam
 The riskiest thing in the project, so it goes first and gets proven before
 anything is built on it.
-- [ ] `cst`: parse to a span-carrying tree over `eemeli/yaml`'s CST layer
-- [ ] Apply an op list as a minimal byte patch; comments, key order, quoting
-      style, blank lines, and indentation of untouched regions survive
-- [ ] Tier 2 byte-identity harness (§5) green over `examples/` + the awkward
-      fixtures
-- [ ] Establish what we do about the library's documented instability around
+- [x] `cst`: parse to a span-carrying tree over `eemeli/yaml`'s CST layer.
+      **Shipped.** Scalars, mappings, sequences; a span on every node; none of
+      the library's types in the public API. A scalar keeps both its resolved
+      value and its source text, and plain scalars resolve by the YAML 1.2 core
+      schema — which is what makes `"007"` text and `007` seven. An integer too
+      large for a double stays text rather than rounding. Aliases, non-text
+      keys, and a second document are refused with a diagnostic and the read
+      continues. `diag` (spans, positions, diagnostics) landed with it, since a
+      span-carrying tree needs somewhere to put the spans.
+- [x] Apply an op list as a minimal byte patch; comments, key order, quoting
+      style, blank lines, and indentation of untouched regions survive.
+      **Shipped** as `set` / `renameKey` / `remove` / `insert` over YAML nodes —
+      fewer operations than the spec-level algebra of §4.5, which addresses spec
+      constructs and belongs to `patch`. The mechanism turned out to matter more
+      than the operation list: **ADR-017**, edits as text ranges rather than a
+      re-serialization, which makes preservation structural instead of
+      best-effort. `set` keeps the quoting style the node already had, and
+      quotes a value that would otherwise read back as another type.
+      Not done, deliberately: inserting a whole collection (a scalar is all the
+      syntax layer needs asked of it so far), `rekeyMap` (a composition, and
+      Phase 8's), and structural edits inside flow collections (refused with a
+      diagnostic — ADR-017).
+- [x] Tier 2 byte-identity harness (§5) green over `examples/` + the awkward
+      fixtures. **Shipped** as `tests/`, a workspace package holding corpus
+      harnesses and no product code — the same shape as yxl's `src/examples`.
+      It runs over **18 upstream example specs and 7 awkward fixtures** (a
+      comment in every position, flow style, all four block-scalar forms,
+      tricky quoting, CRLF, a BOM, odd indentation), asserting four things per
+      sample: the CST retains it character for character, it parses clean, every
+      scalar's span slices back to the same value, and a single `set` changes
+      exactly one line. `.gitattributes` keeps git from normalizing the CRLF and
+      BOM fixtures, which would quietly void what they test. The corpus size is
+      asserted, so a missing sibling checkout fails instead of passing
+      vacuously.
+- [x] Establish what we do about the library's documented instability around
       **trailing-comment association** — a fixture that pins current behaviour,
-      and a decision recorded as an ADR if we must work around it (§9 R2)
+      and a decision recorded as an ADR if we must work around it (§9 R2).
+      **Answered: it does not reach us** (ADR-017). The hazard is in the
+      Document API's parse → modify → stringify cycle, and we never stringify.
+      Writing the fixtures did surface a *different* comment defect that is ours
+      alone — inserting before an item put the new item between that item and
+      the comment describing it — now fixed by stepping back over a contiguous
+      comment block, stopping at a blank line, and pinned in both directions.
 
 ### Phase 2 — L1: SpecDoc and the loader
 Sliced by schema area; each slice is "load it, and the differential oracle
@@ -720,6 +755,44 @@ Anything here that wants to *analyse* TypeScript source — a future codegen ste
 or generating the §8 Q7 JSON Schema — has to pick a parser deliberately rather
 than assume the compiler API is there.
 
+### ADR-017 — Write-back is a list of text edits, not a re-serialization
+**Accepted.** Refines ADR-003 with how the minimal patch is actually produced.
+
+An op does not mutate the CST and stringify it back. It resolves to a **text
+edit** — one span of the source and its replacement — and the edits are applied
+back to front. The bytes between the edits are the original file, untouched
+because they were never candidates for rewriting.
+
+*Why this rather than mutate-and-stringify:*
+
+1. **Preservation stops being a property to verify and becomes one to state.**
+   Comments, key order, quoting style, blank lines, and indentation outside the
+   edited span cannot change, because no code path can reach them.
+2. **The library's documented instability around trailing-comment association
+   does not apply to us.** That hazard lives in the Document API's
+   parse → modify → stringify cycle. We never stringify, so a comment is never
+   re-attached to anything. This is the answer to the Phase 1 question that
+   asked whether we would need a workaround: **we do not**, and the reason is
+   architectural rather than lucky.
+3. **The edits are the diff.** `Applied.edits` is returned, so the verification
+   loop (ADR-009) and the UI can show exactly which ranges moved without
+   re-deriving them.
+
+*What it costs, and where the comment problem does still bite us.* Text edits
+know about lines, not about what a comment means. Inserting before an item whose
+description sits above it would put the new item between the comment and its
+subject — so the insert steps back over a contiguous comment block, and stops at
+a blank line, on the reading that a comment separated by one is a section
+heading rather than a label. That is a *heuristic about layout*, which is
+allowed; ADR-001 forbids guessing which **spec** the user meant, not how a line
+should be indented. It is pinned by tests in both directions.
+
+The remaining gap is **flow collections**: removing from or inserting into
+`{ … }` / `[ … ]` needs comma and bracket handling that a line-oriented edit
+cannot express, so both are refused with a diagnostic rather than attempted.
+`set` works inside flow collections, which is the case that actually comes up.
+Lift this when a phase needs it, not before.
+
 ## 8. Open questions
 
 - **Q1 — `cells:` A1 keys and row insertion.** Inserting a row rewrites every
@@ -869,3 +942,23 @@ than widening it silently.
 - Toolchain recorded as ADR-016, including the discovery that TypeScript 7 no
   longer ships the JS compiler API — which changed how the layer checker had to
   be written and constrains any later source analysis.
+
+### 2026-08-14 — Phase 1 complete: the CST seam
+- `cst` parses YAML into a span-carrying tree and applies ops as a minimal byte
+  patch, with `diag` underneath it. 191 tests.
+- **ADR-017**: write-back is a list of text edits, not a re-serialization. This
+  was the phase's real result. It makes "untouched bytes stay untouched"
+  structural rather than best-effort, and it **dissolves R2** — the library's
+  trailing-comment instability lives in an API we now never use.
+- The risk that remained was ours, not the library's: inserting before an item
+  detached the comment above it from what it described. Found by writing the
+  fixtures the phase asked for, fixed, and pinned in both directions (including
+  the blank-line case, where the comment is a heading and the new item belongs
+  *under* it).
+- Tier 2 stands up over the real upstream corpus — 18 example specs plus 7
+  fixtures built to be hostile to a serializer — with the corpus size asserted
+  so it cannot pass by finding nothing.
+- Phase 1 was scheduled first because it was judged the riskiest part of the
+  project. It is worth recording that it was not: the CST layer held, and the
+  scope left undone (flow-collection structural edits, collection inserts) is
+  bounded and named rather than discovered.

@@ -15,7 +15,7 @@
     "oracleRepo": "../yxl"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit && tsc --noEmit -p packages/webview",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p packages/webview && tsc --noEmit -p tests",
     "test": "vitest run",
     "lint": "biome check . && node scripts/check-layers.mjs",
     "format": "biome check --write .",
@@ -25,6 +25,7 @@
     "@biomejs/biome": "^2.5.8",
     "@types/node": "^26.2.0",
     "typescript": "^7.0.2",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.10",
+    "yaml": "^2.9.0"
   }
 }
