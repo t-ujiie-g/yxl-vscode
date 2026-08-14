@@ -2,13 +2,13 @@ import type { Entry, Node, Path } from '@yxl-vscode/cst';
 import {
   CELL_TYPES,
   type Cell,
+  type CellFacets,
   type CellType,
   type CellValue,
   type FormulaBody,
   MODELED_KEYS,
   REF_KEY,
   type RichRun,
-  type SpecNode,
   type StyleUse,
   type Templated,
 } from '@yxl-vscode/spec';
@@ -71,13 +71,30 @@ const NOTHING_ELSE = {
   style: null,
 } as const;
 
-type CellBody = Omit<Cell, keyof SpecNode | 'at'>;
-
-function readExpandedCell(ctx: Ctx, node: Node, what: string): CellBody | null {
+function readExpandedCell(ctx: Ctx, node: Node, what: string): CellFacets | null {
   const opened = openMap(ctx, node, [], what);
   if (opened === null) return null;
   const here = opened.ctx;
 
+  const entries = entriesOf(here, opened.node);
+  for (const entry of entries) {
+    if (!MODELED_KEYS.cell.has(keyOf(entry))) {
+      rejectUnknownKey(here, entry, what, MODELED_KEYS.cell);
+    }
+  }
+
+  const body = readFacets(here, entries, what);
+  return holdsSomething(here, body, opened.node, what) ? body : null;
+}
+
+/**
+ * The six keys a `cells:` entry and an `overrides:` entry both write
+ * (`docs/spec.md` §3).
+ *
+ * Anything else in `entries` is left alone: which other keys the construct
+ * allows is the caller's, and so is saying so.
+ */
+export function readFacets(ctx: Ctx, entries: readonly Entry[], what: string): CellFacets {
   let value: CellValue | null = null;
   let formula: FormulaBody | null = null;
   let rich: readonly RichRun[] | null = null;
@@ -85,34 +102,33 @@ function readExpandedCell(ctx: Ctx, node: Node, what: string): CellBody | null {
   let format: string | null = null;
   let style: StyleUse | null = null;
 
-  for (const entry of entriesOf(here, opened.node)) {
+  for (const entry of entries) {
     const at = `${what} \`${keyOf(entry)}\``;
     switch (keyOf(entry)) {
       case 'value':
-        value = readCellValue(here, entry.value, at);
+        value = readCellValue(ctx, entry.value, at);
         break;
       case 'formula':
-        formula = readFormulaBody(here, entry.value, at);
+        formula = readFormulaBody(ctx, entry.value, at);
         break;
       case 'rich':
-        rich = readRich(here, entry.value, at);
+        rich = readRich(ctx, entry.value, at);
         break;
       case 'type':
-        type = expectSpelling(here, entry.value, at, CELL_TYPES);
+        type = expectSpelling(ctx, entry.value, at, CELL_TYPES);
         break;
       case 'format':
-        format = expectText(here, entry.value, at);
+        format = expectText(ctx, entry.value, at);
         break;
       case 'style':
-        style = readStyleUse(here, entry.value, at);
+        style = readStyleUse(ctx, entry.value, at);
         break;
       default:
-        rejectUnknownKey(here, entry, what, MODELED_KEYS.cell);
+        break;
     }
   }
 
-  const body = { value, formula, rich, type, format, style };
-  return holdsSomething(here, body, opened.node, what) ? body : null;
+  return { value, formula, rich, type, format, style };
 }
 
 /**
@@ -122,7 +138,7 @@ function readExpandedCell(ctx: Ctx, node: Node, what: string): CellBody | null {
  * ruled edge of a table, the blank half of a merged heading. A cell with nothing
  * is unfinished, and there is nothing to project.
  */
-function holdsSomething(ctx: Ctx, body: CellBody, node: Node, what: string): boolean {
+export function holdsSomething(ctx: Ctx, body: CellFacets, node: Node, what: string): boolean {
   const holdsNothing =
     body.value === null &&
     body.formula === null &&

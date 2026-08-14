@@ -14,7 +14,9 @@ import {
   parseA1Range,
   parseColor,
   parseColumnSpan,
+  parseQualifiedAddr,
   parseRowSpan,
+  type QualifiedAddr,
   type RowSpan,
   type SheetName,
   type StyleName,
@@ -41,6 +43,12 @@ export const ADDRESS: Kind<A1Addr> = {
   code: CODE.badAddress,
   noun: 'a cell reference',
   read: parseA1Addr,
+};
+
+export const QUALIFIED: Kind<QualifiedAddr> = {
+  code: CODE.badAddress,
+  noun: 'a sheet and a cell',
+  read: parseQualifiedAddr,
 };
 
 export const RANGE: Kind<A1Range> = {
