@@ -1,0 +1,11 @@
+{
+  "name": "@yxl-vscode/extension",
+  "version": "0.0.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "description": "The VS Code custom editor: registration, filesystem, and the yxl CLI.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "name": "@yxl-vscode/diag",
+  "version": "0.0.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "description": "Diagnostics, severities, and source spans — the one place a user-visible message is shaped.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}

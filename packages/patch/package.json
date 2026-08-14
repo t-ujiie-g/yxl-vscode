@@ -1,0 +1,11 @@
+{
+  "name": "@yxl-vscode/patch",
+  "version": "0.0.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "description": "Patch operations applied to the CST, and the inverse patch that makes undo AST-level.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}

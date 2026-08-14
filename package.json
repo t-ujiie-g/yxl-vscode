@@ -1,0 +1,30 @@
+{
+  "name": "yxl-vscode",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "license": "Apache-2.0",
+  "description": "An Excel-like editor for yxl specs. The grid is a projection of the spec; edits resolve back into it.",
+  "repository": "github:t-ujiie-g/yxl-vscode",
+  "packageManager": "pnpm@10.27.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "yxl": {
+    "targetVersion": "0.3.3",
+    "oracleRepo": "../yxl"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit && tsc --noEmit -p packages/webview",
+    "test": "vitest run",
+    "lint": "biome check . && node scripts/check-layers.mjs",
+    "format": "biome check --write .",
+    "build": "pnpm -r --if-present build"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.8",
+    "@types/node": "^26.2.0",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.10"
+  }
+}

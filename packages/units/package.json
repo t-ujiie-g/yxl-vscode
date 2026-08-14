@@ -1,0 +1,11 @@
+{
+  "name": "@yxl-vscode/units",
+  "version": "0.0.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "description": "Branded types for A1 addresses, ranges, sheet names, colours, and node ids.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}

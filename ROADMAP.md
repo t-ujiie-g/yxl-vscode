@@ -157,7 +157,9 @@ entire reason L4 exists. See ADR-001.
 ### 4.2 Package map
 
 A pnpm workspace. Dependencies point **downward**; a lower package never imports
-a higher one, and the boundary is enforced in CI (§5).
+a higher one. The rows below are in dependency order, and that order is
+**declared once in `layers.json` and enforced in CI** by `scripts/check-layers.mjs`
+(§5) — the table is the explanation, the file is the rule.
 
 | Package | Layer | Purpose |
 |---|---|---|
@@ -167,11 +169,11 @@ a higher one, and the boundary is enforced in CI (§5).
 | `spec` | L1 | The `SpecDoc` AST — the TypeScript shape of `docs/spec.md`. Types and constructors only, no logic. |
 | `loader` | L1 | CST tree → `SpecDoc`, with the validation projection requires. Preserves unmodeled-but-valid constructs verbatim. (ADR-011) |
 | `compile` | L2/L3 | `SpecDoc` → `CompiledGrid` + per-facet provenance and style layers. Pure and deterministic; the workhorse. (ADR-005) |
-| `intent` | L4 | `EditIntent` → `Resolution[]` → `Patch`. Holds the resolution table (§4.4) and the impact estimator. |
 | `normalize` | L4 | The style normalizer: an applied style becomes a reference, an `extends:`, or a new definition — in that order of preference. (ADR-008) |
-| `verify` | L4 | The double-compile diff gate every patch passes. (ADR-009) |
 | `patch` | L0/L1 | `Patch` → `cst` ops, and the inverse patch that makes undo AST-level. (ADR-010) |
+| `verify` | L4 | The double-compile diff gate every patch passes. (ADR-009) |
 | `evaluate` | — | Formula evaluation behind a seam; display only, never written back. (ADR-013) |
+| `intent` | L4 | `EditIntent` → `Resolution[]` → `Patch`. Holds the resolution table (§4.4) and the impact estimator. Sits highest of the core packages, because resolving needs all of them. |
 | `webview` | UI | The grid, the inspector, the resolution dialog. The only package that renders. |
 | `extension` | edge | VS Code custom editor registration, filesystem, `yxl` CLI invocation, settings. The only package that imports `vscode`. |
 
@@ -327,15 +329,33 @@ Phases land in order. Each is releasable or explicitly marked otherwise. The
 **first release is Phase 4** — read-only, and worth shipping alone.
 
 ### Phase 0 — Bootstrap
-- [ ] pnpm workspace, TypeScript strict, the §4.2 package skeleton (empty but
-      wired, so the dependency graph is real from day one)
-- [ ] vitest, formatter/linter, the CI workflow (typecheck, test, lint,
-      dependency-direction check)
-- [ ] `AGENTS.md` + `CLAUDE.md` symlink, `README.md`, Apache-2.0 `LICENSE`
+- [x] pnpm workspace, TypeScript strict, the §4.2 package skeleton (empty but
+      wired, so the dependency graph is real from day one).
+      **Shipped** as 13 packages under `packages/`, each declaring
+      `exports: ./src/index.ts` so nothing is built to be imported. TypeScript 7
+      with `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`,
+      `verbatimModuleSyntax`, and the unused-locals checks on from the start —
+      cheaper now than retrofitted over a populated tree.
+- [x] vitest, formatter/linter, the CI workflow (typecheck, test, lint,
+      dependency-direction check).
+      **Shipped**: vitest 4, Biome 2 (one tool for lint and format), and
+      `scripts/check-layers.mjs`, which reads the order from `layers.json` and
+      fails on an upward import or a host reached from the wrong package. It
+      checks **both** the declared `dependencies` and the source imports — the
+      manifest is exact but coarse, and the sources are where a stray `node:fs`
+      shows up. 18 tests cover it, including the cases it would be embarrassing
+      to miss (re-exports, dynamic imports, type-only imports, wrapped import
+      lists, a node builtin imported without its prefix).
+      Two host rules are enforced by the *compiler* rather than the script, which
+      is stronger: no package has `@types/node` in scope, and the DOM lib is
+      reachable only from `packages/webview/tsconfig.json`. So `document` in a
+      core package is a type error, not a lint finding.
+- [x] `AGENTS.md` + `CLAUDE.md` symlink, `README.md`, Apache-2.0 `LICENSE`
       (matching yxl)
-- [ ] Pin the `yxl` version this editor targets, in one place, and state the
-      compatibility rule (§8 Q6)
-- [ ] Retire `docs/design-provenance-editor.md` — its content is now §4 and §7
+- [x] Pin the `yxl` version this editor targets, in one place, and state the
+      compatibility rule (§8 Q6). **Shipped** as the `yxl` field in the root
+      `package.json` (`targetVersion`, `oracleRepo`); the rule is §8 Q6.
+- [x] Retire `docs/design-provenance-editor.md` — its content is now §4 and §7
       (see §11)
 
 ### Phase 1 — L0: the CST seam
@@ -675,6 +695,31 @@ that is an acceptable price.
 it carries tool-generated ids it stops being ordinary reviewable YAML, which is
 the entire proposition (§2).
 
+### ADR-016 — Toolchain: pnpm, TypeScript 7, vitest, Biome
+**Accepted.** Development dependencies, recorded because §9 requires a dependency
+to be argued for rather than merely installed.
+
+- **pnpm workspaces.** Strict `node_modules` means an undeclared cross-package
+  import fails to resolve, so the §4.2 dependency graph is partly enforced by
+  the package manager before any check runs.
+- **TypeScript 7**, strict, plus `noUncheckedIndexedAccess`,
+  `exactOptionalPropertyTypes`, and `verbatimModuleSyntax`. Turned on while the
+  tree is empty; each is painful to adopt later.
+- **Biome** for lint and format, over ESLint + Prettier: one tool, one config,
+  and no plugin matrix to maintain. It is not type-aware, which is the real
+  trade — we accept it because `tsc` at this strictness is where type-level
+  mistakes get caught anyway.
+- **vitest** for all tiers.
+
+**One finding worth recording, because it will come up again:** TypeScript 7's
+npm package exports only `lib/version.cjs` — the JavaScript compiler API
+(`ts.preProcessFile`, `ts.createProgram`, …) is no longer shipped, and the
+replacement (`typescript/unstable/sync`) is named for its stability. The layer
+checker was written against `preProcessFile` and had to be rewritten without it.
+Anything here that wants to *analyse* TypeScript source — a future codegen step,
+or generating the §8 Q7 JSON Schema — has to pick a parser deliberately rather
+than assume the compiler API is there.
+
 ## 8. Open questions
 
 - **Q1 — `cells:` A1 keys and row insertion.** Inserting a row rewrites every
@@ -704,11 +749,27 @@ the entire proposition (§2).
   spreadsheet), or building on canvas directly. **Decide in Phase 4**, and note
   that Phase 5 already brings `@univerjs/engine-formula` into the tree, which
   changes the calculus. Handsontable is out — proprietary.
-- **Q6 — Version compatibility with `yxl`.** The schema is not frozen until
-  yxl's v1.0, so this editor tracks a pinned version. Open: do we detect the
-  installed CLI's version and refuse or warn on a mismatch, and do we bundle a
-  binary or require one on `PATH`? Decide in Phase 4, when the CLI is first
-  invoked.
+- **Q6 — Version compatibility with `yxl`.** ✅ **Rule decided (Phase 0); the
+  packaging half is still open.** The schema is not frozen until yxl's v1.0, so
+  this editor targets **exactly one** yxl version, pinned in the root
+  `package.json`'s `yxl.targetVersion` and nowhere else. The rule:
+
+  1. The pinned version is what the Tier 3 oracle (ADR-012) is built from, and
+     what the loader's schema coverage is written against. Raising the pin is a
+     deliberate change with its own PR, and the oracle is what reviews it.
+  2. A **newer** CLI on the user's machine is a warning, not a refusal — a spec
+     we write is ordinary yxl and will still compile, and refusing would make
+     this editor an obstacle to upgrading yxl.
+  3. An **older** CLI is also a warning, naming the pinned version, because a
+     construct we let the user write may not exist there yet.
+  4. Neither warning blocks editing. `yxl build` failing is the honest signal,
+     and it already has a good error message (yxl ADR-006) — we surface it
+     rather than pre-empting it.
+
+  Still open: do we bundle a binary or require one on `PATH`? Bundling means
+  shipping per-platform binaries and taking on their update cadence; requiring
+  one means an install step for the user. Decide in Phase 4, when the CLI is
+  first invoked.
 - **Q7 — The JSON Schema.** yxl's Phase 11 has an unchecked item: publish a JSON
   Schema generated from `docs/spec.md`. That artifact would serve this editor's
   loader directly. Worth building **upstream in yxl** rather than here, and worth
@@ -790,3 +851,21 @@ than widening it silently.
 - `docs/design-provenance-editor.md` is **superseded by §4 and §7** of this file.
   It is kept for one commit so nothing is lost in review; delete it in Phase 0,
   per the one-source-of-truth rule this project inherits (`AGENTS.md §1`).
+
+### 2026-08-14 — Phase 0 complete
+- pnpm workspace with the 13 packages of §4.2, wired but empty; TypeScript 7 at
+  full strictness; vitest; Biome; the CI workflow. `docs/` retired (§6 Phase 0).
+- **The §4.2 dependency direction is now a build failure rather than a
+  convention.** `layers.json` declares the order once and
+  `scripts/check-layers.mjs` enforces it over both the declared dependencies and
+  the source imports, with 18 tests of its own.
+- Two of the three host rules turned out to be enforceable by the type checker
+  instead of by a script, which is strictly better: no package has node types in
+  scope, and the DOM lib is reachable only from `packages/webview`. `vscode` and
+  the node builtins are still script-checked, since `@types/node` would
+  otherwise be ambient everywhere.
+- yxl compatibility rule decided and written down (§8 Q6); the target version is
+  pinned in one place.
+- Toolchain recorded as ADR-016, including the discovery that TypeScript 7 no
+  longer ships the JS compiler API — which changed how the layer checker had to
+  be written and constrains any later source analysis.

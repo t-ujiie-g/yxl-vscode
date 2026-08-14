@@ -1,0 +1,11 @@
+{
+  "name": "@yxl-vscode/webview",
+  "version": "0.0.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "description": "The grid, the provenance inspector, and the resolution dialog.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}
