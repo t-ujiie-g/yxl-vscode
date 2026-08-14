@@ -1,6 +1,9 @@
+import { parse } from '@yxl-vscode/cst';
+import type { SpecDoc } from '@yxl-vscode/spec';
 import { type FilePath, filePath } from '@yxl-vscode/units';
 import { describe, expect, it } from 'vitest';
 import { nodeIdAt } from './id';
+import { load } from './load';
 
 function file(name: string): FilePath {
   const branded = filePath(name);
@@ -38,5 +41,58 @@ describe('nodeIdAt', () => {
 
   it('tells an index from the text of one', () => {
     expect(nodeIdAt(FILE, ['sheets', 0])).not.toBe(nodeIdAt(FILE, ['sheets', '0']));
+  });
+});
+
+function idsOf(source: string): string[] {
+  const { doc } = load(parse(source, { file: 'spec.yxl.yaml' }));
+  return doc === null ? [] : everyNode(doc).map((node) => node.id);
+}
+
+function everyNode(doc: SpecDoc): { id: string }[] {
+  const inSheets = doc.sheets.flatMap((sheet) => [
+    sheet,
+    ...sheet.cells,
+    ...sheet.columns,
+    ...sheet.rows,
+    ...sheet.data,
+    ...sheet.merges,
+    ...sheet.formulas,
+    ...sheet.opaque,
+  ]);
+  const declared = [...doc.defs.styles, ...doc.defs.values, ...doc.defs.formulas, ...doc.params];
+  return [doc, ...inSheets, ...declared, ...doc.overrides, ...doc.opaque];
+}
+
+const BANDS = 'sheets:\n  - name: Sales\n    columns:\n      - at: B\n      - at: D\n';
+
+function bandId(source: string, at: string): string | undefined {
+  const { doc } = load(parse(source, { file: 'spec.yxl.yaml' }));
+  return doc?.sheets[0]?.columns.find((band) => band.at === at)?.id;
+}
+
+describe('identity across two reads', () => {
+  it('re-derives the same ids from the same source', () => {
+    // What ADR-015 buys by deriving rather than persisting: nothing has to be
+    // written into the spec for a node to be found again.
+    expect(idsOf(BANDS)).toEqual(idsOf(BANDS));
+  });
+
+  it('holds a mapping key steady when a sibling is added before it', () => {
+    const before = 'sheets:\n  - name: Sales\n    cells:\n      B2: two\n';
+    const after = 'sheets:\n  - name: Sales\n    cells:\n      A1: one\n      B2: two\n';
+    expect(idsOf(after)).toContain(idsOf(before).at(-1));
+  });
+
+  it('gives a sequence item a new id when one is inserted before it', () => {
+    // The weakness ADR-015's identity map exists to cover, pinned so that the
+    // day it is covered, this test is what changes. Until a caller holds an id
+    // across an edit — the first is the Phase 4 UI — nothing is hurt by it
+    // (§8 Q3). Note the id itself is not free either: it stays a valid id and
+    // starts naming the band next door.
+    const inserted =
+      'sheets:\n  - name: Sales\n    columns:\n      - at: A\n      - at: B\n      - at: D\n';
+    expect(bandId(inserted, 'D')).not.toBe(bandId(BANDS, 'D'));
+    expect(bandId(inserted, 'B')).toBe(bandId(BANDS, 'D'));
   });
 });
