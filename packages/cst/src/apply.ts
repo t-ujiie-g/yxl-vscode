@@ -1,4 +1,6 @@
 import { error, type Span, span } from '@yxl-vscode/diag';
+import { CODE, type Code } from './codes';
+import { aboveComments, lineBreak, lineEnd, lineStart } from './lines';
 import { formatPath, locate, type Site } from './locate';
 import type { Node } from './node';
 import type { Applied, Edit, Op, Path } from './op';
@@ -21,14 +23,14 @@ export function apply(source: string, ops: readonly Op[], options: { file: strin
   const diagnostics = [...parseErrors];
   const edits: Edit[] = [];
 
-  const refuse = (code: string, message: string, at: Span) => {
-    diagnostics.push(error(`cst.${code}`, message, { file: options.file, span: at }));
+  const refuse: Refuse = (code, message, at) => {
+    diagnostics.push(error(code, message, { file: options.file, span: at }));
   };
 
   for (const op of ops) {
     const site = root ? locate(root, op.path) : undefined;
     if (!site) {
-      refuse('no-such-path', `nothing at \`${formatPath(op.path)}\``, span(0, 0));
+      refuse(CODE.noSuchPath, `nothing at \`${formatPath(op.path)}\``, span(0, 0));
       continue;
     }
     const edit = editFor(source, op, site, refuse);
@@ -38,7 +40,7 @@ export function apply(source: string, ops: readonly Op[], options: { file: strin
   return { text: splice(source, edits, refuse), edits, diagnostics };
 }
 
-type Refuse = (code: string, message: string, at: Span) => void;
+type Refuse = (code: Code, message: string, at: Span) => void;
 
 function editFor(source: string, op: Op, site: Site, refuse: Refuse): Edit | undefined {
   switch (op.op) {
@@ -49,7 +51,7 @@ function editFor(source: string, op: Op, site: Site, refuse: Refuse): Edit | und
 
     case 'renameKey': {
       if (site.in !== 'map') {
-        refuse('not-a-key', `\`${formatPath(op.path)}\` is not a mapping entry`, site.node.span);
+        refuse(CODE.notAKey, `\`${formatPath(op.path)}\` is not a mapping entry`, site.node.span);
         return undefined;
       }
       return { span: site.entry.key.span, text: renderScalar(op.to, site.entry.key.style) };
@@ -83,15 +85,11 @@ function separatingSpace(source: string, node: Node): string {
  */
 function removal(source: string, path: Path, site: Site, refuse: Refuse): Edit | undefined {
   if (site.in === 'root') {
-    refuse('cannot-remove-root', 'the document root cannot be removed', site.node.span);
+    refuse(CODE.cannotRemoveRoot, 'the document root cannot be removed', site.node.span);
     return undefined;
   }
   if (site.parent.flow) {
-    refuse(
-      'flow-not-supported',
-      `\`${formatPath(path)}\` is inside a flow collection, which this editor does not rewrite yet`,
-      site.node.span,
-    );
+    refuse(CODE.flowNotSupported, insideFlow(path), site.node.span);
     return undefined;
   }
 
@@ -107,15 +105,11 @@ function insertion(
 ): Edit | undefined {
   const target = site.node;
   if (target.kind !== 'seq') {
-    refuse('not-a-sequence', `\`${formatPath(op.path)}\` is not a sequence`, target.span);
+    refuse(CODE.notASequence, `\`${formatPath(op.path)}\` is not a sequence`, target.span);
     return undefined;
   }
   if (target.flow) {
-    refuse(
-      'flow-not-supported',
-      `\`${formatPath(op.path)}\` is a flow sequence, which this editor does not rewrite yet`,
-      target.span,
-    );
+    refuse(CODE.flowNotSupported, insideFlow(op.path), target.span);
     return undefined;
   }
 
@@ -124,15 +118,16 @@ function insertion(
   // none, so there is nothing to copy and nothing to guess from.
   const neighbour = target.items[Math.min(op.index, target.items.length - 1)];
   if (!neighbour) {
-    refuse('empty-sequence', `\`${formatPath(op.path)}\` has no item to take its layout from`, {
-      start: target.span.start,
-      end: target.span.end,
-    });
+    refuse(
+      CODE.emptySequence,
+      `\`${formatPath(op.path)}\` has no item to take its layout from`,
+      target.span,
+    );
     return undefined;
   }
 
   const prefix = source.slice(lineStart(source, neighbour.span.start), neighbour.span.start);
-  const line = `${prefix}${renderScalar(op.value)}\n`;
+  const line = `${prefix}${renderScalar(op.value)}${lineBreak(source)}`;
 
   const append = op.index >= target.items.length;
   const at = append
@@ -141,32 +136,8 @@ function insertion(
   return { span: span(at, at), text: line };
 }
 
-function lineStart(source: string, offset: number): number {
-  return source.lastIndexOf('\n', offset - 1) + 1;
-}
-
-/**
- * Step back over the comment lines directly above `start`, so an insert lands
- * above them rather than between them and the item they describe.
- *
- * A blank line ends the block: a comment separated by one reads as a section
- * heading for what follows, and a new first item belongs under it, not above.
- */
-function aboveComments(source: string, start: number): number {
-  let at = start;
-  while (at > 0) {
-    const previous = lineStart(source, at - 1);
-    const line = source.slice(previous, at - 1).trim();
-    if (!line.startsWith('#')) break;
-    at = previous;
-  }
-  return at;
-}
-
-/** Past the line break, so a removed line takes its own newline with it. */
-function lineEnd(source: string, offset: number): number {
-  const found = source.indexOf('\n', offset);
-  return found === -1 ? source.length : found + 1;
+function insideFlow(path: Path): string {
+  return `\`${formatPath(path)}\` is inside a flow collection, which this editor does not rewrite yet`;
 }
 
 /**
@@ -182,7 +153,7 @@ function splice(source: string, edits: readonly Edit[], refuse: Refuse): string 
 
   for (const edit of ordered) {
     if (edit.span.end > previousStart) {
-      refuse('overlapping-edits', 'two edits cover the same text', edit.span);
+      refuse(CODE.overlappingEdits, 'two edits cover the same text', edit.span);
       continue;
     }
     text = text.slice(0, edit.span.start) + edit.text + text.slice(edit.span.end);

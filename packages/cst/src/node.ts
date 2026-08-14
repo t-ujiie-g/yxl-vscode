@@ -14,6 +14,11 @@ export type ScalarStyle = 'plain' | 'single' | 'double' | 'literal' | 'folded';
  * Scalars carry both the resolved `value` and the `source` it was written as, so
  * a consumer that needs the exact text (a large integer, a number whose
  * precision matters) never has to reach back into the file for it.
+ *
+ * A collection's `flow` distinguishes `{ bold: true }` from the indented block
+ * form. It is not decoration: a block edit inserts a line and a flow edit
+ * inserts inside brackets, so a writer that cannot tell them apart will corrupt
+ * one of them.
  */
 export type Node = Scalar | Mapping | Sequence;
 
@@ -31,11 +36,6 @@ export interface Entry {
   readonly span: Span;
 }
 
-/**
- * `flow` distinguishes `{ bold: true }` from the indented block form. It is not
- * decoration: a block edit inserts a line and a flow edit inserts inside
- * brackets, so a writer that cannot tell them apart will corrupt one of them.
- */
 export interface Mapping {
   readonly kind: 'map';
   readonly entries: readonly Entry[];
@@ -62,16 +62,4 @@ export interface Parsed {
   readonly diagnostics: readonly Diagnostic[];
   readonly source: string;
   readonly file: string;
-}
-
-export function isScalar(node: Node): node is Scalar {
-  return node.kind === 'scalar';
-}
-
-export function isMapping(node: Node): node is Mapping {
-  return node.kind === 'map';
-}
-
-export function isSequence(node: Node): node is Sequence {
-  return node.kind === 'seq';
 }

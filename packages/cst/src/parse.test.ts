@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { CODE } from './codes';
 import type { Mapping, Node, Scalar, Sequence } from './node';
 import { parse } from './parse';
 
@@ -143,14 +144,19 @@ describe('parse', () => {
     it("rejects an alias, pointing at yxl's own reuse mechanism", () => {
       const { diagnostics } = read('base: &b { bold: true }\nuse: *b\n');
       expect(diagnostics).toHaveLength(1);
-      expect(diagnostics[0]?.code).toBe('cst.alias');
+      expect(diagnostics[0]?.code).toBe(CODE.alias);
       expect(diagnostics[0]?.message).toContain('defs:');
+    });
+
+    it('rejects a key that is a collection rather than a scalar', () => {
+      const { diagnostics } = read('? [a, b]\n: value\n');
+      expect(diagnostics[0]?.code).toBe(CODE.unexpectedToken);
     });
 
     it('rejects a non-text mapping key', () => {
       const { diagnostics } = read('1: one\n');
       expect(diagnostics).toHaveLength(1);
-      expect(diagnostics[0]?.code).toBe('cst.non-string-key');
+      expect(diagnostics[0]?.code).toBe(CODE.nonStringKey);
     });
 
     it('keeps the entries it did understand when one is rejected', () => {
@@ -160,7 +166,7 @@ describe('parse', () => {
 
     it('reports a second document rather than silently reading the first', () => {
       const { diagnostics, root } = read('a: 1\n---\nb: 2\n');
-      expect(diagnostics[0]?.code).toBe('cst.multiple-documents');
+      expect(diagnostics[0]?.code).toBe(CODE.multipleDocuments);
       expect(asMap(root as Node).entries[0]?.key.value).toBe('a');
     });
 

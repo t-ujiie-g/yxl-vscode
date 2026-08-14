@@ -1,5 +1,6 @@
 import { type Diagnostic, error, type Span, span, union } from '@yxl-vscode/diag';
 import { CST, Parser } from 'yaml';
+import { CODE, type Code } from './codes';
 import type { Entry, Node, Parsed, Scalar, ScalarStyle, Sequence } from './node';
 import { resolvePlain } from './scalar';
 
@@ -22,7 +23,7 @@ export function parse(source: string, options: { file: string }): Parsed {
 
   const [first, ...rest] = documents;
   for (const extra of rest) {
-    reader.reject('multiple-documents', 'a spec holds one document; the rest are ignored', {
+    reader.reject(CODE.multipleDocuments, 'a spec holds one document; the rest are ignored', {
       start: extra.offset,
       end: extra.offset,
     });
@@ -41,8 +42,8 @@ class Reader {
 
   constructor(private readonly file: string) {}
 
-  reject(code: string, message: string, at: Span): void {
-    this.diagnostics.push(error(`cst.${code}`, message, { file: this.file, span: at }));
+  reject(code: Code, message: string, at: Span): void {
+    this.diagnostics.push(error(code, message, { file: this.file, span: at }));
   }
 
   node(token: CST.Token): Node | null {
@@ -60,20 +61,20 @@ class Reader {
         return this.scalar(token);
       case 'alias':
         this.reject(
-          'alias',
+          CODE.alias,
           'YAML aliases are not supported; name the value in `defs:` and reference it',
           extent(token),
         );
         return null;
       default:
-        this.reject('unexpected-token', `unexpected ${token.type}`, extent(token));
+        this.reject(CODE.unexpectedToken, `unexpected ${token.type}`, extent(token));
         return null;
     }
   }
 
   scalar(token: CST.Token): Scalar | null {
     if (!CST.isScalar(token)) {
-      this.reject('unexpected-token', `expected a scalar, found ${token.type}`, extent(token));
+      this.reject(CODE.unexpectedToken, `expected a scalar, found ${token.type}`, extent(token));
       return null;
     }
 
@@ -99,7 +100,7 @@ class Reader {
       const key = this.scalar(item.key);
       if (!key) continue;
       if (typeof key.value !== 'string') {
-        this.reject('non-string-key', 'a mapping key must be text', key.span);
+        this.reject(CODE.nonStringKey, 'a mapping key must be text', key.span);
         continue;
       }
 

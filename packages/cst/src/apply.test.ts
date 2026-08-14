@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { apply } from './apply';
+import { CODE } from './codes';
 import type { Op } from './op';
 
 function edit(source: string, ...ops: Op[]) {
@@ -115,7 +116,7 @@ describe('apply', () => {
 
     it('refuses to rename something that is not a mapping entry', () => {
       const { diagnostics } = edit(SPEC, { op: 'renameKey', path: [], to: 'x' });
-      expect(diagnostics[0]?.code).toBe('cst.not-a-key');
+      expect(diagnostics[0]?.code).toBe(CODE.notAKey);
     });
   });
 
@@ -140,7 +141,7 @@ describe('apply', () => {
 
     it('refuses to remove the document root', () => {
       const { diagnostics } = edit(SPEC, { op: 'remove', path: [] });
-      expect(diagnostics[0]?.code).toBe('cst.cannot-remove-root');
+      expect(diagnostics[0]?.code).toBe(CODE.cannotRemoveRoot);
     });
 
     it('refuses inside a flow collection rather than corrupting it', () => {
@@ -148,7 +149,7 @@ describe('apply', () => {
         op: 'remove',
         path: ['defs', 'styles', 'header', 'bold'],
       });
-      expect(diagnostics[0]?.code).toBe('cst.flow-not-supported');
+      expect(diagnostics[0]?.code).toBe(CODE.flowNotSupported);
       expect(text).toBe(SPEC);
     });
   });
@@ -182,7 +183,7 @@ describe('apply', () => {
         index: 0,
         value: 'Sales',
       });
-      expect(diagnostics[0]?.code).toBe('cst.flow-not-supported');
+      expect(diagnostics[0]?.code).toBe(CODE.flowNotSupported);
     });
 
     it('refuses to insert into something that is not a sequence', () => {
@@ -192,7 +193,7 @@ describe('apply', () => {
         index: 0,
         value: 'x',
       });
-      expect(diagnostics[0]?.code).toBe('cst.not-a-sequence');
+      expect(diagnostics[0]?.code).toBe(CODE.notASequence);
     });
   });
 
@@ -218,6 +219,13 @@ describe('apply', () => {
       );
     });
 
+    it('writes the line ending the file already uses', () => {
+      const source = 'sheets:\r\n  - Sales\r\n';
+      expect(text(source, { op: 'insert', path: ['sheets'], index: 1, value: 'Costs' })).toBe(
+        'sheets:\r\n  - Sales\r\n  - Costs\r\n',
+      );
+    });
+
     it('takes a trailing comment with the line it removes', () => {
       const source = 'params:\n  region: APAC   # only used here\n  quarter: Q3\n';
       expect(text(source, { op: 'remove', path: ['params', 'region'] })).toBe(
@@ -229,8 +237,17 @@ describe('apply', () => {
   describe('what it refuses', () => {
     it('reports a path that does not exist and changes nothing', () => {
       const { diagnostics, text } = edit(SPEC, { op: 'set', path: ['nope'], value: 1 });
-      expect(diagnostics[0]?.code).toBe('cst.no-such-path');
+      expect(diagnostics[0]?.code).toBe(CODE.noSuchPath);
       expect(text).toBe(SPEC);
+    });
+
+    it('names the path it could not find, the way a reader writes one', () => {
+      const { diagnostics } = edit(SPEC, {
+        op: 'set',
+        path: ['sheets', 3, 'cells', 'A1'],
+        value: 1,
+      });
+      expect(diagnostics[0]?.message).toContain('sheets[3].cells.A1');
     });
 
     it('applies the ops it understood even when one is refused', () => {
@@ -248,7 +265,7 @@ describe('apply', () => {
         { op: 'set', path: ['params'], value: 'gone' },
         { op: 'set', path: ['params', 'region'], value: 'EMEA' },
       );
-      expect(diagnostics[0]?.code).toBe('cst.overlapping-edits');
+      expect(diagnostics[0]?.code).toBe(CODE.overlappingEdits);
     });
   });
 });
