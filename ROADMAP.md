@@ -635,8 +635,15 @@ definition, splitting a formula range — which silently destroys the DRY
 properties yxl exists to provide. An override keeps the structure intact and
 puts the mess in one place where it can be counted; twenty overrides is a
 legible signal that the spec's shape is wrong, and Phase 9 can propose folding
-them back in. Note this construct must exist in the yxl schema itself, so it is
-an upstream request, not a local invention (§8 Q9).
+them back in.
+
+*Status:* the construct does not exist in the yxl schema, and is requested
+upstream as [yxl#66](https://github.com/t-ujiie-g/yxl/issues/66) rather than
+invented here — a spec this editor writes must compile with a stock `yxl`
+(ADR-011). Should it be declined, the fallback is a plain `cells:` entry
+relying on yxl's documented last-wins key order: the edit still lands, and what
+is lost is the badge, the `reason:`, and the ability to count how dirty a spec
+has become (§8 Q9).
 
 ### ADR-008 — Every style write passes the normalizer
 **Accepted.** Before a style reaches the spec: (1) exact match against an
@@ -851,10 +858,22 @@ Lift this when a phase needs it, not before.
 - **Q8 — Tauri.** Phase 11. Nothing in the architecture blocks it (ADR-004); the
   question is whether the demand exists.
 - **Q9 — `overrides:` must exist upstream.** ADR-007 depends on a construct the
-  yxl schema does not have today. It has to be proposed, designed, and shipped in
-  yxl before Phase 6 can rely on it — a spec this editor writes must compile with
-  a stock `yxl`. **This is the one hard external dependency in the plan.** Open
-  it upstream during Phase 2, so it is settled well before Phase 6.
+  yxl schema does not have today. **Filed upstream as
+  [yxl#66](https://github.com/t-ujiie-g/yxl/issues/66)** (2026-08-14); awaiting
+  a decision, which is needed before Phase 6 and before yxl's schema freeze.
+
+  Writing it up changed what the request is. yxl **already has the capability**:
+  `docs/spec.md` §2 says sheet keys apply in the order written, so a `cells:`
+  entry placed after a `data:` block wins, and all three hard cases (param,
+  CSV, formula range) can be expressed that way today. What is missing is
+  **intent** — an override written as an ordinary cell cannot afterwards be
+  counted, explained, or folded back, and it makes the spec's correctness
+  depend on YAML key order, which a reformat can silently break.
+
+  So this is not a blocker on capability, and Phase 6 is **not hard-blocked**:
+  if the answer upstream is no, `overrides:` becomes a `cells:` write and ADR-007
+  loses its badge, its `reason:`, and the health signal — a worse product, not
+  an impossible one. Design for both until it is answered.
 - **Q10 — What do we send upstream from ADR-002's measurements?** yxl's own §8
   Q6 asks "native binary only, or also a wasm CLI?" — and the answer here is that
   the whole pipeline, `emit` included, already passes its tests on the JS target.
@@ -887,9 +906,12 @@ Lift this when a phase needs it, not before.
   Excel somewhere. Mitigated by ADR-014 (never written back), visible
   unsupported-function reporting, and "Excel is the renderer of record" stated in
   the UI, not just here.
-- **R7 — The upstream dependency (§8 Q9).** Phase 6 is blocked on an `overrides:`
-  construct existing in yxl. Raise it in Phase 2; if it is rejected upstream,
-  ADR-007 needs a different answer and Phase 7's resolution table shrinks.
+- **R7 — The upstream dependency (§8 Q9).** *Downgraded 2026-08-14.* Filing
+  [yxl#66](https://github.com/t-ujiie-g/yxl/issues/66) established that yxl can
+  already express an override through `cells:` last-wins precedence, so Phase 6
+  is not blocked on the answer — a rejection costs the badge, the `reason:`, and
+  the health signal, not the feature. Still wanted before yxl's schema freeze,
+  after which it would be a breaking change rather than an addition.
 
 ## 10. How to "進める" (pick the next task)
 
@@ -962,3 +984,16 @@ than widening it silently.
   project. It is worth recording that it was not: the CST layer held, and the
   scope left undone (flow-collection structural edits, collection inserts) is
   bounded and named rather than discovered.
+- CI runs against a sibling `yxl` checkout, which the Tier 3 oracle will need
+  too. `defaults.run.working-directory` governs `run:` steps only, so the pnpm
+  action needed its manifest path given explicitly — the sort of thing that only
+  shows up once the workflow is real.
+
+### 2026-08-14 — `overrides:` requested upstream
+- Filed [yxl#66](https://github.com/t-ujiie-g/yxl/issues/66) for §8 Q9 / ADR-007.
+- Writing it up changed the request and **downgraded R7**. yxl can already
+  express an override, through the documented last-wins key order (`docs/spec.md`
+  §2); what it cannot express is that a cell *is* one. So the ask is for intent —
+  something countable, explainable, and foldable — rather than for capability,
+  and Phase 6 is no longer hard-blocked on the answer. §8 Q9, §9 R7, and ADR-007
+  updated to say so, including the fallback to design against in the meantime.
