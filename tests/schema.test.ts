@@ -1,27 +1,8 @@
-import { readFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
 import { parse } from '@yxl-vscode/cst';
-import { type IncludeReader, load } from '@yxl-vscode/loader';
+import { load } from '@yxl-vscode/loader';
 import type { SpecDoc } from '@yxl-vscode/spec';
-import { filePath } from '@yxl-vscode/units';
 import { describe, expect, it } from 'vitest';
-import { type Sample, yxlExamples } from './corpus';
-
-/**
- * The half of `$include` that belongs to the shell (ADR-004): resolve the path
- * against the file that wrote it, and read it.
- */
-const include: IncludeReader = (from, path) => {
-  const resolved = resolve(dirname(from), path);
-  const file = filePath(resolved);
-  if (file === null) return null;
-
-  try {
-    return { file, source: readFileSync(resolved, 'utf8') };
-  } catch {
-    return null;
-  }
-};
+import { includeReader, type Sample, yxlExamples } from './corpus';
 
 /**
  * A spec, rather than one of the fragments an `$include` pulls into one. A
@@ -36,7 +17,7 @@ function isDocument(sample: Sample): boolean {
 const documents = yxlExamples().filter(isDocument);
 
 function read(sample: Sample) {
-  return load(parse(sample.source, { file: sample.path }), include);
+  return load(parse(sample.source, { file: sample.path }), includeReader);
 }
 
 describe('the upstream specs', () => {

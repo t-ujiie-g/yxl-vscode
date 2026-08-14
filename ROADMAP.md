@@ -164,10 +164,10 @@ a higher one. The rows below are in dependency order, and that order is
 | Package | Layer | Purpose |
 |---|---|---|
 | `diag` | — | Diagnostics, severities, source spans (file/line/col). The one place a user-visible message is shaped. |
-| `units` | — | Branded types: `A1Addr`, `A1Range`, `SheetName`, `Color`, `NodeId`, dimensions. Parse at the edge, pass typed inside. |
+| `units` | — | Branded types and the readers that make them: `A1Addr`, `A1Range`, `ColumnSpan` / `RowSpan`, `QualifiedAddr`, `Color`, `SheetName`, the three definition namespaces, `ParamName`, `FilePath`, `NodeId`. Parse at the edge, pass typed inside. |
 | `cst` | L0 | `eemeli/yaml` behind our own seam: source → span-carrying tree; apply an op list as a minimal byte patch. The *only* package that knows YAML syntax exists. (ADR-003) |
-| `spec` | L1 | The `SpecDoc` AST — the TypeScript shape of `docs/spec.md`. Types and constructors only, no logic. |
-| `loader` | L1 | CST tree → `SpecDoc`, with the validation projection requires. Preserves unmodeled-but-valid constructs verbatim. (ADR-011) |
+| `spec` | L1 | The `SpecDoc` AST — the TypeScript shape of `docs/spec.md` — and the schema's own vocabulary: `MODELED_KEYS`, which is where the line ADR-011 draws is written down. Types and tables, no logic. |
+| `loader` | L1 | CST tree → `SpecDoc`, with the validation projection requires and `$include` expanded through an injected reader. Preserves unmodeled-but-valid constructs verbatim, marked `opaque`. (ADR-011) |
 | `compile` | L2/L3 | `SpecDoc` → `CompiledGrid` + per-facet provenance and style layers. Pure and deterministic; the workhorse. (ADR-005) |
 | `normalize` | L4 | The style normalizer: an applied style becomes a reference, an `extends:`, or a new definition — in that order of preference. (ADR-008) |
 | `patch` | L0/L1 | `Patch` → `cst` ops, and the inverse patch that makes undo AST-level. (ADR-010) |
@@ -389,7 +389,7 @@ anything is built on it.
 - [x] Tier 2 byte-identity harness (§5) green over `examples/` + the awkward
       fixtures. **Shipped** as `tests/`, a workspace package holding corpus
       harnesses and no product code — the same shape as yxl's `src/examples`.
-      It runs over **18 upstream example specs and 7 awkward fixtures** (a
+      It runs over **18 upstream example specs and 8 awkward fixtures** (a
       comment in every position, flow style, all four block-scalar forms,
       tricky quoting, CRLF, a BOM, odd indentation), asserting four things per
       sample: the CST retains it character for character, it parses clean, every
@@ -1269,6 +1269,38 @@ this at a phase boundary rather than at the end.
   for upstream as [yxl#68](https://github.com/t-ujiie-g/yxl/issues/68) — §23 is
   the only section of the reference with no worked example behind it, which
   means its compile path is not exercised there either.
+
+### 2026-08-15 — Refactoring pass at the Phase 2 boundary (`AGENTS.md` §8)
+Walked the lenses in order over everything Phase 2 landed. 60 lines net
+removed, and one gap in the tests closed.
+
+- **Every reader began with the same four lines** — open a mapping, check it,
+  take its entries — and every sequence with the same five. Both are one thing
+  now (`openEntries`, `readEach`), which took 207 lines out and put 147 back.
+  `band.ts` lost a bespoke type that had been a private copy of what the shared
+  one already said.
+- **§5 promised a fixture the fixtures did not have.** Tier 2's description
+  named anchors and tabs-in-strings; the awkward set covered neither. Rather
+  than trim the promise, the fixture now exists — an anchor nothing aliases and
+  a tab inside a quoted scalar, both of which the CST keeps byte for byte. That
+  is the honest direction to close a doc/reality gap when the code can already
+  do the thing.
+- **Deleted three exports with no caller** — `nodeIdAt` and `Brand` from their
+  package indexes, and a `keyOf` re-export nobody used — and made
+  `openMap` / `entriesOf` / `itemsOf` module-private now that one helper wraps
+  them. Same house rule as the Phase 0–1 sweep: re-exporting later costs a line.
+- **The tests had two copies of the `$include` reader**, one per test file. It
+  is the shell half of ADR-004 and now lives once, in the corpus harness, where
+  the extension's version will have an obvious sibling.
+- Documentation: §4.2's `units` and `spec` rows described packages that no
+  longer exist as written (`dimensions` that were never built, "constructors
+  only" for a package whose second half is the key vocabulary), and the README
+  still said the model stopped at the shape of a spec.
+- Every diagnostic code the loader can raise has a test asserting it — 25 of 25,
+  checked rather than assumed. Layer check, typecheck, lint, and 477 tests clean.
+- **Left alone, deliberately:** pnpm is 10.27.0 against 11.21.0 available. A
+  package-manager major is its own change with its own risk (lockfile format),
+  and §8.9 says to land a toolchain bump where it can be reviewed as one.
 
 ### 2026-08-15 — Phase 2 complete: the oracle, and what it can honestly claim
 - Tier 3 stands up and is green: 29 conformance assertions over the pinned

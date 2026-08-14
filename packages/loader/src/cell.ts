@@ -15,11 +15,10 @@ import {
 import { CODE } from './codes';
 import { type Ctx, keyOf, nodeAt, reject } from './ctx';
 import {
-  entriesOf,
   expectSpelling,
   expectText,
   expectValue,
-  openMap,
+  openEntries,
   openSeq,
   rejectUnknownKey,
 } from './read';
@@ -28,11 +27,11 @@ import { ADDRESS, FORMULA_NAME, type Kind, readAs, readTextAs, VALUE_NAME } from
 
 /** A sheet's `cells:` mapping: one entry per addressed cell. */
 export function readCells(ctx: Ctx, node: Node, path: Path): Cell[] {
-  const opened = openMap(ctx, node, path, '`cells`');
+  const opened = openEntries(ctx, node, path, '`cells`');
   if (opened === null) return [];
 
   const cells: Cell[] = [];
-  for (const entry of entriesOf(opened.ctx, opened.node)) {
+  for (const entry of opened.entries) {
     const cell = readCell(opened.ctx, entry, opened.path);
     if (cell !== null) cells.push(cell);
   }
@@ -72,11 +71,11 @@ const NOTHING_ELSE = {
 } as const;
 
 function readExpandedCell(ctx: Ctx, node: Node, what: string): CellFacets | null {
-  const opened = openMap(ctx, node, [], what);
+  const opened = openEntries(ctx, node, [], what);
   if (opened === null) return null;
   const here = opened.ctx;
 
-  const entries = entriesOf(here, opened.node);
+  const { entries } = opened;
   for (const entry of entries) {
     if (!MODELED_KEYS.cell.has(keyOf(entry))) {
       rejectUnknownKey(here, entry, what, MODELED_KEYS.cell);
@@ -239,14 +238,14 @@ function readRichRun(ctx: Ctx, node: Node, what: string): RichRun | null {
     return text === null ? null : { text, font: null };
   }
 
-  const opened = openMap(ctx, node, [], what);
+  const opened = openEntries(ctx, node, [], what);
   if (opened === null) return null;
   const here = opened.ctx;
 
   let text: string | null = null;
   let font: RichRun['font'] = null;
 
-  for (const entry of entriesOf(here, opened.node)) {
+  for (const entry of opened.entries) {
     const at = `${what} \`${keyOf(entry)}\``;
     switch (keyOf(entry)) {
       case 'text':

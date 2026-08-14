@@ -16,12 +16,11 @@ import {
 import { CODE } from './codes';
 import { type Ctx, keyOf, reject } from './ctx';
 import {
-  entriesOf,
   expectBool,
   expectNumber,
   expectSpelling,
   expectText,
-  openMap,
+  openEntries,
   rejectUnknownKey,
 } from './read';
 import { COLOR, readAs, STYLE_NAME } from './template';
@@ -38,7 +37,7 @@ export function readStyleUse(ctx: Ctx, node: Node, what: string): StyleUse | nul
 }
 
 export function readStyle(ctx: Ctx, node: Node, what: string): Style | null {
-  const opened = openMap(ctx, node, [], what);
+  const opened = openEntries(ctx, node, [], what);
   if (opened === null) return null;
   const here = opened.ctx;
 
@@ -50,7 +49,7 @@ export function readStyle(ctx: Ctx, node: Node, what: string): Style | null {
   let protection: Protection | null = null;
   let format: string | null = null;
 
-  for (const entry of entriesOf(here, opened.node)) {
+  for (const entry of opened.entries) {
     const at = `${what} \`${keyOf(entry)}\``;
     switch (keyOf(entry)) {
       case 'extends':
@@ -83,7 +82,7 @@ export function readStyle(ctx: Ctx, node: Node, what: string): Style | null {
 }
 
 export function readFont(ctx: Ctx, node: Node, what: string): Font | null {
-  const opened = openMap(ctx, node, [], what);
+  const opened = openEntries(ctx, node, [], what);
   if (opened === null) return null;
   const here = opened.ctx;
 
@@ -95,7 +94,7 @@ export function readFont(ctx: Ctx, node: Node, what: string): Font | null {
   let name: string | null = null;
   let color: Font['color'] = null;
 
-  for (const entry of entriesOf(here, opened.node)) {
+  for (const entry of opened.entries) {
     const at = `${what} \`${keyOf(entry)}\``;
     switch (keyOf(entry)) {
       case 'bold':
@@ -131,12 +130,12 @@ export function readFont(ctx: Ctx, node: Node, what: string): Font | null {
 function readFill(ctx: Ctx, node: Node, what: string): Style['fill'] {
   if (node.kind === 'scalar') return readAs(ctx, node, what, COLOR);
 
-  const opened = openMap(ctx, node, [], what);
+  const opened = openEntries(ctx, node, [], what);
   if (opened === null) return null;
   const here = opened.ctx;
 
   let color: Style['fill'] = null;
-  for (const entry of entriesOf(here, opened.node)) {
+  for (const entry of opened.entries) {
     if (keyOf(entry) === 'color') {
       color = readAs(here, entry.value, `${what} \`color\``, COLOR);
     } else {
@@ -154,12 +153,12 @@ function readBorder(ctx: Ctx, node: Node, what: string): readonly BorderSide[] |
     return edge === null ? null : [{ side: 'all', edge }];
   }
 
-  const opened = openMap(ctx, node, [], what);
+  const opened = openEntries(ctx, node, [], what);
   if (opened === null) return null;
   const here = opened.ctx;
 
   const sides: BorderSide[] = [];
-  for (const entry of entriesOf(here, opened.node)) {
+  for (const entry of opened.entries) {
     const side = BORDER_SIDES.find((known) => known === keyOf(entry));
     if (side === undefined) {
       rejectUnknownKey(here, entry, what, MODELED_KEYS.border);
@@ -178,14 +177,14 @@ function readBorderEdge(ctx: Ctx, node: Node, what: string): BorderEdge | null {
     return style === null ? null : { style, color: null };
   }
 
-  const opened = openMap(ctx, node, [], what);
+  const opened = openEntries(ctx, node, [], what);
   if (opened === null) return null;
   const here = opened.ctx;
 
   let style: BorderEdge['style'] | null = null;
   let color: BorderEdge['color'] = null;
 
-  for (const entry of entriesOf(here, opened.node)) {
+  for (const entry of opened.entries) {
     const at = `${what} \`${keyOf(entry)}\``;
     switch (keyOf(entry)) {
       case 'style':
@@ -207,7 +206,7 @@ function readBorderEdge(ctx: Ctx, node: Node, what: string): BorderEdge | null {
 }
 
 function readAlign(ctx: Ctx, node: Node, what: string): Align | null {
-  const opened = openMap(ctx, node, [], what);
+  const opened = openEntries(ctx, node, [], what);
   if (opened === null) return null;
   const here = opened.ctx;
 
@@ -215,7 +214,7 @@ function readAlign(ctx: Ctx, node: Node, what: string): Align | null {
   let vertical: Align['vertical'] = null;
   let wrap: boolean | null = null;
 
-  for (const entry of entriesOf(here, opened.node)) {
+  for (const entry of opened.entries) {
     const at = `${what} \`${keyOf(entry)}\``;
     switch (keyOf(entry)) {
       case 'horizontal':
@@ -236,14 +235,14 @@ function readAlign(ctx: Ctx, node: Node, what: string): Align | null {
 }
 
 function readProtection(ctx: Ctx, node: Node, what: string): Protection | null {
-  const opened = openMap(ctx, node, [], what);
+  const opened = openEntries(ctx, node, [], what);
   if (opened === null) return null;
   const here = opened.ctx;
 
   let locked: boolean | null = null;
   let hidden: boolean | null = null;
 
-  for (const entry of entriesOf(here, opened.node)) {
+  for (const entry of opened.entries) {
     const at = `${what} \`${keyOf(entry)}\``;
     switch (keyOf(entry)) {
       case 'locked':

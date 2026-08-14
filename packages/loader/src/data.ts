@@ -8,34 +8,21 @@ import {
 } from '@yxl-vscode/spec';
 import { CODE } from './codes';
 import { type Ctx, keyOf, nodeAt, reject, type Site } from './ctx';
-import {
-  entriesOf,
-  expectText,
-  findEntry,
-  itemsOf,
-  openMap,
-  openSeq,
-  rejectUnknownKey,
-} from './read';
+import { expectText, findEntry, openEntries, openSeq, readEach, rejectUnknownKey } from './read';
 import { ADDRESS, PATH, readAs } from './template';
 
 /** A sheet's `data:` sequence: one anchored table per entry. */
 export function readDataBlocks(ctx: Ctx, node: Node, path: Path): DataBlock[] {
-  const blocks: DataBlock[] = [];
-  for (const item of itemsOf(ctx, node, path, '`data`')) {
-    const block = readDataBlock(item);
-    if (block !== null) blocks.push(block);
-  }
-  return blocks;
+  return readEach(ctx, node, path, '`data`', readDataBlock);
 }
 
 function readDataBlock(site: Site): DataBlock | null {
   const what = 'a `data` entry';
-  const opened = openMap(site.ctx, site.node, site.path, what);
+  const opened = openEntries(site.ctx, site.node, site.path, what);
   if (opened === null) return null;
 
   const here = opened.ctx;
-  const entries = entriesOf(here, opened.node);
+  const { entries } = opened;
 
   const anchor = findEntry(entries, 'at');
   if (anchor === undefined) {

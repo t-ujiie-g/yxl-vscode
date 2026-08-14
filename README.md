@@ -7,8 +7,9 @@ and translates grid gestures back into edits on the spec — not into a workbook
 > ⚠️ **Status: early.** There is no editor yet — the first release is Phase 4,
 > the read-only preview. What exists today is the layer underneath it: YAML
 > parses into a span-carrying tree, edits apply as minimal byte patches that
-> leave every untouched byte alone, and the shape of a spec is modelled on top
-> of that. `ROADMAP.md` holds the design and the phase plan.
+> leave every untouched byte alone, and a whole spec — `$include` and all —
+> reads into a model of itself, checked on every commit against the compiler
+> that will build it. `ROADMAP.md` holds the design and the phase plan.
 
 `yxl` made a workbook into version-controllable text. This makes that text
 direct-manipulable without giving up what made it text:

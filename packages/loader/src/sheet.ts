@@ -15,33 +15,20 @@ import { readCells, withoutLeadingEquals } from './cell';
 import { CODE } from './codes';
 import { type Ctx, keyOf, nodeAt, reject, type Site } from './ctx';
 import { readDataBlocks } from './data';
-import {
-  entriesOf,
-  expectText,
-  findEntry,
-  itemsOf,
-  openMap,
-  rejectUnknownKey,
-  scalarText,
-} from './read';
+import { expectText, findEntry, openEntries, readEach, rejectUnknownKey, scalarText } from './read';
 import { RANGE, readAs, SHEET_NAME } from './template';
 
 /** The workbook's `sheets:` sequence, in tab order. */
 export function readSheets(ctx: Ctx, node: Node, path: Path): Sheet[] {
-  const sheets: Sheet[] = [];
-  for (const item of itemsOf(ctx, node, path, '`sheets`')) {
-    const sheet = readSheet(item);
-    if (sheet !== null) sheets.push(sheet);
-  }
-  return sheets;
+  return readEach(ctx, node, path, '`sheets`', readSheet);
 }
 
 function readSheet(site: Site): Sheet | null {
-  const opened = openMap(site.ctx, site.node, site.path, 'a sheet');
+  const opened = openEntries(site.ctx, site.node, site.path, 'a sheet');
   if (opened === null) return null;
 
   const here = opened.ctx;
-  const entries = entriesOf(here, opened.node);
+  const { entries } = opened;
 
   const named = findEntry(entries, 'name');
   if (named === undefined) {
@@ -104,30 +91,23 @@ function readSheet(site: Site): Sheet | null {
 }
 
 function readMerges(ctx: Ctx, node: Node, path: Path, what: string): Merge[] {
-  const merges: Merge[] = [];
-  for (const item of itemsOf(ctx, node, path, `${what} \`merges\``)) {
-    const at = readAs(item.ctx, item.node, 'a `merges` entry', RANGE);
-    if (at !== null) merges.push({ ...nodeAt(item.ctx, item.path, item.node.span), at });
-  }
-  return merges;
+  return readEach(ctx, node, path, `${what} \`merges\``, (site) => {
+    const at = readAs(site.ctx, site.node, 'a `merges` entry', RANGE);
+    return at === null ? null : { ...nodeAt(site.ctx, site.path, site.node.span), at };
+  });
 }
 
 function readFormulaRanges(ctx: Ctx, node: Node, path: Path): FormulaRange[] {
-  const ranges: FormulaRange[] = [];
-  for (const item of itemsOf(ctx, node, path, '`formulas`')) {
-    const range = readFormulaRange(item);
-    if (range !== null) ranges.push(range);
-  }
-  return ranges;
+  return readEach(ctx, node, path, '`formulas`', readFormulaRange);
 }
 
 function readFormulaRange(site: Site): FormulaRange | null {
   const what = 'a `formulas` entry';
-  const opened = openMap(site.ctx, site.node, site.path, what);
+  const opened = openEntries(site.ctx, site.node, site.path, what);
   if (opened === null) return null;
 
   const here = opened.ctx;
-  const entries = entriesOf(here, opened.node);
+  const { entries } = opened;
   for (const entry of entries) {
     if (!MODELED_KEYS.formulaRange.has(keyOf(entry))) {
       rejectUnknownKey(here, entry, what, MODELED_KEYS.formulaRange);
