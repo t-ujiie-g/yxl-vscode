@@ -7,6 +7,8 @@
   "type": "module",
   "dependencies": {
     "@yxl-vscode/cst": "workspace:*",
+    "@yxl-vscode/loader": "workspace:*",
+    "@yxl-vscode/spec": "workspace:*",
     "yaml": "^2.9.0"
   }
 }

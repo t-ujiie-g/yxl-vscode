@@ -22,10 +22,20 @@ export type FilePath = Brand<string, 'FilePath'>;
  * The identity of one AST node within a session.
  *
  * Derived from the node's path when a spec loads and never written to a spec
- * (ADR-015), which is why this package parses no `NodeId`: there is no text to
- * read one from.
+ * (ADR-015).
  */
 export type NodeId = Brand<string, 'NodeId'>;
+
+/**
+ * Name a node.
+ *
+ * Total where the rest of this package is partial: an id is derived from text
+ * the caller has already made unique, never read from a spec, so there is
+ * nothing here to refuse.
+ */
+export function nodeId(text: string): NodeId {
+  return text as NodeId;
+}
 
 /**
  * Read a sheet name.

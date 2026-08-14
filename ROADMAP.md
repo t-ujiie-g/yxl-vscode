@@ -420,13 +420,25 @@ grid must understand to be drawn at all.
       editor reads — the line ADR-011 draws between edited and merely carried —
       and `Sheet.keyOrder` keeps the written key order, which is what decides
       whether a `cells:` entry or a `data:` block wins (see §11).
-- [ ] `loader`: CST → SpecDoc for that subset, with spans carried onto every node
+- [x] `loader`: CST → SpecDoc for that subset, with spans carried onto every node
+      **Shipped.** Reads and reports rather than stopping — a spec is wrong most
+      of the time it is being edited, and a reader that gave up at the first
+      half-typed key would blank the grid on every keystroke. Every one of yxl's
+      example specs loads with no diagnostic but the one saying an `$include` is
+      not expanded yet, which is the strongest check available on whether the
+      schema was read correctly (see §11).
 - [ ] `$include` expansion through an injected reader (the core stays I/O-free —
       yxl ADR-014 has already solved this shape; copy it)
-- [ ] Verbatim preservation + `opaque` marking for every *other* valid construct
+- [x] Verbatim preservation + `opaque` marking for every *other* valid construct
       (tables, charts, images, pivots, validations, conditional formats, shapes,
       sparklines, controls, slicers, protection, print setup, properties)
       (ADR-011)
+      **Shipped** with the loader, since it is the same walk: a document or sheet
+      key this editor does not model becomes an `Opaque` node carrying its key
+      and the span of its whole entry. Preservation itself needs no code —
+      ADR-017 writes text edits, so a region nothing edited is untouched by
+      construction — and the test that *proves* it belongs to Phase 6, where
+      there is finally a writer to point at it.
 - [ ] `NodeId` derivation and the session identity map (ADR-015)
 - [ ] Tier 3 differential harness stood up and green (ADR-012)
 
@@ -479,6 +491,10 @@ the inverse is unique, so no dialog is needed yet.
       and the optional `reason:`
 - [ ] Everything not `direct` is visibly, explainedly read-only — the editor is
       honest about what it cannot yet do
+- [ ] Prove ADR-011's preservation half: load a spec that uses opaque constructs,
+      write an edit through `patch`, and assert every opaque region came back
+      byte for byte. Owed from Phase 2, which could mark the constructs but had
+      no writer to test them against.
 - [ ] Tier 4 end-to-end green
 
 ### Phase 7 — `mediated` write-back
@@ -1066,6 +1082,41 @@ this at a phase boundary rather than at the end.
   constructed yet (its derivation is its own item), and the corpus test that
   would check these key sets against real specs waits for the loader — writing
   a walker in the test to get it sooner would be writing the loader twice.
+
+### 2026-08-15 — Phase 2: the loader, and what the corpus said about it
+- `loader` reads a parsed file into a `SpecDoc`: sheets, cells, filled formula
+  ranges, data blocks, bands, merges, `defs`, `params`, and an `Opaque` node for
+  every document or sheet key this editor does not model. 115 new tests, 396 in
+  total.
+- **The corpus is the real test.** Every one of yxl's example specs loads with no
+  diagnostic other than `loader.include-not-expanded`, over specs upstream
+  compiles on every commit. Any other code would mean a key, a value form, or a
+  vocabulary was misread — which is a sharper instrument than any unit test here,
+  and it is what stands in for Tier 3 until the oracle is built. A second
+  assertion checks the corpus actually exercises each construct, so the first
+  cannot pass on a loader that reads nothing.
+- **A reader reports and carries on.** A spec is wrong most of the time it is
+  being edited; a loader that stopped at the first half-typed key would blank the
+  grid on every keystroke. So a bad address costs one cell, not the sheet, and a
+  document always comes back when the root is a mapping.
+- The line ADR-011 draws turned out to be sharper than "unknown keys are
+  carried": a key at the **document or sheet** level is a construct we have not
+  modeled yet, so it becomes `Opaque`; a key inside a **cell, style, band, or
+  data block** is a mistake, because those are modeled completely, so it is a
+  diagnostic — with the expected keys listed from `MODELED_KEYS`, so what a
+  reader accepts and what it says it accepts cannot drift.
+- **`Style` stopped being a node.** A definition's entry and the style it binds
+  share a path, so both deriving an id from it collided. A style is a value now,
+  and the node is whatever holds it — a definition, a cell, a band — which is
+  also what an edit addresses. Finding this is why the AST and the loader were
+  worth doing in that order.
+- An `$include` is reported where it stands rather than read as the construct it
+  replaced, so `modular.yxl.yaml` says one clear thing instead of a dozen about
+  missing keys. The next item replaces the diagnostic with expansion.
+- Biome's `noTemplateCurlyInString` is **off**: `${...}` in a string is a yxl
+  parameter placeholder in this codebase — spec data, in the loader and in its
+  tests — and the rule fires on every one of them. Twelve suppression comments
+  would have been the alternative.
 
 ### 2026-08-14 — `overrides:` requested upstream
 - Filed [yxl#66](https://github.com/t-ujiie-g/yxl/issues/66) for §8 Q9 / ADR-007.
