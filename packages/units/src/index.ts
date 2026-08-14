@@ -8,6 +8,7 @@ export {
   filePath,
   formulaName,
   type NodeId,
+  nodeId,
   type ParamName,
   paramName,
   type SheetName,

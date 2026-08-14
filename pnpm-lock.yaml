@@ -43,7 +43,20 @@ importers:
 
   packages/intent: {}
 
-  packages/loader: {}
+  packages/loader:
+    dependencies:
+      '@yxl-vscode/cst':
+        specifier: workspace:*
+        version: link:../cst
+      '@yxl-vscode/diag':
+        specifier: workspace:*
+        version: link:../diag
+      '@yxl-vscode/spec':
+        specifier: workspace:*
+        version: link:../spec
+      '@yxl-vscode/units':
+        specifier: workspace:*
+        version: link:../units
 
   packages/normalize: {}
 
@@ -69,6 +82,12 @@ importers:
       '@yxl-vscode/cst':
         specifier: workspace:*
         version: link:../packages/cst
+      '@yxl-vscode/loader':
+        specifier: workspace:*
+        version: link:../packages/loader
+      '@yxl-vscode/spec':
+        specifier: workspace:*
+        version: link:../packages/spec
       yaml:
         specifier: ^2.9.0
         version: 2.9.0

@@ -1,5 +1,5 @@
 import type { Color, StyleName } from '@yxl-vscode/units';
-import type { SpecNode, Templated } from './node';
+import type { Templated } from './node';
 
 /** The line styles a border edge may take. */
 export const BORDER_STYLES = [
@@ -38,8 +38,11 @@ export type StyleUse =
  * `null` throughout means the key was absent, which is not the same as a key
  * that turns something off: an absent `font.bold` inherits, and `bold: false`
  * overrides an inherited bold. What each key means is `docs/spec.md` §6.
+ *
+ * A style is a value rather than a node: the node is whatever holds it — a
+ * definition, a cell, a band — which is also what an edit addresses.
  */
-export interface Style extends SpecNode {
+export interface Style {
   readonly extends: Templated<StyleName> | null;
   readonly font: Font | null;
   readonly fill: Templated<Color> | null;

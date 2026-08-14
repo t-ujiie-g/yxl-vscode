@@ -44,10 +44,7 @@ export interface Defs {
   readonly formulas: readonly FormulaDef[];
 }
 
-/**
- * One `defs.styles` entry. The span covers the whole entry, key included, while
- * `style.span` covers only what the name is bound to.
- */
+/** One `defs.styles` entry; the span covers the whole entry, key included. */
 export interface StyleDef extends SpecNode {
   readonly name: StyleName;
   readonly style: Style;
