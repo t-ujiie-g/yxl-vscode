@@ -306,13 +306,16 @@ how it was produced. (ADR-009)
   block scalars, CRLF, BOM, tabs in strings). Then: apply one patch, and assert
   the diff touches only the intended lines. This tier is what protects the
   promise in §1; it runs on every commit.
-- **Tier 3 — differential conformance against `yxl` itself.** The MoonBit core
-  compiles to JavaScript (measured — ADR-012), so the real loader can run in-
-  process as a **test-only oracle**. For every spec in `examples/`, assert the
-  TypeScript model agrees with the MoonBit model, and that accept/reject verdicts
-  agree on a corpus of deliberately invalid specs. This is the direct answer to
-  "we now maintain a second implementation of the schema"; without it, that risk
-  is unbounded, and with it, drift becomes a red build.
+- **Tier 3 — differential conformance against `yxl` itself.** The pinned
+  compiler, run as a **test-only oracle** (ADR-012, mechanism revised by
+  ADR-018). Three assertions, on every commit: every spec in `examples/` builds
+  *and* reads clean; every spec **this editor refuses, the compiler refuses too**
+  — we are never the stricter of the two; and a listed corpus of specs the
+  compiler refuses and we deliberately carry, so the gap ADR-011 opens is
+  measured rather than claimed. This is the direct answer to "we now maintain a
+  second implementation of the schema"; without it that risk is unbounded, and
+  with it, drift becomes a red build. What it does **not** yet compare is the two
+  *models*, structurally — ADR-018 says why, and what it would take.
 - **Tier 4 — end to end.** Open a real spec in the extension, perform a scripted
   edit, run the **shipped `yxl` binary** over the result, and assert the workbook
   it produces holds what the edit claimed. Nothing else proves the loop closes.
@@ -459,7 +462,13 @@ grid must understand to be drawn at all.
       the node, derived on every read and written to nothing. **The session
       identity map moved to Phase 4**, deliberately — see there for why, and §11
       for the characterization test that pins what it will change.
-- [ ] Tier 3 differential harness stood up and green (ADR-012)
+- [x] Tier 3 differential harness stood up and green (ADR-012)
+      **Shipped**, with its mechanism revised — **ADR-018**. The JS target emits
+      a program with no exported API, so the oracle is the pinned *release*, run
+      as a subprocess; CI takes it from the release rather than building it, and
+      needs no MoonBit toolchain. Conformance is one-directional plus a list:
+      anything this editor refuses, the compiler refuses too, and the specs it
+      refuses that we carry are enumerated so ADR-011's gap is measured.
 
 ### Phase 3 — L2/L3: compile and provenance
 - [ ] `compile`: SpecDoc → CompiledGrid, deterministic, no I/O
@@ -867,6 +876,44 @@ cannot express, so both are refused with a diagnostic rather than attempted.
 `set` works inside flow collections, which is the case that actually comes up.
 Lift this when a phase needs it, not before.
 
+### ADR-018 — The oracle is the compiler's CLI, and conformance is one-directional
+**Accepted.** Revises **how** ADR-012 is implemented; ADR-012's decision —
+differential conformance against the MoonBit core, in tests only — stands.
+
+Two things came out of building it.
+
+*The JS target has no library surface.* `moon build --target js` emits a
+**program**: `main.js` runs `main()` and exits, and the `main.d.ts` beside it
+declares nothing. ADR-002 measured that the whole pipeline *runs* on the JS
+target, which is true and still useful, but "the real loader runs in-process"
+needs an exported API that does not exist. Adding one is an upstream change this
+project does not need, because the compiler already ships a **released binary
+per platform** and `yxl build --check` is the validator of record (ADR-011). So
+the oracle is the pinned release, run as a subprocess, and CI takes it from the
+release rather than building it — no MoonBit toolchain in this repo's CI, and
+the thing being asked is the artifact users actually run.
+
+*"The two agree" cannot mean "the same verdict".* ADR-011 has this editor
+validate only what projection requires, so the compiler will always refuse specs
+we happily read. Conformance is therefore stated in one direction plus a list:
+
+- **Anything this editor refuses, the compiler refuses too.** Being the stricter
+  of the two is the failure a user feels — an editor that will not open a file
+  that builds — and it is exactly what a second implementation of a schema
+  produces when it drifts.
+- **The other direction is enumerated, not asserted equal.** A corpus of specs
+  the compiler refuses and we deliberately carry (an undefined style name, a
+  sheet name Excel would refuse, an unknown top-level key) pins the gap ADR-011
+  opens, so it is measured rather than claimed, and so that closing part of it
+  later is a visible change.
+
+*What this does not cover:* the two **models**, compared structurally. Nothing
+here proves that a cell we read as the number `7` is the number `7` to yxl —
+only that we agree about which files are specs. Closing that would take a
+machine-readable model dump from the compiler (an upstream ask) or a comparison
+through `yxl extract`'s output (lossy, §22). Neither is worth building until the
+two disagree in a way a verdict cannot catch; §9 R1 carries the residue.
+
 ## 8. Open questions
 
 - **Q1 — `cells:` A1 keys and row insertion.** Inserting a row rewrites every
@@ -952,6 +999,14 @@ Lift this when a phase needs it, not before.
   ADR-011 (bounded surface), ADR-012 (measured, on every commit), and pinning
   (§8 Q6). Watch: if Tier 3 needs manual repair more than occasionally, revisit
   ADR-002.
+
+  *Partly unmitigated, as of ADR-018.* Tier 3 compares **verdicts**, not models:
+  it catches a spec we read that the compiler will not build, and it does not
+  catch reading a value differently from the way the compiler reads it — a
+  quoted `"007"` becoming the number seven would pass every test here. Nothing
+  cheap closes that today, so the honest statement is that the largest risk is
+  bounded on one side and watched on the other. Reach for a model dump upstream
+  the first time a defect of that shape appears.
 - **R2 — CST write-back is harder than it looks.** Comment attachment, block
   scalars, flow collections, anchors. The library itself documents instability
   around trailing comments. Mitigated by putting it in Phase 1 with a byte-
@@ -1214,6 +1269,34 @@ this at a phase boundary rather than at the end.
   for upstream as [yxl#68](https://github.com/t-ujiie-g/yxl/issues/68) — §23 is
   the only section of the reference with no worked example behind it, which
   means its compile path is not exercised there either.
+
+### 2026-08-15 — Phase 2 complete: the oracle, and what it can honestly claim
+- Tier 3 stands up and is green: 29 conformance assertions over the pinned
+  compiler, wired into CI. **Phase 2 is complete** — L1 reads every construct
+  the grid will need, from one file or from several.
+- **ADR-018**, and it came from building rather than from planning. Two findings:
+  1. **The JS target has no library surface.** `moon build --target js` emits a
+     program — `main.js` runs `main()` and exits, and the `main.d.ts` beside it
+     declares nothing. ADR-002 measured that the pipeline *runs* on JS, which is
+     true; "the loader runs in-process" needed an exported API that does not
+     exist. The compiler ships a released binary per platform, so the oracle is
+     that, run as a subprocess. CI downloads it (checksum verified) instead of
+     installing a MoonBit toolchain, which is both cheaper and closer to what a
+     user actually runs.
+  2. **"The two agree" cannot mean "the same verdict"**, because ADR-011 has us
+     validate only what projection requires. So conformance is one-directional —
+     *anything this editor refuses, the compiler refuses too* — plus a listed
+     corpus of the specs it refuses and we deliberately carry. Being the
+     stricter of the two is the failure a user feels; the other direction is
+     design, and now it is enumerated rather than asserted.
+- **What Tier 3 does not catch, stated in §9 R1 rather than glossed:** it
+  compares verdicts, not models. A quoted `"007"` read as the number seven would
+  pass every test here. The fix — a machine-readable model dump from the
+  compiler — is an upstream ask worth making the first time a defect of that
+  shape appears, and not before.
+- The oracle's version is asserted equal to the pin rather than skipped when
+  absent. The schema moves until yxl's v1.0, so an answer from the wrong build
+  says nothing about this code, and a missing build says nothing at all.
 
 ### 2026-08-15 — Phase 2: `NodeId` derivation, and the map that did not get built
 - Derivation was already in: an id is the file plus the path that reaches the

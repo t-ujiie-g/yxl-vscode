@@ -1,0 +1,4 @@
+sheets:
+  - name: Sales
+    cells:
+      A1: { value: 1, style: { fill: yellow } }

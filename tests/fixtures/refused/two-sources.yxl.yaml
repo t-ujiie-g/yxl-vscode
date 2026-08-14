@@ -1,0 +1,6 @@
+sheets:
+  - name: Sales
+    data:
+      - at: A1
+        values: [[1]]
+        csv: rows.csv

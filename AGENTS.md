@@ -136,7 +136,7 @@ pnpm build            # the extension actually bundles
 | Format and apply safe fixes | `pnpm format` |
 | Layer check alone | `node scripts/check-layers.mjs` |
 | Build | `pnpm build` |
-| Build the conformance oracle | `cd ../yxl && moon build --target js` |
+| Get the conformance oracle | install the **pinned** `yxl` release, or point `YXL_BIN` at it (`ROADMAP.md` ADR-018) |
 
 Running and packaging the extension arrive with the extension itself
 (`ROADMAP.md` §6 Phase 4); there is nothing to run before then.

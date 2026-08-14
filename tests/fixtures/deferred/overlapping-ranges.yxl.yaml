@@ -1,0 +1,9 @@
+sheets:
+  - name: Sales
+    cells:
+      A1: 1
+    formulas:
+      - at: D2:D9
+        formula: "B2*C2"
+      - at: D5:D12
+        formula: "B5*C5"
