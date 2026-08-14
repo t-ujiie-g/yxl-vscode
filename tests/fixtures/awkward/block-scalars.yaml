@@ -1,0 +1,14 @@
+notes:
+  literal: |
+    line one
+    line two
+
+    line four after a blank
+  folded: >
+    this is one long line
+    written across several
+  keep: |+
+    trailing blank kept
+
+  strip: |-
+    no trailing newline

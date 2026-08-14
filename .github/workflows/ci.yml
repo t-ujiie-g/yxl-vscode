@@ -5,18 +5,38 @@ on:
     branches: [main]
   pull_request:
 
+defaults:
+  run:
+    working-directory: yxl-vscode
+
 jobs:
   check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          path: yxl-vscode
 
+      # The corpus tiers run against yxl's real example specs, and the Tier 3
+      # oracle is built from this checkout too (ROADMAP §5). Sibling layout,
+      # matching what a contributor has locally.
+      - uses: actions/checkout@v5
+        with:
+          repository: t-ujiie-g/yxl
+          path: yxl
+
+      # `defaults.run.working-directory` governs `run:` steps only, so an action
+      # step still resolves paths from the workspace root — which holds the two
+      # checkouts and no manifest of its own.
       - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: yxl-vscode/package.json
 
       - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: pnpm
+          cache-dependency-path: yxl-vscode/pnpm-lock.yaml
 
       - run: pnpm install --frozen-lockfile
 

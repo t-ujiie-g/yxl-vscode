@@ -1,0 +1,12 @@
+{
+  "name": "@yxl-vscode/tests",
+  "version": "0.0.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "description": "The corpus harnesses of ROADMAP §5 — no product code, only the tiers that need real files.",
+  "type": "module",
+  "dependencies": {
+    "@yxl-vscode/cst": "workspace:*",
+    "yaml": "^2.9.0"
+  }
+}

@@ -1,0 +1,18 @@
+# A leading comment, before anything else.
+
+# A second block, after a blank line.
+params:
+  # A comment indented with the key it describes.
+  region: APAC   # and one trailing the value
+
+  quarter: Q3
+
+# A comment between two top-level keys.
+
+sheets:
+  - name: Sales   # trailing a sequence item
+    # a comment as the first thing inside a mapping
+    cells:
+      A1: Revenue
+
+# A comment at the very end, with no newline after it

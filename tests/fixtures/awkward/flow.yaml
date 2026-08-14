@@ -1,0 +1,10 @@
+defs:
+  styles:
+    header: { bold: true, size: 12 }
+    total:  { extends: header, fill: "1F3864" }
+    empty:  {}
+sheets:
+  - name: Sales
+    merges: [A1:B1, C1:D1]
+    nothing: []
+    nested: { a: [1, 2, { b: 3 }] }
