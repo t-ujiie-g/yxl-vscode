@@ -70,10 +70,17 @@ is one more than we want.
   `ROADMAP.md §4.2`: `diag`, `units`, `cst`, `spec`, `loader`, `compile`,
   `intent`, `normalize`, `verify`, `patch`, `evaluate`, `webview`, `extension`.
 - **Dependencies point downward.** A lower package never imports a higher one.
-  This is checked in CI, not merely intended.
+  The order is declared once in `layers.json` and enforced by
+  `scripts/check-layers.mjs`, which runs as part of `pnpm lint`. Adding a
+  package means adding it to `layers.json`, in its right position — the checker
+  refuses a package it does not know, in both directions.
 - **The core is I/O-free and UI-free** (ADR-004). Only `extension` may import
-  `vscode` or touch the filesystem; only `webview` may touch the DOM. Everything
-  else takes its inputs as values and returns values. This is what makes the core
+  `vscode` or touch the filesystem; only `webview` may touch the DOM. Two of
+  those are enforced by the type checker rather than by the linter — node types
+  are out of scope everywhere, and the DOM lib is configured only in
+  `packages/webview/tsconfig.json` — so reaching for `document` or `process` in
+  a core package is a compile error. Everything else takes its inputs as values
+  and returns values. This is what makes the core
   testable and Phase 11 (Tauri) a packaging change rather than a rewrite.
 - TypeScript **strict** everywhere. `any` needs a comment saying why, and that
   comment is one of the few that earns its place (§8.6).
@@ -125,11 +132,14 @@ pnpm build            # the extension actually bundles
 | Test | `pnpm test` |
 | Single test file | `pnpm test <path>` |
 | Watch tests | `pnpm test --watch` |
-| Lint + format | `pnpm lint` / `pnpm format` |
-| Build the extension | `pnpm build` |
-| Run the extension | VS Code "Run Extension" launch config (F5) |
-| Package a `.vsix` | `pnpm package` |
+| Lint (includes the layer check) | `pnpm lint` |
+| Format and apply safe fixes | `pnpm format` |
+| Layer check alone | `node scripts/check-layers.mjs` |
+| Build | `pnpm build` |
 | Build the conformance oracle | `cd ../yxl && moon build --target js` |
+
+Running and packaging the extension arrive with the extension itself
+(`ROADMAP.md` §6 Phase 4); there is nothing to run before then.
 
 ## 6. Testing conventions
 

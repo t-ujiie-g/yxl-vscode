@@ -1,0 +1,11 @@
+{
+  "name": "@yxl-vscode/intent",
+  "version": "0.0.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "description": "Edit intent to candidate resolutions to a patch. Holds the resolution table.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "name": "@yxl-vscode/normalize",
+  "version": "0.0.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "description": "The style normalizer: reference, extend, or define — in that order of preference.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}

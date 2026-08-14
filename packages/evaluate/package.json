@@ -1,0 +1,11 @@
+{
+  "name": "@yxl-vscode/evaluate",
+  "version": "0.0.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "description": "Formula evaluation behind a seam. Display only, never written back.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}

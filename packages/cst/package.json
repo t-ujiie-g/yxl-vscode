@@ -1,0 +1,11 @@
+{
+  "name": "@yxl-vscode/cst",
+  "version": "0.0.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "description": "The YAML seam: source to a span-carrying tree, and an op list applied as a minimal byte patch.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}

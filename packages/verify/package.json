@@ -1,0 +1,11 @@
+{
+  "name": "@yxl-vscode/verify",
+  "version": "0.0.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "description": "The double-compile diff gate that every patch passes.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}

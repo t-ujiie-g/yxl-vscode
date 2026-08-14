@@ -1,0 +1,21 @@
+{
+  "order": [
+    "diag",
+    "units",
+    "cst",
+    "spec",
+    "loader",
+    "compile",
+    "normalize",
+    "patch",
+    "verify",
+    "evaluate",
+    "intent",
+    "webview",
+    "extension"
+  ],
+  "hosts": {
+    "vscode": "extension",
+    "node": "extension"
+  }
+}
