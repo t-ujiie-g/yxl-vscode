@@ -24,7 +24,8 @@ import {
   valueName,
 } from '@yxl-vscode/units';
 import { CODE, type Code } from './codes';
-import { type Ctx, expectText, reject } from './read';
+import { type Ctx, reject } from './ctx';
+import { expectText } from './read';
 
 /**
  * One of the vocabularies a spec's text is read into: how to read it, what to

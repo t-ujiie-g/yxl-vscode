@@ -99,6 +99,8 @@ describe('a band', () => {
   });
 
   it('is identified by its position in the sequence', () => {
-    expect(columns('      - at: B\n      - at: D\n')[1]?.id).toBe('["sheets",0,"columns",1]');
+    expect(columns('      - at: B\n      - at: D\n')[1]?.id).toBe(
+      '["spec.yxl.yaml","sheets",0,"columns",1]',
+    );
   });
 });

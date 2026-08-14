@@ -3,8 +3,9 @@ import { type Diagnostic, error, span } from '@yxl-vscode/diag';
 import type { Defs, Opaque, Param, Sheet, SpecDoc } from '@yxl-vscode/spec';
 import { filePath } from '@yxl-vscode/units';
 import { CODE } from './codes';
+import { type Ctx, type IncludeReader, keyOf, nodeAt } from './ctx';
 import { NO_DEFS, readDefs, readParams } from './defs';
-import { type Ctx, entriesOf, expectMap, keyOf, nodeAt } from './read';
+import { entriesOf, openMap } from './read';
 import { readSheets } from './sheet';
 
 /**
@@ -22,10 +23,16 @@ export interface Loaded {
 /**
  * Read a parsed file into the AST.
  *
+ * `include` is how the core reaches the files an `$include` names without
+ * knowing what a file is (ADR-004). Leaving it out is a legitimate way to read
+ * one file alone — every include then reports that it was not expanded, rather
+ * than being read as the construct it stands in for.
+ *
  * The parser's own diagnostics are not repeated here — a caller that wants both
- * has both, and merging them would report a syntax error twice.
+ * has both, and merging them would report a syntax error twice. Diagnostics
+ * from a file this one *included* are here, since nobody else parsed it.
  */
-export function load(parsed: Parsed): Loaded {
+export function load(parsed: Parsed, include?: IncludeReader): Loaded {
   const file = filePath(parsed.file);
   if (file === null) {
     const at = { file: parsed.file, span: span(0, 0) };
@@ -33,7 +40,7 @@ export function load(parsed: Parsed): Loaded {
     return { doc: null, diagnostics: [unnamed] };
   }
 
-  const ctx: Ctx = { file, diagnostics: [] };
+  const ctx: Ctx = { file, diagnostics: [], include: include ?? null, chain: [file] };
   const doc = parsed.root === null ? null : readDocument(ctx, parsed);
   return { doc, diagnostics: ctx.diagnostics };
 }
@@ -41,31 +48,32 @@ export function load(parsed: Parsed): Loaded {
 function readDocument(ctx: Ctx, parsed: Parsed): SpecDoc | null {
   if (parsed.root === null) return null;
 
-  const map = expectMap(ctx, parsed.root, 'a spec');
-  if (map === null) return null;
+  const opened = openMap(ctx, parsed.root, [], 'a spec');
+  if (opened === null) return null;
+  const here = opened.ctx;
 
   let sheets: Sheet[] = [];
   let params: Param[] = [];
   let defs: Defs = NO_DEFS;
   const opaque: Opaque[] = [];
 
-  for (const entry of entriesOf(ctx, map)) {
+  for (const entry of entriesOf(here, opened.node)) {
     const key = keyOf(entry);
-    const at = [key];
+    const at = [...opened.path, key];
     switch (key) {
       case 'sheets':
-        sheets = readSheets(ctx, entry.value, at);
+        sheets = readSheets(here, entry.value, at);
         break;
       case 'params':
-        params = readParams(ctx, entry.value, at);
+        params = readParams(here, entry.value, at);
         break;
       case 'defs':
-        defs = readDefs(ctx, entry.value, at);
+        defs = readDefs(here, entry.value, at);
         break;
       default:
-        opaque.push({ ...nodeAt(ctx, at, entry.span), key });
+        opaque.push({ ...nodeAt(here, at, entry.span), key });
     }
   }
 
-  return { ...nodeAt(ctx, [], parsed.root.span), sheets, params, defs, opaque };
+  return { ...nodeAt(here, opened.path, opened.node.span), sheets, params, defs, opaque };
 }

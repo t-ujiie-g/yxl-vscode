@@ -32,6 +32,10 @@ export const CODE = {
   badPath: 'loader.bad-path',
   unknownSpelling: 'loader.unknown-spelling',
   includeNotExpanded: 'loader.include-not-expanded',
+  includeWithSiblings: 'loader.include-with-siblings',
+  includeUnreadable: 'loader.include-unreadable',
+  includeCycle: 'loader.include-cycle',
+  includeEmpty: 'loader.include-empty',
 } as const;
 
 export type Code = (typeof CODE)[keyof typeof CODE];

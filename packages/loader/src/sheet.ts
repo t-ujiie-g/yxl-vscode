@@ -13,17 +13,14 @@ import {
 import { readColumnBands, readRowBands } from './band';
 import { readCells, withoutLeadingEquals } from './cell';
 import { CODE } from './codes';
+import { type Ctx, keyOf, nodeAt, reject, type Site } from './ctx';
 import { readDataBlocks } from './data';
 import {
-  type Ctx,
   entriesOf,
-  expectMap,
-  expectSeq,
   expectText,
   findEntry,
-  keyOf,
-  nodeAt,
-  reject,
+  itemsOf,
+  openMap,
   rejectUnknownKey,
   scalarText,
 } from './read';
@@ -31,28 +28,27 @@ import { RANGE, readAs, SHEET_NAME } from './template';
 
 /** The workbook's `sheets:` sequence, in tab order. */
 export function readSheets(ctx: Ctx, node: Node, path: Path): Sheet[] {
-  const seq = expectSeq(ctx, node, '`sheets`');
-  if (seq === null) return [];
-
   const sheets: Sheet[] = [];
-  for (const [index, item] of seq.items.entries()) {
-    const sheet = readSheet(ctx, item, [...path, index]);
+  for (const item of itemsOf(ctx, node, path, '`sheets`')) {
+    const sheet = readSheet(item);
     if (sheet !== null) sheets.push(sheet);
   }
   return sheets;
 }
 
-function readSheet(ctx: Ctx, node: Node, path: Path): Sheet | null {
-  const map = expectMap(ctx, node, 'a sheet');
-  if (map === null) return null;
+function readSheet(site: Site): Sheet | null {
+  const opened = openMap(site.ctx, site.node, site.path, 'a sheet');
+  if (opened === null) return null;
 
-  const entries = entriesOf(ctx, map);
+  const here = opened.ctx;
+  const entries = entriesOf(here, opened.node);
+
   const named = findEntry(entries, 'name');
   if (named === undefined) {
-    reject(ctx, CODE.missingKey, 'a sheet needs a `name`', node.span);
+    reject(here, CODE.missingKey, 'a sheet needs a `name`', opened.node.span);
     return null;
   }
-  const name = readAs(ctx, named.value, 'a sheet `name`', SHEET_NAME);
+  const name = readAs(here, named.value, 'a sheet `name`', SHEET_NAME);
   if (name === null) return null;
 
   const what = `sheet \`${scalarText(named.value) ?? ''}\``;
@@ -66,35 +62,35 @@ function readSheet(ctx: Ctx, node: Node, path: Path): Sheet | null {
 
   for (const entry of entries) {
     const key = keyOf(entry);
-    const at = [...path, key];
+    const at = [...opened.path, key];
     switch (key) {
       case 'name':
         break;
       case 'cells':
-        cells = readCells(ctx, entry.value, at);
+        cells = readCells(here, entry.value, at);
         break;
       case 'formulas':
-        formulas = readFormulaRanges(ctx, entry.value, at);
+        formulas = readFormulaRanges(here, entry.value, at);
         break;
       case 'data':
-        data = readDataBlocks(ctx, entry.value, at);
+        data = readDataBlocks(here, entry.value, at);
         break;
       case 'columns':
-        columns = readColumnBands(ctx, entry.value, at);
+        columns = readColumnBands(here, entry.value, at);
         break;
       case 'rows':
-        rows = readRowBands(ctx, entry.value, at);
+        rows = readRowBands(here, entry.value, at);
         break;
       case 'merges':
-        merges = readMerges(ctx, entry.value, at, what);
+        merges = readMerges(here, entry.value, at, what);
         break;
       default:
-        opaque.push({ ...nodeAt(ctx, at, entry.span), key });
+        opaque.push({ ...nodeAt(here, at, entry.span), key });
     }
   }
 
   return {
-    ...nodeAt(ctx, path, node.span),
+    ...nodeAt(here, opened.path, opened.node.span),
     name,
     cells,
     formulas,
@@ -108,38 +104,33 @@ function readSheet(ctx: Ctx, node: Node, path: Path): Sheet | null {
 }
 
 function readMerges(ctx: Ctx, node: Node, path: Path, what: string): Merge[] {
-  const seq = expectSeq(ctx, node, `${what} \`merges\``);
-  if (seq === null) return [];
-
   const merges: Merge[] = [];
-  for (const [index, item] of seq.items.entries()) {
-    const at = readAs(ctx, item, 'a `merges` entry', RANGE);
-    if (at !== null) merges.push({ ...nodeAt(ctx, [...path, index], item.span), at });
+  for (const item of itemsOf(ctx, node, path, `${what} \`merges\``)) {
+    const at = readAs(item.ctx, item.node, 'a `merges` entry', RANGE);
+    if (at !== null) merges.push({ ...nodeAt(item.ctx, item.path, item.node.span), at });
   }
   return merges;
 }
 
 function readFormulaRanges(ctx: Ctx, node: Node, path: Path): FormulaRange[] {
-  const seq = expectSeq(ctx, node, '`formulas`');
-  if (seq === null) return [];
-
   const ranges: FormulaRange[] = [];
-  for (const [index, item] of seq.items.entries()) {
-    const range = readFormulaRange(ctx, item, [...path, index]);
+  for (const item of itemsOf(ctx, node, path, '`formulas`')) {
+    const range = readFormulaRange(item);
     if (range !== null) ranges.push(range);
   }
   return ranges;
 }
 
-function readFormulaRange(ctx: Ctx, node: Node, path: Path): FormulaRange | null {
+function readFormulaRange(site: Site): FormulaRange | null {
   const what = 'a `formulas` entry';
-  const map = expectMap(ctx, node, what);
-  if (map === null) return null;
+  const opened = openMap(site.ctx, site.node, site.path, what);
+  if (opened === null) return null;
 
-  const entries = entriesOf(ctx, map);
+  const here = opened.ctx;
+  const entries = entriesOf(here, opened.node);
   for (const entry of entries) {
     if (!MODELED_KEYS.formulaRange.has(keyOf(entry))) {
-      rejectUnknownKey(ctx, entry, what, MODELED_KEYS.formulaRange);
+      rejectUnknownKey(here, entry, what, MODELED_KEYS.formulaRange);
     }
   }
 
@@ -147,13 +138,14 @@ function readFormulaRange(ctx: Ctx, node: Node, path: Path): FormulaRange | null
   const written = findEntry(entries, 'formula');
   if (anchor === undefined || written === undefined) {
     const missing = anchor === undefined ? 'at' : 'formula';
-    reject(ctx, CODE.missingKey, `${what} needs a \`${missing}\``, node.span);
+    reject(here, CODE.missingKey, `${what} needs a \`${missing}\``, opened.node.span);
     return null;
   }
 
-  const at = readAs(ctx, anchor.value, `${what} \`at\``, RANGE);
-  const formula = expectText(ctx, written.value, `${what} \`formula\``);
+  const at = readAs(here, anchor.value, `${what} \`at\``, RANGE);
+  const formula = expectText(here, written.value, `${what} \`formula\``);
   if (at === null || formula === null) return null;
 
-  return { ...nodeAt(ctx, path, node.span), at, formula: withoutLeadingEquals(formula) };
+  const range = nodeAt(here, opened.path, opened.node.span);
+  return { ...range, at, formula: withoutLeadingEquals(formula) };
 }

@@ -7,18 +7,15 @@ import {
   type Templated,
 } from '@yxl-vscode/spec';
 import { CODE } from './codes';
+import { type Ctx, keyOf, nodeAt, reject, type Site } from './ctx';
 import {
-  type Ctx,
   entriesOf,
   expectBool,
-  expectMap,
   expectNumber,
-  expectSeq,
   expectText,
   findEntry,
-  keyOf,
-  nodeAt,
-  reject,
+  itemsOf,
+  openMap,
   rejectUnknownKey,
   scalarText,
 } from './read';
@@ -30,15 +27,20 @@ export function readColumnBands(ctx: Ctx, node: Node, path: Path): ColumnBand[] 
   const what = 'a `columns` entry';
   const bands: ColumnBand[] = [];
 
-  for (const [index, item] of itemsOf(ctx, node, '`columns`').entries()) {
-    const entries = openBand(ctx, item, what);
-    if (entries === null) continue;
+  for (const item of itemsOf(ctx, node, path, '`columns`')) {
+    const band = openBand(item, what);
+    if (band === null) continue;
 
-    const at = readSelector(ctx, entries, item, what, COLUMN);
+    const at = readSelector(band, what, COLUMN);
     if (at === null) continue;
 
-    const body = readBandBody(ctx, entries, what, 'width', MODELED_KEYS.columnBand);
-    bands.push({ ...nodeAt(ctx, [...path, index], item.span), at, width: body.size, ...body.rest });
+    const body = readBandBody(band, what, 'width', MODELED_KEYS.columnBand);
+    bands.push({
+      ...nodeAt(band.ctx, band.path, band.node.span),
+      at,
+      width: body.size,
+      ...body.rest,
+    });
   }
 
   return bands;
@@ -49,16 +51,16 @@ export function readRowBands(ctx: Ctx, node: Node, path: Path): RowBand[] {
   const what = 'a `rows` entry';
   const bands: RowBand[] = [];
 
-  for (const [index, item] of itemsOf(ctx, node, '`rows`').entries()) {
-    const entries = openBand(ctx, item, what);
-    if (entries === null) continue;
+  for (const item of itemsOf(ctx, node, path, '`rows`')) {
+    const band = openBand(item, what);
+    if (band === null) continue;
 
-    const at = readSelector(ctx, entries, item, what, ROW);
+    const at = readSelector(band, what, ROW);
     if (at === null) continue;
 
-    const body = readBandBody(ctx, entries, what, 'height', MODELED_KEYS.rowBand);
+    const body = readBandBody(band, what, 'height', MODELED_KEYS.rowBand);
     bands.push({
-      ...nodeAt(ctx, [...path, index], item.span),
+      ...nodeAt(band.ctx, band.path, band.node.span),
       at,
       height: body.size,
       ...body.rest,
@@ -68,13 +70,23 @@ export function readRowBands(ctx: Ctx, node: Node, path: Path): RowBand[] {
   return bands;
 }
 
-function itemsOf(ctx: Ctx, node: Node, what: string): readonly Node[] {
-  return expectSeq(ctx, node, what)?.items ?? [];
+interface Band {
+  readonly ctx: Ctx;
+  readonly node: Node;
+  readonly path: Path;
+  readonly entries: readonly Entry[];
 }
 
-function openBand(ctx: Ctx, node: Node, what: string): Entry[] | null {
-  const map = expectMap(ctx, node, what);
-  return map === null ? null : entriesOf(ctx, map);
+function openBand(site: Site, what: string): Band | null {
+  const opened = openMap(site.ctx, site.node, site.path, what);
+  if (opened === null) return null;
+
+  return {
+    ctx: opened.ctx,
+    node: opened.node,
+    path: opened.path,
+    entries: entriesOf(opened.ctx, opened.node),
+  };
 }
 
 interface BandBody {
@@ -92,8 +104,7 @@ interface BandBody {
  * apart from the key their size is written under.
  */
 function readBandBody(
-  ctx: Ctx,
-  entries: readonly Entry[],
+  band: Band,
   what: string,
   sizeKey: string,
   known: ReadonlySet<string>,
@@ -104,30 +115,30 @@ function readBandBody(
   let hidden: boolean | null = null;
   let group: number | null = null;
 
-  for (const entry of entries) {
+  for (const entry of band.entries) {
     const key = keyOf(entry);
     const at = `${what} \`${key}\``;
     if (key === sizeKey) {
-      size = expectNumber(ctx, entry.value, at);
+      size = expectNumber(band.ctx, entry.value, at);
       continue;
     }
     switch (key) {
       case 'at':
         break;
       case 'style':
-        style = readStyleUse(ctx, entry.value, at);
+        style = readStyleUse(band.ctx, entry.value, at);
         break;
       case 'format':
-        format = expectText(ctx, entry.value, at);
+        format = expectText(band.ctx, entry.value, at);
         break;
       case 'hidden':
-        hidden = expectBool(ctx, entry.value, at);
+        hidden = expectBool(band.ctx, entry.value, at);
         break;
       case 'group':
-        group = expectNumber(ctx, entry.value, at);
+        group = expectNumber(band.ctx, entry.value, at);
         break;
       default:
-        rejectUnknownKey(ctx, entry, what, known);
+        rejectUnknownKey(band.ctx, entry, what, known);
     }
   }
 
@@ -135,24 +146,18 @@ function readBandBody(
 }
 
 /** A band's `at`, which a row may write as a number. */
-function readSelector<T>(
-  ctx: Ctx,
-  entries: readonly Entry[],
-  node: Node,
-  what: string,
-  kind: Kind<T>,
-): Templated<T> | null {
-  const entry = findEntry(entries, 'at');
+function readSelector<T>(band: Band, what: string, kind: Kind<T>): Templated<T> | null {
+  const entry = findEntry(band.entries, 'at');
   if (entry === undefined) {
-    reject(ctx, CODE.missingKey, `${what} needs an \`at\``, node.span);
+    reject(band.ctx, CODE.missingKey, `${what} needs an \`at\``, band.node.span);
     return null;
   }
 
   const text = scalarText(entry.value);
   if (text === null) {
-    reject(ctx, CODE.notText, `${what} \`at\` must be text or a number`, entry.value.span);
+    reject(band.ctx, CODE.notText, `${what} \`at\` must be text or a number`, entry.value.span);
     return null;
   }
 
-  return readTextAs(ctx, text, entry.value.span, `${what} \`at\``, kind);
+  return readTextAs(band.ctx, text, entry.value.span, `${what} \`at\``, kind);
 }

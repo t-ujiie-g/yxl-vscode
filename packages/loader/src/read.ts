@@ -1,80 +1,84 @@
 import type { Entry, Mapping, Node, Path, Sequence } from '@yxl-vscode/cst';
-import { type Diagnostic, error, type Span } from '@yxl-vscode/diag';
-import { INCLUDE_KEY, type ScalarValue, type SpecNode } from '@yxl-vscode/spec';
-import type { FilePath } from '@yxl-vscode/units';
-import { CODE, type Code } from './codes';
-import { nodeIdAt } from './id';
+import type { ScalarValue } from '@yxl-vscode/spec';
+import { CODE } from './codes';
+import { type Ctx, keyOf, reject, type Site } from './ctx';
+import { follow } from './include';
+
+export { keyOf } from './ctx';
 
 /**
- * What every reader is given: the file it is reading, and somewhere to put what
- * it could not read.
+ * A mapping, wherever it turned out to be, or `null` with the reason reported.
  *
- * A reader reports and carries on. A spec being edited is wrong most of the
- * time — half a key is typed, a range is momentarily backwards — and a reader
- * that stopped at the first of those would blank the grid on every keystroke.
+ * Every construct opens through here or through `openSeq`, which is what makes
+ * `$include` work everywhere it is allowed to stand: what comes back carries
+ * the file and the path the reader must go on with, and they are not always the
+ * ones it asked about.
  */
-export interface Ctx {
-  readonly file: FilePath;
-  readonly diagnostics: Diagnostic[];
+export function openMap(ctx: Ctx, node: Node, path: Path, what: string): Site<Mapping> | null {
+  const here = follow(ctx, node, path);
+  if (here === null) return null;
+
+  if (here.node.kind !== 'map') {
+    reject(here.ctx, CODE.notAMapping, `${what} must be a mapping`, here.node.span);
+    return null;
+  }
+  return { ctx: here.ctx, node: here.node, path: here.path };
 }
 
-export function reject(ctx: Ctx, code: Code, message: string, at: Span): void {
-  ctx.diagnostics.push(error(code, message, { file: ctx.file, span: at }));
-}
+/** A sequence, on the same terms. */
+export function openSeq(ctx: Ctx, node: Node, path: Path, what: string): Site<Sequence> | null {
+  const here = follow(ctx, node, path);
+  if (here === null) return null;
 
-/** The identity, file, and span every node of the AST carries. */
-export function nodeAt(ctx: Ctx, path: Path, at: Span): SpecNode {
-  return { id: nodeIdAt(path), file: ctx.file, span: at };
+  if (here.node.kind !== 'seq') {
+    reject(here.ctx, CODE.notASequence, `${what} must be a sequence`, here.node.span);
+    return null;
+  }
+  return { ctx: here.ctx, node: here.node, path: here.path };
 }
 
 /**
- * A mapping, or `null` with the reason reported.
+ * Each item of a sequence, as a site of its own.
  *
- * An `$include` is a mapping standing where another node should be. Until it is
- * expanded, saying so is more use than reading it as the construct it replaced
- * and reporting everything that construct is missing.
+ * An item may be an `$include` in its own right — one sheet of a workbook kept
+ * in its own file — so following happens per item as well as for the sequence.
  */
-export function expectMap(ctx: Ctx, node: Node, what: string): Mapping | null {
-  if (isInclude(node)) {
-    reject(ctx, CODE.includeNotExpanded, `${what} is an \`${INCLUDE_KEY}\``, node.span);
-    return null;
-  }
-  if (node.kind !== 'map') {
-    reject(ctx, CODE.notAMapping, `${what} must be a mapping`, node.span);
-    return null;
-  }
-  return node;
-}
+export function itemsOf(ctx: Ctx, node: Node, path: Path, what: string): Site[] {
+  const opened = openSeq(ctx, node, path, what);
+  if (opened === null) return [];
 
-/** A sequence, or `null` with the reason reported. */
-export function expectSeq(ctx: Ctx, node: Node, what: string): Sequence | null {
-  if (isInclude(node)) {
-    reject(ctx, CODE.includeNotExpanded, `${what} is an \`${INCLUDE_KEY}\``, node.span);
-    return null;
-  }
-  if (node.kind !== 'seq') {
-    reject(ctx, CODE.notASequence, `${what} must be a sequence`, node.span);
-    return null;
-  }
-  return node;
+  return opened.node.items.map((item, index) => ({
+    ctx: opened.ctx,
+    node: item,
+    path: [...opened.path, index],
+  }));
 }
 
 /** Text, or `null` with the reason reported. A number is not text. */
 export function expectText(ctx: Ctx, node: Node, what: string): string | null {
-  if (node.kind === 'scalar' && typeof node.value === 'string') return node.value;
-  reject(ctx, CODE.notText, `${what} must be text`, node.span);
+  const here = follow(ctx, node, []);
+  if (here === null) return null;
+
+  if (here.node.kind === 'scalar' && typeof here.node.value === 'string') return here.node.value;
+  reject(here.ctx, CODE.notText, `${what} must be text`, here.node.span);
   return null;
 }
 
 export function expectBool(ctx: Ctx, node: Node, what: string): boolean | null {
-  if (node.kind === 'scalar' && typeof node.value === 'boolean') return node.value;
-  reject(ctx, CODE.notABoolean, `${what} must be true or false`, node.span);
+  const here = follow(ctx, node, []);
+  if (here === null) return null;
+
+  if (here.node.kind === 'scalar' && typeof here.node.value === 'boolean') return here.node.value;
+  reject(here.ctx, CODE.notABoolean, `${what} must be true or false`, here.node.span);
   return null;
 }
 
 export function expectNumber(ctx: Ctx, node: Node, what: string): number | null {
-  if (node.kind === 'scalar' && typeof node.value === 'number') return node.value;
-  reject(ctx, CODE.notANumber, `${what} must be a number`, node.span);
+  const here = follow(ctx, node, []);
+  if (here === null) return null;
+
+  if (here.node.kind === 'scalar' && typeof here.node.value === 'number') return here.node.value;
+  reject(here.ctx, CODE.notANumber, `${what} must be a number`, here.node.span);
   return null;
 }
 
@@ -86,8 +90,30 @@ export function expectNumber(ctx: Ctx, node: Node, what: string): number | null 
  * one place a `null` means something, and they read their fields themselves.
  */
 export function expectValue(ctx: Ctx, node: Node, what: string): ScalarValue | null {
-  if (node.kind === 'scalar' && node.value !== null) return node.value;
-  reject(ctx, CODE.notAValue, `${what} must be text, a number, or a boolean`, node.span);
+  const here = follow(ctx, node, []);
+  if (here === null) return null;
+
+  if (here.node.kind === 'scalar' && here.node.value !== null) return here.node.value;
+  const message = `${what} must be text, a number, or a boolean`;
+  reject(here.ctx, CODE.notAValue, message, here.node.span);
+  return null;
+}
+
+/** One spelling out of a closed vocabulary, or `null` with the reason reported. */
+export function expectSpelling<T extends string>(
+  ctx: Ctx,
+  node: Node,
+  what: string,
+  vocabulary: readonly T[],
+): T | null {
+  const text = expectText(ctx, node, what);
+  if (text === null) return null;
+
+  const spelling = vocabulary.find((known) => known === text);
+  if (spelling !== undefined) return spelling;
+
+  const message = `${what} must be one of ${vocabulary.join(', ')}: \`${text}\``;
+  reject(ctx, CODE.unknownSpelling, message, node.span);
   return null;
 }
 
@@ -131,28 +157,6 @@ export function rejectUnknownKey(
   reject(ctx, CODE.unknownKey, message, entry.span);
 }
 
-/** One spelling out of a closed vocabulary, or `null` with the reason reported. */
-export function expectSpelling<T extends string>(
-  ctx: Ctx,
-  node: Node,
-  what: string,
-  vocabulary: readonly T[],
-): T | null {
-  const text = expectText(ctx, node, what);
-  if (text === null) return null;
-
-  const spelling = vocabulary.find((known) => known === text);
-  if (spelling !== undefined) return spelling;
-
-  const message = `${what} must be one of ${vocabulary.join(', ')}: \`${text}\``;
-  reject(ctx, CODE.unknownSpelling, message, node.span);
-  return null;
-}
-
-export function keyOf(entry: Entry): string {
-  return typeof entry.key.value === 'string' ? entry.key.value : String(entry.key.value);
-}
-
 export function findEntry(entries: readonly Entry[], key: string): Entry | undefined {
   return entries.find((entry) => keyOf(entry) === key);
 }
@@ -166,8 +170,4 @@ export function scalarText(node: Node): string | null {
   if (typeof node.value === 'string') return node.value;
   if (typeof node.value === 'number') return String(node.value);
   return null;
-}
-
-function isInclude(node: Node): boolean {
-  return node.kind === 'map' && node.entries.some((entry) => keyOf(entry) === INCLUDE_KEY);
 }

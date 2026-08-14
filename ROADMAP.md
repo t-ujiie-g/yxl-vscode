@@ -427,8 +427,13 @@ grid must understand to be drawn at all.
       example specs loads with no diagnostic but the one saying an `$include` is
       not expanded yet, which is the strongest check available on whether the
       schema was read correctly (see §11).
-- [ ] `$include` expansion through an injected reader (the core stays I/O-free —
+- [x] `$include` expansion through an injected reader (the core stays I/O-free —
       yxl ADR-014 has already solved this shape; copy it)
+      **Shipped**, and it changed the reader's shape rather than adding a pass:
+      a node is now read as a *site* — a node, the file it was written in, and
+      its path within that file — because an include makes both of those change
+      mid-walk. Ids carry the file for the same reason. The corpus test is the
+      payoff: every upstream spec now loads with **no diagnostics at all**.
 - [x] Verbatim preservation + `opaque` marking for every *other* valid construct
       (tables, charts, images, pivots, validations, conditional formats, shapes,
       sparklines, controls, slicers, protection, print setup, properties)
@@ -1113,6 +1118,31 @@ this at a phase boundary rather than at the end.
 - An `$include` is reported where it stands rather than read as the construct it
   replaced, so `modular.yxl.yaml` says one clear thing instead of a dozen about
   missing keys. The next item replaces the diagnostic with expansion.
+
+### 2026-08-15 — Phase 2: `$include`, and what a node's address really is
+- The loader follows an `$include` through an injected reader (ADR-004): the
+  core says *which* file it wants, and the shell decides what a path means and
+  whether it can be read. 17 new tests, 419 in total.
+- **It was not a pass over the tree, it was a change to what a reader is given.**
+  An include replaces its whole node, so the file *and* the path change in the
+  middle of a walk. A reader now works on a **site** — a node, the file it was
+  written in, and its path within that file — and every construct opens through
+  one of two functions, which is what makes includes work in all the places the
+  schema allows them without a case for each.
+- **A `NodeId` carries the file.** Without it, the first sheet of an included
+  file and of the file that included it are both `sheets/0`. The path restarts at
+  each included root for the same reason an edit does: a node from `theme.yaml`
+  is patched in `theme.yaml`, at its own path.
+- **The corpus test got its teeth.** With a filesystem reader supplied from
+  `tests/` — where I/O is allowed — every upstream spec now loads with **no
+  diagnostics at all**, `modular.yxl.yaml` included. Before this it was "none
+  except includes"; now there is no exception left to argue about.
+- Reading one file alone is still legitimate: with no reader, an include reports
+  that it was not expanded rather than being read as the construct it stands in
+  for.
+- A cycle names the whole loop (`a → b → a`), which is what makes the error
+  actionable. It is checked against the chain of files followed, so a file
+  included twice by different parents is fine and only a loop is not.
 - Biome's `noTemplateCurlyInString` is **off**: `${...}` in a string is a yxl
   parameter placeholder in this codebase — spec data, in the loader and in its
   tests — and the rule fires on every one of them. Twelve suppression comments

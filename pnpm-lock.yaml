@@ -88,6 +88,9 @@ importers:
       '@yxl-vscode/spec':
         specifier: workspace:*
         version: link:../packages/spec
+      '@yxl-vscode/units':
+        specifier: workspace:*
+        version: link:../packages/units
       yaml:
         specifier: ^2.9.0
         version: 2.9.0
