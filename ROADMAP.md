@@ -454,7 +454,11 @@ grid must understand to be drawn at all.
       could drift. What an override may *land on* is not checked here — it needs
       the whole workbook in view, so it belongs to `compile` (§4.6 and the
       four rules in ADR-007).
-- [ ] `NodeId` derivation and the session identity map (ADR-015)
+- [x] `NodeId` derivation (ADR-015)
+      **Shipped** with the loader: an id is the file plus the path that reaches
+      the node, derived on every read and written to nothing. **The session
+      identity map moved to Phase 4**, deliberately — see there for why, and §11
+      for the characterization test that pins what it will change.
 - [ ] Tier 3 differential harness stood up and green (ADR-012)
 
 ### Phase 3 — L2/L3: compile and provenance
@@ -485,6 +489,15 @@ value, and it carries none of the write-back risk.
       discovery and a clear message when it is missing
 - [ ] Live re-projection on text edit, debounced
 - [ ] `params` switcher, so one spec previews as several workbooks
+- [ ] **The session identity map** (ADR-015), moved here from Phase 2. A
+      `NodeId` is positional, so inserting an item into a sequence gives every
+      item after it a new one — and gives the old id to the item next door. That
+      costs nothing until something holds an id *across* a re-read, and the
+      first thing that does is this phase's UI, which is also where §8 Q3 asks
+      whether losing selection state on reload is acceptable at all. The two
+      questions are the same question, and deciding them together, with a real
+      consumer in view, beats deciding either blind. `id.test.ts` pins today's
+      behaviour, so the day this lands, that test is what changes.
 
 ### Phase 5 — Evaluated preview
 - [ ] `evaluate` seam: `CompiledGrid` → computed values, display only
@@ -871,6 +884,10 @@ Lift this when a phase needs it, not before.
 - **Q3 — External change detection.** The file will change under us — the CLI,
   an agent, a git checkout. Working assumption: discard the AST, re-derive, lose
   UI selection state. Confirm this is enough during Phase 4, when it first bites.
+
+  ADR-015's identity map is the same question asked from the other side, and it
+  was moved to Phase 4 to be answered with this one: if losing selection state
+  on a re-read is acceptable, most of what the map is for goes with it.
 - **Q4 — Where do new nodes go, across `$include`?** Provenance names the source
   file for existing nodes, but an addition has no file yet. Working assumption:
   the file backing the sheet being edited, shown in the resolution dialog so it
@@ -1193,8 +1210,31 @@ this at a phase boundary rather than at the end.
   `compile`'s, not a file reader's. Reading and validating are different jobs
   and this is where the line falls (ADR-011).
 - Not covered by the corpus: yxl's `examples/` has no spec using `overrides:`
-  yet, so this construct is held by unit tests alone until one appears. Worth
-  offering upstream — a cookbook entry for the feature would serve both projects.
+  yet, so this construct is held by unit tests alone until one appears. Asked
+  for upstream as [yxl#68](https://github.com/t-ujiie-g/yxl/issues/68) — §23 is
+  the only section of the reference with no worked example behind it, which
+  means its compile path is not exercised there either.
+
+### 2026-08-15 — Phase 2: `NodeId` derivation, and the map that did not get built
+- Derivation was already in: an id is the file plus the path that reaches the
+  node, derived on every read and written to nothing (ADR-015). What this change
+  adds is **three tests that say what identity currently is** — the same source
+  re-derives the same ids, a mapping key survives a sibling appearing before it,
+  and a sequence item does not.
+- **The session identity map moved to Phase 4**, and that is the substance of
+  this entry. A `NodeId` is positional, so inserting a band gives every band
+  after it a new id — and hands the old id to the band next door, which is the
+  sharper half of the problem. None of that costs anything until something holds
+  an id *across* a re-read, and the first thing that will is the Phase 4 UI.
+- It is also the same question as §8 Q3, which asks whether losing UI selection
+  state on an external re-read is acceptable at all — and which Phase 4 was
+  already going to answer. If the answer there is yes, most of what the map is
+  for goes with it. Building it now would mean choosing what makes two nodes
+  "the same" with no consumer to check the choice against; the alternative
+  design (ids from natural keys rather than indices) has the same problem and
+  would supersede an accepted ADR on a guess.
+- The characterization test is the hedge: it fails the day identity changes, so
+  the decision cannot be made silently.
 
 ### 2026-08-15 — `overrides:` shipped upstream; the pin moves to v0.3.4
 - [yxl#66](https://github.com/t-ujiie-g/yxl/issues/66) is **closed as completed**:
