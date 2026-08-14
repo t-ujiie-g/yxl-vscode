@@ -989,6 +989,42 @@ than widening it silently.
   action needed its manifest path given explicitly — the sort of thing that only
   shows up once the workflow is real.
 
+### 2026-08-15 — Refactoring pass (`AGENTS.md` §8)
+Walked the lenses in order over everything Phases 0–1 landed. Two of the
+findings were defects rather than untidiness, which is the argument for doing
+this at a phase boundary rather than at the end.
+
+- **A line inserted into a CRLF file was written with a bare `\n`.** Every later
+  diff would have reported the mixed endings as changes nobody made, and the
+  CRLF fixture did not catch it because the corpus only exercises `set`. Fixed
+  by taking the line ending from the file; regression test added.
+- **`renderScalar` had no direct tests at all** — it was exercised only through
+  `apply`. Now covered, and more usefully, the writer is asserted against the
+  *reader*: what `renderScalar` writes, `parse` reads back unchanged, over 24
+  values. These are two halves of one contract living in different files, and a
+  disagreement between them would silently change a value's type on the next
+  open. Writing that test is what showed the first version of the assertion was
+  too weak (it checked the plain resolver, which never sees a quoted scalar).
+- **Diagnostic codes are now named once** in `cst/codes.ts` rather than spelled
+  at each throw site, with the `cst.` prefix no longer built in two files.
+  `AGENTS.md` §8.1 names diagnostic codes as domain constants; tests assert
+  against the constants.
+- **Deleted every export with no caller**: three type guards, `contains`,
+  `warning`, `hasError`, `Position`, and `isPlainSafe`'s export. All were
+  plausible-looking API written ahead of a user. The house precedent is yxl's
+  own `resolve` package (its ADR-008), which was designed into the architecture
+  and never built — speculative structure is the thing this project should be
+  quickest to remove, and re-exporting later costs one line.
+- Split the line/offset arithmetic out of `apply` into `cst/lines.ts`, so
+  `apply` says only which edit an op becomes.
+- Moved the `flow` explanation onto the `Node` doc. It had been on `Mapping`
+  and not `Sequence`, which is the inconsistent-annotation failure §8.6 warns
+  about, for a concept both share.
+- **`README.md` said "there is no code yet"**, which stopped being true two
+  phases ago. Corrected — §1's rule is that a doc which lies is worse than a
+  missing one, and it applies to our own.
+- 191 → 242 tests. Typecheck, lint, layer check, and build clean.
+
 ### 2026-08-14 — `overrides:` requested upstream
 - Filed [yxl#66](https://github.com/t-ujiie-g/yxl/issues/66) for §8 Q9 / ADR-007.
 - Writing it up changed the request and **downgraded R7**. yxl can already

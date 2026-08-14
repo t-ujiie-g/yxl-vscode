@@ -28,15 +28,3 @@ export function error(
 ): Diagnostic {
   return { severity: 'error', code, message, file: where.file, span: where.span };
 }
-
-export function warning(
-  code: string,
-  message: string,
-  where: { file: string; span: Span },
-): Diagnostic {
-  return { severity: 'warning', code, message, file: where.file, span: where.span };
-}
-
-export function hasError(diagnostics: readonly Diagnostic[]): boolean {
-  return diagnostics.some((d) => d.severity === 'error');
-}

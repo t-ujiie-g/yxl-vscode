@@ -37,7 +37,7 @@ function renderNumber(value: number): string {
  * anything but the same text, writing it plain would change its type, so it has
  * to be quoted. That keeps this rule and `resolvePlain` from ever disagreeing.
  */
-export function isPlainSafe(text: string): boolean {
+function isPlainSafe(text: string): boolean {
   if (text === '') return false;
   if (text !== text.trim()) return false;
   if (/[\n\r\t]/.test(text)) return false;
