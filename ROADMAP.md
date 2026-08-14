@@ -409,9 +409,17 @@ anything is built on it.
 Sliced by schema area; each slice is "load it, and the differential oracle
 agrees". Coverage grows over later phases — Phase 2 targets the constructs a
 grid must understand to be drawn at all.
-- [ ] `spec`: the AST types for the core subset — `params`, `defs.styles`,
+- [x] `spec`: the AST types for the core subset — `params`, `defs.styles`,
       `defs.values`, `defs.formulas`, `sheets`, `cells`, `data` (inline / csv /
       json), `formulas` ranges, `columns` / `rows` bands, `merges`
+      **Shipped**, and `units` with it: the branded types §7 requires had to
+      exist before an AST could be written in them. Every node carries an id, the
+      file it was written in, and its span; `Templated<T>` marks the places a
+      `${param}` can stand where a value would otherwise have been read, so
+      substitution stays the compiler's job. `MODELED_KEYS` names the keys this
+      editor reads — the line ADR-011 draws between edited and merely carried —
+      and `Sheet.keyOrder` keeps the written key order, which is what decides
+      whether a `cells:` entry or a `data:` block wins (see §11).
 - [ ] `loader`: CST → SpecDoc for that subset, with spans carried onto every node
 - [ ] `$include` expansion through an injected reader (the core stays I/O-free —
       yxl ADR-014 has already solved this shape; copy it)
@@ -1024,6 +1032,40 @@ this at a phase boundary rather than at the end.
   phases ago. Corrected — §1's rule is that a doc which lies is worse than a
   missing one, and it applies to our own.
 - 191 → 242 tests. Typecheck, lint, layer check, and build clean.
+
+### 2026-08-15 — Phase 2: the SpecDoc AST, and the units under it
+- `spec` holds the AST for the core subset and `units` the branded types it is
+  written in. Both were empty packages until now. 39 new tests, 281 in total.
+- Every key, value form, and vocabulary was **read out of yxl's loader**, not
+  recalled: `src/loader/{cell,style,axis,data,defs}.mbt` and `src/units`. Two
+  things that reading found, which `docs/spec.md` does not say — a colour may be
+  eight hex digits with an optional `#`, and a row may be padded (`A01`) — are
+  accepted here for the reason in ADR-011: refusing what the compiler accepts
+  would leave this editor unable to open a spec that builds.
+- **Placeholders are not substituted away.** `Templated<T>` is `T` or the raw
+  `${...}` text, and appears wherever a parameter can stand in for something
+  this AST would otherwise have parsed — an address, a name, a colour, a path.
+  Phase 3 substitutes and records it as `param` provenance; flattening it here
+  would have destroyed exactly what makes a parameterized cell editable.
+- **`Sheet.keyOrder` records the order the sheet's keys were written in.** Sheet
+  keys apply in that order (`docs/spec.md` §2), so a `cells:` entry after a
+  `data:` block wins — the same rule ADR-007's fallback leans on. Split into one
+  list per construct, the AST would have lost it, and spans cannot recover it
+  across an `$include`.
+- **A style's border is an ordered list of sides, not four slots.** yxl applies
+  the keys as written, so `all` after `left` replaces that `left`. Four named
+  slots would have been the tidier type and would have quietly disagreed with
+  the compiler on any spec that wrote them in that order — a Tier 3 failure
+  waiting to happen, and the conformance rule (ADR-012) is that we match yxl
+  even where our answer looks better.
+- Colours are kept **as the spec spelled them**, case and `#` included. yxl
+  canonicalizes on the way into a workbook; an editor that writes specs back
+  must not change a value it was not asked to change.
+- Not done here, deliberately: `Opaque` exists as a type but nothing produces
+  one yet (that is this phase's preservation item), no `NodeId` can be
+  constructed yet (its derivation is its own item), and the corpus test that
+  would check these key sets against real specs waits for the loader — writing
+  a walker in the test to get it sooner would be writing the loader twice.
 
 ### 2026-08-14 — `overrides:` requested upstream
 - Filed [yxl#66](https://github.com/t-ujiie-g/yxl/issues/66) for §8 Q9 / ADR-007.

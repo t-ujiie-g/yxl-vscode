@@ -49,7 +49,14 @@ importers:
 
   packages/patch: {}
 
-  packages/spec: {}
+  packages/spec:
+    dependencies:
+      '@yxl-vscode/diag':
+        specifier: workspace:*
+        version: link:../diag
+      '@yxl-vscode/units':
+        specifier: workspace:*
+        version: link:../units
 
   packages/units: {}
 
