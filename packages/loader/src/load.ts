@@ -1,10 +1,11 @@
 import type { Parsed } from '@yxl-vscode/cst';
 import { type Diagnostic, error, span } from '@yxl-vscode/diag';
-import type { Defs, Opaque, Param, Sheet, SpecDoc } from '@yxl-vscode/spec';
+import type { Defs, Opaque, Override, Param, Sheet, SpecDoc } from '@yxl-vscode/spec';
 import { filePath } from '@yxl-vscode/units';
 import { CODE } from './codes';
 import { type Ctx, type IncludeReader, keyOf, nodeAt } from './ctx';
 import { NO_DEFS, readDefs, readParams } from './defs';
+import { readOverrides } from './override';
 import { entriesOf, openMap } from './read';
 import { readSheets } from './sheet';
 
@@ -55,6 +56,7 @@ function readDocument(ctx: Ctx, parsed: Parsed): SpecDoc | null {
   let sheets: Sheet[] = [];
   let params: Param[] = [];
   let defs: Defs = NO_DEFS;
+  let overrides: Override[] = [];
   const opaque: Opaque[] = [];
 
   for (const entry of entriesOf(here, opened.node)) {
@@ -70,10 +72,14 @@ function readDocument(ctx: Ctx, parsed: Parsed): SpecDoc | null {
       case 'defs':
         defs = readDefs(here, entry.value, at);
         break;
+      case 'overrides':
+        overrides = readOverrides(here, entry.value, at);
+        break;
       default:
         opaque.push({ ...nodeAt(here, at, entry.span), key });
     }
   }
 
-  return { ...nodeAt(here, opened.path, opened.node.span), sheets, params, defs, opaque };
+  const site = nodeAt(here, opened.path, opened.node.span);
+  return { ...site, sheets, params, defs, overrides, opaque };
 }

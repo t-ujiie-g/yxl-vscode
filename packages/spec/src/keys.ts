@@ -6,6 +6,8 @@ export const REF_KEY = '$ref';
 /** The mapping key that stands for the contents of another file. */
 export const INCLUDE_KEY = '$include';
 
+const CELL_KEYS = ['value', 'formula', 'rich', 'type', 'format', 'style'] as const;
+
 /**
  * The keys each construct of this AST is read from, which is also the line
  * between what this editor edits and what it only carries: a key that is not
@@ -16,10 +18,11 @@ export const INCLUDE_KEY = '$include';
  * or a style is modeled or it is not.
  */
 export const MODELED_KEYS = {
-  document: keySet(['sheets', 'params', 'defs']),
+  document: keySet(['sheets', 'params', 'defs', 'overrides']),
   defs: keySet(['styles', 'values', 'formulas']),
   sheet: keySet(['name', 'cells', 'formulas', 'data', 'columns', 'rows', 'merges']),
-  cell: keySet(['value', 'formula', 'rich', 'type', 'format', 'style']),
+  cell: keySet(CELL_KEYS),
+  override: keySet(['at', 'reason', ...CELL_KEYS]),
   richRun: keySet(['text', 'font']),
   style: keySet(['extends', 'font', 'fill', 'border', 'align', 'protection', 'format']),
   font: keySet(['bold', 'italic', 'underline', 'strike', 'size', 'name', 'color']),

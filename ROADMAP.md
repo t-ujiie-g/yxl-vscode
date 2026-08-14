@@ -444,11 +444,16 @@ grid must understand to be drawn at all.
       ADR-017 writes text edits, so a region nothing edited is untouched by
       construction — and the test that *proves* it belongs to Phase 6, where
       there is finally a writer to point at it.
-- [ ] `overrides:` read into the AST, with the sheet-qualified address unit it
+- [x] `overrides:` read into the AST, with the sheet-qualified address unit it
       needs (yxl v0.3.4, `docs/spec.md` §23). Newly possible: the construct
       ADR-007 waited for now exists. It belongs here rather than in Phase 6
       because an override changes what a cell *shows* — a Phase 4 preview that
       did not read it would draw a value the workbook will not have.
+      **Shipped.** An override and a cell write the same six facets, so they
+      share one reader and one `CellFacets` type rather than two lists that
+      could drift. What an override may *land on* is not checked here — it needs
+      the whole workbook in view, so it belongs to `compile` (§4.6 and the
+      four rules in ADR-007).
 - [ ] `NodeId` derivation and the session identity map (ADR-015)
 - [ ] Tier 3 differential harness stood up and green (ADR-012)
 
@@ -1169,6 +1174,27 @@ this at a phase boundary rather than at the end.
   parameter placeholder in this codebase — spec data, in the loader and in its
   tests — and the rule fires on every one of them. Twelve suppression comments
   would have been the alternative.
+
+### 2026-08-15 — Phase 2: reading `overrides:`
+- The loader reads the construct yxl v0.3.4 shipped: a top-level list, each
+  entry a sheet-qualified cell, the facets it replaces, and an optional
+  `reason:`. 22 new tests, 441 in total.
+- **A cell and an override write the same six facets**, so they share one reader
+  and one `CellFacets` type. Upstream made the same call in the same week —
+  their cell grammar is now stated once so an override can borrow it — and the
+  reason is the same on both sides: two lists of the same six keys drift.
+- **`QualifiedAddr` is a record, not a brand.** `Sales!E37` is two values, and a
+  reader that kept the text would only have to split it again. Excel's quoted
+  form comes with it (`'Q3 data'!A1`, an inner apostrophe doubled), unquoted at
+  the edge so the sheet name compares equal to the sheet's own.
+- **What an override may land on is not checked here.** A declared sheet, one
+  override per cell, something to override, and not the anchor of a filled
+  range — every one of those needs the whole workbook in view, which is
+  `compile`'s, not a file reader's. Reading and validating are different jobs
+  and this is where the line falls (ADR-011).
+- Not covered by the corpus: yxl's `examples/` has no spec using `overrides:`
+  yet, so this construct is held by unit tests alone until one appears. Worth
+  offering upstream — a cookbook entry for the feature would serve both projects.
 
 ### 2026-08-15 — `overrides:` shipped upstream; the pin moves to v0.3.4
 - [yxl#66](https://github.com/t-ujiie-g/yxl/issues/66) is **closed as completed**:

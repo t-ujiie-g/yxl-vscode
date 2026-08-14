@@ -1,5 +1,12 @@
-import type { FormulaName, ParamName, StyleName, ValueName } from '@yxl-vscode/units';
-import type { Opaque, SpecNode } from './node';
+import type {
+  FormulaName,
+  ParamName,
+  QualifiedAddr,
+  StyleName,
+  ValueName,
+} from '@yxl-vscode/units';
+import type { CellFacets } from './cell';
+import type { Opaque, SpecNode, Templated } from './node';
 import type { Sheet } from './sheet';
 import type { Style } from './style';
 import type { ScalarValue } from './value';
@@ -16,7 +23,27 @@ export interface SpecDoc extends SpecNode {
   readonly sheets: readonly Sheet[];
   readonly params: readonly Param[];
   readonly defs: Defs;
+  readonly overrides: readonly Override[];
   readonly opaque: readonly Opaque[];
+}
+
+/**
+ * One deliberate one-off deviation (`docs/spec.md` §23, ADR-007): the cell it
+ * lands on, the facets it replaces, and why.
+ *
+ * Applied after every rule that wrote the cell, by construction rather than by
+ * where it sits in the file. The facets are independent — one that gives a
+ * `value` leaves the styling alone — and `reason` is for whoever reads the spec
+ * in six months; nothing compiles it.
+ *
+ * What an override may land on is checked where the whole workbook is in view,
+ * not here: that it names a declared sheet, that no second override takes the
+ * same cell, that something actually writes that cell, and that it is not the
+ * anchor of a filled range.
+ */
+export interface Override extends SpecNode, CellFacets {
+  readonly at: Templated<QualifiedAddr>;
+  readonly reason: string | null;
 }
 
 /**

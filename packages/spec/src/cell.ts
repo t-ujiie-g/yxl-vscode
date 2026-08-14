@@ -9,23 +9,30 @@ export const CELL_TYPES = ['text', 'number', 'bool', 'date', 'duration', 'error'
 export type CellType = (typeof CELL_TYPES)[number];
 
 /**
- * One entry of a sheet's `cells:` mapping, in the expanded form whichever form
- * the spec used — `A1: 42` and `A1: { value: 42 }` load the same, and which
- * one was written is a fact about the syntax that the CST already holds.
+ * What a cell holds, in the six keys `docs/spec.md` §3 gives it — and which an
+ * `overrides:` entry writes with the same grammar.
  *
- * `null` means the key was absent. A cell carries at least one of `value`,
- * `formula`, `rich`, `style`, or `format`; `value` beside `formula` is the
- * cached result Excel shows until it recomputes, and `style` alone is a blank
- * cell that exists to carry a look.
+ * `null` means the key was absent. At least one of `value`, `formula`, `rich`,
+ * `style`, or `format` is present; `value` beside `formula` is the cached
+ * result Excel shows until it recomputes, and `style` alone is a blank cell
+ * that exists to carry a look.
  */
-export interface Cell extends SpecNode {
-  readonly at: Templated<A1Addr>;
+export interface CellFacets {
   readonly value: CellValue | null;
   readonly formula: FormulaBody | null;
   readonly rich: readonly RichRun[] | null;
   readonly type: CellType | null;
   readonly format: string | null;
   readonly style: StyleUse | null;
+}
+
+/**
+ * One entry of a sheet's `cells:` mapping, whichever form the spec used —
+ * `A1: 42` and `A1: { value: 42 }` load the same, and which one was written is
+ * a fact about the syntax that the CST already holds.
+ */
+export interface Cell extends SpecNode, CellFacets {
+  readonly at: Templated<A1Addr>;
 }
 
 /** A value written where it is used, or the name of a `defs.values` entry. */

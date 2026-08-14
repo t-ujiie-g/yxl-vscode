@@ -18,3 +18,4 @@ export {
   type ValueName,
   valueName,
 } from './name';
+export { parseQualifiedAddr, type QualifiedAddr } from './qualified';

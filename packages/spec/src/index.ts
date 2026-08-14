@@ -2,13 +2,14 @@ export type { ColumnBand, RowBand } from './band';
 export {
   CELL_TYPES,
   type Cell,
+  type CellFacets,
   type CellType,
   type CellValue,
   type FormulaBody,
   type RichRun,
 } from './cell';
 export type { DataBlock, DataRow, DataSource } from './data';
-export type { Defs, FormulaDef, Param, SpecDoc, StyleDef, ValueDef } from './doc';
+export type { Defs, FormulaDef, Override, Param, SpecDoc, StyleDef, ValueDef } from './doc';
 export { INCLUDE_KEY, MODELED_KEYS, REF_KEY } from './keys';
 export type { Opaque, SpecNode, Template, Templated } from './node';
 export type { FormulaRange, Merge, Sheet } from './sheet';
