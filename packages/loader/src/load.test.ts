@@ -48,15 +48,15 @@ describe('load', () => {
 
   it('gives every node an identity derived from its path', () => {
     const { doc } = sheetWithCell();
-    expect(doc?.id).toBe('[]');
-    expect(doc?.sheets[0]?.id).toBe('["sheets",0]');
-    expect(doc?.sheets[0]?.cells[0]?.id).toBe('["sheets",0,"cells","A1"]');
+    expect(doc?.id).toBe(`["${FILE}"]`);
+    expect(doc?.sheets[0]?.id).toBe(`["${FILE}","sheets",0]`);
+    expect(doc?.sheets[0]?.cells[0]?.id).toBe(`["${FILE}","sheets",0,"cells","A1"]`);
   });
 
   it('carries a top-level key it does not model, rather than dropping it', () => {
     const { doc } = read('sheets: []\nactive: Sales\ndate1904: true\n');
     expect(doc?.opaque.map((o) => o.key)).toEqual(['active', 'date1904']);
-    expect(doc?.opaque[0]?.id).toBe('["active"]');
+    expect(doc?.opaque[0]?.id).toBe(`["${FILE}","active"]`);
   });
 
   it('reads params, keeping a default that names another parameter as written', () => {

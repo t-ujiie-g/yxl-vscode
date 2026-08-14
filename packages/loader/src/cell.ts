@@ -13,17 +13,14 @@ import {
   type Templated,
 } from '@yxl-vscode/spec';
 import { CODE } from './codes';
+import { type Ctx, keyOf, nodeAt, reject } from './ctx';
 import {
-  type Ctx,
   entriesOf,
-  expectMap,
-  expectSeq,
   expectSpelling,
   expectText,
   expectValue,
-  keyOf,
-  nodeAt,
-  reject,
+  openMap,
+  openSeq,
   rejectUnknownKey,
 } from './read';
 import { readFont, readStyleUse } from './style';
@@ -31,12 +28,12 @@ import { ADDRESS, FORMULA_NAME, type Kind, readAs, readTextAs, VALUE_NAME } from
 
 /** A sheet's `cells:` mapping: one entry per addressed cell. */
 export function readCells(ctx: Ctx, node: Node, path: Path): Cell[] {
-  const map = expectMap(ctx, node, '`cells`');
-  if (map === null) return [];
+  const opened = openMap(ctx, node, path, '`cells`');
+  if (opened === null) return [];
 
   const cells: Cell[] = [];
-  for (const entry of entriesOf(ctx, map)) {
-    const cell = readCell(ctx, entry, path);
+  for (const entry of entriesOf(opened.ctx, opened.node)) {
+    const cell = readCell(opened.ctx, entry, opened.path);
     if (cell !== null) cells.push(cell);
   }
   return cells;
@@ -77,8 +74,9 @@ const NOTHING_ELSE = {
 type CellBody = Omit<Cell, keyof SpecNode | 'at'>;
 
 function readExpandedCell(ctx: Ctx, node: Node, what: string): CellBody | null {
-  const map = expectMap(ctx, node, what);
-  if (map === null) return null;
+  const opened = openMap(ctx, node, [], what);
+  if (opened === null) return null;
+  const here = opened.ctx;
 
   let value: CellValue | null = null;
   let formula: FormulaBody | null = null;
@@ -87,34 +85,34 @@ function readExpandedCell(ctx: Ctx, node: Node, what: string): CellBody | null {
   let format: string | null = null;
   let style: StyleUse | null = null;
 
-  for (const entry of entriesOf(ctx, map)) {
+  for (const entry of entriesOf(here, opened.node)) {
     const at = `${what} \`${keyOf(entry)}\``;
     switch (keyOf(entry)) {
       case 'value':
-        value = readCellValue(ctx, entry.value, at);
+        value = readCellValue(here, entry.value, at);
         break;
       case 'formula':
-        formula = readFormulaBody(ctx, entry.value, at);
+        formula = readFormulaBody(here, entry.value, at);
         break;
       case 'rich':
-        rich = readRich(ctx, entry.value, at);
+        rich = readRich(here, entry.value, at);
         break;
       case 'type':
-        type = expectSpelling(ctx, entry.value, at, CELL_TYPES);
+        type = expectSpelling(here, entry.value, at, CELL_TYPES);
         break;
       case 'format':
-        format = expectText(ctx, entry.value, at);
+        format = expectText(here, entry.value, at);
         break;
       case 'style':
-        style = readStyleUse(ctx, entry.value, at);
+        style = readStyleUse(here, entry.value, at);
         break;
       default:
-        rejectUnknownKey(ctx, entry, what, MODELED_KEYS.cell);
+        rejectUnknownKey(here, entry, what, MODELED_KEYS.cell);
     }
   }
 
   const body = { value, formula, rich, type, format, style };
-  return holdsSomething(ctx, body, node, what) ? body : null;
+  return holdsSomething(here, body, opened.node, what) ? body : null;
 }
 
 /**
@@ -208,12 +206,12 @@ function refName<T>(ctx: Ctx, node: Node, what: string, kind: Kind<T>): Template
 }
 
 function readRich(ctx: Ctx, node: Node, what: string): readonly RichRun[] | null {
-  const seq = expectSeq(ctx, node, what);
-  if (seq === null) return null;
+  const opened = openSeq(ctx, node, [], what);
+  if (opened === null) return null;
 
   const runs: RichRun[] = [];
-  for (const [index, item] of seq.items.entries()) {
-    const run = readRichRun(ctx, item, `${what} run ${index + 1}`);
+  for (const [index, item] of opened.node.items.entries()) {
+    const run = readRichRun(opened.ctx, item, `${what} run ${index + 1}`);
     if (run !== null) runs.push(run);
   }
   return runs;
@@ -225,28 +223,29 @@ function readRichRun(ctx: Ctx, node: Node, what: string): RichRun | null {
     return text === null ? null : { text, font: null };
   }
 
-  const map = expectMap(ctx, node, what);
-  if (map === null) return null;
+  const opened = openMap(ctx, node, [], what);
+  if (opened === null) return null;
+  const here = opened.ctx;
 
   let text: string | null = null;
   let font: RichRun['font'] = null;
 
-  for (const entry of entriesOf(ctx, map)) {
+  for (const entry of entriesOf(here, opened.node)) {
     const at = `${what} \`${keyOf(entry)}\``;
     switch (keyOf(entry)) {
       case 'text':
-        text = expectText(ctx, entry.value, at);
+        text = expectText(here, entry.value, at);
         break;
       case 'font':
-        font = readFont(ctx, entry.value, at);
+        font = readFont(here, entry.value, at);
         break;
       default:
-        rejectUnknownKey(ctx, entry, what, MODELED_KEYS.richRun);
+        rejectUnknownKey(here, entry, what, MODELED_KEYS.richRun);
     }
   }
 
   if (text === null) {
-    reject(ctx, CODE.missingKey, `${what} needs a \`text\``, node.span);
+    reject(here, CODE.missingKey, `${what} needs a \`text\``, opened.node.span);
     return null;
   }
   return { text, font };

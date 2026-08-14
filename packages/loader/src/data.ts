@@ -7,50 +7,48 @@ import {
   type ScalarValue,
 } from '@yxl-vscode/spec';
 import { CODE } from './codes';
+import { type Ctx, keyOf, nodeAt, reject, type Site } from './ctx';
 import {
-  type Ctx,
   entriesOf,
-  expectMap,
-  expectSeq,
   expectText,
   findEntry,
-  keyOf,
-  nodeAt,
-  reject,
+  itemsOf,
+  openMap,
+  openSeq,
   rejectUnknownKey,
 } from './read';
 import { ADDRESS, PATH, readAs } from './template';
 
 /** A sheet's `data:` sequence: one anchored table per entry. */
 export function readDataBlocks(ctx: Ctx, node: Node, path: Path): DataBlock[] {
-  const seq = expectSeq(ctx, node, '`data`');
-  if (seq === null) return [];
-
   const blocks: DataBlock[] = [];
-  for (const [index, item] of seq.items.entries()) {
-    const block = readDataBlock(ctx, item, [...path, index]);
+  for (const item of itemsOf(ctx, node, path, '`data`')) {
+    const block = readDataBlock(item);
     if (block !== null) blocks.push(block);
   }
   return blocks;
 }
 
-function readDataBlock(ctx: Ctx, node: Node, path: Path): DataBlock | null {
+function readDataBlock(site: Site): DataBlock | null {
   const what = 'a `data` entry';
-  const map = expectMap(ctx, node, what);
-  if (map === null) return null;
+  const opened = openMap(site.ctx, site.node, site.path, what);
+  if (opened === null) return null;
 
-  const entries = entriesOf(ctx, map);
+  const here = opened.ctx;
+  const entries = entriesOf(here, opened.node);
 
   const anchor = findEntry(entries, 'at');
   if (anchor === undefined) {
-    reject(ctx, CODE.missingKey, `${what} needs an \`at\``, node.span);
+    reject(here, CODE.missingKey, `${what} needs an \`at\``, opened.node.span);
     return null;
   }
-  const at = readAs(ctx, anchor.value, `${what} \`at\``, ADDRESS);
+  const at = readAs(here, anchor.value, `${what} \`at\``, ADDRESS);
   if (at === null) return null;
 
-  const source = readSource(ctx, entries, node, what);
-  return source === null ? null : { ...nodeAt(ctx, path, node.span), at, source };
+  const source = readSource(here, entries, opened.node, what);
+  if (source === null) return null;
+
+  return { ...nodeAt(here, opened.path, opened.node.span), at, source };
 }
 
 /**
@@ -122,24 +120,24 @@ function pickSource(ctx: Ctx, taken: DataSource | null, entry: Entry, source: Da
 }
 
 function readColumnNames(ctx: Ctx, node: Node, what: string): readonly string[] | null {
-  const seq = expectSeq(ctx, node, what);
-  if (seq === null) return null;
+  const opened = openSeq(ctx, node, [], what);
+  if (opened === null) return null;
 
   const names: string[] = [];
-  for (const item of seq.items) {
-    const name = expectText(ctx, item, `a name in ${what}`);
+  for (const item of opened.node.items) {
+    const name = expectText(opened.ctx, item, `a name in ${what}`);
     if (name !== null) names.push(name);
   }
   return names;
 }
 
 function readRows(ctx: Ctx, node: Node): readonly DataRow[] {
-  const seq = expectSeq(ctx, node, 'a `data` entry `values`');
-  if (seq === null) return [];
+  const opened = openSeq(ctx, node, [], 'a `data` entry `values`');
+  if (opened === null) return [];
 
   const rows: DataRow[] = [];
-  for (const [index, item] of seq.items.entries()) {
-    rows.push(readRow(ctx, item, `row ${index + 1} of a \`data\` entry`));
+  for (const [index, item] of opened.node.items.entries()) {
+    rows.push(readRow(opened.ctx, item, `row ${index + 1} of a \`data\` entry`));
   }
   return rows;
 }
@@ -152,17 +150,17 @@ function readRows(ctx: Ctx, node: Node): readonly DataRow[] {
  * unfinished key `expectValue` refuses elsewhere.
  */
 function readRow(ctx: Ctx, node: Node, what: string): DataRow {
-  const seq = expectSeq(ctx, node, what);
-  if (seq === null) return [];
+  const opened = openSeq(ctx, node, [], what);
+  if (opened === null) return [];
 
   const fields: ScalarValue[] = [];
-  for (const [index, item] of seq.items.entries()) {
+  for (const [index, item] of opened.node.items.entries()) {
     if (item.kind === 'scalar') {
       fields.push(item.value);
       continue;
     }
     const message = `field ${index + 1} of ${what} must be text, a number, a boolean, or null`;
-    reject(ctx, CODE.notAValue, message, item.span);
+    reject(opened.ctx, CODE.notAValue, message, item.span);
     // Blank rather than absent: dropping the field would move every field after
     // it one column left, which is a worse answer than an empty cell.
     fields.push(null);

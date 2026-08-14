@@ -11,17 +11,8 @@ import {
 import { formulaName, paramName, styleName, valueName } from '@yxl-vscode/units';
 import { withoutLeadingEquals } from './cell';
 import { CODE } from './codes';
-import {
-  type Ctx,
-  entriesOf,
-  expectMap,
-  expectText,
-  expectValue,
-  keyOf,
-  nodeAt,
-  reject,
-  rejectUnknownKey,
-} from './read';
+import { type Ctx, keyOf, nodeAt, reject } from './ctx';
+import { entriesOf, expectText, expectValue, openMap, rejectUnknownKey } from './read';
 import { readStyle } from './style';
 
 export const NO_DEFS: Defs = { styles: [], values: [], formulas: [] };
@@ -35,27 +26,28 @@ export const NO_DEFS: Defs = { styles: [], values: [], formulas: [] };
  * the compiler substitutes both sides of the lookup.
  */
 export function readDefs(ctx: Ctx, node: Node, path: Path): Defs {
-  const map = expectMap(ctx, node, '`defs`');
-  if (map === null) return NO_DEFS;
+  const opened = openMap(ctx, node, path, '`defs`');
+  if (opened === null) return NO_DEFS;
+  const here = opened.ctx;
 
   let styles: StyleDef[] = [];
   let values: ValueDef[] = [];
   let formulas: FormulaDef[] = [];
 
-  for (const entry of entriesOf(ctx, map)) {
-    const at = [...path, keyOf(entry)];
+  for (const entry of entriesOf(here, opened.node)) {
+    const at = [...opened.path, keyOf(entry)];
     switch (keyOf(entry)) {
       case 'styles':
-        styles = readStyleDefs(ctx, entry.value, at);
+        styles = readStyleDefs(here, entry.value, at);
         break;
       case 'values':
-        values = readValueDefs(ctx, entry.value, at);
+        values = readValueDefs(here, entry.value, at);
         break;
       case 'formulas':
-        formulas = readFormulaDefs(ctx, entry.value, at);
+        formulas = readFormulaDefs(here, entry.value, at);
         break;
       default:
-        rejectUnknownKey(ctx, entry, '`defs`', MODELED_KEYS.defs);
+        rejectUnknownKey(here, entry, '`defs`', MODELED_KEYS.defs);
     }
   }
 
@@ -63,59 +55,64 @@ export function readDefs(ctx: Ctx, node: Node, path: Path): Defs {
 }
 
 function readStyleDefs(ctx: Ctx, node: Node, path: Path): StyleDef[] {
-  const map = expectMap(ctx, node, '`defs.styles`');
-  if (map === null) return [];
+  const opened = openMap(ctx, node, path, '`defs.styles`');
+  if (opened === null) return [];
+  const here = opened.ctx;
 
   const defs: StyleDef[] = [];
-  for (const entry of entriesOf(ctx, map)) {
+  for (const entry of entriesOf(here, opened.node)) {
     const key = keyOf(entry);
     const name = styleName(key);
     if (name === null) {
-      rejectEmptyName(ctx, '`defs.styles`', entry.key.span);
+      rejectEmptyName(here, '`defs.styles`', entry.key.span);
       continue;
     }
 
-    const style = readStyle(ctx, entry.value, `style \`${key}\``);
-    if (style !== null) defs.push({ ...nodeAt(ctx, [...path, key], entry.span), name, style });
+    const style = readStyle(here, entry.value, `style \`${key}\``);
+    if (style !== null)
+      defs.push({ ...nodeAt(here, [...opened.path, key], entry.span), name, style });
   }
   return defs;
 }
 
 function readValueDefs(ctx: Ctx, node: Node, path: Path): ValueDef[] {
-  const map = expectMap(ctx, node, '`defs.values`');
-  if (map === null) return [];
+  const opened = openMap(ctx, node, path, '`defs.values`');
+  if (opened === null) return [];
+  const here = opened.ctx;
 
   const defs: ValueDef[] = [];
-  for (const entry of entriesOf(ctx, map)) {
+  for (const entry of entriesOf(here, opened.node)) {
     const key = keyOf(entry);
     const name = valueName(key);
     if (name === null) {
-      rejectEmptyName(ctx, '`defs.values`', entry.key.span);
+      rejectEmptyName(here, '`defs.values`', entry.key.span);
       continue;
     }
 
-    const value = expectValue(ctx, entry.value, `value \`${key}\``);
-    if (value !== null) defs.push({ ...nodeAt(ctx, [...path, key], entry.span), name, value });
+    const value = expectValue(here, entry.value, `value \`${key}\``);
+    if (value !== null)
+      defs.push({ ...nodeAt(here, [...opened.path, key], entry.span), name, value });
   }
   return defs;
 }
 
 function readFormulaDefs(ctx: Ctx, node: Node, path: Path): FormulaDef[] {
-  const map = expectMap(ctx, node, '`defs.formulas`');
-  if (map === null) return [];
+  const opened = openMap(ctx, node, path, '`defs.formulas`');
+  if (opened === null) return [];
+  const here = opened.ctx;
 
   const defs: FormulaDef[] = [];
-  for (const entry of entriesOf(ctx, map)) {
+  for (const entry of entriesOf(here, opened.node)) {
     const key = keyOf(entry);
     const name = formulaName(key);
     if (name === null) {
-      rejectEmptyName(ctx, '`defs.formulas`', entry.key.span);
+      rejectEmptyName(here, '`defs.formulas`', entry.key.span);
       continue;
     }
 
-    const body = expectText(ctx, entry.value, `formula \`${key}\``);
+    const body = expectText(here, entry.value, `formula \`${key}\``);
     if (body !== null) {
-      const site = nodeAt(ctx, [...path, key], entry.span);
+      const site = nodeAt(here, [...opened.path, key], entry.span);
       defs.push({ ...site, name, body: withoutLeadingEquals(body) });
     }
   }
@@ -124,20 +121,22 @@ function readFormulaDefs(ctx: Ctx, node: Node, path: Path): FormulaDef[] {
 
 /** The `params:` block, each entry holding the default it declares. */
 export function readParams(ctx: Ctx, node: Node, path: Path): Param[] {
-  const map = expectMap(ctx, node, '`params`');
-  if (map === null) return [];
+  const opened = openMap(ctx, node, path, '`params`');
+  if (opened === null) return [];
+  const here = opened.ctx;
 
   const params: Param[] = [];
-  for (const entry of entriesOf(ctx, map)) {
+  for (const entry of entriesOf(here, opened.node)) {
     const key = keyOf(entry);
     const name = paramName(key);
     if (name === null) {
-      rejectEmptyName(ctx, '`params`', entry.key.span);
+      rejectEmptyName(here, '`params`', entry.key.span);
       continue;
     }
 
-    const value = expectValue(ctx, entry.value, `parameter \`${key}\``);
-    if (value !== null) params.push({ ...nodeAt(ctx, [...path, key], entry.span), name, value });
+    const value = expectValue(here, entry.value, `parameter \`${key}\``);
+    if (value !== null)
+      params.push({ ...nodeAt(here, [...opened.path, key], entry.span), name, value });
   }
   return params;
 }

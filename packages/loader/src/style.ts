@@ -14,16 +14,14 @@ import {
   V_ALIGNS,
 } from '@yxl-vscode/spec';
 import { CODE } from './codes';
+import { type Ctx, keyOf, reject } from './ctx';
 import {
-  type Ctx,
   entriesOf,
   expectBool,
-  expectMap,
   expectNumber,
   expectSpelling,
   expectText,
-  keyOf,
-  reject,
+  openMap,
   rejectUnknownKey,
 } from './read';
 import { COLOR, readAs, STYLE_NAME } from './template';
@@ -40,8 +38,9 @@ export function readStyleUse(ctx: Ctx, node: Node, what: string): StyleUse | nul
 }
 
 export function readStyle(ctx: Ctx, node: Node, what: string): Style | null {
-  const map = expectMap(ctx, node, what);
-  if (map === null) return null;
+  const opened = openMap(ctx, node, [], what);
+  if (opened === null) return null;
+  const here = opened.ctx;
 
   let base: Style['extends'] = null;
   let font: Font | null = null;
@@ -51,32 +50,32 @@ export function readStyle(ctx: Ctx, node: Node, what: string): Style | null {
   let protection: Protection | null = null;
   let format: string | null = null;
 
-  for (const entry of entriesOf(ctx, map)) {
+  for (const entry of entriesOf(here, opened.node)) {
     const at = `${what} \`${keyOf(entry)}\``;
     switch (keyOf(entry)) {
       case 'extends':
-        base = readAs(ctx, entry.value, at, STYLE_NAME);
+        base = readAs(here, entry.value, at, STYLE_NAME);
         break;
       case 'font':
-        font = readFont(ctx, entry.value, at);
+        font = readFont(here, entry.value, at);
         break;
       case 'fill':
-        fill = readFill(ctx, entry.value, at);
+        fill = readFill(here, entry.value, at);
         break;
       case 'border':
-        border = readBorder(ctx, entry.value, at);
+        border = readBorder(here, entry.value, at);
         break;
       case 'align':
-        align = readAlign(ctx, entry.value, at);
+        align = readAlign(here, entry.value, at);
         break;
       case 'protection':
-        protection = readProtection(ctx, entry.value, at);
+        protection = readProtection(here, entry.value, at);
         break;
       case 'format':
-        format = expectText(ctx, entry.value, at);
+        format = expectText(here, entry.value, at);
         break;
       default:
-        rejectUnknownKey(ctx, entry, what, MODELED_KEYS.style);
+        rejectUnknownKey(here, entry, what, MODELED_KEYS.style);
     }
   }
 
@@ -84,8 +83,9 @@ export function readStyle(ctx: Ctx, node: Node, what: string): Style | null {
 }
 
 export function readFont(ctx: Ctx, node: Node, what: string): Font | null {
-  const map = expectMap(ctx, node, what);
-  if (map === null) return null;
+  const opened = openMap(ctx, node, [], what);
+  if (opened === null) return null;
+  const here = opened.ctx;
 
   let bold: boolean | null = null;
   let italic: boolean | null = null;
@@ -95,32 +95,32 @@ export function readFont(ctx: Ctx, node: Node, what: string): Font | null {
   let name: string | null = null;
   let color: Font['color'] = null;
 
-  for (const entry of entriesOf(ctx, map)) {
+  for (const entry of entriesOf(here, opened.node)) {
     const at = `${what} \`${keyOf(entry)}\``;
     switch (keyOf(entry)) {
       case 'bold':
-        bold = expectBool(ctx, entry.value, at);
+        bold = expectBool(here, entry.value, at);
         break;
       case 'italic':
-        italic = expectBool(ctx, entry.value, at);
+        italic = expectBool(here, entry.value, at);
         break;
       case 'underline':
-        underline = expectBool(ctx, entry.value, at);
+        underline = expectBool(here, entry.value, at);
         break;
       case 'strike':
-        strike = expectBool(ctx, entry.value, at);
+        strike = expectBool(here, entry.value, at);
         break;
       case 'size':
-        size = expectNumber(ctx, entry.value, at);
+        size = expectNumber(here, entry.value, at);
         break;
       case 'name':
-        name = expectText(ctx, entry.value, at);
+        name = expectText(here, entry.value, at);
         break;
       case 'color':
-        color = readAs(ctx, entry.value, at, COLOR);
+        color = readAs(here, entry.value, at, COLOR);
         break;
       default:
-        rejectUnknownKey(ctx, entry, what, MODELED_KEYS.font);
+        rejectUnknownKey(here, entry, what, MODELED_KEYS.font);
     }
   }
 
@@ -131,19 +131,20 @@ export function readFont(ctx: Ctx, node: Node, what: string): Font | null {
 function readFill(ctx: Ctx, node: Node, what: string): Style['fill'] {
   if (node.kind === 'scalar') return readAs(ctx, node, what, COLOR);
 
-  const map = expectMap(ctx, node, what);
-  if (map === null) return null;
+  const opened = openMap(ctx, node, [], what);
+  if (opened === null) return null;
+  const here = opened.ctx;
 
   let color: Style['fill'] = null;
-  for (const entry of entriesOf(ctx, map)) {
+  for (const entry of entriesOf(here, opened.node)) {
     if (keyOf(entry) === 'color') {
-      color = readAs(ctx, entry.value, `${what} \`color\``, COLOR);
+      color = readAs(here, entry.value, `${what} \`color\``, COLOR);
     } else {
-      rejectUnknownKey(ctx, entry, what, MODELED_KEYS.fill);
+      rejectUnknownKey(here, entry, what, MODELED_KEYS.fill);
     }
   }
 
-  if (color === null) reject(ctx, CODE.missingKey, `${what} needs a \`color\``, node.span);
+  if (color === null) reject(here, CODE.missingKey, `${what} needs a \`color\``, opened.node.span);
   return color;
 }
 
@@ -153,17 +154,18 @@ function readBorder(ctx: Ctx, node: Node, what: string): readonly BorderSide[] |
     return edge === null ? null : [{ side: 'all', edge }];
   }
 
-  const map = expectMap(ctx, node, what);
-  if (map === null) return null;
+  const opened = openMap(ctx, node, [], what);
+  if (opened === null) return null;
+  const here = opened.ctx;
 
   const sides: BorderSide[] = [];
-  for (const entry of entriesOf(ctx, map)) {
+  for (const entry of entriesOf(here, opened.node)) {
     const side = BORDER_SIDES.find((known) => known === keyOf(entry));
     if (side === undefined) {
-      rejectUnknownKey(ctx, entry, what, MODELED_KEYS.border);
+      rejectUnknownKey(here, entry, what, MODELED_KEYS.border);
       continue;
     }
-    const edge = readBorderEdge(ctx, entry.value, `${what} \`${side}\``);
+    const edge = readBorderEdge(here, entry.value, `${what} \`${side}\``);
     if (edge !== null) sides.push({ side, edge });
   }
 
@@ -176,55 +178,57 @@ function readBorderEdge(ctx: Ctx, node: Node, what: string): BorderEdge | null {
     return style === null ? null : { style, color: null };
   }
 
-  const map = expectMap(ctx, node, what);
-  if (map === null) return null;
+  const opened = openMap(ctx, node, [], what);
+  if (opened === null) return null;
+  const here = opened.ctx;
 
   let style: BorderEdge['style'] | null = null;
   let color: BorderEdge['color'] = null;
 
-  for (const entry of entriesOf(ctx, map)) {
+  for (const entry of entriesOf(here, opened.node)) {
     const at = `${what} \`${keyOf(entry)}\``;
     switch (keyOf(entry)) {
       case 'style':
-        style = expectSpelling(ctx, entry.value, at, BORDER_STYLES);
+        style = expectSpelling(here, entry.value, at, BORDER_STYLES);
         break;
       case 'color':
-        color = readAs(ctx, entry.value, at, COLOR);
+        color = readAs(here, entry.value, at, COLOR);
         break;
       default:
-        rejectUnknownKey(ctx, entry, what, MODELED_KEYS.borderEdge);
+        rejectUnknownKey(here, entry, what, MODELED_KEYS.borderEdge);
     }
   }
 
   if (style === null) {
-    reject(ctx, CODE.missingKey, `${what} needs a \`style\``, node.span);
+    reject(here, CODE.missingKey, `${what} needs a \`style\``, opened.node.span);
     return null;
   }
   return { style, color };
 }
 
 function readAlign(ctx: Ctx, node: Node, what: string): Align | null {
-  const map = expectMap(ctx, node, what);
-  if (map === null) return null;
+  const opened = openMap(ctx, node, [], what);
+  if (opened === null) return null;
+  const here = opened.ctx;
 
   let horizontal: Align['horizontal'] = null;
   let vertical: Align['vertical'] = null;
   let wrap: boolean | null = null;
 
-  for (const entry of entriesOf(ctx, map)) {
+  for (const entry of entriesOf(here, opened.node)) {
     const at = `${what} \`${keyOf(entry)}\``;
     switch (keyOf(entry)) {
       case 'horizontal':
-        horizontal = expectSpelling(ctx, entry.value, at, H_ALIGNS);
+        horizontal = expectSpelling(here, entry.value, at, H_ALIGNS);
         break;
       case 'vertical':
-        vertical = expectSpelling(ctx, entry.value, at, V_ALIGNS);
+        vertical = expectSpelling(here, entry.value, at, V_ALIGNS);
         break;
       case 'wrap':
-        wrap = expectBool(ctx, entry.value, at);
+        wrap = expectBool(here, entry.value, at);
         break;
       default:
-        rejectUnknownKey(ctx, entry, what, MODELED_KEYS.align);
+        rejectUnknownKey(here, entry, what, MODELED_KEYS.align);
     }
   }
 
@@ -232,23 +236,24 @@ function readAlign(ctx: Ctx, node: Node, what: string): Align | null {
 }
 
 function readProtection(ctx: Ctx, node: Node, what: string): Protection | null {
-  const map = expectMap(ctx, node, what);
-  if (map === null) return null;
+  const opened = openMap(ctx, node, [], what);
+  if (opened === null) return null;
+  const here = opened.ctx;
 
   let locked: boolean | null = null;
   let hidden: boolean | null = null;
 
-  for (const entry of entriesOf(ctx, map)) {
+  for (const entry of entriesOf(here, opened.node)) {
     const at = `${what} \`${keyOf(entry)}\``;
     switch (keyOf(entry)) {
       case 'locked':
-        locked = expectBool(ctx, entry.value, at);
+        locked = expectBool(here, entry.value, at);
         break;
       case 'hidden':
-        hidden = expectBool(ctx, entry.value, at);
+        hidden = expectBool(here, entry.value, at);
         break;
       default:
-        rejectUnknownKey(ctx, entry, what, MODELED_KEYS.protection);
+        rejectUnknownKey(here, entry, what, MODELED_KEYS.protection);
     }
   }
 
