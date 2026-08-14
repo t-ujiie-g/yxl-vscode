@@ -11,7 +11,7 @@
     "node": ">=22"
   },
   "yxl": {
-    "targetVersion": "0.3.3",
+    "targetVersion": "0.3.4",
     "oracleRepo": "../yxl"
   },
   "scripts": {

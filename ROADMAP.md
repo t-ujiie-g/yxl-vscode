@@ -439,6 +439,11 @@ grid must understand to be drawn at all.
       ADR-017 writes text edits, so a region nothing edited is untouched by
       construction — and the test that *proves* it belongs to Phase 6, where
       there is finally a writer to point at it.
+- [ ] `overrides:` read into the AST, with the sheet-qualified address unit it
+      needs (yxl v0.3.4, `docs/spec.md` §23). Newly possible: the construct
+      ADR-007 waited for now exists. It belongs here rather than in Phase 6
+      because an override changes what a cell *shows* — a Phase 4 preview that
+      did not read it would draw a value the workbook will not have.
 - [ ] `NodeId` derivation and the session identity map (ADR-015)
 - [ ] Tier 3 differential harness stood up and green (ADR-012)
 
@@ -488,7 +493,8 @@ the inverse is unique, so no dialog is needed yet.
 - [ ] `verify` loop wired in front of every apply (ADR-009)
 - [ ] `setValue` / `setFormula` on `literal` and `inline` origins
 - [ ] `overrides:` as an explicit escape hatch, with the "manually edited" badge
-      and the optional `reason:`
+      and the optional `reason:` — writing the construct yxl v0.3.4 shipped
+      (`docs/spec.md` §23), which Phase 2 already reads
 - [ ] Everything not `direct` is visibly, explainedly read-only — the editor is
       honest about what it cannot yet do
 - [ ] Prove ADR-011's preservation half: load a spec that uses opaque constructs,
@@ -661,13 +667,27 @@ puts the mess in one place where it can be counted; twenty overrides is a
 legible signal that the spec's shape is wrong, and Phase 9 can propose folding
 them back in.
 
-*Status:* the construct does not exist in the yxl schema, and is requested
-upstream as [yxl#66](https://github.com/t-ujiie-g/yxl/issues/66) rather than
-invented here — a spec this editor writes must compile with a stock `yxl`
-(ADR-011). Should it be declined, the fallback is a plain `cells:` entry
-relying on yxl's documented last-wins key order: the edit still lands, and what
-is lost is the badge, the `reason:`, and the ability to count how dirty a spec
-has become (§8 Q9).
+*Status:* ✅ **it exists.** Requested upstream as
+[yxl#66](https://github.com/t-ujiie-g/yxl/issues/66) rather than invented here —
+a spec this editor writes must compile with a stock `yxl` (ADR-011) — and
+**shipped in yxl v0.3.4** as `docs/spec.md` §23. The `cells:` fallback this ADR
+was designed to fall back on is no longer needed.
+
+What shipped is the proposal with its edges tightened, and the tightenings are
+the resolver's to respect:
+
+- `at:` is **sheet-qualified** — `Sales!E37`, or `'Q3 data'!A1` where Excel
+  would quote the name. Never a range. So this project needs a qualified-address
+  unit alongside `A1Addr`.
+- **An override must have something to override.** A spec whose override lands
+  where no `cells:`, `data:`, or `formulas:` entry writes is refused: an
+  exception to nothing is a `cells:` entry with a misleading name.
+- **One cell, one override** — a second entry for the same cell is refused
+  rather than resolved by order.
+- Inside a filled range an override may land anywhere **but the top-left**,
+  which is where the shared formula is stored; it takes that one cell out of the
+  range and leaves the range whole. This is the case §4.4's `formulaRange` row
+  had no good answer for.
 
 ### ADR-008 — Every style write passes the normalizer
 **Accepted.** Before a style reaches the spec: (1) exact match against an
@@ -881,23 +901,18 @@ Lift this when a phase needs it, not before.
   it honest against the reference.
 - **Q8 — Tauri.** Phase 11. Nothing in the architecture blocks it (ADR-004); the
   question is whether the demand exists.
-- **Q9 — `overrides:` must exist upstream.** ADR-007 depends on a construct the
-  yxl schema does not have today. **Filed upstream as
-  [yxl#66](https://github.com/t-ujiie-g/yxl/issues/66)** (2026-08-14); awaiting
-  a decision, which is needed before Phase 6 and before yxl's schema freeze.
+- **Q9 — `overrides:` must exist upstream.** ✅ **Answered: it does.** Filed as
+  [yxl#66](https://github.com/t-ujiie-g/yxl/issues/66) (2026-08-14) and shipped
+  in **yxl v0.3.4** (2026-08-15) as `docs/spec.md` §23, close to the shape
+  ADR-007 asked for and with its edges tightened — see the ADR for the four
+  rules the resolver has to respect. The fallback design (a `cells:` write
+  relying on last-wins key order) is retired; Phase 6 builds on the real thing.
 
-  Writing it up changed what the request is. yxl **already has the capability**:
-  `docs/spec.md` §2 says sheet keys apply in the order written, so a `cells:`
-  entry placed after a `data:` block wins, and all three hard cases (param,
-  CSV, formula range) can be expressed that way today. What is missing is
-  **intent** — an override written as an ordinary cell cannot afterwards be
-  counted, explained, or folded back, and it makes the spec's correctness
-  depend on YAML key order, which a reformat can silently break.
-
-  So this is not a blocker on capability, and Phase 6 is **not hard-blocked**:
-  if the answer upstream is no, `overrides:` becomes a `cells:` write and ADR-007
-  loses its badge, its `reason:`, and the health signal — a worse product, not
-  an impossible one. Design for both until it is answered.
+  Worth keeping for the next time this comes up: the request went in as "add a
+  capability" and turned out to be "name an intent". yxl could already express
+  every one of the three hard cases through documented key order — what it could
+  not express was that a cell *is* an exception, which is what makes overrides
+  countable, explainable, and foldable.
 - **Q10 — What do we send upstream from ADR-002's measurements?** yxl's own §8
   Q6 asks "native binary only, or also a wasm CLI?" — and the answer here is that
   the whole pipeline, `emit` included, already passes its tests on the JS target.
@@ -919,7 +934,7 @@ Lift this when a phase needs it, not before.
   (which is why Phase 6 exists as its own phase), a remembered choice per
   origin-kind, and honest measurement of the ask rate during Phase 7. If it
   cannot get low, that is a finding about the design, not a UX tweak.
-- **R4 — Scope.** `docs/spec.md` is 1351 lines across 22 sections. ADR-011 makes
+- **R4 — Scope.** `docs/spec.md` is 1451 lines across 23 sections. ADR-011 makes
   coverage incremental, but "editable in the GUI" will lag "expressible in yxl"
   for a long time, and the README must say so plainly rather than imply parity.
 - **R5 — Webview performance.** Large sheets in a VS Code webview, re-projected
@@ -930,7 +945,14 @@ Lift this when a phase needs it, not before.
   Excel somewhere. Mitigated by ADR-014 (never written back), visible
   unsupported-function reporting, and "Excel is the renderer of record" stated in
   the UI, not just here.
-- **R7 — The upstream dependency (§8 Q9).** *Downgraded 2026-08-14.* Filing
+- **R7 — The upstream dependency (§8 Q9).** ✅ *Closed 2026-08-15* — `overrides:`
+  shipped in yxl v0.3.4, so there is no dependency left to carry. Kept here for
+  what it says about the shape of this project's risks: the one that looked
+  structural was a *coordination* risk, and it was retired by writing the request
+  down carefully rather than by building anything. The history below is what it
+  was.
+
+  *Downgraded 2026-08-14.* Filing
   [yxl#66](https://github.com/t-ujiie-g/yxl/issues/66) established that yxl can
   already express an override through `cells:` last-wins precedence, so Phase 6
   is not blocked on the answer — a rejection costs the badge, the `reason:`, and
@@ -1117,6 +1139,28 @@ this at a phase boundary rather than at the end.
   parameter placeholder in this codebase — spec data, in the loader and in its
   tests — and the rule fires on every one of them. Twelve suppression comments
   would have been the alternative.
+
+### 2026-08-15 — `overrides:` shipped upstream; the pin moves to v0.3.4
+- [yxl#66](https://github.com/t-ujiie-g/yxl/issues/66) is **closed as completed**:
+  `overrides:` is in yxl v0.3.4, `docs/spec.md` §23. **ADR-007's dependency is
+  gone**, §8 Q9 is answered, and §9 R7 is closed — the one risk that looked
+  structural was a coordination risk, and writing the request down carefully is
+  what retired it.
+- What shipped tightened the proposal in four ways, and each is a rule the
+  resolver has to respect rather than a detail: `at:` is **sheet-qualified**
+  (`Sales!E37`), an override **must have something to override**, there is **one
+  override per cell**, and inside a filled range it may land anywhere **but the
+  top-left**, where Excel stores the shared formula. That last one answers the
+  case §4.4's `formulaRange` row had no good answer for: the exception comes out
+  of the range and the range stays whole.
+- The pin moves to **0.3.4** (§8 Q6). Nothing this editor already reads changed —
+  the cell grammar is the same six keys, now stated once upstream so an override
+  can share it — and the whole suite is green against the new checkout.
+- Reading `overrides:` is now a Phase 2 item rather than a Phase 6 one. It
+  changes what a cell *shows*, so a Phase 4 preview that skipped it would draw a
+  value the workbook will not have. Writing them stays in Phase 6.
+- It needs a unit this project does not have: a **sheet-qualified address**,
+  including the quoted form Excel uses for a name with a space.
 
 ### 2026-08-14 — `overrides:` requested upstream
 - Filed [yxl#66](https://github.com/t-ujiie-g/yxl/issues/66) for §8 Q9 / ADR-007.
