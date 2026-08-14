@@ -1,0 +1,4 @@
+sheets:
+  - name: Sales
+    formulas:
+      - at: D2:D9

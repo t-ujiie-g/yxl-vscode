@@ -1,0 +1,5 @@
+sheets:
+  - name: Sales
+    cells:
+      A1: 1
+    merges: [A1]

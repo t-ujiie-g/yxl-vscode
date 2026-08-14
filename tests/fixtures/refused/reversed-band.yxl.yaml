@@ -1,0 +1,5 @@
+sheets:
+  - name: Sales
+    columns:
+      - at: F-D
+        width: 12

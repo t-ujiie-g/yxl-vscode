@@ -1,0 +1,4 @@
+sheets:
+  - name: A sheet name that is far too long for Excel to accept
+    cells:
+      A1: 1

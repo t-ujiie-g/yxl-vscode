@@ -1,0 +1,4 @@
+sheets:
+  - name: Sales
+    cells:
+      A1: { $ref: nosuch }
