@@ -51,6 +51,9 @@ const WINDOW = { rows: 200, columns: 50 };
 /** Where a sheet is being looked at, 1-based, as the view last asked. */
 export type Window = { readonly row: number; readonly col: number };
 
+/** The window each sheet is being looked at through, by the sheet's own name. */
+export type Windows = ReadonlyMap<string, Window>;
+
 /**
  * A spec, read and drawn — and everything that could not be, said once.
  *
@@ -78,7 +81,7 @@ export function project(
   file: string,
   read: IncludeReader & DataReader,
   params: Setting = new Map(),
-  windows: ReadonlyMap<number, Window> = new Map(),
+  windows: Windows = new Map(),
 ): Projected {
   const parsed = parse(text, { file });
   const loaded = load(parsed, read);
@@ -108,11 +111,7 @@ export function project(
  * recompiles nothing: that work is what a keystroke costs, and scrolling is not
  * a keystroke.
  */
-export function redraw(
-  projected: Projected,
-  params: Setting,
-  windows: ReadonlyMap<number, Window>,
-): Drawing {
+export function redraw(projected: Projected, params: Setting, windows: Windows): Drawing {
   const { doc, grid } = projected;
   if (doc === null || grid === null) return projected.drawing;
 
@@ -128,7 +127,7 @@ function drawn(
     diagnostics: readonly Diagnostic[];
   },
   params: Setting,
-  windows: ReadonlyMap<number, Window>,
+  windows: Windows,
 ): Drawing {
   const { doc, grid, nodes, diagnostics } = projected;
   const marked = marks(grid, nodes, diagnostics);
@@ -136,8 +135,8 @@ function drawn(
   return {
     kind: 'drawing',
     file,
-    sheets: grid.sheets.map((sheet, index) =>
-      drawSheet(sheet, marked.get(sheet.name) ?? [], windows.get(index)),
+    sheets: grid.sheets.map((sheet) =>
+      drawSheet(sheet, marked.get(sheet.name) ?? [], windows.get(sheet.name)),
     ),
     params: declared(doc, params),
     diagnostics: listed(diagnostics),

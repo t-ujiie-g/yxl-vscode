@@ -611,7 +611,7 @@ value, and it carries none of the write-back risk.
       leaves out so the scrollbar spans the whole sheet, and asks for another
       window on nearing an edge of the drawn one; the host answers from the grid
       it already compiled, so scrolling costs a redraw and not a re-parse.
-- [ ] **The session identity map** (ADR-015), moved here from Phase 2. A
+- [x] **The session identity map** (ADR-015), moved here from Phase 2. A
       `NodeId` is positional, so inserting an item into a sequence gives every
       item after it a new one — and gives the old id to the item next door. That
       costs nothing until something holds an id *across* a re-read, and the
@@ -620,6 +620,12 @@ value, and it carries none of the write-back risk.
       questions are the same question, and deciding them together, with a real
       consumer in view, beats deciding either blind. `id.test.ts` pins today's
       behaviour, so the day this lands, that test is what changes.
+      **Decided (ADR-023): no map.** With the consumer built, it holds no ids —
+      it keeps a sheet by name, a cell by address, a parameter by name. What the
+      decision cost was making that true rather than accidental: the showing tab
+      and the scroll window were keyed by *position* and are now keyed by name,
+      the wire names sheets, and a test asserts no id reaches the view.
+      `id.test.ts` is unchanged, because identity is unchanged.
 
 ### Phase 5 — Evaluated preview
 - [ ] `evaluate` seam: `CompiledGrid` → computed values, display only
@@ -1105,6 +1111,38 @@ from disk, inside a webview — the same trade a syntax highlighter makes.
 text the spec wrote, because this projection never converts either to an Excel
 serial. That is `compile`'s to do and is now an item of its own.
 
+### ADR-023 — The UI keeps its place by name, not by node id
+**Accepted.** What the preview holds across a re-read is what the reader
+*pointed at*: a sheet by its name, a cell by its A1 address, a parameter by its
+name. No `NodeId` crosses the wire, and none is kept anywhere.
+
+*Why this and not the session identity map:* ADR-015 left a map open because a
+`NodeId` is positional — inserting an item gives every item after it a new id,
+and hands the old id to the item next door. The map was to survive that. With
+the real consumer built, the premise turned out not to hold: **the UI never held
+an id in the first place.** Selection is an address, the scroll window is a row
+and a column, the tabs are sheets, the parameter boxes are names. Every one of
+those is a *natural key* the reader chose, and every one of them means the same
+thing in the next read. A map from old ids to new ones would have been
+machinery for a consumer that does not exist.
+
+*What it cost to make true:* two keys were positional and are now names — the
+showing tab and the per-sheet scroll window — so a sheet inserted before them no
+longer moves the reader somewhere else silently. The wire names sheets too,
+which also settles a race: an answer computed after a re-read is about the sheet
+that was asked about, or about none.
+
+*What is left, and is not identity:* a span is an offset into the text it was
+read from, so the cursor is not answered from a read older than the document —
+it says nothing until the read catches up. That is a *version* check, one number
+per projection, and not a map.
+
+*What would reopen this:* a write path that has to name a node across a re-read
+— "the band the dialog is about" while the file changes underneath — is Phase 6
+and later, and the natural keys above may not reach it. Then this decision is
+the thing to supersede, with a consumer to check the choice against, which is
+what was missing both times before.
+
 ## 8. Open questions
 
 - **Q1 — `cells:` A1 keys and row insertion.** Inserting a row rewrites every
@@ -1119,13 +1157,12 @@ serial. That is `compile`'s to do and is now an item of its own.
   parser (the Phase 5 evaluation engine has one). Prototype during Phase 5, when
   the parser is already in the build, and decide before Phase 7 commits to the
   `formulaRange` resolutions.
-- **Q3 — External change detection.** The file will change under us — the CLI,
-  an agent, a git checkout. Working assumption: discard the AST, re-derive, lose
-  UI selection state. Confirm this is enough during Phase 4, when it first bites.
-
-  ADR-015's identity map is the same question asked from the other side, and it
-  was moved to Phase 4 to be answered with this one: if losing selection state
-  on a re-read is acceptable, most of what the map is for goes with it.
+- **Q3 — External change detection.** ✅ *Answered 2026-08-15 (ADR-023).* Discard
+  the AST and re-derive — and there is no selection state to lose, because what
+  the UI keeps is names and addresses rather than nodes. The one thing that
+  cannot outlive a read is a *span*, so the cursor is not answered from a read
+  older than the document. ADR-015's identity map, asked from the other side,
+  goes with it: there was no consumer holding an id.
 - **Q4 — Where do new nodes go, across `$include`?** Provenance names the source
   file for existing nodes, but an addition has no file yet. Working assumption:
   the file backing the sheet being edited, shown in the resolution dialog so it
@@ -1501,6 +1538,31 @@ this at a phase boundary rather than at the end.
   two serials either side of it, so the next reader knows it is deliberate.
 - A cell's own format — written, or the one its type takes — now wins over a
   band's. Both are requests about *that* cell; a band is something reaching it.
+
+### 2026-08-15 — Phase 4: keeping your place, without a map for it
+
+- **ADR-015's session identity map is decided: there isn't one, and §8 Q3 is
+  answered with it (ADR-023).** The map was to survive positional `NodeId`s
+  across a re-read. With the Phase 4 UI built and in view, the premise did not
+  hold: the UI never held an id. It keeps a sheet by name, a cell by address, a
+  parameter by name — natural keys the *reader* chose, each meaning the same
+  thing in the next read.
+- **Two keys were positional, and are now names.** The showing tab and the
+  per-sheet scroll window were kept by index, so a sheet inserted above them
+  moved the reader to a different sheet without saying so. `sheetAgain` looks the
+  tab up again — position first, so two sheets briefly sharing a name stay
+  distinguishable, then the name, then the first sheet.
+- **The wire names sheets too**, which settles a race as well as a rename: an
+  `inspect` answered after a re-read is about the sheet that was asked about, or
+  about no sheet at all.
+- **The cursor is not answered from a stale read.** A span is an offset into the
+  text it was read from; asking one about a cursor in text edited since names
+  whichever node the shift landed in. The host now compares the document's
+  version with the read behind its node map and says nothing until they agree —
+  and the redraw that follows says it. A number per projection, not a map.
+- A test asserts that **no node id appears anywhere in what the view is sent**,
+  so the decision is checked rather than remembered. 9 new tests, 714 in total.
+  Phase 4 is complete.
 
 ### 2026-08-15 — Phase 4: a window that follows the scroll
 

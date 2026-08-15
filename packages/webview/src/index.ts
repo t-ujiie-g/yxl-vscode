@@ -1,6 +1,8 @@
+import { sheetAgain } from './again';
 import { type Asks, draw, type Reached, type Showing } from './draw';
 import type { Drawing, FromView, Source, ToView } from './protocol';
 
+export { type Kept, sheetAgain } from './again';
 export { type Asks, draw, type Reached, type Showing } from './draw';
 export type {
   Drawing,
@@ -25,6 +27,8 @@ declare function acquireVsCodeApi(): { postMessage: (message: FromView) => void 
  * It holds three things of its own — which sheet is showing, which cell is
  * selected, and the answer to the last question it asked — and redraws outright
  * for everything else, because a projection has nothing to reconcile (ADR-001).
+ * The three are named, not numbered, so that a spec read again finds them where
+ * the reader left them (ADR-023).
  */
 function start(): void {
   const into = document.getElementById('grid');
@@ -41,6 +45,8 @@ function start(): void {
     if (drawing !== null) draw(into, { drawing, sheet, selected, sources, reached }, asks);
   };
 
+  const named = (): string => drawing?.sheets[sheet]?.name ?? '';
+
   const asks: Asks = {
     showSheet: (index) => {
       sheet = index;
@@ -52,7 +58,7 @@ function start(): void {
     select: (row, col) => {
       selected = { row, col };
       sources = null;
-      host.postMessage({ kind: 'inspect', sheet, row, col });
+      host.postMessage({ kind: 'inspect', sheet: named(), row, col });
       redraw();
     },
     reveal: (source) => {
@@ -62,7 +68,7 @@ function start(): void {
       host.postMessage({ kind: 'setParam', name, value });
     },
     showWindow: (row, col) => {
-      host.postMessage({ kind: 'window', sheet, row, col });
+      host.postMessage({ kind: 'window', sheet: named(), row, col });
     },
   };
 
@@ -70,9 +76,12 @@ function start(): void {
     const sent = event.data;
 
     if (sent.kind === 'drawing') {
+      const was = drawing?.sheets[sheet];
       if (drawing?.file !== sent.file) {
         sheet = 0;
         selected = null;
+      } else if (was !== undefined) {
+        sheet = sheetAgain(sent.sheets, { name: was.name, index: sheet });
       }
       drawing = sent;
       sources = null;
@@ -82,8 +91,7 @@ function start(): void {
     }
 
     if (sent.kind === 'highlighted') {
-      const showing = drawing?.sheets[sheet]?.name;
-      const here = sent.cells.filter((cell) => cell.sheet === showing);
+      const here = sent.cells.filter((cell) => cell.sheet === named());
       reached = { says: sent.says, cells: new Set(here.map((one) => `${one.col}:${one.row}`)) };
       redraw();
       return;
@@ -91,7 +99,7 @@ function start(): void {
 
     // An answer about a cell that is still the selected one: a redraw may have
     // arrived since it was asked, and then it is no longer the question.
-    if (sent.sheet === sheet && sent.row === selected?.row && sent.col === selected.col) {
+    if (sent.sheet === named() && sent.row === selected?.row && sent.col === selected.col) {
       sources = sent.sources;
       redraw();
     }
