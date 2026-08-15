@@ -6,7 +6,13 @@ import { type Asks, draw, type Showing } from './draw';
 import type { Drawing, DrawnCell, DrawnSheet } from './protocol';
 
 function asks(): Asks {
-  return { showSheet: vi.fn(), select: vi.fn(), reveal: vi.fn(), setParam: vi.fn() };
+  return {
+    showSheet: vi.fn(),
+    select: vi.fn(),
+    reveal: vi.fn(),
+    setParam: vi.fn(),
+    showWindow: vi.fn(),
+  };
 }
 
 function cell(row: number, col: number, of: Partial<DrawnCell> = {}): DrawnCell {
@@ -27,6 +33,7 @@ function sheet(of: Partial<DrawnSheet> = {}): DrawnSheet {
     name: 'Sales',
     rows: 2,
     columns: 2,
+    at: { row: 1, col: 1 },
     of: { rows: of.rows ?? 2, columns: of.columns ?? 2 },
     widths: [],
     heights: [],
@@ -62,6 +69,13 @@ function shown(of: Partial<Showing> = {}, on: Asks = asks()): HTMLElement {
 function at(into: HTMLElement, row: number, col: number): HTMLTableCellElement | undefined {
   const line = into.querySelectorAll('tbody tr')[row - 1];
   return [...(line?.querySelectorAll('td') ?? [])][col - 1];
+}
+
+/** Leave the scroller somewhere, as a reader would. */
+function scrolled(into: HTMLElement, top: number): void {
+  const box = into.querySelector('.scroller');
+  if (!(box instanceof HTMLElement)) throw new Error('no scroller');
+  box.scrollTop = top;
 }
 
 /** A colour, branded the way the projection would have branded it. */
@@ -181,6 +195,102 @@ describe('a merge', () => {
   });
 });
 
+describe('a sheet larger than the window drawn of it', () => {
+  const tall = sheet({
+    rows: 2,
+    columns: 2,
+    at: { row: 51, col: 1 },
+    of: { rows: 100, columns: 2 },
+  });
+
+  it('draws the rows of the window it was given and no others', () => {
+    const into = shown({ drawing: drawing({ sheets: [tall] }) });
+    const numbers = [...into.querySelectorAll('tbody th')].map((one) => one.textContent);
+
+    expect(numbers).toEqual(['51', '52']);
+  });
+
+  it('holds the rows above and below open, so the scrollbar says how much sheet there is', () => {
+    const into = shown({ drawing: drawing({ sheets: [tall] }) });
+    const gaps = [...into.querySelectorAll<HTMLElement>('tbody .gap')].map(
+      (one) => one.style.height,
+    );
+
+    // 50 rows of 20px above, and the 48 the window leaves below it.
+    expect(gaps).toEqual(['1000px', '960px']);
+  });
+
+  it('holds the columns to the left and right open in the same way', () => {
+    const wide = sheet({ at: { row: 1, col: 3 }, of: { rows: 2, columns: 10 } });
+    const into = shown({ drawing: drawing({ sheets: [wide] }) });
+    const pads = [...into.querySelectorAll<HTMLElement>('thead .pad')].map((one) =>
+      Number.parseFloat(one.style.width),
+    );
+
+    // Two default columns to the left of the window, six to the right of it.
+    expect(pads[0]).toBeCloseTo(2 * 59.01, 2);
+    expect(pads[1]).toBeCloseTo(6 * 59.01, 2);
+  });
+
+  it('asks for the window the reader has scrolled to', () => {
+    const on = asks();
+    const into = shown({ drawing: drawing({ sheets: [tall] }) }, on);
+
+    const box = into.querySelector('.scroller');
+    if (!(box instanceof HTMLElement)) throw new Error('no scroller');
+
+    box.scrollTop = 20 * 89;
+    box.dispatchEvent(new Event('scroll'));
+    expect(on.showWindow).toHaveBeenCalledWith(89, 1);
+  });
+
+  it('asks for nothing while what is drawn covers where the reader is', () => {
+    const on = asks();
+    const covering = sheet({ rows: 100, columns: 2, of: { rows: 100, columns: 2 } });
+    const into = shown({ drawing: drawing({ sheets: [covering] }) }, on);
+
+    into.querySelector('.scroller')?.dispatchEvent(new Event('scroll'));
+    expect(on.showWindow).not.toHaveBeenCalled();
+  });
+
+  it('stays where the reader left it when a new window is drawn', () => {
+    const into = document.createElement('div');
+    const on = asks();
+    const showing = (of: DrawnSheet): Showing => ({
+      drawing: drawing({ sheets: [of] }),
+      sheet: 0,
+      selected: null,
+      sources: null,
+      reached: null,
+    });
+
+    draw(into, showing(tall), on);
+    scrolled(into, 1400);
+
+    draw(into, showing(sheet({ ...tall, at: { row: 61, col: 1 } })), on);
+    expect(into.querySelector<HTMLElement>('.scroller')?.scrollTop).toBe(1400);
+  });
+
+  it('starts at the top of another sheet, which was never scrolled', () => {
+    const into = document.createElement('div');
+    const on = asks();
+    const two = drawing({ sheets: [tall, sheet({ name: 'Notes' })] });
+    const showing = (index: number): Showing => ({
+      drawing: two,
+      sheet: index,
+      selected: null,
+      sources: null,
+      reached: null,
+    });
+
+    draw(into, showing(0), on);
+    scrolled(into, 1400);
+
+    draw(into, showing(1), on);
+    expect(into.querySelector<HTMLElement>('.scroller')?.scrollTop).toBe(0);
+  });
+});
+
 describe('what the view asks for', () => {
   it('asks to select the cell that was clicked', () => {
     const on = asks();
@@ -251,17 +361,6 @@ describe('what the view says about a spec', () => {
 
     expect(at(into, 1, 1)?.classList.contains('reached')).toBe(true);
     expect(into.querySelector('.reaching')?.textContent).toBe('the style `header` reaches 1 cell');
-  });
-
-  it('says what a page of preview left out', () => {
-    const large = sheet({ rows: 200, columns: 50, of: { rows: 5001, columns: 60 } });
-    const said = shown({ drawing: drawing({ sheets: [large] }) }).querySelector('.note');
-
-    expect(said?.textContent).toContain('4801 more rows and 10 more columns are not drawn');
-  });
-
-  it('says nothing when the whole sheet is drawn', () => {
-    expect(shown().querySelector('.note')).toBeNull();
   });
 
   it('says a spec with no sheets has nothing to draw', () => {

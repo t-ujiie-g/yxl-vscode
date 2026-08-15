@@ -3,7 +3,7 @@ import type { IncludeReader } from '@yxl-vscode/loader';
 import { filePath } from '@yxl-vscode/units';
 import type { DrawnSheet } from '@yxl-vscode/webview/protocol';
 import { describe, expect, it } from 'vitest';
-import { project } from './project';
+import { project, redraw, type Window } from './project';
 
 const FILE = '/specs/report.yxl.yaml';
 
@@ -15,8 +15,8 @@ const read: IncludeReader & DataReader = (_from, path) => {
   return file === null ? null : { file, source: 'APAC,1\nEMEA,2\n' };
 };
 
-function drawn(source: string): DrawnSheet {
-  const sheet = project(source, FILE, read).drawing.sheets[0];
+function drawn(source: string, windows?: ReadonlyMap<number, Window>): DrawnSheet {
+  const sheet = project(source, FILE, read, new Map(), windows).drawing.sheets[0];
   if (sheet === undefined) throw new Error('drew no sheet');
   return sheet;
 }
@@ -26,6 +26,9 @@ function at(source: string, col: number, row: number) {
 }
 
 const SALES = 'sheets:\n  - name: Sales\n';
+
+/** A sheet twice as tall as one window, so a window is a window and not the lot. */
+const TALL = `${SALES}    cells:\n${Array.from({ length: 400 }, (_, at) => `      A${at + 1}: ${at}`).join('\n')}\n`;
 
 describe('a drawn spec', () => {
   it('names its sheets', () => {
@@ -146,15 +149,50 @@ describe('a drawn spec', () => {
     expect(at(source, 2, 1)?.format).toBe('@');
   });
 
-  it('draws a page of a sheet, and says how far the sheet really reaches', () => {
+  it('draws a window of a sheet, and says how far the sheet really reaches', () => {
     // Measured rather than guessed (§9 R5): the cost that does not survive a
     // hundred thousand cells is the DOM, not the projection.
-    const rows = Array.from({ length: 400 }, (_, at) => `      A${at + 1}: ${at}`).join('\n');
-    const sheet = drawn(`${SALES}    cells:\n${rows}\n`);
+    const sheet = drawn(TALL);
 
-    expect(sheet.rows).toBe(200);
+    expect([sheet.rows, sheet.at.row]).toEqual([200, 1]);
     expect(sheet.of.rows).toBe(400);
     expect(sheet.cells.every((cell) => cell.row <= 200)).toBe(true);
+  });
+
+  it('draws the window the view scrolled to, and nothing either side of it', () => {
+    const sheet = drawn(TALL, new Map([[0, { row: 150, col: 1 }]]));
+
+    expect(sheet.at.row).toBe(150);
+    expect(sheet.cells.map((cell) => cell.row)).toEqual(
+      Array.from({ length: 200 }, (_, at) => at + 150),
+    );
+  });
+
+  it('keeps a window inside the sheet, however far the view asks to go', () => {
+    // The last window is the last 200 rows, not 200 rows of nothing past the end.
+    const sheet = drawn(TALL, new Map([[0, { row: 9000, col: 1 }]]));
+
+    expect([sheet.at.row, sheet.rows]).toEqual([201, 200]);
+  });
+
+  it('draws a window of a sheet too small to fill one', () => {
+    const sheet = drawn(`${SALES}    cells:\n      B2: x\n`, new Map([[0, { row: 5, col: 5 }]]));
+    expect([sheet.at.row, sheet.at.col, sheet.rows, sheet.columns]).toEqual([1, 1, 2, 2]);
+  });
+
+  it('draws another window without reading or compiling the spec again', () => {
+    const projected = project(TALL, FILE, read);
+    const moved = redraw(projected, new Map(), new Map([[0, { row: 150, col: 1 }]]));
+
+    expect(moved.sheets[0]?.at.row).toBe(150);
+    expect(moved.sheets[0]?.cells[0]?.row).toBe(150);
+    // Everything but the cells is the drawing it already had.
+    expect(moved.diagnostics).toEqual(projected.drawing.diagnostics);
+  });
+
+  it('draws the same window as before when nothing has scrolled', () => {
+    const projected = project(TALL, FILE, read);
+    expect(redraw(projected, new Map(), new Map())).toEqual(projected.drawing);
   });
 
   it('marks the cells a diagnostic is about', () => {

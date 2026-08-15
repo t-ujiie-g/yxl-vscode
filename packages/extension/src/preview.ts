@@ -4,7 +4,7 @@ import type { FromView } from '@yxl-vscode/webview/protocol';
 import * as vscode from 'vscode';
 import { readBeside } from './files';
 import { inspect, type Nodes, nodeAt } from './inspect';
-import { type Projected, project } from './project';
+import { type Projected, project, redraw, type Window } from './project';
 
 /** Long enough that typing does not redraw on every keystroke, short enough to feel live. */
 const SETTLE = 150;
@@ -30,6 +30,7 @@ export class Preview {
   private drawn: Projected | undefined;
   private nodes: Nodes = new Map();
   private readonly params = new Map<string, string>();
+  private readonly windows = new Map<number, Window>();
 
   static show(document: vscode.TextDocument, extension: vscode.Uri): void {
     const already = Preview.open.get(document.uri.toString());
@@ -113,7 +114,7 @@ export class Preview {
 
   private redraw(): void {
     const file = this.document.uri.fsPath;
-    const drawn = project(this.document.getText(), file, readBeside, this.params);
+    const drawn = project(this.document.getText(), file, readBeside, this.params, this.windows);
     const { drawing, diagnostics } = drawn;
     this.drawn = drawn;
     this.nodes = drawn.nodes;
@@ -145,6 +146,17 @@ export class Preview {
   private answer(asked: FromView): void {
     if (asked.kind === 'reveal') {
       void this.reveal(asked.file, asked.start, asked.end);
+      return;
+    }
+
+    if (asked.kind === 'window') {
+      this.windows.set(asked.sheet, { row: asked.row, col: asked.col });
+      const drawn = this.drawn;
+      if (drawn !== undefined) {
+        const drawing = redraw(drawn, this.params, this.windows);
+        this.drawn = { ...drawn, drawing };
+        void this.panel.webview.postMessage(drawing);
+      }
       return;
     }
 

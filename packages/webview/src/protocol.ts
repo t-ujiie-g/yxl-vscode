@@ -33,9 +33,10 @@ export interface DrawnParam {
 /**
  * One sheet, sized to what it holds.
  *
- * `rows` and `columns` are how far the sheet is *drawn*; `of` is how far it
- * reaches. They differ when a sheet is larger than a preview can put on a page
- * at once, and the view says so rather than quietly showing a corner.
+ * `at` and `rows`/`columns` are the window being drawn; `of` is how far the
+ * sheet reaches. A sheet larger than one page is drawn a window at a time and
+ * the view asks for another as the reader scrolls, so the grid never holds more
+ * elements than a page needs however large the sheet is (§9 R5).
  *
  * A spec with three cells draws three cells' worth of grid rather than a
  * million empty ones: the box is what its written cells, merges, and filled
@@ -45,6 +46,7 @@ export interface DrawnSheet {
   readonly name: string;
   readonly rows: number;
   readonly columns: number;
+  readonly at: { readonly row: number; readonly col: number };
   readonly of: { readonly rows: number; readonly columns: number };
   readonly widths: readonly Sized[];
   readonly heights: readonly Sized[];
@@ -152,10 +154,10 @@ export type ToView = Drawing | Inspected | Highlighted;
 /**
  * Everything the view sends back.
  *
- * Two questions and one knob, and none of them touches the spec: *where did
- * this cell come from*, *take me there*, and *draw it as though this parameter
- * were something else*. Setting a parameter changes what is drawn, not what is
- * written — the file on disk is untouched.
+ * Questions and knobs, none of which touches the spec: *where did this cell
+ * come from*, *take me there*, *draw it as though this parameter were something
+ * else*, and *draw the part of the sheet I have scrolled to*. Nothing here
+ * writes: the file on disk is untouched.
  */
 export type FromView =
   | { readonly kind: 'inspect'; readonly sheet: number; readonly row: number; readonly col: number }
@@ -165,7 +167,13 @@ export type FromView =
       readonly start: number;
       readonly end: number;
     }
-  | { readonly kind: 'setParam'; readonly name: string; readonly value: string };
+  | { readonly kind: 'setParam'; readonly name: string; readonly value: string }
+  | {
+      readonly kind: 'window';
+      readonly sheet: number;
+      readonly row: number;
+      readonly col: number;
+    };
 
 /**
  * Something the projection could not do, as the view lists it.
