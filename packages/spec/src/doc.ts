@@ -18,12 +18,17 @@ import type { ScalarValue } from './value';
  * Every top-level construct this editor does not model is in `opaque` — the
  * document's own keys and, per sheet, that sheet's. Nothing is dropped and
  * nothing is reformatted (ADR-011).
+ *
+ * `date1904` is modeled rather than carried because it decides what a date
+ * *is*: the two epochs are four years and a day apart, and a projection that
+ * guessed would draw every date wrong in a workbook that chose the other one.
  */
 export interface SpecDoc extends SpecNode {
   readonly sheets: readonly Sheet[];
   readonly params: readonly Param[];
   readonly defs: Defs;
   readonly overrides: readonly Override[];
+  readonly date1904: boolean;
   readonly opaque: readonly Opaque[];
 }
 

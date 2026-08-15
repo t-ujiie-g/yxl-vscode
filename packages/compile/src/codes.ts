@@ -21,6 +21,8 @@ export const CODE = {
   unknownStyle: 'compile.unknown-style',
   styleCycle: 'compile.style-cycle',
   badColour: 'compile.bad-colour',
+  badDate: 'compile.bad-date',
+  badDuration: 'compile.bad-duration',
   unknownSheet: 'compile.unknown-sheet',
   noDataReader: 'compile.no-data-reader',
   unreadableData: 'compile.unreadable-data',

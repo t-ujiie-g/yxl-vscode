@@ -231,6 +231,41 @@ describe('the order the sheet was written in', () => {
   });
 });
 
+describe('a typed cell', () => {
+  it('becomes the number Excel keeps, under the format that reads it back', () => {
+    const cell = at(`${SALES}    cells:\n      A1: { value: "2023-03-15", type: date }\n`, 'A1');
+    expect(cell?.value).toBe(45000);
+    expect(cell?.format).toBe('yyyy-mm-dd');
+  });
+
+  it('takes the date-time format when the text carried a time', () => {
+    const spec = `${SALES}    cells:\n      A1: { value: "2023-03-15 06:00:00", type: date }\n`;
+    expect(at(spec, 'A1')?.format).toBe('yyyy-mm-dd hh:mm:ss');
+  });
+
+  it('counts an elapsed time as a fraction of a day', () => {
+    const cell = at(`${SALES}    cells:\n      A1: { value: "36:00:00", type: duration }\n`, 'A1');
+    expect(cell?.value).toBe(1.5);
+    expect(cell?.format).toBe('[h]:mm:ss');
+  });
+
+  it('keeps the format the spec wrote, which is a request', () => {
+    const spec = `${SALES}    cells:\n      A1: { value: "2023-03-15", type: date, format: "dd/mm/yyyy" }\n`;
+    expect(at(spec, 'A1')?.format).toBe('dd/mm/yyyy');
+  });
+
+  it('numbers a date from the epoch the workbook chose', () => {
+    const spec = `date1904: true\n${SALES}    cells:\n      A1: { value: "2023-03-15", type: date }\n`;
+    expect(at(spec, 'A1')?.value).toBe(43538);
+  });
+
+  it('is reported, and left as written, when the value is not one', () => {
+    const spec = `${SALES}    cells:\n      A1: { value: "15/03/2023", type: date }\n`;
+    expect(codes(spec)).toEqual([CODE.badDate]);
+    expect(at(spec, 'A1')?.value).toBe('15/03/2023');
+  });
+});
+
 describe('a cell that is only a number format', () => {
   it('holds nothing, and says its value came from nowhere', () => {
     // The one shape that produces an `empty` origin: the node exists and no key

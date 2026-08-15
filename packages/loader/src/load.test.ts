@@ -54,9 +54,14 @@ describe('load', () => {
   });
 
   it('carries a top-level key it does not model, rather than dropping it', () => {
-    const { doc } = read('sheets: []\nactive: Sales\ndate1904: true\n');
-    expect(doc?.opaque.map((o) => o.key)).toEqual(['active', 'date1904']);
+    const { doc } = read('sheets: []\nactive: Sales\ndefault_font: Calibri\n');
+    expect(doc?.opaque.map((o) => o.key)).toEqual(['active', 'default_font']);
     expect(doc?.opaque[0]?.id).toBe(`["${FILE}","active"]`);
+  });
+
+  it('reads the date epoch, which decides what a date is', () => {
+    expect(read('sheets: []\n').doc?.date1904).toBe(false);
+    expect(read('sheets: []\ndate1904: true\n').doc?.date1904).toBe(true);
   });
 
   it('reads params, keeping a default that names another parameter as written', () => {
