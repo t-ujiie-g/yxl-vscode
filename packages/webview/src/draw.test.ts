@@ -23,6 +23,7 @@ function cell(row: number, col: number, of: Partial<DrawnCell> = {}): DrawnCell 
     filledFrom: null,
     format: null,
     rich: null,
+    computed: null,
     style: {},
     ...of,
   };

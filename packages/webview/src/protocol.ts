@@ -1,3 +1,4 @@
+import type { Computed } from '@yxl-vscode/evaluate';
 import type { ScalarValue, StyleValues } from '@yxl-vscode/spec';
 
 /**
@@ -108,6 +109,11 @@ export interface Sized {
  *
  * `rich` is a cell whose text is written in runs of its own (`docs/spec.md` §3),
  * and it is what the cell *says* — a cell that has runs has no `value`.
+ *
+ * `computed` is what the formula came to, and it is kept apart from `value` on
+ * purpose: `value` is what the *spec* holds and is the only one an edit could
+ * ever be about, while a computed number is display-only and is written back
+ * nowhere (ADR-014).
  */
 export interface DrawnCell {
   readonly row: number;
@@ -117,6 +123,7 @@ export interface DrawnCell {
   readonly filledFrom: string | null;
   readonly format: string | null;
   readonly rich: readonly DrawnRun[] | null;
+  readonly computed: Computed | null;
   readonly style: StyleValues;
 }
 

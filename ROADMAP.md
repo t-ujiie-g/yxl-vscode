@@ -638,10 +638,20 @@ value, and it carries none of the write-back risk.
       the way it draws a cell — and the cell is drawn as one `<span>` per run.
 
 ### Phase 5 — Evaluated preview
-- [ ] `evaluate` seam: `CompiledGrid` → computed values, display only
-- [ ] Adapter over `@univerjs/engine-formula` (Apache-2.0 — ADR-013)
-- [ ] Cells show the computed value with the formula available; an evaluation
+- [x] `evaluate` seam: `CompiledGrid` → computed values, display only
+      **Shipped**: two calls — here is what the workbook holds, what does this
+      formula come to — and everything else is the seam's, because it is about
+      the spec rather than about arithmetic: which cells to ask about, a range
+      asked cell by cell with its offset, and passes until the answers settle.
+- [x] Adapter over `@univerjs/engine-formula` (Apache-2.0 — ADR-013)
+      **Shipped** (ADR-025), and *synchronously*: the layer under Univer's own
+      entry points needs no live workbook and answers in the same tick, so the
+      projection is still a function over text.
+- [x] Cells show the computed value with the formula available; an evaluation
       failure degrades to showing the formula, never to a wrong number
+      **Shipped**: the computed value rides beside the spec's own rather than
+      over it, so what an edit could be about and what a reader is looking at
+      stay different fields (ADR-014).
 - [ ] Unsupported-function reporting, so the gap between us and Excel is visible
       rather than silent
 - [ ] The evaluated value is unreachable from every write path — asserted, not
@@ -1176,6 +1186,36 @@ matching the theme would not even match a dark-mode Excel.
 *What would reopen this:* a reader who wants the dark canvas, at which point it
 is a setting with two values, not a different default. Nobody has asked.
 
+### ADR-025 — The engine is driven under its own API, and given fresh ids each load
+**Accepted.** `@univerjs/engine-formula` is used through its lexer, parser, and
+interpreter directly rather than through `CalculateFormulaService.execute` or
+`executeFormulas`, and every load of the workbook's values is registered under
+new sheet ids.
+
+*Why not the documented entry points:* both of them read the workbook from a
+live Univer instance — `loadDataLite()` fetches the sheets from the instance
+service and overwrites whatever was registered — so using them would mean
+standing up a real workbook model, a document, and the plugins under it. They
+are also `async`. The layer beneath them takes the cell values it is handed and
+answers in the same tick, which is what keeps `project` a synchronous function
+over text.
+
+*Why fresh ids:* the engine caches a materialised range in a **process-wide LRU
+keyed by unit, sheet, and position, with nothing in the key about the values it
+holds**. Reading `A1:A2` once would otherwise freeze it for every later pass and
+every later preview in the process — measured, not guessed: a second pass read
+the first pass's blanks. New ids per load are new keys, and the LRU evicts the
+old ones.
+
+*What it costs:* the extension bundle goes from 365KB to 3.3MB. The webview's is
+unchanged, because the wire carries the engine's *answers* and the type that
+names them is erased at build time.
+
+*What it does not do:* no dependency graph. Univer's would come with the
+workbook model this deliberately avoids, so the order is `evaluate`'s own — a
+pass per depth of chain, and a cell that never settles is reported as
+uncomputable rather than as the number it stopped at.
+
 ## 8. Open questions
 
 - **Q1 — `cells:` A1 keys and row insertion.** Inserting a row rewrites every
@@ -1571,6 +1611,31 @@ this at a phase boundary rather than at the end.
   two serials either side of it, so the next reader knows it is deliberate.
 - A cell's own format — written, or the one its type takes — now wins over a
   band's. Both are requests about *that* cell; a band is something reaching it.
+
+### 2026-08-15 — Phase 5: the preview computes
+
+- **Formulas are evaluated, display only.** `SUM(B2:B3)` shows `4150000` where
+  it used to show its own text, `1/0` shows `#DIV/0!`, and `TEXT(0.085,"0.0%")`
+  shows `8.5%` — 511 functions, from Univer's Apache-2.0 engine (ADR-013).
+- **A filled range computes per cell, correctly.** The one thing this preview has
+  refused to guess at since Phase 4 — what `B2*0.05` means one row down — is
+  exactly what the engine's own shared-formula offset answers, so `C3` now shows
+  `B3*0.05`'s value while the spec still holds one formula. The offset comes from
+  the cell's provenance, which has recorded it since Phase 3.
+- **Nothing computed is written anywhere near the spec (ADR-014).** The computed
+  value rides in a field of its own beside the spec's `value`, so what a reader
+  is looking at and what an edit could ever be about are different fields on the
+  wire. A cell that could not be computed shows its formula, never a number.
+- **The engine is driven under its own API and answers synchronously** (ADR-025),
+  which is what lets the whole projection stay a function over text. Its
+  process-wide range cache is keyed by position and not by contents; the adapter
+  works around that with fresh ids per load, which is the sort of thing you only
+  find by measuring — a second pass was reading the first pass's blanks.
+- The seam holds the parts that are about *the spec* rather than about
+  arithmetic: which cells to ask about, a range asked cell by cell, and passes
+  until the answers settle. A workbook past the limit computes **nothing**
+  rather than the part that fit: half a total is a wrong total. 31 new tests,
+  751 in total.
 
 ### 2026-08-15 — Rich text is drawn
 

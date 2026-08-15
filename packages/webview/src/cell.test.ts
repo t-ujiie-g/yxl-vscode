@@ -14,6 +14,7 @@ function cell(of: Partial<DrawnCell> = {}): DrawnCell {
     filledFrom: null,
     format: null,
     rich: null,
+    computed: null,
     style: {},
     ...of,
   };
@@ -50,6 +51,51 @@ describe('what a cell says', () => {
     expect(drawn.textContent).toBe('↧ C2');
     expect(drawn.classList.contains('filled')).toBe(true);
     expect(drawn.title).toContain('Excel shifts');
+  });
+
+  it('shows what a formula came to, with the formula a hover away', () => {
+    const drawn = drawCell(
+      cell({ formula: 'SUM(B2:B3)', computed: { kind: 'value', value: 4150000 } }),
+      undefined,
+    );
+
+    expect(drawn.textContent).toBe('4150000');
+    expect(drawn.title).toBe('=SUM(B2:B3)');
+  });
+
+  it('shows a computed number under the format the cell wears', () => {
+    const computed = { kind: 'value', value: 0.085 } as const;
+    expect(drawCell(cell({ formula: 'x', computed, format: '0.0%' }), undefined).textContent).toBe(
+      '8.5%',
+    );
+  });
+
+  it("shows Excel's own error text, marked as a problem", () => {
+    const drawn = drawCell(
+      cell({ formula: '1/0', computed: { kind: 'error', error: '#DIV/0!' } }),
+      undefined,
+    );
+
+    expect(drawn.textContent).toBe('#DIV/0!');
+    expect(drawn.classList.contains('problem')).toBe(true);
+  });
+
+  it('falls back to the formula when nothing could be computed, never to a number', () => {
+    const computed = { kind: 'unsupported', why: 'this function answers asynchronously' } as const;
+    const drawn = drawCell(cell({ formula: 'WEBSERVICE(A1)', computed }), undefined);
+
+    expect(drawn.textContent).toBe('=WEBSERVICE(A1)');
+    expect(drawn.title).toContain('not computed');
+  });
+
+  it('shows a filled cell its own result rather than where it reads from', () => {
+    // The marker is what a cell of a range says when nothing computed it; with
+    // a value there is a value to show, and the story stays on the hover.
+    const computed = { kind: 'value', value: 10 } as const;
+    const drawn = drawCell(cell({ formula: 'B2*0.05', filledFrom: 'C2', computed }), undefined);
+
+    expect(drawn.textContent).toBe('10');
+    expect(drawn.title).toContain('filled from C2');
   });
 
   it('shows a cell written in runs as its runs, each wearing its own font', () => {
