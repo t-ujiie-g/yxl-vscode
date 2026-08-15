@@ -603,9 +603,14 @@ value, and it carries none of the write-back risk.
       cost; **parsing is**, and the DOM would have been. So the preview draws a
       page of a sheet (200 rows × 50 columns) and says what it left out, and §8
       Q5 is answered: no grid library.
-- [ ] Draw more of a large sheet than the first page — a window that follows the
+- [x] Draw more of a large sheet than the first page — a window that follows the
       scroll, rather than a cap. The cap is honest and cheap and makes the first
       release usable; this is what makes it good.
+      **Done**: the same 200 × 50 window, drawn wherever the reader is rather
+      than only at the top left. The view pads the rows and columns the window
+      leaves out so the scrollbar spans the whole sheet, and asks for another
+      window on nearing an edge of the drawn one; the host answers from the grid
+      it already compiled, so scrolling costs a redraw and not a re-parse.
 - [ ] **The session identity map** (ADR-015), moved here from Phase 2. A
       `NodeId` is positional, so inserting an item into a sequence gives every
       item after it a new one — and gives the old id to the item next door. That
@@ -1225,10 +1230,14 @@ serial. That is `compile`'s to do and is now an item of its own.
 - **R4 — Scope.** `docs/spec.md` is 1451 lines across 23 sections. ADR-011 makes
   coverage incremental, but "editable in the GUI" will lag "expressible in yxl"
   for a long time, and the README must say so plainly rather than imply parity.
-- **R5 — Webview performance.** Large sheets in a VS Code webview, re-projected
-  on every keystroke. Mitigations: debounce, incremental compilation keyed by
-  node, virtualized rendering. Measure in Phase 4 with a deliberately large spec
-  before choosing the grid (§8 Q5).
+- **R5 — Webview performance.** ✅ *Closed 2026-08-15* — measured, then answered.
+  100 000 written cells parse in 353ms, load in 5ms, compile in 27ms and flatten
+  in 52ms; the one cost that did not survive that size was the DOM. So the view
+  draws a 200 × 50 window wherever the reader is and pads out the rest, the host
+  answers a scroll from the grid it already compiled, and a keystroke is
+  debounced. What is left of this risk is ordinary: a *keystroke* still re-parses
+  the whole spec, which is why incremental compilation keyed by node stays on the
+  list rather than in the closed column.
 - **R6 — Evaluation disagrees with Excel.** Any preview engine will differ from
   Excel somewhere. Mitigated by ADR-014 (never written back), visible
   unsupported-function reporting, and "Excel is the renderer of record" stated in
@@ -1492,6 +1501,27 @@ this at a phase boundary rather than at the end.
   two serials either side of it, so the next reader knows it is deliberate.
 - A cell's own format — written, or the one its type takes — now wins over a
   band's. Both are requests about *that* cell; a band is something reaching it.
+
+### 2026-08-15 — Phase 4: a window that follows the scroll
+
+- **A large sheet is no longer drawn only at its top left.** The view keeps the
+  200 × 50 window the measurement bought, and moves it: it pads the rows above
+  and below and the columns either side, so the scrollbar says how much sheet
+  there is, and asks the host for another window on coming within 20 rows or 5
+  columns of an edge of the drawn one. The new window is centred on the reader,
+  which is what stops it asking again on the next scrolled row.
+- **Scrolling is not a keystroke, and no longer costs one.** `redraw` draws
+  another window from the grid the host already compiled — the parse and the
+  compile behind it are what an *edit* costs. On a spec where that is 353ms,
+  doing it per scroll would have been the whole feature undone.
+- The scroll position survives the redraw that answers, because the padding puts
+  every row at the same offset whichever window is drawn; switching sheets starts
+  at the top, because that scroll position belongs to the other sheet.
+- The geometry moved to its own module and is tested as values — where a row
+  sits, which row a scroll position has reached, which window to ask for — and
+  the view's tests assert the drawn rows and the pad sizes. 20 new tests, 704 in
+  total. §9 R5 is closed, and the "says what it left out" note is gone: there is
+  nothing left out to say.
 
 ### 2026-08-15 — Phase 4: the number, and what it decided
 - §9 R5 asked for a measurement before a grid library was chosen. Here it is,

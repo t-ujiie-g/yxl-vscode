@@ -38,15 +38,18 @@ import { type Nodes, nodeAt, nodesOf } from './inspect';
 const BEYOND = 50;
 
 /**
- * How much of a sheet one page of preview draws.
+ * How much of a sheet is drawn at once, wherever in it the reader is.
  *
  * Measured rather than guessed (§9 R5): a hundred thousand written cells parse,
  * load, compile, and flatten in under half a second, and the cost that does not
  * survive that size is the DOM — a hundred thousand `<td>`s is a page that
- * stops responding. Ten thousand is a screenful many times over, and the view
- * says what it is not showing.
+ * stops responding. Ten thousand is a screenful many times over with enough
+ * either side that scrolling does not wait on this pipeline.
  */
-const PAGE = { rows: 200, columns: 50 };
+const WINDOW = { rows: 200, columns: 50 };
+
+/** Where a sheet is being looked at, 1-based, as the view last asked. */
+export type Window = { readonly row: number; readonly col: number };
 
 /**
  * A spec, read and drawn — and everything that could not be, said once.
@@ -75,6 +78,7 @@ export function project(
   file: string,
   read: IncludeReader & DataReader,
   params: Setting = new Map(),
+  windows: ReadonlyMap<number, Window> = new Map(),
 ): Projected {
   const parsed = parse(text, { file });
   const loaded = load(parsed, read);
@@ -92,20 +96,51 @@ export function project(
   const grid = compile(loaded.doc, { read, params });
   const diagnostics = [...parsed.diagnostics, ...loaded.diagnostics, ...grid.diagnostics];
   const nodes = nodesOf(loaded.doc);
+  const projected = { diagnostics, doc: loaded.doc, grid, nodes };
+
+  return { drawing: drawn(file, projected, params, windows), ...projected };
+}
+
+/**
+ * The same spec drawn at a different part of a sheet.
+ *
+ * Scrolling changes only which cells the view is handed, so it re-reads and
+ * recompiles nothing: that work is what a keystroke costs, and scrolling is not
+ * a keystroke.
+ */
+export function redraw(
+  projected: Projected,
+  params: Setting,
+  windows: ReadonlyMap<number, Window>,
+): Drawing {
+  const { doc, grid } = projected;
+  if (doc === null || grid === null) return projected.drawing;
+
+  return drawn(projected.drawing.file, { ...projected, doc, grid }, params, windows);
+}
+
+function drawn(
+  file: string,
+  projected: {
+    doc: SpecDoc;
+    grid: CompiledGrid;
+    nodes: Nodes;
+    diagnostics: readonly Diagnostic[];
+  },
+  params: Setting,
+  windows: ReadonlyMap<number, Window>,
+): Drawing {
+  const { doc, grid, nodes, diagnostics } = projected;
   const marked = marks(grid, nodes, diagnostics);
 
   return {
-    drawing: {
-      kind: 'drawing',
-      file,
-      sheets: grid.sheets.map((sheet) => drawSheet(sheet, marked.get(sheet.name) ?? [])),
-      params: declared(loaded.doc, params),
-      diagnostics: listed(diagnostics),
-    },
-    diagnostics,
-    doc: loaded.doc,
-    grid,
-    nodes,
+    kind: 'drawing',
+    file,
+    sheets: grid.sheets.map((sheet, index) =>
+      drawSheet(sheet, marked.get(sheet.name) ?? [], windows.get(index)),
+    ),
+    params: declared(doc, params),
+    diagnostics: listed(diagnostics),
   };
 }
 
@@ -152,20 +187,29 @@ function declared(doc: SpecDoc, params: Setting): DrawnParam[] {
   }));
 }
 
-function drawSheet(sheet: CompiledSheet, problems: readonly MarkedCell[]): DrawnSheet {
+function drawSheet(
+  sheet: CompiledSheet,
+  problems: readonly MarkedCell[],
+  window: Window | undefined,
+): DrawnSheet {
   const of = extent(sheet);
-  const rows = Math.min(of.rows, PAGE.rows);
-  const columns = Math.min(of.columns, PAGE.columns);
+  const at = {
+    row: Math.max(1, Math.min(window?.row ?? 1, Math.max(1, of.rows - WINDOW.rows + 1))),
+    col: Math.max(1, Math.min(window?.col ?? 1, Math.max(1, of.columns - WINDOW.columns + 1))),
+  };
+  const rows = Math.min(of.rows - at.row + 1, WINDOW.rows);
+  const columns = Math.min(of.columns - at.col + 1, WINDOW.columns);
 
   return {
     name: sheet.name,
     problems,
     rows,
     columns,
+    at,
     of,
     widths: sheet.columns.map(sizedRun),
     heights: sheet.rows.map(sizedRun),
-    cells: drawCells(sheet, rows, columns),
+    cells: drawCells(sheet, at, rows, columns),
     merges: sheet.merges.map(
       (merge): DrawnMerge => ({
         top: merge.rect.top,
@@ -205,17 +249,17 @@ function extent(sheet: CompiledSheet): { rows: number; columns: number } {
 }
 
 /**
- * Every address in the drawn box that has anything to show.
+ * Every address in the window that has anything to show.
  *
  * A band gives an empty cell a look, so this asks about addresses nothing
  * wrote — and skips the ones that come back with nothing, which is most of a
- * grid.
+ * grid. Only the window is asked about, however large the sheet is.
  */
-function drawCells(sheet: CompiledSheet, rows: number, columns: number): DrawnCell[] {
+function drawCells(sheet: CompiledSheet, at: Window, rows: number, columns: number): DrawnCell[] {
   const drawn: DrawnCell[] = [];
 
-  for (let row = 1; row <= rows; row += 1) {
-    for (let col = 1; col <= columns; col += 1) {
+  for (let row = at.row; row < at.row + rows; row += 1) {
+    for (let col = at.col; col < at.col + columns; col += 1) {
       const at = addrAt({ col, row });
       const cell = cellAt(sheet, at);
       const layers = styleAt(sheet, at);

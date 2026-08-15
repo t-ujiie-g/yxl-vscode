@@ -1,6 +1,7 @@
 import type { StyleValues } from '@yxl-vscode/spec';
 import { format as excel } from 'numfmt';
 import type { Drawing, DrawnCell, DrawnSheet, Source } from './protocol';
+import { across, down, heightOf, type Where, wanted, widthOf } from './window';
 
 /** What the view is showing: the drawing, and the little it holds of its own. */
 export interface Showing {
@@ -23,6 +24,7 @@ export interface Asks {
   readonly select: (row: number, col: number) => void;
   readonly reveal: (source: Source) => void;
   readonly setParam: (name: string, value: string) => void;
+  readonly showWindow: (row: number, col: number) => void;
 }
 
 const EDGES = [
@@ -31,10 +33,6 @@ const EDGES = [
   ['top', 'borderTop'],
   ['bottom', 'borderBottom'],
 ] as const;
-
-/** Excel's own units, as CSS: a character width is about 7px, a point is 4/3 of one. */
-const PER_CHARACTER = 7;
-const PER_POINT = 4 / 3;
 
 /**
  * The whole view: a tab per sheet, and the grid of whichever is showing.
@@ -45,6 +43,12 @@ const PER_POINT = 4 / 3;
  */
 export function draw(into: HTMLElement, showing: Showing, asks: Asks): void {
   const { drawing } = showing;
+  const was = into.querySelector('.scroller');
+  const same = was?.getAttribute('data-of') === looking(showing);
+  const kept: Where =
+    same && was instanceof HTMLElement
+      ? { top: was.scrollTop, left: was.scrollLeft }
+      : { top: 0, left: 0 };
   into.replaceChildren();
 
   if (drawing.sheets.length === 0) {
@@ -57,9 +61,12 @@ export function draw(into: HTMLElement, showing: Showing, asks: Asks): void {
 
   const sheet = drawing.sheets[Math.min(showing.sheet, drawing.sheets.length - 1)];
   if (sheet !== undefined) {
-    into.append(grid(sheet, showing, asks));
-    const rest = notShown(sheet);
-    if (rest !== null) into.append(note(rest));
+    const box = scroller(sheet, showing, asks);
+    into.append(box);
+    // After it is in the page: an element with no layout box has nowhere to
+    // scroll to, and the assignment would be dropped.
+    box.scrollTop = kept.top;
+    box.scrollLeft = kept.left;
   }
 
   if (showing.reached !== null) into.append(reaching(showing.reached));
@@ -106,23 +113,33 @@ function parameters(drawing: Drawing, asks: Asks): HTMLElement {
   return panel;
 }
 
+/** What a scroll position is a position in, so that another sheet starts at its top. */
+function looking(showing: Showing): string {
+  return `${showing.drawing.file}#${showing.sheet}`;
+}
+
 /**
- * What a page of preview left out, said plainly.
+ * The sheet as something to scroll through: the drawn window, sitting in a box
+ * padded out to the size of the whole sheet.
  *
- * A sheet can be larger than one page can draw, and a corner of a sheet shown
- * without saying so is a preview that lies about how much there is.
+ * The scrollbar then says how much sheet there is, while the grid holds only a
+ * window's worth of cells however large the sheet is (§9 R5). Coming near an
+ * edge of what is drawn asks the host for a window around where the reader now
+ * is; the scroll position outlives the redraw that answers, because the padding
+ * puts every row at the same offset whichever window is drawn.
  */
-function notShown(sheet: DrawnSheet): string | null {
-  const rows = sheet.of.rows - sheet.rows;
-  const columns = sheet.of.columns - sheet.columns;
-  if (rows <= 0 && columns <= 0) return null;
+function scroller(sheet: DrawnSheet, showing: Showing, asks: Asks): HTMLElement {
+  const box = document.createElement('div');
+  box.className = 'scroller';
+  box.setAttribute('data-of', looking(showing));
+  box.append(grid(sheet, showing, asks));
 
-  const left = [
-    rows > 0 ? `${rows} more row${rows === 1 ? '' : 's'}` : '',
-    columns > 0 ? `${columns} more column${columns === 1 ? '' : 's'}` : '',
-  ].filter((one) => one !== '');
+  box.addEventListener('scroll', () => {
+    const at = wanted(sheet, { top: box.scrollTop, left: box.scrollLeft });
+    if (at !== null) asks.showWindow(at.row, at.col);
+  });
 
-  return `${left.join(' and ')} are not drawn: this preview shows the first ${sheet.rows} rows and ${sheet.columns} columns of a sheet.`;
+  return box;
 }
 
 /** What the cursor is reaching, said above the grid so the highlight is explained. */
@@ -210,9 +227,15 @@ function grid(sheet: DrawnSheet, showing: Showing, asks: Asks): HTMLElement {
   const covered = coveredBy(sheet);
   const problems = markedBy(sheet);
 
-  for (let row = 1; row <= sheet.rows; row += 1) {
+  const before = down(sheet, sheet.at.row);
+  if (before > 0) body.append(gap(sheet, before));
+
+  for (let row = sheet.at.row; row < sheet.at.row + sheet.rows; row += 1) {
     body.append(line(sheet, row, held, covered, problems, showing, asks));
   }
+
+  const after = down(sheet, sheet.of.rows + 1) - down(sheet, sheet.at.row + sheet.rows);
+  if (after > 0) body.append(gap(sheet, after));
 
   table.append(body);
   return table;
@@ -255,15 +278,47 @@ function headings(sheet: DrawnSheet): HTMLElement {
   const line = document.createElement('tr');
   line.append(corner());
 
-  for (let col = 1; col <= sheet.columns; col += 1) {
+  const before = across(sheet, sheet.at.col);
+  if (before > 0) line.append(pad(before));
+
+  for (let col = sheet.at.col; col < sheet.at.col + sheet.columns; col += 1) {
     const heading = document.createElement('th');
     heading.textContent = label(col);
-    heading.style.width = `${width(sheet, col)}px`;
+    heading.style.width = `${widthOf(sheet, col)}px`;
     line.append(heading);
   }
 
+  const after = across(sheet, sheet.of.columns + 1) - across(sheet, sheet.at.col + sheet.columns);
+  if (after > 0) line.append(pad(after));
+
   head.append(line);
   return head;
+}
+
+/**
+ * A cell holding nothing but the width of the columns the window left out.
+ *
+ * A `td` even in the heading row: a `th` there would be frozen to the edge like
+ * the headings it sits among, and this one has to scroll with what it stands in
+ * for.
+ */
+function pad(width: number): HTMLElement {
+  const cell = document.createElement('td');
+  cell.className = 'pad';
+  cell.style.width = `${width}px`;
+  return cell;
+}
+
+/** The same down the page: a row holding the height of the rows left out. */
+function gap(sheet: DrawnSheet, height: number): HTMLElement {
+  const line = document.createElement('tr');
+  line.className = 'gap';
+  line.style.height = `${height}px`;
+
+  const cell = document.createElement('td');
+  cell.colSpan = sheet.columns + 3;
+  line.append(cell);
+  return line;
 }
 
 function line(
@@ -276,14 +331,16 @@ function line(
   asks: Asks,
 ): HTMLElement {
   const line = document.createElement('tr');
-  const height = sized(sheet.heights, row);
-  if (height !== null) line.style.height = `${height * PER_POINT}px`;
+  line.style.height = `${heightOf(sheet, row)}px`;
 
   const number = document.createElement('th');
   number.textContent = String(row);
   line.append(number);
 
-  for (let col = 1; col <= sheet.columns; col += 1) {
+  const before = across(sheet, sheet.at.col);
+  if (before > 0) line.append(pad(before));
+
+  for (let col = sheet.at.col; col < sheet.at.col + sheet.columns; col += 1) {
     if (covered.has(`${col}:${row}`)) continue;
 
     const drawn = drawCell(sheet, held.get(`${col}:${row}`), col, row);
@@ -412,16 +469,6 @@ function thickness(line: string): string {
   if (line === 'hair') return '0.5px';
   if (line === 'medium' || line === 'double') return '2px';
   return line === 'thick' ? '3px' : '1px';
-}
-
-function width(sheet: DrawnSheet, col: number): number {
-  const set = sized(sheet.widths, col);
-  return (set ?? 8.43) * PER_CHARACTER;
-}
-
-function sized(runs: readonly { first: number; last: number; size: number }[], at: number) {
-  const found = runs.findLast((run) => at >= run.first && at <= run.last);
-  return found?.size ?? null;
 }
 
 /** A column's Excel name: 1 is `A`, 27 is `AA`. */

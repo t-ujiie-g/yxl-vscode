@@ -61,6 +61,9 @@ function start(): void {
     setParam: (name, value) => {
       host.postMessage({ kind: 'setParam', name, value });
     },
+    showWindow: (row, col) => {
+      host.postMessage({ kind: 'window', sheet, row, col });
+    },
   };
 
   window.addEventListener('message', (event: MessageEvent<ToView>) => {
