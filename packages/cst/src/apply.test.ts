@@ -197,6 +197,127 @@ describe('apply', () => {
     });
   });
 
+  describe('write', () => {
+    it('puts back the exact text, escapes and all', () => {
+      const source = 'values:\n  tabbed: "a\tb"\n';
+      const flattened = text(source, { op: 'set', path: ['values', 'tabbed'], value: 'x' });
+
+      expect(text(flattened, { op: 'write', path: ['values', 'tabbed'], source: '"a\tb"' })).toBe(
+        source,
+      );
+    });
+
+    it('writes into a key that had no value at all', () => {
+      expect(text('a:\n', { op: 'write', path: ['a'], source: '1' })).toBe('a: 1\n');
+    });
+  });
+
+  describe('block scalars', () => {
+    const SOURCE = 'notes:\n  body: |\n    line one\n    line two\n';
+
+    it('refuses to write over one, rather than swallowing the lines under it', () => {
+      const { diagnostics, text: after } = edit(SOURCE, {
+        op: 'set',
+        path: ['notes', 'body'],
+        value: 'x',
+      });
+
+      expect(diagnostics[0]?.code).toBe(CODE.blockScalarNotSupported);
+      expect(after).toBe(SOURCE);
+    });
+
+    it('refuses to empty one for the same reason', () => {
+      const { diagnostics } = edit(SOURCE, { op: 'clear', path: ['notes', 'body'] });
+      expect(diagnostics[0]?.code).toBe(CODE.blockScalarNotSupported);
+    });
+  });
+
+  describe('clear', () => {
+    it('leaves the key with no value, and no space where the value was', () => {
+      expect(text('a: 1\nb: 2\n', { op: 'clear', path: ['a'] })).toBe('a:\nb: 2\n');
+    });
+
+    it('leaves a key that already has no value alone', () => {
+      expect(text('a:\nb: 2\n', { op: 'clear', path: ['a'] })).toBe('a:\nb: 2\n');
+    });
+  });
+
+  describe('add', () => {
+    it('appends an entry, copying the layout of the ones there', () => {
+      const source = 'cells:\n  A1: Revenue\n  B1: 2400000\n';
+      const after = text(source, {
+        op: 'add',
+        path: ['cells'],
+        key: 'C1',
+        value: 'Share',
+        before: null,
+      });
+
+      expect(after).toBe('cells:\n  A1: Revenue\n  B1: 2400000\n  C1: Share\n');
+    });
+
+    it('puts an entry above the one it names, which is how a removal is undone', () => {
+      const source = 'cells:\n  A1: Revenue\n  C1: Share\n';
+      const after = text(source, {
+        op: 'add',
+        path: ['cells'],
+        key: 'B1',
+        value: 2400000,
+        before: 'C1',
+      });
+
+      expect(after).toBe('cells:\n  A1: Revenue\n  B1: 2400000\n  C1: Share\n');
+    });
+
+    it('quotes a key and a value that need it', () => {
+      const after = text('cells:\n  A1: x\n', {
+        op: 'add',
+        path: ['cells'],
+        key: 'A2',
+        value: '007',
+        before: null,
+      });
+
+      expect(after).toBe('cells:\n  A1: x\n  A2: "007"\n');
+    });
+
+    it('refuses a key that is already there', () => {
+      const { diagnostics } = edit('cells:\n  A1: x\n', {
+        op: 'add',
+        path: ['cells'],
+        key: 'A1',
+        value: 'y',
+        before: null,
+      });
+
+      expect(diagnostics[0]?.code).toBe(CODE.keyExists);
+    });
+
+    it('refuses a mapping with no entry to copy a layout from', () => {
+      const { diagnostics } = edit('cells:\n', {
+        op: 'add',
+        path: ['cells'],
+        key: 'A1',
+        value: 'x',
+        before: null,
+      });
+
+      expect(diagnostics[0]?.code).toBe(CODE.notAMapping);
+    });
+
+    it('refuses to add before a key that is not there', () => {
+      const { diagnostics } = edit('cells:\n  A1: x\n', {
+        op: 'add',
+        path: ['cells'],
+        key: 'A2',
+        value: 'y',
+        before: 'Z9',
+      });
+
+      expect(diagnostics[0]?.code).toBe(CODE.noSuchKey);
+    });
+  });
+
   describe('comments', () => {
     it('leaves a comment above an entry attached to that entry when inserting before it', () => {
       const source = 'sheets:\n  # the sales sheet\n  - Sales\n  - Costs\n';

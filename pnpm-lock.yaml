@@ -135,7 +135,14 @@ importers:
 
   packages/normalize: {}
 
-  packages/patch: {}
+  packages/patch:
+    dependencies:
+      '@yxl-vscode/cst':
+        specifier: workspace:*
+        version: link:../cst
+      '@yxl-vscode/diag':
+        specifier: workspace:*
+        version: link:../diag
 
   packages/spec:
     dependencies:
@@ -182,6 +189,9 @@ importers:
       '@yxl-vscode/loader':
         specifier: workspace:*
         version: link:../packages/loader
+      '@yxl-vscode/patch':
+        specifier: workspace:*
+        version: link:../packages/patch
       '@yxl-vscode/spec':
         specifier: workspace:*
         version: link:../packages/spec

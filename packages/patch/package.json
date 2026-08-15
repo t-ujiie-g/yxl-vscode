@@ -3,9 +3,13 @@
   "version": "0.0.0",
   "private": true,
   "license": "Apache-2.0",
-  "description": "Patch operations applied to the CST, and the inverse patch that makes undo AST-level.",
+  "description": "Edits to a spec as invertible operations, with an AST-level history.",
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@yxl-vscode/cst": "workspace:*",
+    "@yxl-vscode/diag": "workspace:*"
   }
 }

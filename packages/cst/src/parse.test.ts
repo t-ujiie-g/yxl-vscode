@@ -99,6 +99,18 @@ describe('parse', () => {
       expect(scalar.value).toBe(1.5);
       expect(scalar.source).toBe('1.50');
     });
+
+    it('keeps the bytes of a quoted scalar, not the reading of them', () => {
+      // `"a\tb"` written with a real tab and written with an escape are one
+      // value and two files, and only the bytes can put one back where it was.
+      const map = asMap(root('a: "x\ty"\nb: "x\\ty"\n'));
+
+      expect(asScalar(map.entries[0]?.value as Node).source).toBe('"x\ty"');
+      expect(asScalar(map.entries[1]?.value as Node).source).toBe('"x\\ty"');
+      expect(asScalar(map.entries[0]?.value as Node).value).toBe(
+        asScalar(map.entries[1]?.value as Node).value,
+      );
+    });
   });
 
   describe('spans', () => {
