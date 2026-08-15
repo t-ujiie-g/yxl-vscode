@@ -503,8 +503,20 @@ grid must understand to be drawn at all.
       written. A placeholder nothing declares is left standing in the value and
       reported — a grid drawn from a half-written spec should show `${region}`
       where the value will be, not a blank.
-- [ ] Editability classification derived from origins (§4.3)
-- [ ] Impact estimation: given a definition node, which cells does it reach
+- [x] Editability classification derived from origins (§4.3)
+      **Shipped** as two functions over an origin and a style layer — no stored
+      field, because the class is a fact about where a facet came from and
+      storing it would be a second copy to keep true (ADR-006). A definition is
+      `mediated` however it was reached; what the cell itself wrote is `direct`,
+      including a cell that carries only a look, since adding `value:` to a
+      mapping that exists is one change to one node.
+- [x] Impact estimation: given a definition node, which cells does it reach
+      **Shipped** as `reaches(grid, node)`, over values, formats, and style
+      layers alike — so it counts the base of an `extends:` chain and a band's
+      cells, not only a direct `$ref`. It answers for the cells the projection
+      *holds*: a band also reaches every empty address in its span, which no
+      diff of two projections could show, and the band itself is the honest way
+      to say "and the rest of column B".
 - [ ] Read `csv:` and `json:` `data:` through an injected reader, as `$include`
       already is, and record the cells as `external` provenance. Until then a
       block naming a file is reported rather than drawn, which is honest but
@@ -1321,6 +1333,23 @@ this at a phase boundary rather than at the end.
   for upstream as [yxl#68](https://github.com/t-ujiie-g/yxl/issues/68) — §23 is
   the only section of the reference with no worked example behind it, which
   means its compile path is not exercised there either.
+
+### 2026-08-15 — Phase 3: what an edit would cost, and whether it may happen
+- The two derivations that sit on top of provenance: **editability** (§4.3,
+  ADR-006) and **impact** (§4.4's ripple count, §4.6's expected diff). 23 new
+  tests, 568 in total.
+- **Neither is stored.** A class is a fact about an origin and a ripple is a fact
+  about the grid; keeping either as a field would be a second copy to keep true.
+  ADR-006's requirement is that the UI hold no *second opinion*, which a function
+  in `compile` satisfies exactly.
+- Writing the tests corrected a reading of §4.3: **a cell that carries only a
+  look is `direct`**, not `empty`. The node exists, so writing a value into it
+  is one change to one mapping. `empty` is for an address where no cell was
+  written at all — which the projection answers with `null` rather than a cell,
+  so its row is asserted on the origin itself.
+- `reaches` counts a **band** and the **base of an `extends:` chain**, not only
+  a direct `$ref`. Both are ripples a user would be surprised by, which is the
+  test that matters for a number shown before an edit.
 
 ### 2026-08-15 — Phase 3: a look as the layers that made it
 - Style resolution lands as ADR-005 asked for it: an ordered list where each
