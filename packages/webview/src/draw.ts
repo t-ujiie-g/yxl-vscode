@@ -1,6 +1,6 @@
-import type { StyleValues } from '@yxl-vscode/spec';
-import { format as excel } from 'numfmt';
-import type { Drawing, DrawnCell, DrawnSheet, Source } from './protocol';
+import { columnLabel } from '@yxl-vscode/units';
+import { drawCell } from './cell';
+import type { Drawing, DrawnCell, DrawnMerge, DrawnSheet, Source } from './protocol';
 import { across, down, heightOf, type Where, wanted, widthOf } from './window';
 
 /** What the view is showing: the drawing, and the little it holds of its own. */
@@ -18,6 +18,11 @@ export interface Reached {
   readonly cells: ReadonlySet<string>;
 }
 
+/** How a cell is named in the sets and maps a drawing is looked up in. */
+export function cellKey(col: number, row: number): string {
+  return `${col}:${row}`;
+}
+
 /** What the view can ask for. None of it changes anything (ADR-001). */
 export interface Asks {
   readonly showSheet: (index: number) => void;
@@ -26,13 +31,6 @@ export interface Asks {
   readonly setParam: (name: string, value: string) => void;
   readonly showWindow: (row: number, col: number) => void;
 }
-
-const EDGES = [
-  ['left', 'borderLeft'],
-  ['right', 'borderRight'],
-  ['top', 'borderTop'],
-  ['bottom', 'borderBottom'],
-] as const;
 
 /**
  * The whole view: a tab per sheet, and the grid of whichever is showing.
@@ -123,7 +121,7 @@ function looking(showing: Showing): string {
  * padded out to the size of the whole sheet.
  *
  * The scrollbar then says how much sheet there is, while the grid holds only a
- * window's worth of cells however large the sheet is (§9 R5). Coming near an
+ * window's worth of cells however large the sheet is. Coming near an
  * edge of what is drawn asks the host for a window around where the reader now
  * is; the scroll position outlives the redraw that answers, because the padding
  * puts every row at the same offset whichever window is drawn.
@@ -157,7 +155,7 @@ function reaching(reached: Reached): HTMLElement {
 }
 
 /**
- * Where each facet of the selected cell came from (§4.3).
+ * Where each facet of the selected cell came from.
  *
  * Every line is a place in a file, so every line can be gone to — which is half
  * of the bidirectional jump this release is for.
@@ -168,7 +166,7 @@ function inspector(showing: Showing, asks: Asks): HTMLElement {
 
   const at = showing.selected;
   const heading = document.createElement('h2');
-  heading.textContent = at === null ? 'Nothing selected' : `${label(at.col)}${at.row}`;
+  heading.textContent = at === null ? 'Nothing selected' : `${columnLabel(at.col)}${at.row}`;
   panel.append(heading);
 
   if (showing.sources?.length === 0) {
@@ -223,15 +221,16 @@ function grid(sheet: DrawnSheet, showing: Showing, asks: Asks): HTMLElement {
   table.append(headings(sheet));
 
   const body = document.createElement('tbody');
-  const held = new Map(sheet.cells.map((cell) => [`${cell.col}:${cell.row}`, cell]));
-  const covered = coveredBy(sheet);
+  const held = new Map(sheet.cells.map((cell) => [cellKey(cell.col, cell.row), cell]));
+  const merged = mergedIn(sheet);
   const problems = markedBy(sheet);
 
   const before = down(sheet, sheet.at.row);
   if (before > 0) body.append(gap(sheet, before));
 
   for (let row = sheet.at.row; row < sheet.at.row + sheet.rows; row += 1) {
-    body.append(line(sheet, row, held, covered, problems, showing, asks));
+    if (heightOf(sheet, row) === 0) continue;
+    body.append(line(sheet, row, held, merged, problems, showing, asks));
   }
 
   const after = down(sheet, sheet.of.rows + 1) - down(sheet, sheet.at.row + sheet.rows);
@@ -246,7 +245,7 @@ function markedBy(sheet: DrawnSheet): Map<string, string[]> {
   const problems = new Map<string, string[]>();
 
   for (const problem of sheet.problems) {
-    const at = `${problem.col}:${problem.row}`;
+    const at = cellKey(problem.col, problem.row);
     problems.set(at, [...(problems.get(at) ?? []), problem.message]);
   }
 
@@ -254,23 +253,30 @@ function markedBy(sheet: DrawnSheet): Map<string, string[]> {
 }
 
 /**
- * The addresses a merge swallows.
+ * Each merge at its top-left cell, and every address it swallows.
  *
  * Excel shows the top-left cell's value across the whole region, so the rest of
  * it must not be drawn at all — a `<td>` there would push the row along.
  */
-function coveredBy(sheet: DrawnSheet): Set<string> {
+function mergedIn(sheet: DrawnSheet): Merged {
+  const anchored = new Map<string, DrawnMerge>();
   const covered = new Set<string>();
 
   for (const merge of sheet.merges) {
+    anchored.set(cellKey(merge.left, merge.top), merge);
     for (let row = merge.top; row <= merge.bottom; row += 1) {
       for (let col = merge.left; col <= merge.right; col += 1) {
-        if (row !== merge.top || col !== merge.left) covered.add(`${col}:${row}`);
+        if (row !== merge.top || col !== merge.left) covered.add(cellKey(col, row));
       }
     }
   }
 
-  return covered;
+  return { anchored, covered };
+}
+
+interface Merged {
+  readonly anchored: ReadonlyMap<string, DrawnMerge>;
+  readonly covered: ReadonlySet<string>;
 }
 
 function headings(sheet: DrawnSheet): HTMLElement {
@@ -282,9 +288,12 @@ function headings(sheet: DrawnSheet): HTMLElement {
   if (before > 0) line.append(pad(before));
 
   for (let col = sheet.at.col; col < sheet.at.col + sheet.columns; col += 1) {
+    const wide = widthOf(sheet, col);
+    if (wide === 0) continue;
+
     const heading = document.createElement('th');
-    heading.textContent = label(col);
-    heading.style.width = `${widthOf(sheet, col)}px`;
+    heading.textContent = columnLabel(col);
+    heading.style.width = `${wide}px`;
     line.append(heading);
   }
 
@@ -325,7 +334,7 @@ function line(
   sheet: DrawnSheet,
   row: number,
   held: ReadonlyMap<string, DrawnCell>,
-  covered: ReadonlySet<string>,
+  merged: Merged,
   problems: ReadonlyMap<string, readonly string[]>,
   showing: Showing,
   asks: Asks,
@@ -341,15 +350,15 @@ function line(
   if (before > 0) line.append(pad(before));
 
   for (let col = sheet.at.col; col < sheet.at.col + sheet.columns; col += 1) {
-    if (covered.has(`${col}:${row}`)) continue;
+    if (merged.covered.has(cellKey(col, row)) || widthOf(sheet, col) === 0) continue;
 
-    const drawn = drawCell(sheet, held.get(`${col}:${row}`), col, row);
+    const drawn = drawCell(held.get(cellKey(col, row)), merged.anchored.get(cellKey(col, row)));
     if (showing.selected?.row === row && showing.selected.col === col) {
       drawn.classList.add('selected');
     }
-    if (showing.reached?.cells.has(`${col}:${row}`) === true) drawn.classList.add('reached');
+    if (showing.reached?.cells.has(cellKey(col, row)) === true) drawn.classList.add('reached');
 
-    const said = problems.get(`${col}:${row}`);
+    const said = problems.get(cellKey(col, row));
     if (said !== undefined) {
       drawn.classList.add('problem');
       drawn.title = said.join('\n');
@@ -359,125 +368,6 @@ function line(
   }
 
   return line;
-}
-
-function drawCell(
-  sheet: DrawnSheet,
-  cell: DrawnCell | undefined,
-  col: number,
-  row: number,
-): HTMLElement {
-  const drawn = document.createElement('td');
-  const merge = sheet.merges.find((one) => one.top === row && one.left === col);
-  if (merge !== undefined) {
-    drawn.colSpan = merge.right - merge.left + 1;
-    drawn.rowSpan = merge.bottom - merge.top + 1;
-  }
-
-  if (cell === undefined) return drawn;
-
-  drawn.textContent = shown(cell);
-  if (cell.formula !== null) drawn.title = told(cell);
-  if (cell.filledFrom !== null) drawn.classList.add('filled');
-  apply(drawn, cell.style);
-  return drawn;
-}
-
-/**
- * What a cell shows.
- *
- * A formula shows as its own text, not as a result: nothing here computes, and
- * a preview that guessed at one would be inventing a number Excel had not
- * agreed to (ADR-014). A cached value beside it is what Excel would show, so it
- * wins.
- *
- * A number wears its format, so `0.085` under `0.0%` reads `8.5%` here as it
- * will in Excel. A pattern the formatter cannot read shows its own error rather
- * than throwing the view away.
- *
- * A cell **filled** by a `formulas:` range shows where it is filled from
- * instead. The range holds one formula, written as it applies at its anchor,
- * and Excel shifts the references per cell (§8 Q2) — printing that text in
- * every cell would be printing something false in all but one of them.
- */
-function shown(cell: DrawnCell): string {
-  if (typeof cell.value === 'number' && cell.format !== null) {
-    return excel(cell.format, cell.value, { throws: false });
-  }
-  if (cell.value !== null) return String(cell.value);
-  if (cell.formula === null) return '';
-
-  return cell.filledFrom === null ? `=${cell.formula}` : `↧ ${cell.filledFrom}`;
-}
-
-/**
- * What the cell says about its own formula on hover.
- *
- * A cell of a filled range holds the formula as it applies at the range's
- * anchor; Excel shifts the relative references per cell and nothing here does
- * (§8 Q2), so the view says where it is reading from rather than letting the
- * text be read as this cell's own.
- */
-function told(cell: DrawnCell): string {
-  const formula = `=${cell.formula ?? ''}`;
-  if (cell.filledFrom === null) return formula;
-
-  return `${formula} — filled from ${cell.filledFrom}; Excel shifts the references per cell`;
-}
-
-function apply(drawn: HTMLElement, style: StyleValues): void {
-  if (style['font.bold'] === true) drawn.style.fontWeight = 'bold';
-  if (style['font.italic'] === true) drawn.style.fontStyle = 'italic';
-  if (style['font.underline'] === true) drawn.style.textDecoration = 'underline';
-  if (style['font.strike'] === true) drawn.style.textDecoration = 'line-through';
-  if (style['font.size'] !== undefined) drawn.style.fontSize = `${style['font.size']}pt`;
-  if (style['font.name'] !== undefined) drawn.style.fontFamily = style['font.name'];
-  if (style['font.color'] !== undefined) drawn.style.color = colour(style['font.color']);
-  if (style.fill !== undefined) drawn.style.backgroundColor = colour(style.fill);
-  if (style['align.horizontal'] !== undefined) drawn.style.textAlign = horizontal(style);
-  if (style['align.vertical'] !== undefined) drawn.style.verticalAlign = vertical(style);
-  if (style['align.wrap'] === true) drawn.style.whiteSpace = 'pre-wrap';
-
-  for (const [side, property] of EDGES) {
-    const line = style[`border.${side}.style`];
-    if (line === undefined) continue;
-
-    const edge = style[`border.${side}.color`];
-    const drawnWith = edge === undefined ? 'currentColor' : colour(edge);
-    drawn.style[property] = `${thickness(line)} solid ${drawnWith}`;
-  }
-}
-
-/** A spec's colour is `RRGGBB` or `AARRGGBB`, and CSS wants the alpha last. */
-function colour(hex: string): string {
-  const digits = hex.startsWith('#') ? hex.slice(1) : hex;
-  return digits.length === 8 ? `#${digits.slice(2)}${digits.slice(0, 2)}` : `#${digits}`;
-}
-
-function horizontal(style: StyleValues): string {
-  const set = style['align.horizontal'];
-  return set === 'fill' || set === 'distributed' ? 'justify' : (set ?? 'left');
-}
-
-function vertical(style: StyleValues): string {
-  const set = style['align.vertical'];
-  if (set === 'middle') return 'middle';
-  return set === 'justify' || set === 'distributed' ? 'middle' : (set ?? 'bottom');
-}
-
-function thickness(line: string): string {
-  if (line === 'hair') return '0.5px';
-  if (line === 'medium' || line === 'double') return '2px';
-  return line === 'thick' ? '3px' : '1px';
-}
-
-/** A column's Excel name: 1 is `A`, 27 is `AA`. */
-function label(col: number): string {
-  let name = '';
-  for (let left = col; left > 0; left = Math.floor((left - 1) / 26)) {
-    name = String.fromCharCode(65 + ((left - 1) % 26)) + name;
-  }
-  return name;
 }
 
 function corner(): HTMLElement {

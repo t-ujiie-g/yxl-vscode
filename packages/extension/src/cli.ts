@@ -4,7 +4,7 @@ import { promisify } from 'node:util';
 const spawn = promisify(execFile);
 
 /** What the compiler did, and what it said about it. */
-export interface Ran {
+interface Ran {
   readonly ok: boolean;
   readonly said: string;
 }
@@ -12,7 +12,7 @@ export interface Ran {
 /**
  * Run `yxl`, or `null` when there is no `yxl` to run.
  *
- * The compiler is required rather than bundled (§8 Q6): shipping a binary per
+ * The compiler is required rather than bundled: shipping a binary per
  * platform would mean owning its update cadence and its size, and every user of
  * this preview is already a user of `yxl` — the thing being previewed is its
  * input. A missing one is a message with the install instructions, not a
@@ -40,7 +40,7 @@ export function versionOf(said: string): string | null {
 }
 
 /**
- * What to say about a compiler that is not the one this editor targets (§8 Q6).
+ * What to say about a compiler that is not the one this editor targets.
  *
  * Neither direction refuses anything. A newer compiler builds what this writes,
  * because what this writes is ordinary yxl; an older one may not have a

@@ -3,10 +3,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { REPO_ROOT } from './corpus';
 
-/**
- * The `yxl` this editor targets, from the one place it is written down
- * (`ROADMAP.md` §8 Q6).
- */
+/** The `yxl` this editor targets, from the one place it is written down. */
 export const PINNED: string = version(join(REPO_ROOT, 'package.json'));
 
 /**
@@ -19,7 +16,7 @@ const { YXL_BIN } = process.env;
 const BIN = YXL_BIN ?? 'yxl';
 
 /** What the compiler made of a spec: whether it would build, and what it said. */
-export interface Verdict {
+interface Verdict {
   readonly ok: boolean;
   readonly said: string;
 }

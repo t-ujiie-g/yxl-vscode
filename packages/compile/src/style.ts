@@ -15,7 +15,7 @@ import { type Ctx, reject, text } from './ctx';
  *
  * A column band that names `header` gives `definition` layers reached
  * `through: 'column'`, because the two answers a resolver has to offer are
- * different — edit the definition, or edit the band (§4.4).
+ * different — edit the definition, or edit the band.
  */
 export type StyleSource = 'column' | 'row' | 'cell' | 'override';
 

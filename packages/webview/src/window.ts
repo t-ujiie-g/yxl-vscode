@@ -1,4 +1,4 @@
-import type { DrawnSheet } from './protocol';
+import type { DrawnSheet, Sized } from './protocol';
 
 /** Excel's own units, as CSS: a character width is about 7px, a point is 4/3 of one. */
 const PER_CHARACTER = 7;
@@ -10,16 +10,25 @@ export interface Where {
   readonly left: number;
 }
 
-/** A row's height and a column's width, in pixels, defaults included. */
+/**
+ * A row's height and a column's width, in pixels.
+ *
+ * A hidden band is nothing across, which is what hidden means; a band that set
+ * no size takes Excel's default — 15 points of height, 8.43 characters of
+ * width.
+ */
 export function heightOf(sheet: DrawnSheet, row: number): number {
-  return (sized(sheet.heights, row) ?? DEFAULT.height) * PER_POINT;
+  const run = sized(sheet.heights, row);
+  if (run?.hidden === true) return 0;
+  return (run?.size ?? DEFAULT.height) * PER_POINT;
 }
 
 export function widthOf(sheet: DrawnSheet, col: number): number {
-  return (sized(sheet.widths, col) ?? DEFAULT.width) * PER_CHARACTER;
+  const run = sized(sheet.widths, col);
+  if (run?.hidden === true) return 0;
+  return (run?.size ?? DEFAULT.width) * PER_CHARACTER;
 }
 
-/** Excel's own defaults: 15 points of height, 8.43 characters of width. */
 const DEFAULT = { height: 15, width: 8.43 };
 
 /** Where a row's top edge sits, in pixels from the sheet's own top. */
@@ -83,7 +92,7 @@ export function wanted(sheet: DrawnSheet, at: Where): { row: number; col: number
 
 const MARGIN = { rows: 20, columns: 5 };
 
-function sized(runs: readonly { first: number; last: number; size: number }[], at: number) {
-  const found = runs.findLast((run) => at >= run.first && at <= run.last);
-  return found?.size ?? null;
+/** The last run covering this row or column, since a later band overrides an earlier one. */
+function sized(runs: readonly Sized[], at: number): Sized | undefined {
+  return runs.findLast((run) => at >= run.first && at <= run.last);
 }

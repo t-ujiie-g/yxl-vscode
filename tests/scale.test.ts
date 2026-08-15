@@ -1,13 +1,13 @@
 import { cellAt, compile, resolve, styleAt } from '@yxl-vscode/compile';
 import { parse } from '@yxl-vscode/cst';
 import { load } from '@yxl-vscode/loader';
-import { addrAt } from '@yxl-vscode/units';
+import { addrAt, columnLabel } from '@yxl-vscode/units';
 import { describe, expect, it } from 'vitest';
 import { largeSpec } from './scale';
 
 /**
- * What §9 R5 asked for: the projection measured against a spec larger than
- * anyone would write, so that §8 Q5 is answered with a number.
+ * The projection measured against a spec larger than anyone would write, so
+ * that the question of what to draw a grid with was answered with a number.
  *
  * The ceilings below are ten times the measured cost, not a target. They are
  * here to catch the day something turns linear work quadratic — the failure a
@@ -34,8 +34,8 @@ describe(`a sheet of ${ROWS * COLUMNS} written cells`, () => {
 
     const compiled = timed(() => compile(doc));
 
-    // Printed rather than asserted: the number is the point, and it belongs in
-    // `ROADMAP.md` §8 Q5 where a decision was waiting for it.
+    // Printed rather than asserted: the number is the point, and it is what the
+    // choice of how to draw a grid was waiting on.
     console.log(
       `${(source.length / 1024).toFixed(0)}KB of YAML · ` +
         `parse ${parsed.took.toFixed(0)}ms · ` +
@@ -87,7 +87,7 @@ describe(`a sheet of ${ROWS * COLUMNS} written cells`, () => {
     const asked = timed(() => {
       for (let row = 2; row < 1000; row += 1) {
         for (let col = 1; col <= 10; col += 1) {
-          sheet.cells.get(`${label(col)}${row}`);
+          sheet.cells.get(`${columnLabel(col)}${row}`);
         }
       }
     });
@@ -96,11 +96,3 @@ describe(`a sheet of ${ROWS * COLUMNS} written cells`, () => {
     expect(asked.took).toBeLessThan(CEILING);
   });
 });
-
-function label(col: number): string {
-  let name = '';
-  for (let left = col; left > 0; left = Math.floor((left - 1) / 26)) {
-    name = String.fromCharCode(65 + ((left - 1) % 26)) + name;
-  }
-  return name;
-}

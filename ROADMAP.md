@@ -1539,6 +1539,42 @@ this at a phase boundary rather than at the end.
 - A cell's own format — written, or the one its type takes — now wins over a
   band's. Both are requests about *that* cell; a band is something reaching it.
 
+### 2026-08-15 — Sweep of Phase 4 (AGENTS.md §8)
+
+A pass over the whole tree at the phase boundary. What it found that was not
+tidiness:
+
+- **A `0` that meant "unsaid" drew a column nothing could be seen in.** The
+  drawing sent `size: band.size ?? 0` for every band, and the view read that `0`
+  as a width — so a column band that set only a style collapsed its column, and
+  its cells with it. `Sized.size` is now `number | null`, `null` meaning the band
+  said nothing about size, and the type's doc says so. Two tests pin it, one at
+  each end of the wire. No test had covered a band that styles without sizing.
+- **`Sized.hidden` had been crossing the wire since the first drawing and
+  nothing read it**, so a hidden row or column was drawn as though visible.
+  Honoured now, by one rule at the geometry: nothing wide is nothing drawn —
+  which is also what a `width: 0` in the spec means.
+- **The A1 column name existed four times** — private in `units`, again in the
+  view, twice in the scale tests. It belongs to `units`, which owns addresses,
+  and is exported from there now.
+- **`drawCell` was handed the whole sheet to find its own merge**, once per cell.
+  The merges are walked once for the covered set already; the anchors come out of
+  the same walk, and the cell drawing now takes what it draws and nothing else.
+  It moved to `cell.ts` with its own tests — `draw.ts` had grown two subjects and
+  514 lines.
+- **33 comments carried roadmap coordinates** (`§4.3`, `§8 Q2`, `§9 R5`,
+  `Phase 4`), which §8.6 bans because they go stale independently of the code
+  they annotate. Each now names the thing instead. ADR references stayed.
+- **The README called this a custom editor**, which ADR-020 decided against, and
+  said the first release was half-done. It now leads with what the preview does
+  today, in a table, and says plainly that nothing writes yet.
+- Four exported types with no importer are module-private again; the cell-key
+  convention has a name rather than eight copies of a template literal.
+
+Nothing moved between layers, and the five placeholder packages stayed: they are
+the layer stack `layers.json` enforces, and deleting them would delete the
+architecture to re-add it in Phase 5. 6 new tests, 720 in total.
+
 ### 2026-08-15 — Phase 4: keeping your place, without a map for it
 
 - **ADR-015's session identity map is decided: there isn't one, and §8 Q3 is

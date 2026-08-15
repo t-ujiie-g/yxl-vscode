@@ -79,7 +79,7 @@ describe('how editable a look is', () => {
 });
 
 describe('an origin no spec has produced yet', () => {
-  it('asks about an address nothing wrote, which §4.4 gives two answers', () => {
+  it('asks about an address nothing wrote, which has two answers', () => {
     // A new `cells:` entry, or extending the `data:` rectangle beside it. The
     // projection says `null` for such an address rather than carrying a cell,
     // so the row is asserted on the origin itself.

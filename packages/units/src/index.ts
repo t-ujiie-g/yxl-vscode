@@ -6,6 +6,7 @@ export {
   type Band,
   type CellRef,
   cellOf,
+  columnLabel,
   columnsOf,
   type Rect,
   rectOf,

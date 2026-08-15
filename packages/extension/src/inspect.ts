@@ -6,7 +6,7 @@ import type { Source } from '@yxl-vscode/webview/protocol';
 /**
  * Where every facet of one cell came from, in the words a reader wants.
  *
- * This is §4.3's promise made visible: *this is bold because
+ * This is the provenance table's promise made visible: *this is bold because
  * `defs.styles.header` says so, blue because column B's band says so, and its
  * value came from row 12 of `sales.csv`*. Each answer carries the file and the
  * span it lives at, so the view can offer to go there.
@@ -53,7 +53,7 @@ function nodeOf(origin: FacetOrigin): string | null {
   return origin.kind === 'defRef' ? origin.def : origin.node;
 }
 
-/** What one origin says about itself (§4.3). */
+/** What one origin says about itself. */
 function says(origin: FacetOrigin, where: Described | undefined): string {
   switch (origin.kind) {
     case 'literal':

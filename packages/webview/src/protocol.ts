@@ -36,7 +36,7 @@ export interface DrawnParam {
  * `at` and `rows`/`columns` are the window being drawn; `of` is how far the
  * sheet reaches. A sheet larger than one page is drawn a window at a time and
  * the view asks for another as the reader scrolls, so the grid never holds more
- * elements than a page needs however large the sheet is (§9 R5).
+ * elements than a page needs however large the sheet is.
  *
  * A spec with three cells draws three cells' worth of grid rather than a
  * million empty ones: the box is what its written cells, merges, and filled
@@ -68,11 +68,18 @@ export interface MarkedCell {
   readonly message: string;
 }
 
-/** A run of columns or rows the spec gave a size, in the spec's own units. */
+/**
+ * A run of columns or rows a band declares something about.
+ *
+ * `size` is in the spec's own units — character widths across, points down —
+ * and is `null` where the band set none, which is every band that only styles
+ * or only hides. A run is not a *sized* run: it is a band with a span, and the
+ * size is one of the things it may not say.
+ */
 export interface Sized {
   readonly first: number;
   readonly last: number;
-  readonly size: number;
+  readonly size: number | null;
   readonly hidden: boolean;
 }
 
@@ -91,7 +98,7 @@ export interface Sized {
  * for every cell of it but the anchor. The formula shown is the one the range
  * holds, written as it applies **there**: Excel shifts its relative references
  * per cell and this does not, so the view says which cell it is really reading
- * rather than showing a formula that is wrong here (§8 Q2).
+ * rather than showing a formula that is wrong here.
  */
 export interface DrawnCell {
   readonly row: number;
@@ -111,7 +118,7 @@ export interface DrawnMerge {
 }
 
 /**
- * Where one facet of a cell came from, and where to go to change it (§4.3).
+ * Where one facet of a cell came from, and where to go to change it.
  *
  * `facet` is what the answer is about — `value`, `format`, or a style leaf like
  * `font.bold` — and `says` is the answer in the words a reader wants. The span

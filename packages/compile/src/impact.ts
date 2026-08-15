@@ -14,7 +14,7 @@ export interface FullAddr {
  * block, a cell of its own.
  *
  * This is what a resolution dialog counts ("ripples to 40 cells") and what
- * `verify` takes as the expected diff of a definition edit (§4.6): a change
+ * `verify` takes as the expected diff of a definition edit: a change
  * that touches a cell this did not name is the surprise that gate exists for.
  *
  * It answers for the cells the projection **holds**. A band also reaches every

@@ -17,7 +17,7 @@ const DATE = /^(\d{1,4})-(\d{1,2})-(\d{1,2})(?:[ T](\d{1,2}):(\d{1,2})(?::(\d{1,
 const DURATION = /^(\d+):(\d{1,2})(?::(\d{1,2}))?$/;
 
 /** A date and, when the text carried one, a time of day. */
-export interface Dated {
+interface Dated {
   readonly serial: number;
   readonly withTime: boolean;
 }
