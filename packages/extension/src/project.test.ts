@@ -146,6 +146,17 @@ describe('a drawn spec', () => {
     expect(at(source, 2, 1)?.format).toBe('@');
   });
 
+  it('draws a page of a sheet, and says how far the sheet really reaches', () => {
+    // Measured rather than guessed (§9 R5): the cost that does not survive a
+    // hundred thousand cells is the DOM, not the projection.
+    const rows = Array.from({ length: 400 }, (_, at) => `      A${at + 1}: ${at}`).join('\n');
+    const sheet = drawn(`${SALES}    cells:\n${rows}\n`);
+
+    expect(sheet.rows).toBe(200);
+    expect(sheet.of.rows).toBe(400);
+    expect(sheet.cells.every((cell) => cell.row <= 200)).toBe(true);
+  });
+
   it('marks the cells a diagnostic is about', () => {
     // The node at the diagnostic's span is the cause; the cells it reaches are
     // where a reader sees the effect.

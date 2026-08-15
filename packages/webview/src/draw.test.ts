@@ -27,6 +27,7 @@ function sheet(of: Partial<DrawnSheet> = {}): DrawnSheet {
     name: 'Sales',
     rows: 2,
     columns: 2,
+    of: { rows: of.rows ?? 2, columns: of.columns ?? 2 },
     widths: [],
     heights: [],
     cells: [],
@@ -250,6 +251,17 @@ describe('what the view says about a spec', () => {
 
     expect(at(into, 1, 1)?.classList.contains('reached')).toBe(true);
     expect(into.querySelector('.reaching')?.textContent).toBe('the style `header` reaches 1 cell');
+  });
+
+  it('says what a page of preview left out', () => {
+    const large = sheet({ rows: 200, columns: 50, of: { rows: 5001, columns: 60 } });
+    const said = shown({ drawing: drawing({ sheets: [large] }) }).querySelector('.note');
+
+    expect(said?.textContent).toContain('4801 more rows and 10 more columns are not drawn');
+  });
+
+  it('says nothing when the whole sheet is drawn', () => {
+    expect(shown().querySelector('.note')).toBeNull();
   });
 
   it('says a spec with no sheets has nothing to draw', () => {

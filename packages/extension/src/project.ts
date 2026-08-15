@@ -38,6 +38,17 @@ import { type Nodes, nodeAt, nodesOf } from './inspect';
 const BEYOND = 50;
 
 /**
+ * How much of a sheet one page of preview draws.
+ *
+ * Measured rather than guessed (§9 R5): a hundred thousand written cells parse,
+ * load, compile, and flatten in under half a second, and the cost that does not
+ * survive that size is the DOM — a hundred thousand `<td>`s is a page that
+ * stops responding. Ten thousand is a screenful many times over, and the view
+ * says what it is not showing.
+ */
+const PAGE = { rows: 200, columns: 50 };
+
+/**
  * A spec, read and drawn — and everything that could not be, said once.
  *
  * The `doc` and the `grid` come back too: the drawing is what the view needs,
@@ -142,13 +153,16 @@ function declared(doc: SpecDoc, params: Setting): DrawnParam[] {
 }
 
 function drawSheet(sheet: CompiledSheet, problems: readonly MarkedCell[]): DrawnSheet {
-  const { rows, columns } = extent(sheet);
+  const of = extent(sheet);
+  const rows = Math.min(of.rows, PAGE.rows);
+  const columns = Math.min(of.columns, PAGE.columns);
 
   return {
     name: sheet.name,
     problems,
     rows,
     columns,
+    of,
     widths: sheet.columns.map(sizedRun),
     heights: sheet.rows.map(sizedRun),
     cells: drawCells(sheet, rows, columns),

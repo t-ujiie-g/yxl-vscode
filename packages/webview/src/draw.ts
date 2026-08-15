@@ -56,7 +56,11 @@ export function draw(into: HTMLElement, showing: Showing, asks: Asks): void {
   if (drawing.sheets.length > 1) into.append(tabs(drawing, showing.sheet, asks.showSheet));
 
   const sheet = drawing.sheets[Math.min(showing.sheet, drawing.sheets.length - 1)];
-  if (sheet !== undefined) into.append(grid(sheet, showing, asks));
+  if (sheet !== undefined) {
+    into.append(grid(sheet, showing, asks));
+    const rest = notShown(sheet);
+    if (rest !== null) into.append(note(rest));
+  }
 
   if (showing.reached !== null) into.append(reaching(showing.reached));
   if (showing.sources !== null) into.append(inspector(showing, asks));
@@ -100,6 +104,25 @@ function parameters(drawing: Drawing, asks: Asks): HTMLElement {
 
   panel.append(form);
   return panel;
+}
+
+/**
+ * What a page of preview left out, said plainly.
+ *
+ * A sheet can be larger than one page can draw, and a corner of a sheet shown
+ * without saying so is a preview that lies about how much there is.
+ */
+function notShown(sheet: DrawnSheet): string | null {
+  const rows = sheet.of.rows - sheet.rows;
+  const columns = sheet.of.columns - sheet.columns;
+  if (rows <= 0 && columns <= 0) return null;
+
+  const left = [
+    rows > 0 ? `${rows} more row${rows === 1 ? '' : 's'}` : '',
+    columns > 0 ? `${columns} more column${columns === 1 ? '' : 's'}` : '',
+  ].filter((one) => one !== '');
+
+  return `${left.join(' and ')} are not drawn: this preview shows the first ${sheet.rows} rows and ${sheet.columns} columns of a sheet.`;
 }
 
 /** What the cursor is reaching, said above the grid so the highlight is explained. */
