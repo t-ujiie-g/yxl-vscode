@@ -218,6 +218,11 @@ function tabs(drawing: Drawing, showing: number, onShow: (index: number) => void
 function grid(sheet: DrawnSheet, showing: Showing, asks: Asks): HTMLElement {
   const table = document.createElement('table');
   table.className = 'grid';
+  // A table laid out `fixed` only *is* laid out fixed if it has a width of its
+  // own; left to size itself it reverts to the automatic algorithm, where one
+  // cell holding a long formula stretches its column and drags the sheet out of
+  // shape. The width is the sheet's own: the gutter, plus every column of it.
+  table.style.width = `${GUTTER + across(sheet, sheet.of.columns + 1)}px`;
   table.append(headings(sheet));
 
   const body = document.createElement('tbody');
@@ -373,8 +378,12 @@ function line(
 function corner(): HTMLElement {
   const cell = document.createElement('th');
   cell.className = 'corner';
+  cell.style.width = `${GUTTER}px`;
   return cell;
 }
+
+/** How wide the column of row numbers is, which is not a column of the sheet. */
+const GUTTER = 44;
 
 function note(text: string): HTMLElement {
   const said = document.createElement('p');

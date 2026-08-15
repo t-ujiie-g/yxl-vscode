@@ -71,6 +71,12 @@ export function columnAt(sheet: DrawnSheet, left: number): number {
  * The margin is what keeps this from asking on every scrolled row: a new window
  * is wanted only on nearing an edge of the drawn one, and it is asked for
  * centred on the reader, so the next ask is a long way off in either direction.
+ *
+ * The last window of a sheet is the *last* one — asking to be centred past the
+ * end gets the same window back, and asking again for what was already answered
+ * is a loop with a redraw in it. So the ask is clamped here the way the
+ * host clamps it, which makes "there is nothing more to draw" an answer of
+ * `null` rather than a question repeated forever.
  */
 export function wanted(sheet: DrawnSheet, at: Where): { row: number; col: number } | null {
   const row = rowAt(sheet, at.top);
@@ -83,9 +89,13 @@ export function wanted(sheet: DrawnSheet, at: Where): { row: number; col: number
     col >= sheet.at.col + sheet.columns - MARGIN.columns;
   if (!near) return null;
 
+  const last = {
+    row: Math.max(1, sheet.of.rows - sheet.rows + 1),
+    col: Math.max(1, sheet.of.columns - sheet.columns + 1),
+  };
   const asked = {
-    row: Math.max(1, row - Math.floor(sheet.rows / 2)),
-    col: Math.max(1, col - Math.floor(sheet.columns / 2)),
+    row: Math.min(Math.max(1, row - Math.floor(sheet.rows / 2)), last.row),
+    col: Math.min(Math.max(1, col - Math.floor(sheet.columns / 2)), last.col),
   };
   return asked.row === sheet.at.row && asked.col === sheet.at.col ? null : asked;
 }

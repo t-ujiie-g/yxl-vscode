@@ -163,6 +163,11 @@ export class Preview {
     }
 
     if (asked.kind === 'window') {
+      // A window that has not moved is a redraw that would change nothing, and
+      // answering it is what turns one stray scroll into a loop.
+      const at = this.windows.get(asked.sheet);
+      if (at?.row === asked.row && at.col === asked.col) return;
+
       this.windows.set(asked.sheet, { row: asked.row, col: asked.col });
       const drawn = this.drawn;
       if (drawn !== undefined) {
