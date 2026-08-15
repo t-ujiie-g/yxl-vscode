@@ -15,6 +15,7 @@ function cell(of: Partial<DrawnCell> = {}): DrawnCell {
     format: null,
     rich: null,
     computed: null,
+    overridden: false,
     style: {},
     ...of,
   };

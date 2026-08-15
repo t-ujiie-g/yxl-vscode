@@ -6,7 +6,7 @@ import * as vscode from 'vscode';
 import { readBeside } from './files';
 import { inspect, knows, type Nodes, nodeAt } from './inspect';
 import { type Projected, project, redraw, type Window } from './project';
-import { type Typed, write } from './write';
+import { type Port, type Spec, type Typed, write, writeOverride } from './write';
 
 /** Long enough that typing does not redraw on every keystroke, short enough to feel live. */
 const SETTLE = 150;
@@ -215,6 +215,11 @@ export class Preview {
       return;
     }
 
+    if (asked.kind === 'override') {
+      void this.overrideWith(asked);
+      return;
+    }
+
     if (asked.kind === 'setParam') {
       // Emptying the box gives the parameter back to the spec's own default.
       if (asked.value === '') this.params.delete(asked.name);
@@ -238,15 +243,46 @@ export class Preview {
 
   /** What a reader typed, handed to the write path with the world it needs. */
   private async write(typed: Typed): Promise<void> {
-    const grid = this.drawn?.grid;
-    const root = filePath(this.document.uri.fsPath);
-    if (grid === undefined || grid === null || root === null) return;
+    const spec = this.spec();
+    if (spec !== null) await write(spec, typed, this.port());
+  }
 
-    await write({ root, grid, read: readBeside, params: this.params }, typed, {
+  /**
+   * The same edit, written as an override — after asking what it is for.
+   *
+   * The reason is optional and the asking is not: an override is an exception
+   * somebody made on purpose, and the box is where they get to say so
+   * (`docs/spec.md` §23).
+   */
+  private async overrideWith(typed: Typed): Promise<void> {
+    const spec = this.spec();
+    if (spec === null) return;
+
+    const reason = await vscode.window.showInputBox({
+      title: `Override ${typed.sheet}!${addrAt({ col: typed.col, row: typed.row })}`,
+      prompt: 'Why does this cell differ? Left empty, the override is written without a reason.',
+      placeHolder: 'audit asked for this one figure',
+    });
+    if (reason === undefined) return;
+
+    await writeOverride(spec, typed, reason === '' ? undefined : reason, this.port());
+  }
+
+  /** The spec as the write path needs it, or nothing where it is not readable. */
+  private spec(): Spec | null {
+    const drawn = this.drawn;
+    const root = filePath(this.document.uri.fsPath);
+    if (drawn?.grid == null || drawn.doc == null || root === null) return null;
+
+    return { root, doc: drawn.doc, grid: drawn.grid, read: readBeside, params: this.params };
+  }
+
+  private port(): Port {
+    return {
       text: (file) => this.textOf(file),
       put: (file, text) => this.put(file, text),
-      refuse: (why) => this.refuse(why),
-    });
+      refuse: (why, override) => this.refuse(why, override),
+    };
   }
 
   /**
@@ -256,8 +292,12 @@ export class Preview {
    * edit is something they are in the middle of, and their eyes are on the cell
    * they typed into.
    */
-  private refuse(why: string): void {
-    void this.panel.webview.postMessage({ kind: 'refused', why: why.replace(/`/g, '') });
+  private refuse(why: string, override: Typed | null): void {
+    void this.panel.webview.postMessage({
+      kind: 'refused',
+      why: why.replace(/`/g, ''),
+      override,
+    });
   }
 
   /** The file as the reader has it: the buffer if it is open, the disk if not. */

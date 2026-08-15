@@ -12,6 +12,7 @@ function asks(): Asks {
     setParam: vi.fn(),
     showWindow: vi.fn(),
     edit: vi.fn(),
+    overrideWith: vi.fn(),
   };
 }
 
@@ -25,6 +26,7 @@ function cell(row: number, col: number, of: Partial<DrawnCell> = {}): DrawnCell 
     format: null,
     rich: null,
     computed: null,
+    overridden: false,
     style: {},
     ...of,
   };
@@ -500,8 +502,23 @@ describe('what the view says about a spec', () => {
   });
 
   it('says why an edit did not happen, where the edit was made', () => {
-    const said = shown({ refused: '`B5` holds a formula — type a formula to change it' });
-    expect(said.querySelector('.refused')?.textContent).toContain('holds a formula');
+    const refused = { kind: 'refused', why: 'B5 holds a formula', override: null } as const;
+    expect(shown({ refused }).querySelector('.refused')?.textContent).toContain('holds a formula');
+  });
+
+  it('offers the exception where there is a cell it could be about', () => {
+    const typed = { sheet: 'Sales', row: 5, col: 2, text: '5' };
+    const refused = { kind: 'refused', why: 'B5 is filled by a range', override: typed } as const;
+    const on = asks();
+    const into = shown({ refused }, on);
+
+    into.querySelector<HTMLElement>('.refused .go')?.click();
+    expect(on.overrideWith).toHaveBeenCalledWith(typed);
+  });
+
+  it('offers nothing where there is nothing an override could name', () => {
+    const refused = { kind: 'refused', why: 'nothing is written there', override: null } as const;
+    expect(shown({ refused }).querySelector('.refused .go')).toBeNull();
   });
 
   it('says a spec with no sheets has nothing to draw', () => {

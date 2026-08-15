@@ -1,6 +1,6 @@
 import { sheetAgain } from './again';
 import { type Asks, cellKey, draw, type Reached, restate, type Showing } from './draw';
-import type { Drawing, FromView, Source, ToView } from './protocol';
+import type { Drawing, FromView, Refused, Source, ToView } from './protocol';
 
 export { type Kept, sheetAgain } from './again';
 export { type Asks, draw, type Reached, restate, type Showing } from './draw';
@@ -18,6 +18,7 @@ export type {
   Sized,
   Source,
   ToView,
+  Typed,
   Uncomputed,
 } from './protocol';
 
@@ -43,7 +44,7 @@ function start(): void {
   let selected: Showing['selected'] = null;
   let sources: readonly Source[] | null = null;
   let reached: Reached | null = null;
-  let refused: string | null = null;
+  let refused: Refused | null = null;
 
   const redraw = (): void => {
     if (drawing !== null) draw(into, { drawing, sheet, selected, sources, reached, refused }, asks);
@@ -85,13 +86,18 @@ function start(): void {
       refused = null;
       host.postMessage({ kind: 'edit', sheet: named(), row, col, text });
     },
+    overrideWith: (typed) => {
+      refused = null;
+      host.postMessage({ kind: 'override', ...typed });
+      restated();
+    },
   };
 
   window.addEventListener('message', (event: MessageEvent<ToView>) => {
     const sent = event.data;
 
     if (sent.kind === 'refused') {
-      refused = sent.why;
+      refused = sent;
       restated();
       return;
     }

@@ -318,6 +318,73 @@ describe('apply', () => {
     });
   });
 
+  describe('writing a construct rather than a value', () => {
+    const OVERRIDE = 'at: Sales!A1\nvalue: 5\nreason: "audit"';
+
+    it('adds the key and the block under it when the key is not there', () => {
+      const after = text('sheets:\n  - name: Sales\n', {
+        op: 'addSource',
+        path: [],
+        key: 'overrides',
+        source: `- ${OVERRIDE.split('\n').join('\n  ')}`,
+      });
+
+      expect(after).toBe(
+        'sheets:\n  - name: Sales\noverrides:\n  - at: Sales!A1\n    value: 5\n    reason: "audit"\n',
+      );
+    });
+
+    it('appends an item to a sequence that is already there', () => {
+      const source = 'overrides:\n  - at: Sales!A1\n    value: 1\n';
+      const after = text(source, {
+        op: 'insertSource',
+        path: ['overrides'],
+        index: 1,
+        source: 'at: Sales!B2\nvalue: 5',
+      });
+
+      expect(after).toBe(
+        'overrides:\n  - at: Sales!A1\n    value: 1\n  - at: Sales!B2\n    value: 5\n',
+      );
+    });
+
+    it('indents the way the file does, not the way this editor would', () => {
+      const source = 'sheets:\n    - name: Sales\n';
+      const after = text(source, {
+        op: 'addSource',
+        path: [],
+        key: 'overrides',
+        source: '- at: Sales!A1\n  value: 5',
+      });
+
+      expect(after).toBe(
+        'sheets:\n    - name: Sales\noverrides:\n    - at: Sales!A1\n      value: 5\n',
+      );
+    });
+
+    it('refuses a key that is already there', () => {
+      const { diagnostics } = edit('overrides: []\n', {
+        op: 'addSource',
+        path: [],
+        key: 'overrides',
+        source: '- at: Sales!A1',
+      });
+
+      expect(diagnostics[0]?.code).toBe(CODE.keyExists);
+    });
+
+    it('refuses a sequence written in flow style', () => {
+      const { diagnostics } = edit('overrides: []\n', {
+        op: 'insertSource',
+        path: ['overrides'],
+        index: 0,
+        source: 'at: Sales!A1',
+      });
+
+      expect(diagnostics[0]?.code).toBe(CODE.flowNotSupported);
+    });
+  });
+
   describe('comments', () => {
     it('leaves a comment above an entry attached to that entry when inserting before it', () => {
       const source = 'sheets:\n  # the sales sheet\n  - Sales\n  - Costs\n';

@@ -34,6 +34,18 @@ export type Op =
       readonly key: string;
       readonly value: Value;
       readonly before: string | null;
+    }
+  | {
+      readonly op: 'insertSource';
+      readonly path: Path;
+      readonly index: number;
+      readonly source: string;
+    }
+  | {
+      readonly op: 'addSource';
+      readonly path: Path;
+      readonly key: string;
+      readonly source: string;
     };
 
 /** One replacement of a range of the source. The unit minimal patching is made of. */

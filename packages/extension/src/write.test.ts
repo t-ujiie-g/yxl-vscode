@@ -3,7 +3,7 @@ import { parse } from '@yxl-vscode/cst';
 import { type IncludeReader, load } from '@yxl-vscode/loader';
 import { type FilePath, filePath } from '@yxl-vscode/units';
 import { describe, expect, it } from 'vitest';
-import { type Port, type Spec, type Typed, write } from './write';
+import { type Port, type Spec, type Typed, write, writeOverride } from './write';
 
 const ROOT = filePath('/specs/report.yxl.yaml') ?? ('' as FilePath);
 
@@ -20,18 +20,20 @@ function editor(sources: Record<string, string>) {
   const { doc } = load(parse(files[ROOT] ?? '', { file: ROOT }), read);
   if (doc === null) throw new Error('did not load');
 
-  const spec: Spec = { root: ROOT, grid: compile(doc, { read }), read, params: new Map() };
+  const spec: Spec = { root: ROOT, doc, grid: compile(doc, { read }), read, params: new Map() };
+  const offers: (Typed | null)[] = [];
   const port: Port = {
     text: (file) => files[file] ?? null,
     put: (file, text) => {
       files[file] = text;
     },
-    refuse: (why) => {
+    refuse: (why, override) => {
       refusals.push(why);
+      offers.push(override);
     },
   };
 
-  return { spec, port, files, refusals };
+  return { spec, port, files, refusals, offers };
 }
 
 const typed = (of: Partial<Typed> = {}): Typed => ({
@@ -87,6 +89,47 @@ describe('what a reader typed, all the way to the file', () => {
     await write(read, typed(), port);
     expect(files['/specs/sales.yaml']).toBe('name: Sales\ncells:\n  A1: EMEA\n');
     expect(files[ROOT]).toBe('sheets:\n  - $include: sales.yaml\n');
+  });
+});
+
+describe('the exception, when the ordinary edit is refused', () => {
+  const FILLED = `${SALES}    cells:\n      A1: 1\n      A2: 2\n    formulas:\n      - at: B1:B2\n        formula: "A1"\n`;
+
+  it('is offered for a cell that is there but cannot be typed into', async () => {
+    const { spec, port, offers } = editor({ [ROOT]: FILLED });
+
+    await write(spec, typed({ col: 2, row: 2, text: '99' }), port);
+    expect(offers[0]).toEqual(typed({ col: 2, row: 2, text: '99' }));
+  });
+
+  it('is not offered where there is no cell to make an exception of', async () => {
+    const { spec, port, offers } = editor({ [ROOT]: `${SALES}    cells:\n      A1: 1\n` });
+
+    await write(spec, typed({ col: 26, row: 99 }), port);
+    expect(offers[0]).toBeNull();
+  });
+
+  it('writes the override when it is asked for, with the reason given', async () => {
+    const { spec, port, files } = editor({ [ROOT]: FILLED });
+
+    await writeOverride(spec, typed({ col: 2, row: 2, text: '99' }), 'this row is settled', port);
+    expect(files[ROOT]).toContain('overrides:\n  - at: Sales!B2\n    value: 99');
+    expect(files[ROOT]).toContain('reason: "this row is settled"');
+  });
+
+  it('writes one without a reason, since the reason is the reader\u2019s to give', async () => {
+    const { spec, port, files } = editor({ [ROOT]: FILLED });
+
+    await writeOverride(spec, typed({ col: 2, row: 2, text: '99' }), undefined, port);
+    expect(files[ROOT]).toContain('value: 99');
+    expect(files[ROOT]).not.toContain('reason');
+  });
+
+  it('takes a leading `=` as a formula there too', async () => {
+    const { spec, port, files } = editor({ [ROOT]: FILLED });
+
+    await writeOverride(spec, typed({ col: 2, row: 2, text: '=A2*10' }), undefined, port);
+    expect(files[ROOT]).toContain('formula: "A2*10"');
   });
 });
 

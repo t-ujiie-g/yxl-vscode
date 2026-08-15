@@ -688,9 +688,13 @@ the inverse is unique, so no dialog is needed yet.
       whichever *file* wrote the cell, `$include`d or not. A leading `=` makes it
       a formula, as it does in Excel. The way in is a spreadsheet's: Enter, F2,
       a double-click, or simply typing; Enter commits and moves down.
-- [ ] `overrides:` as an explicit escape hatch, with the "manually edited" badge
+- [x] `overrides:` as an explicit escape hatch, with the "manually edited" badge
       and the optional `reason:` — writing the construct yxl v0.3.4 shipped
       (`docs/spec.md` §23), which Phase 2 already reads
+      **Shipped**: every refusal that is about a real cell now carries the way
+      out — *Write it as an override…* — which asks what it is for, writes the
+      entry (creating `overrides:` where the spec has none), and marks the cell.
+      Never taken on its own: an escape hatch that opens by itself is the door.
 - [ ] Everything not `direct` is visibly, explainedly read-only — the editor is
       honest about what it cannot yet do
 - [ ] Prove ADR-011's preservation half: load a spec that uses opaque constructs,
@@ -1666,6 +1670,28 @@ this at a phase boundary rather than at the end.
   two serials either side of it, so the next reader knows it is deliberate.
 - A cell's own format — written, or the one its type takes — now wins over a
   band's. Both are requests about *that* cell; a band is something reaching it.
+
+### 2026-08-15 — Phase 6: the exception, said out loud
+
+- **A refusal now carries the way out.** *`C3` is filled by the range anchored
+  at `C2`* is followed by **Write it as an override…**, which asks what the
+  exception is for and writes it: `at: Sales!C3`, the value or the formula, and
+  the `reason` if one was given. This is the answer to every refusal `direct`
+  editing gives, and the reason the refusals could be firm.
+- **It is offered, never taken.** An override that the editor reaches for by
+  itself is not an escape hatch, it is the door (ADR-007) — so it appears only
+  after an ordinary edit was refused, only where there is a cell it could name,
+  and only when the reader clicks it.
+- **The cell wears a corner mark afterwards**, and says *written as an override*
+  on hover: an exception somebody made on purpose is worth seeing without asking.
+- **The algebra grew the two ops it needed.** `overrides:` is a sequence of
+  mappings, and a value has a renderer while a construct does not — so
+  `insertSource` and `addSource` write *lines*, indented to the file's own step,
+  read off the file rather than assumed. Their inverse is `remove`, which is what
+  makes them safe to have (ADR-026).
+- A second override for a cell that has one is refused, naming which entry to
+  change: two answers to one question, where the compiler takes the last.
+  35 new tests, 907 in total.
 
 ### 2026-08-15 — Sweep of Phase 6 so far (AGENTS.md §8)
 

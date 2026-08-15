@@ -158,6 +158,20 @@ body {
   font: inherit;
 }
 
+.grid td.overridden::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  border: 4px solid transparent;
+  border-top-color: #d13438;
+  border-right-color: #d13438;
+}
+
+.grid td.overridden {
+  position: relative;
+}
+
 .grid td.selected {
   outline: 2px solid #107c41;
   outline-offset: -2px;

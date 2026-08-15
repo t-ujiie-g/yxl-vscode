@@ -1,6 +1,6 @@
 import { columnLabel } from '@yxl-vscode/units';
 import type { Asks, Reached, Showing } from './draw';
-import type { Drawing, Uncomputed } from './protocol';
+import type { Drawing, Refused, Uncomputed } from './protocol';
 
 /**
  * Everything the preview says around the grid: the parameters to turn, the tabs
@@ -68,11 +68,30 @@ function uncomputed(said: Uncomputed): string {
   return `Not computed here: ${shown}${rest} — this preview does not model tables or workbook-defined names, so formulas that use them show as formulas.`;
 }
 
-export /** Why an edit did not happen, said where the edit was attempted. */
-function refusal(why: string): HTMLElement {
+export /**
+ * Why an edit did not happen, said where the edit was attempted — and, where
+ * there is one, the way it could still be made.
+ *
+ * The way is `overrides:`, which is the exception said out loud
+ * (`docs/spec.md` §23). It is offered rather than taken: an escape hatch that
+ * opens on its own is not an escape hatch (ADR-007).
+ */
+function refusal(refused: Refused, asks: Asks): HTMLElement {
   const said = document.createElement('p');
   said.className = 'refused';
-  said.textContent = why;
+  said.append(refused.why);
+
+  const typed = refused.override;
+  if (typed !== null) {
+    const go = document.createElement('button');
+    go.type = 'button';
+    go.className = 'go';
+    go.textContent = 'Write it as an override…';
+    go.addEventListener('click', () => asks.overrideWith(typed));
+
+    said.append(' ', go);
+  }
+
   return said;
 }
 

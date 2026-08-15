@@ -130,6 +130,9 @@ export interface Sized {
  * and it is what the cell *says* — a cell that has runs has no `value`.
  *
  * `computed` is what the formula came to, or why it could not be computed.
+ *
+ * `overridden` is a cell an `overrides:` entry writes: an exception somebody
+ * made on purpose, and worth seeing without asking.
  */
 export interface DrawnCell {
   readonly row: number;
@@ -140,6 +143,7 @@ export interface DrawnCell {
   readonly format: string | null;
   readonly rich: readonly DrawnRun[] | null;
   readonly computed: Computed | null;
+  readonly overridden: boolean;
   readonly style: StyleValues;
 }
 
@@ -194,10 +198,23 @@ export interface Highlighted {
  * A refusal is an answer, so it goes next to the grid rather than into a corner
  * of the window: an edit that appears to do nothing is the one thing worse than
  * an edit that is refused.
+ *
+ * `override` is the same edit, offered as the exception it would have to be
+ * (`docs/spec.md` §23) — present when there is a cell an override could name,
+ * and never taken without the reader saying so (ADR-007).
  */
 export interface Refused {
   readonly kind: 'refused';
   readonly why: string;
+  readonly override: Typed | null;
+}
+
+/** What a reader typed into a cell, as the view sent it. */
+export interface Typed {
+  readonly sheet: string;
+  readonly row: number;
+  readonly col: number;
+  readonly text: string;
 }
 
 /** Everything the host sends the view. */
@@ -211,9 +228,10 @@ export type ToView = Drawing | Inspected | Highlighted | Refused;
  * something else*, *draw the part of the sheet I have scrolled to*, and *put
  * this in that cell*.
  *
- * `edit` carries what the reader typed, not what it means. A leading `=` makes
- * it a formula, exactly as it does in Excel, and deciding that here would be
- * deciding it twice.
+ * `edit` and `override` carry what the reader typed, not what it means. A
+ * leading `=` makes it a formula, exactly as it does in Excel, and deciding that
+ * here would be deciding it twice. `override` is the second of those only
+ * because the reader asked for it after being told why the first was refused.
  *
  * A sheet is named rather than numbered, here and in the answers: the spec may
  * have been read again since the view drew it, and a name is what the reader
@@ -228,13 +246,8 @@ export type FromView =
       readonly end: number;
     }
   | { readonly kind: 'setParam'; readonly name: string; readonly value: string }
-  | {
-      readonly kind: 'edit';
-      readonly sheet: string;
-      readonly row: number;
-      readonly col: number;
-      readonly text: string;
-    }
+  | ({ readonly kind: 'edit' } & Typed)
+  | ({ readonly kind: 'override' } & Typed)
   | {
       readonly kind: 'window';
       readonly sheet: string;

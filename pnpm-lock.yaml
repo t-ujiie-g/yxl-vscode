@@ -139,6 +139,9 @@ importers:
       '@yxl-vscode/patch':
         specifier: workspace:*
         version: link:../patch
+      '@yxl-vscode/spec':
+        specifier: workspace:*
+        version: link:../spec
       '@yxl-vscode/units':
         specifier: workspace:*
         version: link:../units
