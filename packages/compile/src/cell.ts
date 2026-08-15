@@ -4,6 +4,13 @@ import { CODE } from './codes';
 import { type Ctx, filled, reject, text } from './ctx';
 import type { CompiledCell } from './grid';
 import type { FacetOrigin } from './provenance';
+import {
+  DATE_FORMAT,
+  DATETIME_FORMAT,
+  DURATION_FORMAT,
+  dateSerial,
+  durationSerial,
+} from './serial';
 import { layersOf, type StyleSource } from './style';
 
 /** An address after its parameters are substituted, or `null` with the reason reported. */
@@ -31,18 +38,56 @@ export function compileFacets(
   through: StyleSource,
 ): CompiledCell {
   const { value, origin } = compileValue(ctx, node, own);
-  const format = node.format === null ? null : text(ctx, node.format, node);
+  const written = node.format === null ? null : text(ctx, node.format, node);
+  const typed = asTyped(ctx, node, value);
 
   return {
     at,
-    value,
+    value: typed.value,
     type: node.type,
     formula: compileFormula(ctx, node),
-    format,
+    format: written ?? typed.format,
     rich: compileRich(ctx, node),
     style: layersOf(ctx, node, through, node.style, node.format),
     provenance: { value: origin, format: node.format === null ? null : own },
   };
+}
+
+/**
+ * A `type: date` or `type: duration` as the number Excel keeps, and the format
+ * that number needs to read as what it is.
+ *
+ * Excel stores both as plain numbers; without the conversion the value cannot
+ * wear a format at all, and without the default format the number is what the
+ * grid would show. The default only stands where the spec wrote none of its
+ * own (`docs/spec.md` §3).
+ */
+function asTyped(
+  ctx: Ctx,
+  node: SpecNode & CellFacets,
+  value: ScalarValue,
+): { value: ScalarValue; format: string | null } {
+  if (typeof value !== 'string') return { value, format: null };
+
+  if (node.type === 'date') {
+    const read = dateSerial(value, ctx.from1904);
+    if (read === null) {
+      reject(ctx, CODE.badDate, `\`${value}\` is not a date`, node);
+      return { value, format: null };
+    }
+    return { value: read.serial, format: read.withTime ? DATETIME_FORMAT : DATE_FORMAT };
+  }
+
+  if (node.type === 'duration') {
+    const read = durationSerial(value);
+    if (read === null) {
+      reject(ctx, CODE.badDuration, `\`${value}\` is not an elapsed time`, node);
+      return { value, format: null };
+    }
+    return { value: read, format: DURATION_FORMAT };
+  }
+
+  return { value, format: null };
 }
 
 function compileValue(

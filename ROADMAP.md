@@ -583,11 +583,12 @@ value, and it carries none of the write-back risk.
       **Shipped** through `numfmt` (**ADR-022**), including Excel's own rule
       that an *inherited* format does not apply to a text cell. A date or a
       duration still shows as the text the spec wrote — see below.
-- [ ] Show a `type: date` and a `type: duration` under their format. The spec
-      writes `"2026-07-23"` and `"36:00:00"` as text and yxl turns each into an
-      Excel serial when it compiles; this projection keeps the text, so a
-      non-ISO `format:` on a date is not honoured. Converting is `compile`'s to
-      do, and it is the same arithmetic yxl already documents.
+- [x] Show a `type: date` and a `type: duration` under their format
+      **Shipped**: `compile` turns each into the number Excel keeps and gives it
+      the format its type takes, so `dd/mm/yyyy` on a date now draws as a reader
+      would expect. `date1904:` is **modeled** rather than carried, because the
+      two epochs are four years apart and guessing would draw every date in such
+      a workbook wrong.
 - [x] A DOM environment for the view's own tests (jsdom or happy-dom, with the
       licence check §9 requires)
       **Shipped**: jsdom 30 (MIT, checked at the registry), turned on for that
@@ -1474,6 +1475,23 @@ this at a phase boundary rather than at the end.
   for upstream as [yxl#68](https://github.com/t-ujiie-g/yxl/issues/68) — §23 is
   the only section of the reference with no worked example behind it, which
   means its compile path is not exercised there either.
+
+### 2026-08-15 — Phase 4: a date is a number wearing a format
+- `compile` turns a `type: date` into the serial Excel keeps and a
+  `type: duration` into a fraction of a day, each with the format its type takes
+  when the spec wrote none. Before this a date could not wear a format at all —
+  the value was text, and text does not take a number format. 18 new tests, 685
+  in total.
+- **`date1904:` is modeled now, not carried.** The two epochs are four years and
+  a day apart, so a projection that assumed one would draw every date in a
+  workbook that chose the other four years wrong — silently. It is the second
+  document key to earn modelling by changing what a value *is*.
+- **Excel's leap-year bug is carried on purpose**: it counts a 1900-02-29 that
+  never happened, so every date from 1900-03-01 is numbered one higher.
+  Leaving it out would put every modern date one day early. The test names the
+  two serials either side of it, so the next reader knows it is deliberate.
+- A cell's own format — written, or the one its type takes — now wins over a
+  band's. Both are requests about *that* cell; a band is something reaching it.
 
 ### 2026-08-15 — Phase 4: the number, and what it decided
 - §9 R5 asked for a measurement before a grid library was chosen. Here it is,

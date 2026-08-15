@@ -230,7 +230,7 @@ function drawCells(sheet: CompiledSheet, rows: number, columns: number): DrawnCe
         value: cell?.value ?? null,
         formula: cell?.formula ?? null,
         filledFrom: filledFrom(cell),
-        format: applies(layers, cell?.value ?? null),
+        format: applies(layers, cell?.value ?? null, cell?.format ?? null),
         style,
       });
     }
@@ -242,12 +242,21 @@ function drawCells(sheet: CompiledSheet, rows: number, columns: number): DrawnCe
 /**
  * The number format that actually applies to this cell.
  *
- * Excel's own rule, not yxl's: **an inherited number format does not apply to a
- * text cell** (`docs/spec.md` §4). A code with fewer than four sections says
- * nothing about text, so a band's `#,##0` leaves a heading alone — while a
- * `format:` written on the cell itself is a request and is always honoured.
+ * `own` is what the cell carries of its own — the `format:` it was written with,
+ * or the one its `type:` takes — and it wins, because both are requests about
+ * this cell rather than something reaching it.
+ *
+ * Failing that, Excel's own rule, not yxl's: **an inherited number format does
+ * not apply to a text cell** (`docs/spec.md` §4). A code with fewer than four
+ * sections says nothing about text, so a band's `#,##0` leaves a heading alone.
  */
-function applies(layers: readonly StyleLayer[], value: ScalarValue): string | null {
+function applies(
+  layers: readonly StyleLayer[],
+  value: ScalarValue,
+  own: string | null,
+): string | null {
+  if (own !== null) return own;
+
   const supplying = layers.findLast((layer) => layer.gives.format !== undefined);
   if (supplying === undefined) return null;
 

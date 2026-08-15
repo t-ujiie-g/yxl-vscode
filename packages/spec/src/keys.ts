@@ -18,7 +18,7 @@ const CELL_KEYS = ['value', 'formula', 'rich', 'type', 'format', 'style'] as con
  * or a style is modeled or it is not.
  */
 export const MODELED_KEYS = {
-  document: keySet(['sheets', 'params', 'defs', 'overrides']),
+  document: keySet(['sheets', 'params', 'defs', 'overrides', 'date1904']),
   defs: keySet(['styles', 'values', 'formulas']),
   sheet: keySet(['name', 'cells', 'formulas', 'data', 'columns', 'rows', 'merges']),
   cell: keySet(CELL_KEYS),

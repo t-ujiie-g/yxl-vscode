@@ -39,6 +39,7 @@ export interface Ctx {
   readonly diagnostics: Diagnostic[];
   readonly from: FilePath;
   readonly read: DataReader | null;
+  readonly from1904: boolean;
   readonly params: ReadonlyMap<string, ScalarValue>;
   readonly values: ReadonlyMap<string, ValueDef>;
   readonly formulas: ReadonlyMap<string, FormulaDef>;
@@ -51,6 +52,7 @@ export function context(doc: SpecDoc, read: DataReader | null, set: Setting): Ct
     diagnostics: [],
     from: doc.file,
     read,
+    from1904: doc.date1904,
     params: values,
     values: new Map(doc.defs.values.map((def) => [def.name, def])),
     formulas: new Map(doc.defs.formulas.map((def) => [def.name, def])),

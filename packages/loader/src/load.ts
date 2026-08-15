@@ -6,7 +6,7 @@ import { CODE } from './codes';
 import { type Ctx, type IncludeReader, keyOf, nodeAt } from './ctx';
 import { NO_DEFS, readDefs, readParams } from './defs';
 import { readOverrides } from './override';
-import { openEntries } from './read';
+import { expectBool, openEntries } from './read';
 import { readSheets } from './sheet';
 
 /**
@@ -57,6 +57,7 @@ function readDocument(ctx: Ctx, parsed: Parsed): SpecDoc | null {
   let params: Param[] = [];
   let defs: Defs = NO_DEFS;
   let overrides: Override[] = [];
+  let date1904 = false;
   const opaque: Opaque[] = [];
 
   for (const entry of opened.entries) {
@@ -75,11 +76,14 @@ function readDocument(ctx: Ctx, parsed: Parsed): SpecDoc | null {
       case 'overrides':
         overrides = readOverrides(here, entry.value, at);
         break;
+      case 'date1904':
+        date1904 = expectBool(here, entry.value, '`date1904`') ?? false;
+        break;
       default:
         opaque.push({ ...nodeAt(here, at, entry.span), key });
     }
   }
 
   const site = nodeAt(here, opened.path, opened.node.span);
-  return { ...site, sheets, params, defs, overrides, opaque };
+  return { ...site, sheets, params, defs, overrides, date1904, opaque };
 }
