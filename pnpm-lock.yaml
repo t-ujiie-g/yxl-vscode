@@ -96,15 +96,24 @@ importers:
       '@yxl-vscode/evaluate':
         specifier: workspace:*
         version: link:../evaluate
+      '@yxl-vscode/intent':
+        specifier: workspace:*
+        version: link:../intent
       '@yxl-vscode/loader':
         specifier: workspace:*
         version: link:../loader
+      '@yxl-vscode/patch':
+        specifier: workspace:*
+        version: link:../patch
       '@yxl-vscode/spec':
         specifier: workspace:*
         version: link:../spec
       '@yxl-vscode/units':
         specifier: workspace:*
         version: link:../units
+      '@yxl-vscode/verify':
+        specifier: workspace:*
+        version: link:../verify
       '@yxl-vscode/webview':
         specifier: workspace:*
         version: link:../webview
@@ -116,7 +125,26 @@ importers:
         specifier: ^0.28.2
         version: 0.28.2
 
-  packages/intent: {}
+  packages/intent:
+    dependencies:
+      '@yxl-vscode/compile':
+        specifier: workspace:*
+        version: link:../compile
+      '@yxl-vscode/cst':
+        specifier: workspace:*
+        version: link:../cst
+      '@yxl-vscode/loader':
+        specifier: workspace:*
+        version: link:../loader
+      '@yxl-vscode/patch':
+        specifier: workspace:*
+        version: link:../patch
+      '@yxl-vscode/units':
+        specifier: workspace:*
+        version: link:../units
+      '@yxl-vscode/verify':
+        specifier: workspace:*
+        version: link:../verify
 
   packages/loader:
     dependencies:

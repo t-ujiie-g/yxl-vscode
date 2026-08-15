@@ -75,9 +75,12 @@
     "@yxl-vscode/cst": "workspace:*",
     "@yxl-vscode/diag": "workspace:*",
     "@yxl-vscode/evaluate": "workspace:*",
+    "@yxl-vscode/intent": "workspace:*",
     "@yxl-vscode/loader": "workspace:*",
+    "@yxl-vscode/patch": "workspace:*",
     "@yxl-vscode/spec": "workspace:*",
     "@yxl-vscode/units": "workspace:*",
+    "@yxl-vscode/verify": "workspace:*",
     "@yxl-vscode/webview": "workspace:*"
   },
   "devDependencies": {

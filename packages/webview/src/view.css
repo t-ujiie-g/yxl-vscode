@@ -141,6 +141,23 @@ body {
   font-style: italic;
 }
 
+.grid td.editing {
+  position: relative;
+  padding: 0;
+}
+
+.typing {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  box-sizing: border-box;
+  border: 2px solid #107c41;
+  padding: 0 3px;
+  background: #ffffff;
+  color: #000000;
+  font: inherit;
+}
+
 .grid td.selected {
   outline: 2px solid #107c41;
   outline-offset: -2px;
@@ -153,6 +170,14 @@ body {
 .grid td.problem {
   text-decoration: #d13438 wavy underline;
   text-underline-offset: 3px;
+}
+
+.refused {
+  margin: 0 0 0.4rem;
+  padding: 0.3rem 0.5rem;
+  border-left: 3px solid var(--vscode-editorWarning-foreground);
+  background: var(--vscode-inputValidation-warningBackground, transparent);
+  color: var(--vscode-foreground);
 }
 
 .reaching {

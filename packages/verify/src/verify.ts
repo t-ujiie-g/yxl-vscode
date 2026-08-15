@@ -3,6 +3,7 @@ import { parse } from '@yxl-vscode/cst';
 import type { Diagnostic } from '@yxl-vscode/diag';
 import { type IncludeReader, load } from '@yxl-vscode/loader';
 import { applyPatch, type Patch } from '@yxl-vscode/patch';
+import type { FilePath } from '@yxl-vscode/units';
 import { type Change, changedAt, diff } from './diff';
 
 /**
@@ -21,8 +22,17 @@ export interface Expects {
 /** A refactor's claim: this changes no cell at all, and one changed cell fails it. */
 export const nothingChanges: Expects = { cells: new Set(), beyond: 'refuse' };
 
+/**
+ * The spec being edited, as the checker reads it.
+ *
+ * `root` is the file the spec is *opened* as, and it is what gets compiled —
+ * always, even when the edit lands in a file it `$include`s. A cell of
+ * `sheets/summary.yaml` means nothing on its own: what it is worth is what the
+ * workbook makes of it, so the workbook is what is compiled before and after.
+ */
 export interface Ctx {
-  readonly file: string;
+  readonly root: FilePath;
+  readonly file: FilePath;
   readonly read: IncludeReader & DataReader;
   readonly params?: Setting;
 }
@@ -65,9 +75,9 @@ export type Checked =
  * "obviously safe" is exactly the path an edit stops being safe on.
  */
 export function checked(source: string, patch: Patch, expects: Expects, ctx: Ctx): Checked {
-  const before = compiled(source, ctx);
+  const before = compiled(ctx, source);
   if (before === null) {
-    return { ok: false, diagnostics: unreadable(source, ctx), surprises: [] };
+    return { ok: false, diagnostics: unreadable(ctx, source), surprises: [] };
   }
 
   const change = applyPatch(source, patch, { file: ctx.file });
@@ -75,9 +85,9 @@ export function checked(source: string, patch: Patch, expects: Expects, ctx: Ctx
     return { ok: false, diagnostics: change.diagnostics, surprises: [] };
   }
 
-  const after = compiled(change.text, ctx);
+  const after = compiled(ctx, change.text);
   if (after === null) {
-    return { ok: false, diagnostics: unreadable(change.text, ctx), surprises: [] };
+    return { ok: false, diagnostics: unreadable(ctx, change.text), surprises: [] };
   }
 
   const broke = errorsBeyond(before.diagnostics, after.diagnostics);
@@ -100,21 +110,48 @@ interface Read {
   readonly diagnostics: readonly Diagnostic[];
 }
 
-function compiled(source: string, ctx: Ctx): Read | null {
-  const parsed = parse(source, { file: ctx.file });
-  const loaded = load(parsed, ctx.read);
+/**
+ * The whole spec compiled, with one file's text taken from the edit rather than
+ * from disk.
+ *
+ * The root is what is read either way; the overlay is what makes checking an
+ * edit to an `$include`d file mean anything, because a fragment on its own has
+ * no cells to compare.
+ */
+function compiled(ctx: Ctx, edited: string): Read | null {
+  const read = overlaid(ctx, edited);
+  const parsed = parse(root(ctx, edited), { file: ctx.root });
+  const loaded = load(parsed, read);
   if (loaded.doc === null) return null;
 
-  const grid = compile(loaded.doc, { read: ctx.read, params: ctx.params ?? new Map() });
+  const grid = compile(loaded.doc, { read, params: ctx.params ?? new Map() });
   return {
     grid,
     diagnostics: [...parsed.diagnostics, ...loaded.diagnostics, ...grid.diagnostics],
   };
 }
 
-function unreadable(source: string, ctx: Ctx): Diagnostic[] {
-  const parsed = parse(source, { file: ctx.file });
-  return [...parsed.diagnostics, ...load(parsed, ctx.read).diagnostics];
+function root(ctx: Ctx, edited: string): string {
+  if (ctx.file === ctx.root) return edited;
+
+  const read = ctx.read(ctx.root, ctx.root);
+  return read?.source ?? '';
+}
+
+function overlaid(ctx: Ctx, edited: string): IncludeReader & DataReader {
+  if (ctx.file === ctx.root) return ctx.read;
+
+  return (from, path) => {
+    const found = ctx.read(from, path);
+    if (found === null) return null;
+
+    return found.file === ctx.file ? { ...found, source: edited } : found;
+  };
+}
+
+function unreadable(ctx: Ctx, edited: string): Diagnostic[] {
+  const parsed = parse(root(ctx, edited), { file: ctx.root });
+  return [...parsed.diagnostics, ...load(parsed, overlaid(ctx, edited)).diagnostics];
 }
 
 /**

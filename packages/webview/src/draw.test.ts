@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { describe, expect, it, vi } from 'vitest';
-import { type Asks, draw, type Showing } from './draw';
+import { type Asks, draw, restate, type Showing } from './draw';
 import type { Drawing, DrawnCell, DrawnSheet } from './protocol';
 
 function asks(): Asks {
@@ -11,6 +11,7 @@ function asks(): Asks {
     reveal: vi.fn(),
     setParam: vi.fn(),
     showWindow: vi.fn(),
+    edit: vi.fn(),
   };
 }
 
@@ -61,7 +62,15 @@ function shown(of: Partial<Showing> = {}, on: Asks = asks()): HTMLElement {
   const into = document.createElement('div');
   draw(
     into,
-    { drawing: drawing(), sheet: 0, selected: null, sources: null, reached: null, ...of },
+    {
+      drawing: drawing(),
+      sheet: 0,
+      selected: null,
+      sources: null,
+      reached: null,
+      refused: null,
+      ...of,
+    },
     on,
   );
   return into;
@@ -179,6 +188,7 @@ describe('a sheet larger than the window drawn of it', () => {
       selected: null,
       sources: null,
       reached: null,
+      refused: null,
     });
 
     draw(into, showing(tall), on);
@@ -198,6 +208,7 @@ describe('a sheet larger than the window drawn of it', () => {
       selected: null,
       sources: null,
       reached: null,
+      refused: null,
     });
 
     draw(into, showing(0), on);
@@ -215,6 +226,130 @@ describe('what the view asks for', () => {
     at(into, 2, 1)?.click();
 
     expect(on.select).toHaveBeenCalledWith(2, 1);
+  });
+
+  it('asks to put what was typed into the cell it was typed in', () => {
+    const on = asks();
+    const cells = [cell(1, 1, { value: 'APAC' })];
+    const into = shown({ drawing: drawing({ sheets: [sheet({ cells })] }) }, on);
+
+    at(into, 1, 1)?.dispatchEvent(new MouseEvent('dblclick'));
+    const box = into.querySelector('.typing');
+    if (!(box instanceof HTMLInputElement)) throw new Error('nothing to type into');
+
+    expect(box.value).toBe('APAC');
+    box.value = 'EMEA';
+    box.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+
+    expect(on.edit).toHaveBeenCalledWith(1, 1, 'EMEA');
+  });
+
+  it('seeds the box with the formula the spec holds, not what it came to', () => {
+    const on = asks();
+    const computed = { kind: 'value', value: 4150000 } as const;
+    const cells = [cell(1, 1, { formula: 'SUM(B1:B2)', computed })];
+    const into = shown({ drawing: drawing({ sheets: [sheet({ cells })] }) }, on);
+
+    at(into, 1, 1)?.dispatchEvent(new MouseEvent('dblclick'));
+    expect(into.querySelector<HTMLInputElement>('.typing')?.value).toBe('=SUM(B1:B2)');
+  });
+
+  it('opens the cell on Enter, the way a spreadsheet does', () => {
+    const on = asks();
+    const cells = [cell(1, 1, { value: 'APAC' })];
+    const into = shown({ drawing: drawing({ sheets: [sheet({ cells })] }) }, on);
+
+    at(into, 1, 1)?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+    expect(into.querySelector<HTMLInputElement>('.typing')?.value).toBe('APAC');
+  });
+
+  it('starts with the character typed, because typing over a cell replaces it', () => {
+    const on = asks();
+    const cells = [cell(1, 1, { value: 'APAC' })];
+    const into = shown({ drawing: drawing({ sheets: [sheet({ cells })] }) }, on);
+
+    at(into, 1, 1)?.dispatchEvent(new KeyboardEvent('keydown', { key: '4' }));
+    const box = into.querySelector('.typing');
+    if (!(box instanceof HTMLInputElement)) throw new Error('nothing to type into');
+
+    expect(box.value).toBe('4');
+    box.value = '42';
+    box.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+    expect(on.edit).toHaveBeenCalledWith(1, 1, '42');
+  });
+
+  it('leaves a cell alone for a keystroke that is not typing', () => {
+    const on = asks();
+    const into = shown({}, on);
+
+    at(into, 1, 1)?.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', metaKey: true }));
+    at(into, 1, 1)?.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
+
+    expect(into.querySelector('.typing')).toBeNull();
+  });
+
+  it('moves down when an edit is committed, so a column can be typed straight through', () => {
+    const on = asks();
+    const into = shown({}, on);
+
+    at(into, 1, 1)?.dispatchEvent(new MouseEvent('dblclick'));
+    into.querySelector('.typing')?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+
+    expect(on.select).toHaveBeenCalledWith(2, 1);
+  });
+
+  it('lets the reader keep typing, rather than opening a box per keystroke', () => {
+    // The box is inside the cell, so its keys reach the cell's own handlers
+    // unless something stops them — and every one of those opened another box
+    // over the last, swallowing the character on the way.
+    const on = asks();
+    const into = shown({}, on);
+
+    at(into, 1, 1)?.dispatchEvent(new KeyboardEvent('keydown', { key: 'E' }));
+    const box = into.querySelector('.typing');
+    if (!(box instanceof HTMLInputElement)) throw new Error('nothing to type into');
+
+    for (const key of ['M', 'E', 'A']) {
+      const stroke = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
+      box.dispatchEvent(stroke);
+      // Not refused on the way past: a swallowed keystroke is a character the
+      // reader typed and did not get.
+      expect(stroke.defaultPrevented).toBe(false);
+    }
+
+    expect(into.querySelectorAll('.typing')).toHaveLength(1);
+    expect(on.edit).not.toHaveBeenCalled();
+  });
+
+  it('commits once, from the box the reader was typing in', () => {
+    const on = asks();
+    const into = shown({}, on);
+
+    at(into, 1, 1)?.dispatchEvent(new MouseEvent('dblclick'));
+    const box = into.querySelector('.typing');
+    if (!(box instanceof HTMLInputElement)) throw new Error('nothing to type into');
+
+    box.value = 'EMEA';
+    box.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+
+    expect(on.edit).toHaveBeenCalledTimes(1);
+    expect(on.edit).toHaveBeenCalledWith(1, 1, 'EMEA');
+    expect(into.querySelector('.typing')).toBeNull();
+  });
+
+  it('leaves the cell alone when the typing is abandoned', () => {
+    const on = asks();
+    const into = shown({}, on);
+
+    at(into, 1, 1)?.dispatchEvent(new MouseEvent('dblclick'));
+    const box = into.querySelector('.typing');
+    if (!(box instanceof HTMLInputElement)) throw new Error('nothing to type into');
+
+    box.value = 'never mind';
+    box.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+
+    expect(on.edit).not.toHaveBeenCalled();
+    expect(into.querySelector('.typing')).toBeNull();
   });
 
   it('asks to show the sheet whose tab was clicked', () => {
@@ -246,6 +381,71 @@ describe('what the view asks for', () => {
 
     into.querySelector<HTMLElement>('.inspector .go')?.click();
     expect(on.reveal).toHaveBeenCalledWith(source);
+  });
+});
+
+describe('what changes without redrawing the grid', () => {
+  function showing(of: Partial<Showing> = {}): Showing {
+    return {
+      drawing: drawing(),
+      sheet: 0,
+      selected: null,
+      sources: null,
+      reached: null,
+      refused: null,
+      ...of,
+    };
+  }
+
+  it('keeps the very cells it drew, so a click can be followed by another', () => {
+    // A grid rebuilt on selection is a grid whose cells cannot be
+    // double-clicked: the second click lands on an element that was not there
+    // for the first.
+    const into = document.createElement('div');
+    draw(into, showing(), asks());
+
+    const cell = at(into, 1, 1);
+    restate(into, showing({ selected: { row: 1, col: 1 } }), asks());
+
+    expect(at(into, 1, 1)).toBe(cell);
+    expect(cell?.classList.contains('selected')).toBe(true);
+  });
+
+  it('moves the selection off the cell that had it', () => {
+    const into = document.createElement('div');
+    draw(into, showing({ selected: { row: 1, col: 1 } }), asks());
+    restate(into, showing({ selected: { row: 2, col: 1 } }), asks());
+
+    expect(at(into, 1, 1)?.classList.contains('selected')).toBe(false);
+    expect(at(into, 2, 1)?.classList.contains('selected')).toBe(true);
+  });
+
+  it('lights up what the cursor reaches, and puts it out again', () => {
+    const into = document.createElement('div');
+    const reached = { says: 'the style `header`', cells: new Set(['1:1']) };
+    draw(into, showing(), asks());
+
+    restate(into, showing({ reached }), asks());
+    expect(at(into, 1, 1)?.classList.contains('reached')).toBe(true);
+
+    restate(into, showing({ reached: { says: 'x', cells: new Set() } }), asks());
+    expect(at(into, 1, 1)?.classList.contains('reached')).toBe(false);
+  });
+
+  it('shows the answer about a cell under the grid', () => {
+    const into = document.createElement('div');
+    const sources = [{ facet: 'value', says: 'written at `A1`', file: 'f', start: 1, end: 2 }];
+    draw(into, showing(), asks());
+    restate(into, showing({ selected: { row: 1, col: 1 }, sources }), asks());
+
+    expect(into.querySelector('.inspector dt')?.textContent).toBe('value');
+  });
+
+  it('draws the whole thing when there is no grid to keep', () => {
+    const into = document.createElement('div');
+    restate(into, showing(), asks());
+
+    expect(into.querySelector('.grid')).not.toBeNull();
   });
 });
 
@@ -297,6 +497,11 @@ describe('what the view says about a spec', () => {
 
   it('says nothing about computing when everything computed', () => {
     expect(shown().querySelector('.note')).toBeNull();
+  });
+
+  it('says why an edit did not happen, where the edit was made', () => {
+    const said = shown({ refused: '`B5` holds a formula — type a formula to change it' });
+    expect(said.querySelector('.refused')?.textContent).toContain('holds a formula');
   });
 
   it('says a spec with no sheets has nothing to draw', () => {

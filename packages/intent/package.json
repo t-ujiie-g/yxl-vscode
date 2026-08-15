@@ -3,9 +3,17 @@
   "version": "0.0.0",
   "private": true,
   "license": "Apache-2.0",
-  "description": "Edit intent to candidate resolutions to a patch. Holds the resolution table.",
+  "description": "A gesture on the grid as an edit to the spec, or a refusal with a reason.",
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@yxl-vscode/compile": "workspace:*",
+    "@yxl-vscode/cst": "workspace:*",
+    "@yxl-vscode/loader": "workspace:*",
+    "@yxl-vscode/patch": "workspace:*",
+    "@yxl-vscode/units": "workspace:*",
+    "@yxl-vscode/verify": "workspace:*"
   }
 }

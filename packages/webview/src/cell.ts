@@ -39,6 +39,68 @@ export function drawCell(
 }
 
 /**
+ * Type into a cell, over the top of what it shows.
+ *
+ * Opened without a `seed`, the box holds what the *spec* holds — a formula as
+ * `=SUM(A1:A2)`, not as the number it came to — because that is what the reader
+ * is about to change. Opened by typing a character, it holds that character:
+ * typing over a cell replaces it, and nobody presses anything first.
+ *
+ * Enter sends it, Escape and clicking away leave the cell alone: a gesture that
+ * only *might* have been an edit is not one (ADR-001).
+ */
+export function typeInto(
+  cell: HTMLTableCellElement,
+  drawn: DrawnCell | undefined,
+  seed: string | undefined,
+  done: (text: string) => void,
+): void {
+  const box = document.createElement('input');
+  box.type = 'text';
+  box.className = 'typing';
+  box.value = seed ?? written(drawn);
+
+  let sent = false;
+  const leave = (): void => {
+    // Every box in this cell, not only this one: a box left behind is a white
+    // rectangle over the grid, positioned against whatever is positioned above
+    // it once the cell stops being.
+    for (const other of cell.querySelectorAll('.typing')) other.remove();
+    cell.classList.remove('editing');
+  };
+
+  box.addEventListener('keydown', (event) => {
+    // The cell under this box has keys of its own; what is typed here is typed
+    // here.
+    event.stopPropagation();
+
+    if (event.key === 'Enter') {
+      sent = true;
+      done(box.value);
+      leave();
+    }
+    if (event.key === 'Escape') leave();
+  });
+  box.addEventListener('blur', () => {
+    if (!sent) leave();
+  });
+
+  for (const other of cell.querySelectorAll('.typing')) other.remove();
+  cell.classList.add('editing');
+  cell.append(box);
+  box.focus({ preventScroll: true });
+  if (seed === undefined) box.select();
+}
+
+/** What the spec holds for this cell, as a reader would type it. */
+function written(cell: DrawnCell | undefined): string {
+  if (cell === undefined) return '';
+  if (cell.formula !== null) return `=${cell.formula}`;
+
+  return cell.value === null ? '' : String(cell.value);
+}
+
+/**
  * One run of a cell written in runs, wearing the font that run alone was given.
  *
  * Excel keeps a rich string's fonts on the string, so a run's look is not a

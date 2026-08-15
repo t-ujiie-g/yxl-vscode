@@ -1,9 +1,9 @@
 import { sheetAgain } from './again';
-import { type Asks, cellKey, draw, type Reached, type Showing } from './draw';
+import { type Asks, cellKey, draw, type Reached, restate, type Showing } from './draw';
 import type { Drawing, FromView, Source, ToView } from './protocol';
 
 export { type Kept, sheetAgain } from './again';
-export { type Asks, draw, type Reached, type Showing } from './draw';
+export { type Asks, draw, type Reached, restate, type Showing } from './draw';
 export type {
   Drawing,
   DrawnCell,
@@ -14,6 +14,7 @@ export type {
   FromView,
   Highlighted,
   Inspected,
+  Refused,
   Sized,
   Source,
   ToView,
@@ -42,9 +43,17 @@ function start(): void {
   let selected: Showing['selected'] = null;
   let sources: readonly Source[] | null = null;
   let reached: Reached | null = null;
+  let refused: string | null = null;
 
   const redraw = (): void => {
-    if (drawing !== null) draw(into, { drawing, sheet, selected, sources, reached }, asks);
+    if (drawing !== null) draw(into, { drawing, sheet, selected, sources, reached, refused }, asks);
+  };
+
+  /** The same, for what the view holds of its own: the grid stays as it is. */
+  const restated = (): void => {
+    if (drawing !== null) {
+      restate(into, { drawing, sheet, selected, sources, reached, refused }, asks);
+    }
   };
 
   const named = (): string => drawing?.sheets[sheet]?.name ?? '';
@@ -61,7 +70,7 @@ function start(): void {
       selected = { row, col };
       sources = null;
       host.postMessage({ kind: 'inspect', sheet: named(), row, col });
-      redraw();
+      restated();
     },
     reveal: (source) => {
       host.postMessage({ kind: 'reveal', file: source.file, start: source.start, end: source.end });
@@ -72,10 +81,20 @@ function start(): void {
     showWindow: (row, col) => {
       host.postMessage({ kind: 'window', sheet: named(), row, col });
     },
+    edit: (row, col, text) => {
+      refused = null;
+      host.postMessage({ kind: 'edit', sheet: named(), row, col, text });
+    },
   };
 
   window.addEventListener('message', (event: MessageEvent<ToView>) => {
     const sent = event.data;
+
+    if (sent.kind === 'refused') {
+      refused = sent.why;
+      restated();
+      return;
+    }
 
     if (sent.kind === 'drawing') {
       const was = drawing?.sheets[sheet];
@@ -88,6 +107,7 @@ function start(): void {
       drawing = sent;
       sources = null;
       reached = null;
+      refused = null;
       redraw();
       return;
     }
@@ -95,7 +115,7 @@ function start(): void {
     if (sent.kind === 'highlighted') {
       const here = sent.cells.filter((cell) => cell.sheet === named());
       reached = { says: sent.says, cells: new Set(here.map((one) => cellKey(one.col, one.row))) };
-      redraw();
+      restated();
       return;
     }
 
@@ -103,7 +123,7 @@ function start(): void {
     // arrived since it was asked, and then it is no longer the question.
     if (sent.sheet === named() && sent.row === selected?.row && sent.col === selected.col) {
       sources = sent.sources;
-      redraw();
+      restated();
     }
   });
 }

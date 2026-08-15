@@ -681,7 +681,13 @@ the inverse is unique, so no dialog is needed yet.
       claim. Three verdicts — applied, ask about the surprises, refused — and the
       refactor case (a claim of *nothing changes*) is the one where a single
       surprised cell is a refusal.
-- [ ] `setValue` / `setFormula` on `literal` and `inline` origins
+- [x] `setValue` / `setFormula` on `literal` and `inline` origins
+      **Shipped, and the file changes**: double-click a cell, type, Enter. The
+      gesture becomes an `intent` — one node of the spec, or a refusal naming
+      what stands in the way — the checker gates it, and the edit lands in
+      whichever *file* wrote the cell, `$include`d or not. A leading `=` makes it
+      a formula, as it does in Excel. The way in is a spreadsheet's: Enter, F2,
+      a double-click, or simply typing; Enter commits and moves down.
 - [ ] `overrides:` as an explicit escape hatch, with the "manually edited" badge
       and the optional `reason:` — writing the construct yxl v0.3.4 shipped
       (`docs/spec.md` §23), which Phase 2 already reads
@@ -1660,6 +1666,59 @@ this at a phase boundary rather than at the end.
   two serials either side of it, so the next reader knows it is deliberate.
 - A cell's own format — written, or the one its type takes — now wins over a
   band's. Both are requests about *that* cell; a band is something reaching it.
+
+### 2026-08-15 — Phase 6: the first byte the grid writes
+
+Double-click a cell, type, press Enter, and the YAML changes. That sentence is
+the whole phase; what is behind it is three refusals deep.
+
+- **A gesture is an `intent`, or a refusal with a reason.** Only a value one
+  node of the spec wrote can be typed over: a literal at the cell, or one field
+  of an inline `data:` block. Everything else is named rather than blocked —
+  *reads a definition, which other cells read too*, *reads row 3 of
+  `data/sales-2026-07.csv`*, *is filled by the range anchored at `B4`*, *is
+  written as a formula — change the formula*. The reason is the product working
+  (ADR-001), not the product apologising.
+- **The edit lands in the file that wrote the cell.** `workbook.yxl.yaml` is
+  twenty lines of `$include` and the cells are in `sheets/*.yaml`, so an editor
+  that could only write the file it was opened as could not edit that workbook
+  at all. The checker compiles the **root** either way, with the edited file
+  overlaid — a cell of `summary.yaml` means nothing on its own.
+- **Everything goes through `checked`**, so an edit that would add an error to
+  the spec, or move a cell it did not name, does not happen. A surprise is
+  reported and refused for now; the dialog that offers a choice is Phase 7.
+- The write goes in as a VS Code workspace edit, which puts it on the editor's
+  own undo stack — the AST-level history from the last change is for the edits
+  that will not be a text edit to an open document.
+- **The grid is no longer rebuilt when the selection moves.** Clicking a cell
+  used to redraw every `<td>` in the window, which — besides being ten thousand
+  elements of work for a highlight — meant the element a click landed on was
+  gone before a second click could reach it, so *no cell could ever be
+  double-clicked*. What the view holds of its own now updates in place, and the
+  grid is rebuilt only when the spec changes.
+- **The way into a cell is a spreadsheet's** — Google Sheets', not Excel's,
+  which is a real difference: Enter *opens* the cell rather than moving down.
+  Typing a character opens it holding that character, because typing over a
+  cell replaces it; a double-click opens it too. Enter commits and moves down,
+  so a column can be typed straight through, and Escape leaves it alone.
+- **A refusal is said in the preview, under the grid**, not in a notification in
+  the corner: a notification is where a reader looks when something *finished*,
+  and a refused edit is something they are in the middle of.
+- **A cached result is not a value to type over.** `value:` beside `formula:` is
+  what Excel last computed (`docs/spec.md` §3); writing a number there would
+  leave the formula in place and the workbook showing something else until Excel
+  recomputed — the "quietly turn a formula into a constant" failure, wearing a
+  disguise. Refused, with what to type instead.
+- **The box is inside the cell, so the cell heard everything typed into it.**
+  Every keystroke bubbled up to the handler that opens a box, which opened
+  another over the last and refused the character on the way past — the reader
+  got stacked boxes, a swallowed keystroke, and a white rectangle left over the
+  grid when the cell that positioned it was redrawn. Keys typed in the box stay
+  in the box now, a cell holds one box, and leaving takes every box with it.
+- Verified against yxl's own examples before wiring: editing `Summary!A17`
+  rewrites `sheets/summary.yaml` and keeps its style; `Masters!B2` refuses and
+  names the CSV; `Summary!B15` refuses and says to change the formula. 27 new
+  tests, 879 in total.
 
 ### 2026-08-15 — Phase 6: the gate every write passes
 

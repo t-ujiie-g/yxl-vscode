@@ -188,16 +188,32 @@ export interface Highlighted {
   readonly cells: readonly { readonly sheet: string; readonly row: number; readonly col: number }[];
 }
 
+/**
+ * Why an edit did not happen, for the view to say where the reader is looking.
+ *
+ * A refusal is an answer, so it goes next to the grid rather than into a corner
+ * of the window: an edit that appears to do nothing is the one thing worse than
+ * an edit that is refused.
+ */
+export interface Refused {
+  readonly kind: 'refused';
+  readonly why: string;
+}
+
 /** Everything the host sends the view. */
-export type ToView = Drawing | Inspected | Highlighted;
+export type ToView = Drawing | Inspected | Highlighted | Refused;
 
 /**
  * Everything the view sends back.
  *
- * Questions and knobs, none of which touches the spec: *where did this cell
- * come from*, *take me there*, *draw it as though this parameter were something
- * else*, and *draw the part of the sheet I have scrolled to*. Nothing here
- * writes: the file on disk is untouched.
+ * Questions, knobs, and — since the phase that writes — one edit: *where did
+ * this cell come from*, *take me there*, *draw it as though this parameter were
+ * something else*, *draw the part of the sheet I have scrolled to*, and *put
+ * this in that cell*.
+ *
+ * `edit` carries what the reader typed, not what it means. A leading `=` makes
+ * it a formula, exactly as it does in Excel, and deciding that here would be
+ * deciding it twice.
  *
  * A sheet is named rather than numbered, here and in the answers: the spec may
  * have been read again since the view drew it, and a name is what the reader
@@ -212,6 +228,13 @@ export type FromView =
       readonly end: number;
     }
   | { readonly kind: 'setParam'; readonly name: string; readonly value: string }
+  | {
+      readonly kind: 'edit';
+      readonly sheet: string;
+      readonly row: number;
+      readonly col: number;
+      readonly text: string;
+    }
   | {
       readonly kind: 'window';
       readonly sheet: string;

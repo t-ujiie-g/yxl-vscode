@@ -1,5 +1,5 @@
 import { columnLabel } from '@yxl-vscode/units';
-import { drawCell } from './cell';
+import { drawCell, typeInto } from './cell';
 import type { Drawing, DrawnCell, DrawnMerge, DrawnSheet, Source, Uncomputed } from './protocol';
 import { across, down, heightOf, type Where, wanted, widthOf } from './window';
 
@@ -10,6 +10,7 @@ export interface Showing {
   readonly selected: { readonly row: number; readonly col: number } | null;
   readonly sources: readonly Source[] | null;
   readonly reached: Reached | null;
+  readonly refused: string | null;
 }
 
 /** What the cursor in the text is reaching, and what to call it. */
@@ -30,6 +31,7 @@ export interface Asks {
   readonly reveal: (source: Source) => void;
   readonly setParam: (name: string, value: string) => void;
   readonly showWindow: (row: number, col: number) => void;
+  readonly edit: (row: number, col: number, text: string) => void;
 }
 
 /**
@@ -38,6 +40,12 @@ export interface Asks {
  * Rebuilt outright whenever the host sends a new drawing, because that is what
  * a projection is (ADR-001) — there is no state here to reconcile, and the
  * spec is the only thing that changed.
+ *
+ * What the *view* holds of its own — which cell is selected, what the cursor
+ * reaches, the answer to the last question — is not that, and rebuilding the
+ * grid for it would be both wasteful and wrong: a click that replaces the cell
+ * it landed on is a cell that can never be double-clicked. `restate` is the
+ * entry point for those.
  */
 export function draw(into: HTMLElement, showing: Showing, asks: Asks): void {
   const { drawing } = showing;
@@ -67,10 +75,51 @@ export function draw(into: HTMLElement, showing: Showing, asks: Asks): void {
     box.scrollLeft = kept.left;
   }
 
-  if (drawing.uncomputed !== null) into.append(note(uncomputed(drawing.uncomputed)));
-  if (showing.reached !== null) into.append(reaching(showing.reached));
-  if (showing.sources !== null) into.append(inspector(showing, asks));
-  if (drawing.diagnostics.length > 0) into.append(problems(drawing, asks));
+  const under = document.createElement('div');
+  under.className = 'under';
+  into.append(under);
+  say(under, showing, asks);
+}
+
+/**
+ * What the view holds of its own, shown without rebuilding what the host sent.
+ *
+ * Selection, the cursor's highlight, and the inspector all change many times
+ * per drawing; the grid changes when the spec does. Keeping them apart is what
+ * makes the grid something a reader can click twice on.
+ */
+export function restate(into: HTMLElement, showing: Showing, asks: Asks): void {
+  const under = into.querySelector('.under');
+  const grid = into.querySelector('.grid');
+  if (under === null || grid === null) {
+    draw(into, showing, asks);
+    return;
+  }
+
+  for (const cell of grid.querySelectorAll('td.selected')) cell.classList.remove('selected');
+  for (const cell of grid.querySelectorAll('td.reached')) cell.classList.remove('reached');
+
+  const at = showing.selected;
+  if (at !== null)
+    grid.querySelector(`td[data-at="${cellKey(at.col, at.row)}"]`)?.classList.add('selected');
+
+  for (const key of showing.reached?.cells ?? []) {
+    grid.querySelector(`td[data-at="${key}"]`)?.classList.add('reached');
+  }
+
+  say(under, showing, asks);
+}
+
+/** Everything said under the grid, which is rebuilt on its own. */
+function say(under: Element, showing: Showing, asks: Asks): void {
+  const { drawing } = showing;
+  under.replaceChildren();
+
+  if (showing.refused !== null) under.append(refusal(showing.refused));
+  if (drawing.uncomputed !== null) under.append(note(uncomputed(drawing.uncomputed)));
+  if (showing.reached !== null) under.append(reaching(showing.reached));
+  if (showing.sources !== null) under.append(inspector(showing, asks));
+  if (drawing.diagnostics.length > 0) under.append(problems(drawing, asks));
 }
 
 /**
@@ -157,6 +206,14 @@ function uncomputed(said: Uncomputed): string {
   const rest = said.names.length > 3 ? `, and ${said.names.length - 3} more` : '';
 
   return `Not computed here: ${shown}${rest} — this preview does not model tables or workbook-defined names, so formulas that use them show as formulas.`;
+}
+
+/** Why an edit did not happen, said where the edit was attempted. */
+function refusal(why: string): HTMLElement {
+  const said = document.createElement('p');
+  said.className = 'refused';
+  said.textContent = why;
+  return said;
 }
 
 /** What the cursor is reaching, said above the grid so the highlight is explained. */
@@ -262,6 +319,11 @@ function grid(sheet: DrawnSheet, showing: Showing, asks: Asks): HTMLElement {
 
   table.append(body);
   return table;
+}
+
+/** A key that is a character the reader meant to put in the cell. */
+function typed(event: KeyboardEvent): boolean {
+  return event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey;
 }
 
 /** The diagnostics on each cell, gathered so a cell can be asked about once. */
@@ -377,6 +439,7 @@ function line(
     if (merged.covered.has(cellKey(col, row)) || widthOf(sheet, col) === 0) continue;
 
     const drawn = drawCell(held.get(cellKey(col, row)), merged.anchored.get(cellKey(col, row)));
+    drawn.setAttribute('data-at', cellKey(col, row));
     if (showing.selected?.row === row && showing.selected.col === col) {
       drawn.classList.add('selected');
     }
@@ -387,7 +450,42 @@ function line(
       drawn.classList.add('problem');
       drawn.title = said.join('\n');
     }
+    const type = (seed?: string): void => {
+      // The box lives *inside* the cell, so a second one would be a second box
+      // in the same cell rather than a replacement.
+      if (drawn.querySelector('.typing') !== null) return;
+
+      typeInto(drawn, held.get(cellKey(col, row)), seed, (text) => {
+        asks.edit(row, col, text);
+        asks.select(row + 1, col);
+      });
+    };
+
+    // Focusable so the keys that start an edit reach the cell, and not
+    // tab-reachable, because a grid of ten thousand tab stops is a page nobody
+    // can leave.
+    drawn.tabIndex = -1;
     drawn.addEventListener('click', () => asks.select(row, col));
+    drawn.addEventListener('dblclick', () => type());
+    drawn.addEventListener('keydown', (event) => {
+      // Typing *in* the box is not typing *at* the cell, and the box is a child
+      // of the cell — so its keys arrive here too unless this says otherwise.
+      if (event.target !== drawn) return;
+
+      if (event.key === 'Enter' || event.key === 'F2') {
+        event.preventDefault();
+        type();
+        return;
+      }
+
+      // Typing over a cell replaces it, and the first character typed is part
+      // of what was typed — the same as a spreadsheet, where nobody presses
+      // anything first.
+      if (typed(event)) {
+        event.preventDefault();
+        type(event.key);
+      }
+    });
     line.append(drawn);
   }
 
