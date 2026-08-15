@@ -7,5 +7,14 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@yxl-vscode/diag": "workspace:*",
+    "@yxl-vscode/spec": "workspace:*",
+    "@yxl-vscode/units": "workspace:*"
+  },
+  "devDependencies": {
+    "@yxl-vscode/cst": "workspace:*",
+    "@yxl-vscode/loader": "workspace:*"
   }
 }
