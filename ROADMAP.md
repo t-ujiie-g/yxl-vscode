@@ -686,7 +686,8 @@ the inverse is unique, so no dialog is needed yet.
       gesture becomes an `intent` — one node of the spec, or a refusal naming
       what stands in the way — the checker gates it, and the edit lands in
       whichever *file* wrote the cell, `$include`d or not. A leading `=` makes it
-      a formula, as it does in Excel.
+      a formula, as it does in Excel. The way in is a spreadsheet's: Enter, F2,
+      a double-click, or simply typing; Enter commits and moves down.
 - [ ] `overrides:` as an explicit escape hatch, with the "manually edited" badge
       and the optional `reason:` — writing the construct yxl v0.3.4 shipped
       (`docs/spec.md` §23), which Phase 2 already reads
@@ -1689,10 +1690,20 @@ the whole phase; what is behind it is three refusals deep.
 - The write goes in as a VS Code workspace edit, which puts it on the editor's
   own undo stack — the AST-level history from the last change is for the edits
   that will not be a text edit to an open document.
+- **The grid is no longer rebuilt when the selection moves.** Clicking a cell
+  used to redraw every `<td>` in the window, which — besides being ten thousand
+  elements of work for a highlight — meant the element a click landed on was
+  gone before a second click could reach it, so *no cell could ever be
+  double-clicked*. What the view holds of its own now updates in place, and the
+  grid is rebuilt only when the spec changes.
+- **The way into a cell is a spreadsheet's.** Enter or F2 opens it holding what
+  the spec holds; typing a character opens it holding *that character*, because
+  typing over a cell replaces it; a double-click opens it too. Enter commits and
+  moves down, so a column can be typed straight through. Escape leaves it alone.
 - Verified against yxl's own examples before wiring: editing `Summary!A17`
   rewrites `sheets/summary.yaml` and keeps its style; `Masters!B2` refuses and
-  names the CSV; `Summary!B15` refuses and says to change the formula. 18 new
-  tests, 870 in total.
+  names the CSV; `Summary!B15` refuses and says to change the formula. 27 new
+  tests, 879 in total.
 
 ### 2026-08-15 — Phase 6: the gate every write passes
 

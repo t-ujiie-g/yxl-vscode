@@ -41,20 +41,24 @@ export function drawCell(
 /**
  * Type into a cell, over the top of what it shows.
  *
- * The box is seeded with what the *spec* holds — a formula as `=SUM(A1:A2)`,
- * not as the number it came to — because that is what the reader is about to
- * change. Enter sends it, Escape and clicking away leave the cell alone: a
- * gesture that only *might* have been an edit is not one (ADR-001).
+ * Opened without a `seed`, the box holds what the *spec* holds — a formula as
+ * `=SUM(A1:A2)`, not as the number it came to — because that is what the reader
+ * is about to change. Opened by typing a character, it holds that character:
+ * typing over a cell replaces it, and nobody presses anything first.
+ *
+ * Enter sends it, Escape and clicking away leave the cell alone: a gesture that
+ * only *might* have been an edit is not one (ADR-001).
  */
 export function typeInto(
   cell: HTMLTableCellElement,
   drawn: DrawnCell | undefined,
+  seed: string | undefined,
   done: (text: string) => void,
 ): void {
   const box = document.createElement('input');
   box.type = 'text';
   box.className = 'typing';
-  box.value = written(drawn);
+  box.value = seed ?? written(drawn);
 
   let sent = false;
   const leave = (): void => {
@@ -77,7 +81,7 @@ export function typeInto(
   cell.classList.add('editing');
   cell.append(box);
   box.focus();
-  box.select();
+  if (seed === undefined) box.select();
 }
 
 /** What the spec holds for this cell, as a reader would type it. */

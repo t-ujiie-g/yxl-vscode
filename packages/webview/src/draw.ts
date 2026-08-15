@@ -39,6 +39,12 @@ export interface Asks {
  * Rebuilt outright whenever the host sends a new drawing, because that is what
  * a projection is (ADR-001) — there is no state here to reconcile, and the
  * spec is the only thing that changed.
+ *
+ * What the *view* holds of its own — which cell is selected, what the cursor
+ * reaches, the answer to the last question — is not that, and rebuilding the
+ * grid for it would be both wasteful and wrong: a click that replaces the cell
+ * it landed on is a cell that can never be double-clicked. `restate` is the
+ * entry point for those.
  */
 export function draw(into: HTMLElement, showing: Showing, asks: Asks): void {
   const { drawing } = showing;
@@ -68,10 +74,50 @@ export function draw(into: HTMLElement, showing: Showing, asks: Asks): void {
     box.scrollLeft = kept.left;
   }
 
-  if (drawing.uncomputed !== null) into.append(note(uncomputed(drawing.uncomputed)));
-  if (showing.reached !== null) into.append(reaching(showing.reached));
-  if (showing.sources !== null) into.append(inspector(showing, asks));
-  if (drawing.diagnostics.length > 0) into.append(problems(drawing, asks));
+  const under = document.createElement('div');
+  under.className = 'under';
+  into.append(under);
+  say(under, showing, asks);
+}
+
+/**
+ * What the view holds of its own, shown without rebuilding what the host sent.
+ *
+ * Selection, the cursor's highlight, and the inspector all change many times
+ * per drawing; the grid changes when the spec does. Keeping them apart is what
+ * makes the grid something a reader can click twice on.
+ */
+export function restate(into: HTMLElement, showing: Showing, asks: Asks): void {
+  const under = into.querySelector('.under');
+  const grid = into.querySelector('.grid');
+  if (under === null || grid === null) {
+    draw(into, showing, asks);
+    return;
+  }
+
+  for (const cell of grid.querySelectorAll('td.selected')) cell.classList.remove('selected');
+  for (const cell of grid.querySelectorAll('td.reached')) cell.classList.remove('reached');
+
+  const at = showing.selected;
+  if (at !== null)
+    grid.querySelector(`td[data-at="${cellKey(at.col, at.row)}"]`)?.classList.add('selected');
+
+  for (const key of showing.reached?.cells ?? []) {
+    grid.querySelector(`td[data-at="${key}"]`)?.classList.add('reached');
+  }
+
+  say(under, showing, asks);
+}
+
+/** Everything said under the grid, which is rebuilt on its own. */
+function say(under: Element, showing: Showing, asks: Asks): void {
+  const { drawing } = showing;
+  under.replaceChildren();
+
+  if (drawing.uncomputed !== null) under.append(note(uncomputed(drawing.uncomputed)));
+  if (showing.reached !== null) under.append(reaching(showing.reached));
+  if (showing.sources !== null) under.append(inspector(showing, asks));
+  if (drawing.diagnostics.length > 0) under.append(problems(drawing, asks));
 }
 
 /**
@@ -265,6 +311,11 @@ function grid(sheet: DrawnSheet, showing: Showing, asks: Asks): HTMLElement {
   return table;
 }
 
+/** A key that is a character the reader meant to put in the cell. */
+function typed(event: KeyboardEvent): boolean {
+  return event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey;
+}
+
 /** The diagnostics on each cell, gathered so a cell can be asked about once. */
 function markedBy(sheet: DrawnSheet): Map<string, string[]> {
   const problems = new Map<string, string[]>();
@@ -378,6 +429,7 @@ function line(
     if (merged.covered.has(cellKey(col, row)) || widthOf(sheet, col) === 0) continue;
 
     const drawn = drawCell(held.get(cellKey(col, row)), merged.anchored.get(cellKey(col, row)));
+    drawn.setAttribute('data-at', cellKey(col, row));
     if (showing.selected?.row === row && showing.selected.col === col) {
       drawn.classList.add('selected');
     }
@@ -388,10 +440,33 @@ function line(
       drawn.classList.add('problem');
       drawn.title = said.join('\n');
     }
+    const type = (seed?: string): void => {
+      typeInto(drawn, held.get(cellKey(col, row)), seed, (text) => {
+        asks.edit(row, col, text);
+        asks.select(row + 1, col);
+      });
+    };
+
+    // Focusable so the keys that start an edit reach the cell, and not
+    // tab-reachable, because a grid of ten thousand tab stops is a page nobody
+    // can leave.
+    drawn.tabIndex = -1;
     drawn.addEventListener('click', () => asks.select(row, col));
-    drawn.addEventListener('dblclick', () => {
-      asks.select(row, col);
-      typeInto(drawn, held.get(cellKey(col, row)), (text) => asks.edit(row, col, text));
+    drawn.addEventListener('dblclick', () => type());
+    drawn.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === 'F2') {
+        event.preventDefault();
+        type();
+        return;
+      }
+
+      // Typing over a cell replaces it, and the first character typed is part
+      // of what was typed — the same as a spreadsheet, where nobody presses
+      // anything first.
+      if (typed(event)) {
+        event.preventDefault();
+        type(event.key);
+      }
     });
     line.append(drawn);
   }
