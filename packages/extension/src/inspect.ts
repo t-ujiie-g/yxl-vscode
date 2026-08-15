@@ -1,3 +1,4 @@
+import { dirname, relative } from 'node:path';
 import { type CompiledSheet, cellAt, type FacetOrigin, styleAt } from '@yxl-vscode/compile';
 import type { Sheet, SpecDoc, SpecNode } from '@yxl-vscode/spec';
 import type { A1Addr, NodeId } from '@yxl-vscode/units';
@@ -11,14 +12,14 @@ import type { Source } from '@yxl-vscode/webview/protocol';
  * value came from row 12 of `sales.csv`*. Each answer carries the file and the
  * span it lives at, so the view can offer to go there.
  */
-export function inspect(nodes: Nodes, sheet: CompiledSheet, at: A1Addr): Source[] {
+export function inspect(nodes: Nodes, sheet: CompiledSheet, at: A1Addr, from: string): Source[] {
   const cell = cellAt(sheet, at);
   const found: Source[] = [];
 
   if (cell !== null) {
-    found.push(...facet(nodes, 'value', cell.provenance.value));
+    found.push(...facet(nodes, 'value', cell.provenance.value, from));
     if (cell.provenance.format !== null) {
-      found.push(...facet(nodes, 'format', cell.provenance.format));
+      found.push(...facet(nodes, 'format', cell.provenance.format, from));
     }
   }
 
@@ -45,10 +46,10 @@ export function inspect(nodes: Nodes, sheet: CompiledSheet, at: A1Addr): Source[
   return found;
 }
 
-function facet(nodes: Nodes, name: string, origin: FacetOrigin): Source[] {
+function facet(nodes: Nodes, name: string, origin: FacetOrigin, from: string): Source[] {
   const node = nodeOf(origin);
   const where = node === null ? undefined : nodes.get(node);
-  return [{ facet: name, says: says(origin, where), ...sited(where) }];
+  return [{ facet: name, says: says(origin, where, from), ...sited(where) }];
 }
 
 /**
@@ -64,14 +65,14 @@ function nodeOf(origin: FacetOrigin): string | null {
 }
 
 /** What one origin says about itself. */
-function says(origin: FacetOrigin, where: Described | undefined): string {
+function says(origin: FacetOrigin, where: Described | undefined, from: string): string {
   switch (origin.kind) {
     case 'literal':
       return `written at ${where?.what ?? 'the cell'}`;
     case 'inline':
       return `row ${origin.row + 1}, field ${origin.col + 1} of ${where?.what ?? 'a data block'}`;
     case 'external':
-      return `row ${origin.row + 1}, field ${origin.col + 1} of \`${origin.file}\``;
+      return `row ${origin.row + 1}, field ${origin.col + 1} of \`${beside(from, origin.file)}\``;
     case 'formulaRange':
       return `filled from \`${origin.anchor}\` by ${where?.what ?? 'a formula range'}`;
     case 'defRef':
@@ -90,6 +91,17 @@ function says(origin: FacetOrigin, where: Described | undefined): string {
 function through(from: string, where: Described | undefined): string {
   if (from === 'override') return 'an override';
   return from === 'cell' ? 'the cell itself' : (where?.what ?? `a ${from} band`);
+}
+
+/**
+ * A file as the spec would name it: where it sits relative to the spec itself.
+ *
+ * The absolute path is this machine's business, not the reader's — and it is
+ * the same path in every spec on the team, spelled differently on each of them.
+ */
+function beside(from: string, file: string): string {
+  const near = relative(dirname(from), file);
+  return near === '' || near.startsWith('..') ? file : near;
 }
 
 /** Where the node is, or nowhere to go. */

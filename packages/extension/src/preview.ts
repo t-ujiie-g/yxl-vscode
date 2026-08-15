@@ -238,7 +238,12 @@ export class Preview {
       sheet: asked.sheet,
       row: asked.row,
       col: asked.col,
-      sources: inspect(this.nodes, sheet, addrAt({ col: asked.col, row: asked.row })),
+      sources: inspect(
+        this.nodes,
+        sheet,
+        addrAt({ col: asked.col, row: asked.row }),
+        this.document.uri.fsPath,
+      ),
     });
   }
 

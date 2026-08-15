@@ -59,6 +59,31 @@ describe('what a `data:` block reaches', () => {
   });
 });
 
+describe('what a `formulas:` range reaches', () => {
+  it('names every cell it covers, which is the point of asking', () => {
+    // The range is held as a range rather than as cells (ADR-019), so a reach
+    // that only counted cells would say a range reaches nothing — of every
+    // construct, the one whose reach a reader most wants to see.
+    const source = `${SHEET}    cells:\n      A1: 1\n      A2: 2\n    formulas:\n      - at: B1:B2\n        formula: "A1"\n`;
+    expect(reached(source, '["spec.yxl.yaml","sheets",0,"formulas",0]')).toEqual([
+      'Sales!B1',
+      'Sales!B2',
+    ]);
+  });
+
+  it('stops where the sheet does, not where the range was written to', () => {
+    // `B1:B1048576` is a legal thing to write; a count a reader can act on is
+    // not the height of a sheet.
+    const source = `${SHEET}    cells:\n      A1: 1\n    formulas:\n      - at: B1:B1048576\n        formula: "A1"\n`;
+    expect(reached(source, '["spec.yxl.yaml","sheets",0,"formulas",0]')).toEqual(['Sales!B1']);
+  });
+
+  it('leaves out a cell the spec wrote over the range', () => {
+    const source = `${SHEET}    cells:\n      A1: 1\n      A2: 2\n      B2: written\n    formulas:\n      - at: B1:B2\n        formula: "A1"\n`;
+    expect(reached(source, '["spec.yxl.yaml","sheets",0,"formulas",0]')).toEqual(['Sales!B1']);
+  });
+});
+
 describe('what nothing reaches', () => {
   it('is nothing', () => {
     const source = `${SHEET}    cells:\n      A1: 1\n`;
