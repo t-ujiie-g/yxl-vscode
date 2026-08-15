@@ -211,7 +211,8 @@ export class Preview {
     }
 
     if (asked.kind === 'edit') {
-      this.tried(this.write(asked));
+      const { kind, ...typed } = asked;
+      this.tried(this.write(typed));
       return;
     }
 
@@ -266,7 +267,7 @@ export class Preview {
       return;
     }
 
-    const { reason, ...typed } = asked;
+    const { kind, reason, ...typed } = asked;
     await writeOverride(spec, typed, reason === '' ? undefined : reason, this.port());
   }
 

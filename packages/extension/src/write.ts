@@ -149,7 +149,11 @@ function exception(
   const sheet = spec.grid.sheets.find((one) => one.name === where.sheet);
   if (sheet === undefined || cellAt(sheet, where.at) === null) return null;
 
-  return typed;
+  // Built rather than passed through: what arrives here is the *message* that
+  // asked for the edit, and a message carries its own `kind`. Handing that back
+  // for the view to send again is how an override went out as an edit and came
+  // back refused by the rule it was the exception to.
+  return { sheet: typed.sheet, row: typed.row, col: typed.col, text: typed.text };
 }
 
 /**

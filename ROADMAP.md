@@ -1682,9 +1682,19 @@ this at a phase boundary rather than at the end.
   first attempt used VS Code's own input box, and pressing the button appeared
   to do nothing: the question opened somewhere the reader was not looking, in a
   path no test in this repo can reach. Asked where the sentence is, it is both
-  visible and testable — and the messages that carry it now report a failure
-  rather than dropping it, because an edit that vanishes without a word is worse
-  than one refused.
+  visible and testable.
+- **And then it still did nothing, for a better reason.** The offer handed back
+  to the view was the *message* that had asked for the edit — and a message
+  carries its own `kind`. Spread into the next one, `{ kind: 'override',
+  ...typed }` put `'edit'` back on top of `'override'`, so the override was sent
+  as an ordinary edit and came back refused by the very rule it was the
+  exception to. The offer is built from what was typed now, not passed through.
+  What found it was making every outcome say something: the same refusal coming
+  back twice is a sentence, where silence was not.
+- Every silent return in the write path is gone with it — a spec still loading,
+  a sheet name that will not parse, and a successful override, which lands at
+  the end of a file nobody is looking at and now says so. An edit that vanishes
+  without a word cannot be told from one that was never sent.
 - **It is offered, never taken.** An override that the editor reaches for by
   itself is not an escape hatch, it is the door (ADR-007) — so it appears only
   after an ordinary edit was refused, only where there is a cell it could name,

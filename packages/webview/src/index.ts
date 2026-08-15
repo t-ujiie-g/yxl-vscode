@@ -47,6 +47,9 @@ function start(): void {
   let refused: Refused | null = null;
   let said: string | null = null;
 
+  /** Where the last edit was typed, so a refusal can put the reader back at it. */
+  let typedAt: { row: number; col: number } | null = null;
+
   const redraw = (): void => {
     if (drawing !== null) {
       draw(into, { drawing, sheet, selected, sources, reached, refused, said }, asks);
@@ -88,6 +91,7 @@ function start(): void {
     edit: (row, col, text) => {
       refused = null;
       said = null;
+      typedAt = { row, col };
       host.postMessage({ kind: 'edit', sheet: named(), row, col, text });
     },
     overrideWith: (typed, reason) => {
@@ -95,7 +99,9 @@ function start(): void {
       // in a box of its own, and anything this touches now takes the focus back
       // before they can answer it. The answer arrives as a drawing or as
       // another refusal.
-      host.postMessage({ kind: 'override', ...typed, reason });
+      // `kind` last: whatever the host handed back, this message is an
+      // override, and a spread that ends in someone else's `kind` is not.
+      host.postMessage({ ...typed, reason, kind: 'override' });
     },
   };
 
@@ -105,6 +111,9 @@ function start(): void {
     if (sent.kind === 'refused') {
       refused = sent;
       said = null;
+      // Enter moves down, and an edit that did not happen should not move the
+      // reader away from the cell it was about.
+      if (typedAt !== null) selected = typedAt;
       restated();
       return;
     }

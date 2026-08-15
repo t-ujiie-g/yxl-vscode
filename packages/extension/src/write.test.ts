@@ -106,6 +106,17 @@ describe('the exception, when the ordinary edit is refused', () => {
     expect(offers[0]).toEqual(typed({ col: 2, row: 2, text: '99' }));
   });
 
+  it('is offered as what was typed, and not as the message that carried it', async () => {
+    // What arrives at a write is a *message*, and a message carries its own
+    // `kind`. Handing that back for the view to send again is how an override
+    // went out as an edit and came back refused by the rule it excepted.
+    const { spec, port, offers } = editor({ [ROOT]: FILLED });
+    const message = { ...typed({ col: 2, row: 2, text: '99' }), kind: 'edit' } as Typed;
+
+    await write(spec, message, port);
+    expect(offers[0]).not.toHaveProperty('kind');
+  });
+
   it('is not offered where there is no cell to make an exception of', async () => {
     const { spec, port, offers } = editor({ [ROOT]: `${SALES}    cells:\n      A1: 1\n` });
 
