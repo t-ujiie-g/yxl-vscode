@@ -4,6 +4,7 @@ import type {
   ScalarValue,
   SpecDoc,
   SpecNode,
+  StyleDef,
   Templated,
   ValueDef,
 } from '@yxl-vscode/spec';
@@ -23,6 +24,7 @@ export interface Ctx {
   readonly params: ReadonlyMap<string, ScalarValue>;
   readonly values: ReadonlyMap<string, ValueDef>;
   readonly formulas: ReadonlyMap<string, FormulaDef>;
+  readonly styles: ReadonlyMap<string, StyleDef>;
 }
 
 export function context(doc: SpecDoc): Ctx {
@@ -32,6 +34,7 @@ export function context(doc: SpecDoc): Ctx {
     params: values,
     values: new Map(doc.defs.values.map((def) => [def.name, def])),
     formulas: new Map(doc.defs.formulas.map((def) => [def.name, def])),
+    styles: new Map(doc.defs.styles.map((def) => [def.name, def])),
   };
 
   for (const cycle of cycles) {

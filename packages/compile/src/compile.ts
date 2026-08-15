@@ -11,6 +11,7 @@ import { CODE } from './codes';
 import { type Ctx, context, filled, reject } from './ctx';
 import type { CompiledCell, CompiledGrid, CompiledSheet } from './grid';
 import { compileSheet, type Drafted } from './sheet';
+import type { StyleLayer } from './style';
 
 /**
  * The grid a spec projects to: pure, deterministic, and computed forward only
@@ -51,6 +52,7 @@ export function cellAt(sheet: CompiledSheet, at: A1Addr): CompiledCell | null {
     formula: fill.formula,
     format: null,
     rich: null,
+    style: [],
     provenance: {
       value: {
         kind: 'formulaRange',
@@ -61,6 +63,24 @@ export function cellAt(sheet: CompiledSheet, at: A1Addr): CompiledCell | null {
       format: null,
     },
   };
+}
+
+/**
+ * Every layer that makes an address look how it looks, in the order they apply:
+ * the column bands over it, then the rows, then whatever the cell itself said,
+ * then an override (`docs/spec.md` §4).
+ *
+ * An address, not a cell — a band reaches the cells in its span whether a spec
+ * wrote them or not, so an empty cell has a look and this answers for it.
+ */
+export function styleAt(sheet: CompiledSheet, at: A1Addr): readonly StyleLayer[] {
+  const cell = cellOf(at);
+  const bands = [
+    ...sheet.columns.filter((band) => cell.col >= band.first && cell.col <= band.last),
+    ...sheet.rows.filter((band) => cell.row >= band.first && cell.row <= band.last),
+  ];
+
+  return [...bands.flatMap((band) => band.style), ...(sheet.cells.get(at)?.style ?? [])];
 }
 
 /**
@@ -81,7 +101,8 @@ function applyOverride(ctx: Ctx, override: Override, drafts: readonly Drafted[])
   }
 
   const under = cellAt(draft.sheet, read.at);
-  const written = compileFacets(ctx, override, read.at, { kind: 'override', node: override.id });
+  const own = { kind: 'override', node: override.id } as const;
+  const written = compileFacets(ctx, override, read.at, own, 'override');
   draft.cells.set(read.at, under === null ? written : layer(under, written, override));
 }
 
@@ -113,6 +134,7 @@ function layer(under: CompiledCell, over: CompiledCell, override: Override): Com
     formula: writesValue ? over.formula : under.formula,
     rich: writesValue ? over.rich : under.rich,
     format: override.format === null ? under.format : over.format,
+    style: [...under.style, ...over.style],
     provenance: {
       value: writesValue ? over.provenance.value : under.provenance.value,
       format: override.format === null ? under.provenance.format : over.provenance.format,

@@ -19,6 +19,7 @@ import type {
   CompiledMerge,
   CompiledSheet,
 } from './grid';
+import { layersOf } from './style';
 
 /**
  * A sheet under construction: the compiled form, and the cell map still open
@@ -64,7 +65,7 @@ function placeCells(ctx: Ctx, sheet: Sheet, cells: Map<string, CompiledCell>): v
   for (const cell of sheet.cells) {
     const at = address(ctx, cell.at, cell);
     if (at !== null)
-      cells.set(at, compileFacets(ctx, cell, at, { kind: 'literal', node: cell.id }));
+      cells.set(at, compileFacets(ctx, cell, at, { kind: 'literal', node: cell.id }, 'cell'));
   }
 }
 
@@ -98,6 +99,7 @@ function placeData(ctx: Ctx, block: DataBlock, cells: Map<string, CompiledCell>)
         formula: null,
         format: null,
         rich: null,
+        style: [],
         provenance: { value: { kind: 'inline', node: block.id, row, col }, format: null },
       });
     }
@@ -130,7 +132,15 @@ function columnBand(ctx: Ctx, band: ColumnBand): CompiledBand | null {
   }
 
   const { first, last } = columnsOf(read);
-  return { first, last, size: band.width, hidden: band.hidden, group: band.group, node: band.id };
+  return {
+    first,
+    last,
+    size: band.width,
+    hidden: band.hidden,
+    group: band.group,
+    style: layersOf(ctx, band, 'column', band.style, band.format),
+    node: band.id,
+  };
 }
 
 function rowBand(ctx: Ctx, band: RowBand): CompiledBand | null {
@@ -142,7 +152,15 @@ function rowBand(ctx: Ctx, band: RowBand): CompiledBand | null {
   }
 
   const { first, last } = rowsOf(read);
-  return { first, last, size: band.height, hidden: band.hidden, group: band.group, node: band.id };
+  return {
+    first,
+    last,
+    size: band.height,
+    hidden: band.hidden,
+    group: band.group,
+    style: layersOf(ctx, band, 'row', band.style, band.format),
+    node: band.id,
+  };
 }
 
 function mergedRegion(ctx: Ctx, merge: Sheet['merges'][number]): CompiledMerge | null {

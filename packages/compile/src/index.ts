@@ -1,5 +1,5 @@
 export { CODE, type Code } from './codes';
-export { cellAt, compile } from './compile';
+export { cellAt, compile, styleAt } from './compile';
 export type {
   CompiledBand,
   CompiledCell,
@@ -9,3 +9,4 @@ export type {
   CompiledSheet,
 } from './grid';
 export type { CellProvenance, FacetOrigin } from './provenance';
+export { resolve, type StyleLayer, type StyleSource } from './style';

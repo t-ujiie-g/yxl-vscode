@@ -2,6 +2,7 @@ import type { Diagnostic } from '@yxl-vscode/diag';
 import type { CellType, RichRun, ScalarValue } from '@yxl-vscode/spec';
 import type { A1Addr, NodeId, Rect } from '@yxl-vscode/units';
 import type { CellProvenance } from './provenance';
+import type { StyleLayer } from './style';
 
 /**
  * The workbook as the grid draws it: the projection, computed forward from the
@@ -56,6 +57,10 @@ export interface CompiledFill {
  * is followed; `formula` is the body Excel would compute, without its `=`. A
  * cell can hold both: a formula with the cached value Excel shows until it
  * recomputes.
+ *
+ * `style` is what *this cell* contributed to how it looks. What a band over it
+ * contributes is the band's, so how the cell finally looks is `styleAt` — an
+ * address has a look whether a cell was written there or not.
  */
 export interface CompiledCell {
   readonly at: A1Addr;
@@ -64,6 +69,7 @@ export interface CompiledCell {
   readonly formula: string | null;
   readonly format: string | null;
   readonly rich: readonly RichRun[] | null;
+  readonly style: readonly StyleLayer[];
   readonly provenance: CellProvenance;
 }
 
@@ -71,8 +77,8 @@ export interface CompiledCell {
  * One band of columns or rows, as geometry.
  *
  * `size` is a width in character units or a height in points, whichever axis
- * this is; `null` leaves Excel's default. What a band contributes to a cell's
- * *look* is a style layer, and is not here.
+ * this is; `null` leaves Excel's default. `style` is what the band contributes
+ * to every cell in its span, written or not (`docs/spec.md` §4).
  */
 export interface CompiledBand {
   readonly first: number;
@@ -80,6 +86,7 @@ export interface CompiledBand {
   readonly size: number | null;
   readonly hidden: boolean | null;
   readonly group: number | null;
+  readonly style: readonly StyleLayer[];
   readonly node: NodeId;
 }
 

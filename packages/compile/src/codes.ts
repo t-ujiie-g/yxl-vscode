@@ -16,6 +16,9 @@ export const CODE = {
   badRange: 'compile.bad-range',
   badColumn: 'compile.bad-column',
   badRow: 'compile.bad-row',
+  unknownStyle: 'compile.unknown-style',
+  styleCycle: 'compile.style-cycle',
+  badColour: 'compile.bad-colour',
   unknownSheet: 'compile.unknown-sheet',
   notReadYet: 'compile.not-read-yet',
 } as const;
