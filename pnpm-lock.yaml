@@ -155,7 +155,29 @@ importers:
 
   packages/units: {}
 
-  packages/verify: {}
+  packages/verify:
+    dependencies:
+      '@yxl-vscode/compile':
+        specifier: workspace:*
+        version: link:../compile
+      '@yxl-vscode/cst':
+        specifier: workspace:*
+        version: link:../cst
+      '@yxl-vscode/diag':
+        specifier: workspace:*
+        version: link:../diag
+      '@yxl-vscode/loader':
+        specifier: workspace:*
+        version: link:../loader
+      '@yxl-vscode/patch':
+        specifier: workspace:*
+        version: link:../patch
+      '@yxl-vscode/spec':
+        specifier: workspace:*
+        version: link:../spec
+      '@yxl-vscode/units':
+        specifier: workspace:*
+        version: link:../units
 
   packages/webview:
     dependencies:
