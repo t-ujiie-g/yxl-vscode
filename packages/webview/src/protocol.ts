@@ -1,7 +1,13 @@
+import type { Computed } from '@yxl-vscode/evaluate';
 import type { ScalarValue, StyleValues } from '@yxl-vscode/spec';
 
 /**
  * What the host sends the view, and the only thing the view knows about a spec.
+ *
+ * `uncomputed` names what the preview could not resolve well enough to compute
+ * anything from — a table, a workbook-defined name, a function Excel has and
+ * this does not. Cells that depend on one show their formula, and this is what
+ * the view says about why.
  *
  * A projection, flattened for the wire: VS Code serializes a webview message as
  * JSON, so the `Map` and the branded types a `CompiledGrid` holds would not
@@ -15,6 +21,7 @@ export interface Drawing {
   readonly sheets: readonly DrawnSheet[];
   readonly params: readonly DrawnParam[];
   readonly diagnostics: readonly DrawnDiagnostic[];
+  readonly uncomputed: readonly string[];
 }
 
 /**
@@ -108,6 +115,11 @@ export interface Sized {
  *
  * `rich` is a cell whose text is written in runs of its own (`docs/spec.md` §3),
  * and it is what the cell *says* — a cell that has runs has no `value`.
+ *
+ * `computed` is what the formula came to, and it is kept apart from `value` on
+ * purpose: `value` is what the *spec* holds and is the only one an edit could
+ * ever be about, while a computed number is display-only and is written back
+ * nowhere (ADR-014).
  */
 export interface DrawnCell {
   readonly row: number;
@@ -117,6 +129,7 @@ export interface DrawnCell {
   readonly filledFrom: string | null;
   readonly format: string | null;
   readonly rich: readonly DrawnRun[] | null;
+  readonly computed: Computed | null;
   readonly style: StyleValues;
 }
 

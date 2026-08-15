@@ -23,6 +23,7 @@ function cell(row: number, col: number, of: Partial<DrawnCell> = {}): DrawnCell 
     filledFrom: null,
     format: null,
     rich: null,
+    computed: null,
     style: {},
     ...of,
   };
@@ -51,6 +52,7 @@ function drawing(of: Partial<Drawing> = {}): Drawing {
     sheets: [sheet()],
     params: [],
     diagnostics: [],
+    uncomputed: [],
     ...of,
   };
 }
@@ -276,6 +278,19 @@ describe('what the view says about a spec', () => {
 
     expect(at(into, 1, 1)?.classList.contains('reached')).toBe(true);
     expect(into.querySelector('.reaching')?.textContent).toBe('the style `header` reaches 1 cell');
+  });
+
+  it('says what it could not compute, once, under the grid', () => {
+    const said = shown({
+      drawing: drawing({ uncomputed: ['StoreMaster[name', 'target_revenue'] }),
+    });
+
+    expect(said.querySelector('.note')?.textContent).toContain('StoreMaster[name');
+    expect(said.querySelector('.note')?.textContent).toContain('does not model tables');
+  });
+
+  it('says nothing about computing when everything computed', () => {
+    expect(shown().querySelector('.note')).toBeNull();
   });
 
   it('says a spec with no sheets has nothing to draw', () => {

@@ -1,4 +1,5 @@
 import { reaches } from '@yxl-vscode/compile';
+import { type Engine, univerEngine } from '@yxl-vscode/evaluate';
 import { addrAt, cellOf } from '@yxl-vscode/units';
 import type { FromView } from '@yxl-vscode/webview/protocol';
 import * as vscode from 'vscode';
@@ -32,6 +33,12 @@ export class Preview {
   private read = -1;
   private readonly params = new Map<string, string>();
   private readonly windows = new Map<string, Window>();
+
+  /**
+   * One engine for the life of the panel: standing one up registers five
+   * hundred functions, and a keystroke should not pay for that.
+   */
+  private readonly engine: Engine = univerEngine();
 
   static show(document: vscode.TextDocument, extension: vscode.Uri): void {
     const already = Preview.open.get(document.uri.toString());
@@ -142,7 +149,14 @@ export class Preview {
   private redraw(): void {
     const file = this.document.uri.fsPath;
     this.read = this.document.version;
-    const drawn = project(this.document.getText(), file, readBeside, this.params, this.windows);
+    const drawn = project(
+      this.document.getText(),
+      file,
+      readBeside,
+      this.params,
+      this.windows,
+      this.engine,
+    );
     const { drawing, diagnostics } = drawn;
     this.drawn = drawn;
     this.nodes = drawn.nodes;

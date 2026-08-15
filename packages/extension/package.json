@@ -74,6 +74,7 @@
     "@yxl-vscode/compile": "workspace:*",
     "@yxl-vscode/cst": "workspace:*",
     "@yxl-vscode/diag": "workspace:*",
+    "@yxl-vscode/evaluate": "workspace:*",
     "@yxl-vscode/loader": "workspace:*",
     "@yxl-vscode/spec": "workspace:*",
     "@yxl-vscode/units": "workspace:*",

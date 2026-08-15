@@ -1,4 +1,5 @@
 import type { DataReader } from '@yxl-vscode/compile';
+import { univerEngine } from '@yxl-vscode/evaluate';
 import type { IncludeReader } from '@yxl-vscode/loader';
 import { filePath } from '@yxl-vscode/units';
 import type { DrawnSheet } from '@yxl-vscode/webview/protocol';
@@ -46,6 +47,22 @@ describe('a drawn spec', () => {
       { text: 'Figures are ', style: {} },
       { text: 'unaudited', style: { 'font.italic': true } },
     ]);
+  });
+
+  it('draws what the formulas came to, when it is given an engine to ask', () => {
+    const source = `${SALES}    cells:\n      B2: 2400000\n      B3: 1750000\n      B4: { formula: "SUM(B2:B3)" }\n`;
+    const sheet = project(source, FILE, read, new Map(), new Map(), univerEngine()).drawing
+      .sheets[0];
+    const cell = sheet?.cells.find((one) => one.row === 4 && one.col === 2);
+
+    expect(cell?.computed).toEqual({ kind: 'value', value: 4150000 });
+    // The spec's own value is untouched by what was computed (ADR-014).
+    expect(cell?.value).toBeNull();
+  });
+
+  it('computes nothing when it is given no engine, and says so with a null', () => {
+    const source = `${SALES}    cells:\n      B2: 1\n      B3: { formula: "B2+1" }\n`;
+    expect(at(source, 2, 3)?.computed).toBeNull();
   });
 
   it('draws a formula as its own text, having computed nothing', () => {

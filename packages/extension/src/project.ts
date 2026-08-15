@@ -13,6 +13,7 @@ import {
 } from '@yxl-vscode/compile';
 import { parse } from '@yxl-vscode/cst';
 import type { Diagnostic } from '@yxl-vscode/diag';
+import { computedAt, type Engine, type Evaluation, evaluate } from '@yxl-vscode/evaluate';
 import { type IncludeReader, load } from '@yxl-vscode/loader';
 import type { ScalarValue, SpecDoc } from '@yxl-vscode/spec';
 import { addrAt, cellOf } from '@yxl-vscode/units';
@@ -63,6 +64,7 @@ export type Windows = ReadonlyMap<string, Window>;
  */
 export interface Projected {
   readonly drawing: Drawing;
+  readonly evaluation: Evaluation | null;
   readonly diagnostics: readonly Diagnostic[];
   readonly doc: SpecDoc | null;
   readonly grid: CompiledGrid | null;
@@ -82,13 +84,22 @@ export function project(
   read: IncludeReader & DataReader,
   params: Setting = new Map(),
   windows: Windows = new Map(),
+  engine?: Engine,
 ): Projected {
   const parsed = parse(text, { file });
   const loaded = load(parsed, read);
   if (loaded.doc === null) {
     const diagnostics = [...parsed.diagnostics, ...loaded.diagnostics];
     return {
-      drawing: { kind: 'drawing', file, sheets: [], params: [], diagnostics: listed(diagnostics) },
+      drawing: {
+        kind: 'drawing',
+        file,
+        sheets: [],
+        params: [],
+        diagnostics: listed(diagnostics),
+        uncomputed: [],
+      },
+      evaluation: null,
       diagnostics,
       doc: null,
       grid: null,
@@ -99,7 +110,8 @@ export function project(
   const grid = compile(loaded.doc, { read, params });
   const diagnostics = [...parsed.diagnostics, ...loaded.diagnostics, ...grid.diagnostics];
   const nodes = nodesOf(loaded.doc);
-  const projected = { diagnostics, doc: loaded.doc, grid, nodes };
+  const evaluation = engine === undefined ? null : evaluate(grid, engine);
+  const projected = { diagnostics, doc: loaded.doc, grid, nodes, evaluation };
 
   return { drawing: drawn(file, projected, params, windows), ...projected };
 }
@@ -125,21 +137,23 @@ function drawn(
     grid: CompiledGrid;
     nodes: Nodes;
     diagnostics: readonly Diagnostic[];
+    evaluation: Evaluation | null;
   },
   params: Setting,
   windows: Windows,
 ): Drawing {
-  const { doc, grid, nodes, diagnostics } = projected;
+  const { doc, grid, nodes, diagnostics, evaluation } = projected;
   const marked = marks(grid, nodes, diagnostics);
 
   return {
     kind: 'drawing',
     file,
     sheets: grid.sheets.map((sheet) =>
-      drawSheet(sheet, marked.get(sheet.name) ?? [], windows.get(sheet.name)),
+      drawSheet(sheet, marked.get(sheet.name) ?? [], windows.get(sheet.name), evaluation),
     ),
     params: declared(doc, params),
     diagnostics: listed(diagnostics),
+    uncomputed: evaluation?.unknown ?? [],
   };
 }
 
@@ -190,6 +204,7 @@ function drawSheet(
   sheet: CompiledSheet,
   problems: readonly MarkedCell[],
   window: Window | undefined,
+  evaluation: Evaluation | null,
 ): DrawnSheet {
   const of = extent(sheet);
   const at = {
@@ -208,7 +223,7 @@ function drawSheet(
     of,
     widths: sheet.columns.map(sizedRun),
     heights: sheet.rows.map(sizedRun),
-    cells: drawCells(sheet, at, rows, columns),
+    cells: drawCells(sheet, at, rows, columns, evaluation),
     merges: sheet.merges.map(
       (merge): DrawnMerge => ({
         top: merge.rect.top,
@@ -254,7 +269,13 @@ function extent(sheet: CompiledSheet): { rows: number; columns: number } {
  * wrote — and skips the ones that come back with nothing, which is most of a
  * grid. Only the window is asked about, however large the sheet is.
  */
-function drawCells(sheet: CompiledSheet, at: Window, rows: number, columns: number): DrawnCell[] {
+function drawCells(
+  sheet: CompiledSheet,
+  at: Window,
+  rows: number,
+  columns: number,
+  evaluation: Evaluation | null,
+): DrawnCell[] {
   const drawn: DrawnCell[] = [];
 
   for (let row = at.row; row < at.row + rows; row += 1) {
@@ -264,6 +285,7 @@ function drawCells(sheet: CompiledSheet, at: Window, rows: number, columns: numb
       const layers = styleAt(sheet, addr);
       const style = resolve(layers);
 
+      const computed = evaluation?.values.get(computedAt(sheet.name, addr)) ?? null;
       const holds =
         cell !== null && (cell.value !== null || cell.formula !== null || cell.rich !== null);
       if (!holds && Object.keys(style).length === 0) continue;
@@ -275,6 +297,7 @@ function drawCells(sheet: CompiledSheet, at: Window, rows: number, columns: numb
         formula: cell?.formula ?? null,
         filledFrom: filledFrom(cell),
         rich: cell?.rich?.map((run) => ({ text: run.text, style: run.look })) ?? null,
+        computed,
         format: applies(layers, cell?.value ?? null, cell?.format ?? null),
         style,
       });

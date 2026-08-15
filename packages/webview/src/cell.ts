@@ -1,4 +1,4 @@
-import type { StyleValues } from '@yxl-vscode/spec';
+import type { ScalarValue, StyleValues } from '@yxl-vscode/spec';
 import { format as excel } from 'numfmt';
 import type { DrawnCell, DrawnMerge, DrawnRun } from './protocol';
 
@@ -32,7 +32,8 @@ export function drawCell(
   else drawn.append(...cell.rich.map(run));
 
   if (cell.formula !== null) drawn.title = told(cell);
-  if (cell.filledFrom !== null) drawn.classList.add('filled');
+  if (cell.computed?.kind === 'error') drawn.classList.add('problem');
+  else if (cell.computed === null && cell.filledFrom !== null) drawn.classList.add('filled');
   apply(drawn, cell.style);
   return drawn;
 }
@@ -54,43 +55,52 @@ function run(of: DrawnRun): HTMLElement {
 /**
  * What a cell shows.
  *
- * A formula shows as its own text, not as a result: nothing here computes, and
- * a preview that guessed at one would be inventing a number Excel had not
- * agreed to (ADR-014). A cached value beside it is what Excel would show, so it
- * wins.
+ * A **computed** formula shows its result, which is the point of computing it,
+ * and the formula itself is a hover away. A formula that could not be computed
+ * shows as its own text instead — never as a number, because a number that is
+ * not the workbook's number is worse than no number at all (ADR-014).
+ *
+ * A cached value beside a formula is what Excel would show until it recomputes,
+ * so it stands in where nothing was computed here.
  *
  * A number wears its format, so `0.085` under `0.0%` reads `8.5%` here as it
  * will in Excel. A pattern the formatter cannot read shows its own error rather
  * than throwing the view away.
  *
- * A cell **filled** by a `formulas:` range shows where it is filled from
- * instead. The range holds one formula, written as it applies at its anchor,
- * and Excel shifts the references per cell while nothing here does — printing
- * that text in every cell would be printing something false in all but one.
+ * A cell **filled** by a `formulas:` range that was not computed shows where it
+ * is filled from. The range holds one formula, written as it applies at its
+ * anchor, and printing that text in every cell would be printing something
+ * false in all but one.
  */
 function shown(cell: DrawnCell): string {
-  if (typeof cell.value === 'number' && cell.format !== null) {
-    return excel(cell.format, cell.value, { throws: false });
-  }
-  if (cell.value !== null) return String(cell.value);
+  const computed = cell.computed;
+  if (computed?.kind === 'error') return computed.error;
+  if (computed?.kind === 'value') return formatted(computed.value, cell.format);
+
+  if (cell.value !== null) return formatted(cell.value, cell.format);
   if (cell.formula === null) return '';
 
   return cell.filledFrom === null ? `=${cell.formula}` : `↧ ${cell.filledFrom}`;
+}
+
+function formatted(value: ScalarValue, format: string | null): string {
+  if (typeof value === 'number' && format !== null) return excel(format, value, { throws: false });
+  return value === null ? '' : String(value);
 }
 
 /**
  * What the cell says about its own formula on hover.
  *
  * A cell of a filled range holds the formula as it applies at the range's
- * anchor; Excel shifts the relative references per cell and nothing here does,
- * so the view says where it is reading from rather than letting the text be
- * read as this cell's own.
+ * anchor, so it says where it is reading from as well — the same formula means
+ * a different thing one row down, and it is Excel that shifts it.
  */
 function told(cell: DrawnCell): string {
   const formula = `=${cell.formula ?? ''}`;
-  if (cell.filledFrom === null) return formula;
+  const why = cell.computed?.kind === 'unsupported' ? ` — not computed: ${cell.computed.why}` : '';
+  if (cell.filledFrom === null) return `${formula}${why}`;
 
-  return `${formula} — filled from ${cell.filledFrom}; Excel shifts the references per cell`;
+  return `${formula} — filled from ${cell.filledFrom}; Excel shifts the references per cell${why}`;
 }
 
 function apply(drawn: HTMLElement, style: StyleValues): void {

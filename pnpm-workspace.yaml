@@ -7,3 +7,7 @@ packages:
 # default: a build script is arbitrary code from a dependency.
 allowBuilds:
   esbuild: true
+  # Arrives under the formula engine, through Univer's collaboration protocol.
+  # Nothing here speaks protobuf — the engine is used for arithmetic — so its
+  # install script has nothing to prepare that this repository needs.
+  protobufjs: false
