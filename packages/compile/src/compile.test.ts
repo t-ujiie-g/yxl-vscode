@@ -266,6 +266,35 @@ describe('a typed cell', () => {
   });
 });
 
+describe('a cell written in runs', () => {
+  const RICH = `${SALES}    cells:\n      A1:\n        rich:\n          - "Figures are "\n          - { text: unaudited, font: { italic: true, color: "C00000" } }\n          - " as of Q3."\n`;
+
+  it('keeps the runs apart, which is what a rich cell is for', () => {
+    expect(at(RICH, 'A1')?.rich?.map((run) => run.text)).toEqual([
+      'Figures are ',
+      'unaudited',
+      ' as of Q3.',
+    ]);
+  });
+
+  it('gives each run the look that run alone was given', () => {
+    expect(at(RICH, 'A1')?.rich?.map((run) => run.look)).toEqual([
+      {},
+      { 'font.italic': true, 'font.color': 'C00000' },
+      {},
+    ]);
+  });
+
+  it('substitutes a parameter inside a run, as it does in a value', () => {
+    const spec = `params:\n  who: Finance\n${SALES}    cells:\n      A1:\n        rich:\n          - "From \${who}"\n`;
+    expect(at(spec, 'A1')?.rich?.[0]?.text).toBe('From Finance');
+  });
+
+  it('holds no value, because the runs are what it says', () => {
+    expect(at(RICH, 'A1')?.value).toBeNull();
+  });
+});
+
 describe('a cell that is only a number format', () => {
   it('holds nothing, and says its value came from nowhere', () => {
     // The one shape that produces an `empty` origin: the node exists and no key

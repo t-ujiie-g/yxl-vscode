@@ -1,6 +1,6 @@
 import type { StyleValues } from '@yxl-vscode/spec';
 import { format as excel } from 'numfmt';
-import type { DrawnCell, DrawnMerge } from './protocol';
+import type { DrawnCell, DrawnMerge, DrawnRun } from './protocol';
 
 const EDGES = [
   ['left', 'borderLeft'],
@@ -28,11 +28,27 @@ export function drawCell(
 
   if (cell === undefined) return drawn;
 
-  drawn.textContent = shown(cell);
+  if (cell.rich === null) drawn.textContent = shown(cell);
+  else drawn.append(...cell.rich.map(run));
+
   if (cell.formula !== null) drawn.title = told(cell);
   if (cell.filledFrom !== null) drawn.classList.add('filled');
   apply(drawn, cell.style);
   return drawn;
+}
+
+/**
+ * One run of a cell written in runs, wearing the font that run alone was given.
+ *
+ * Excel keeps a rich string's fonts on the string, so a run's look is not a
+ * layer over the cell's — it is the run's own, and the cell's style is still
+ * underneath it.
+ */
+function run(of: DrawnRun): HTMLElement {
+  const piece = document.createElement('span');
+  piece.textContent = of.text;
+  apply(piece, of.style);
+  return piece;
 }
 
 /**
@@ -77,7 +93,7 @@ function told(cell: DrawnCell): string {
   return `${formula} — filled from ${cell.filledFrom}; Excel shifts the references per cell`;
 }
 
-function apply(drawn: HTMLTableCellElement, style: StyleValues): void {
+function apply(drawn: HTMLElement, style: StyleValues): void {
   if (style['font.bold'] === true) drawn.style.fontWeight = 'bold';
   if (style['font.italic'] === true) drawn.style.fontStyle = 'italic';
   if (style['font.underline'] === true) drawn.style.textDecoration = 'underline';

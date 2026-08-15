@@ -40,6 +40,14 @@ describe('a drawn spec', () => {
     expect(at(`${SALES}    cells:\n      B2: Region\n`, 2, 2)?.value).toBe('Region');
   });
 
+  it('draws a cell written in runs, which nothing else in the spec can reach', () => {
+    const source = `${SALES}    cells:\n      A1:\n        rich:\n          - "Figures are "\n          - { text: unaudited, font: { italic: true } }\n`;
+    expect(at(source, 1, 1)?.rich).toEqual([
+      { text: 'Figures are ', style: {} },
+      { text: 'unaudited', style: { 'font.italic': true } },
+    ]);
+  });
+
   it('draws a formula as its own text, having computed nothing', () => {
     const cell = at(`${SALES}    cells:\n      B2: { formula: "SUM(A1:A2)" }\n`, 2, 2);
     expect(cell?.formula).toBe('SUM(A1:A2)');

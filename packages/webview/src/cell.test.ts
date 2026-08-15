@@ -13,6 +13,7 @@ function cell(of: Partial<DrawnCell> = {}): DrawnCell {
     formula: null,
     filledFrom: null,
     format: null,
+    rich: null,
     style: {},
     ...of,
   };
@@ -49,6 +50,24 @@ describe('what a cell says', () => {
     expect(drawn.textContent).toBe('↧ C2');
     expect(drawn.classList.contains('filled')).toBe(true);
     expect(drawn.title).toContain('Excel shifts');
+  });
+
+  it('shows a cell written in runs as its runs, each wearing its own font', () => {
+    const drawn = drawCell(
+      cell({
+        rich: [
+          { text: 'Figures are ', style: {} },
+          { text: 'unaudited', style: { 'font.italic': true, 'font.color': colour('C00000') } },
+          { text: ' as of Q3.', style: {} },
+        ],
+      }),
+      undefined,
+    );
+    const runs = [...drawn.querySelectorAll('span')];
+
+    expect(drawn.textContent).toBe('Figures are unaudited as of Q3.');
+    expect(runs.map((one) => one.style.fontStyle)).toEqual(['', 'italic', '']);
+    expect(runs[1]?.style.color).toBe('rgb(192, 0, 0)');
   });
 
   it('shows nothing for an address only a band reaches', () => {

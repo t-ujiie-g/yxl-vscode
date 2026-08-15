@@ -68,6 +68,12 @@ export interface MarkedCell {
   readonly message: string;
 }
 
+/** One run of a `rich:` cell: a piece of its text, and the look that piece wears. */
+export interface DrawnRun {
+  readonly text: string;
+  readonly style: StyleValues;
+}
+
 /**
  * A run of columns or rows a band declares something about.
  *
@@ -99,6 +105,9 @@ export interface Sized {
  * holds, written as it applies **there**: Excel shifts its relative references
  * per cell and this does not, so the view says which cell it is really reading
  * rather than showing a formula that is wrong here.
+ *
+ * `rich` is a cell whose text is written in runs of its own (`docs/spec.md` §3),
+ * and it is what the cell *says* — a cell that has runs has no `value`.
  */
 export interface DrawnCell {
   readonly row: number;
@@ -107,6 +116,7 @@ export interface DrawnCell {
   readonly formula: string | null;
   readonly filledFrom: string | null;
   readonly format: string | null;
+  readonly rich: readonly DrawnRun[] | null;
   readonly style: StyleValues;
 }
 

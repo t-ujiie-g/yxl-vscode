@@ -264,7 +264,8 @@ function drawCells(sheet: CompiledSheet, at: Window, rows: number, columns: numb
       const layers = styleAt(sheet, addr);
       const style = resolve(layers);
 
-      const holds = cell !== null && (cell.value !== null || cell.formula !== null);
+      const holds =
+        cell !== null && (cell.value !== null || cell.formula !== null || cell.rich !== null);
       if (!holds && Object.keys(style).length === 0) continue;
 
       drawn.push({
@@ -273,6 +274,7 @@ function drawCells(sheet: CompiledSheet, at: Window, rows: number, columns: numb
         value: cell?.value ?? null,
         formula: cell?.formula ?? null,
         filledFrom: filledFrom(cell),
+        rich: cell?.rich?.map((run) => ({ text: run.text, style: run.look })) ?? null,
         format: applies(layers, cell?.value ?? null, cell?.format ?? null),
         style,
       });

@@ -8,6 +8,7 @@ export type {
   CompiledFill,
   CompiledGrid,
   CompiledMerge,
+  CompiledRun,
   CompiledSheet,
 } from './grid';
 export { type FullAddr, reaches } from './impact';
