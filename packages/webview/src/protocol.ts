@@ -71,6 +71,49 @@ export interface DrawnMerge {
 }
 
 /**
+ * Where one facet of a cell came from, and where to go to change it (§4.3).
+ *
+ * `facet` is what the answer is about — `value`, `format`, or a style leaf like
+ * `font.bold` — and `says` is the answer in the words a reader wants. The span
+ * is into `file`, which is not always the file that was opened: an `$include`
+ * makes a definition live somewhere else.
+ */
+export interface Source {
+  readonly facet: string;
+  readonly says: string;
+  readonly file: string;
+  readonly start: number;
+  readonly end: number;
+}
+
+/** The answer to one `inspect`, for the cell that asked. */
+export interface Inspected {
+  readonly kind: 'inspected';
+  readonly sheet: number;
+  readonly row: number;
+  readonly col: number;
+  readonly sources: readonly Source[];
+}
+
+/** Everything the host sends the view. */
+export type ToView = Drawing | Inspected;
+
+/**
+ * Everything the view sends back.
+ *
+ * Two questions, and neither of them changes anything: *where did this cell
+ * come from*, and *take me there*. A read-only preview asks nothing else.
+ */
+export type FromView =
+  | { readonly kind: 'inspect'; readonly sheet: number; readonly row: number; readonly col: number }
+  | {
+      readonly kind: 'reveal';
+      readonly file: string;
+      readonly start: number;
+      readonly end: number;
+    };
+
+/**
  * Something the projection could not do, as the view lists it.
  *
  * No position: a span is an offset into a file the view does not have, and

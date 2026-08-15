@@ -541,11 +541,18 @@ value, and it carries none of the write-back risk.
       spreadsheet model, so the library question is only about size and speed,
       and neither has been measured yet. A number format is *not* applied yet —
       the value shows as the spec wrote it — which is its own item below.
-- [ ] Provenance inspector: select a cell, see where each facet came from,
+- [x] Provenance inspector: select a cell, see where each facet came from,
       property by property
+      **Shipped.** Click a cell and the panel says where its value came from,
+      where its format came from, and — per style property — which layer
+      supplied it. Every line that names a node is a link into the file it lives
+      in, which is half the jump below.
 - [ ] **Bidirectional jump**: grid cell → the YAML node that produced it, and
       cursor in YAML → the cells it produces (highlighted). This is the feature
       that makes the release worth shipping.
+      *Half of it is in*: an inspector line takes you to the node, in whichever
+      file it lives — a definition reached through an `$include` opens that
+      file. The other direction, cursor to cells, is what `reaches` is for.
 - [ ] Diagnostics from the loader shown inline in the grid and as VS Code
       problems
 - [ ] `yxl build` / `--check` invoked as commands, output surfaced, binary
@@ -1396,6 +1403,25 @@ this at a phase boundary rather than at the end.
   for upstream as [yxl#68](https://github.com/t-ujiie-g/yxl/issues/68) — §23 is
   the only section of the reference with no worked example behind it, which
   means its compile path is not exercised there either.
+
+### 2026-08-15 — Phase 4: why a cell looks the way it does
+- Click a cell and the inspector answers §4.3's promise in the words it was
+  written in: *this is bold because `defs.styles.header` says so, `#,##0`
+  because column A's band says so, and its value is the definition
+  `defs.values.rate`*. 11 new tests, 620 in total.
+- **Every line that names a node is a link.** Clicking one opens the file it
+  lives in and selects the span — including a definition an `$include` put in
+  another file, which is the case a reader most needs help with. That is the
+  first half of the bidirectional jump; the second, cursor to cells, is what
+  `reaches` was built for.
+- **A reference takes you to the definition, not to the reference.** `defRef`
+  names both nodes, and "why is it this value" is answered by the definition.
+- **The wording lives in the extension**, not in `compile`. The core carries
+  identity — a `NodeId` and a span — and turning that into a sentence a person
+  reads is the UI's, which is what keeps ADR-004's line where it is.
+- The view now asks two things and changes nothing: *where did this come from*
+  and *take me there*. A read-only preview has no third question, and the
+  protocol says so out loud.
 
 ### 2026-08-15 — Phase 4: what a filled cell says
 - Trying the preview on yxl's own `quickstart.yxl.yaml` showed the first real

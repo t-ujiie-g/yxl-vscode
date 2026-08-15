@@ -1,6 +1,9 @@
+import { addrAt } from '@yxl-vscode/units';
+import type { FromView } from '@yxl-vscode/webview/protocol';
 import * as vscode from 'vscode';
 import { readBeside } from './files';
-import { project } from './project';
+import { inspect } from './inspect';
+import { type Projected, project } from './project';
 
 /** Long enough that typing does not redraw on every keystroke, short enough to feel live. */
 const SETTLE = 150;
@@ -19,6 +22,7 @@ export class Preview {
   private readonly problems: vscode.DiagnosticCollection;
   private readonly listeners: vscode.Disposable[] = [];
   private settling: ReturnType<typeof setTimeout> | undefined;
+  private drawn: Projected | undefined;
 
   static show(document: vscode.TextDocument, extension: vscode.Uri): void {
     const already = Preview.open.get(document.uri.toString());
@@ -54,6 +58,7 @@ export class Preview {
       }),
     );
 
+    this.listeners.push(this.panel.webview.onDidReceiveMessage((asked) => this.answer(asked)));
     this.panel.onDidDispose(() => this.close());
     this.redraw();
   }
@@ -65,7 +70,9 @@ export class Preview {
 
   private redraw(): void {
     const file = this.document.uri.fsPath;
-    const { drawing, diagnostics } = project(this.document.getText(), file, readBeside);
+    const drawn = project(this.document.getText(), file, readBeside);
+    const { drawing, diagnostics } = drawn;
+    this.drawn = drawn;
 
     void this.panel.webview.postMessage(drawing);
     this.problems.set(
@@ -83,6 +90,45 @@ export class Preview {
           return shown;
         }),
     );
+  }
+
+  /**
+   * The two questions the view may ask, neither of which changes anything: where
+   * a cell came from, and take me there.
+   */
+  private answer(asked: FromView): void {
+    if (asked.kind === 'reveal') {
+      void this.reveal(asked.file, asked.start, asked.end);
+      return;
+    }
+
+    const sheet = this.drawn?.grid?.sheets[asked.sheet];
+    const doc = this.drawn?.doc;
+    if (sheet === undefined || doc === undefined || doc === null) return;
+
+    void this.panel.webview.postMessage({
+      kind: 'inspected',
+      sheet: asked.sheet,
+      row: asked.row,
+      col: asked.col,
+      sources: inspect(doc, sheet, addrAt({ col: asked.col, row: asked.row })),
+    });
+  }
+
+  /**
+   * Take the reader to the node behind a cell — in whichever file it lives,
+   * since an `$include` puts a definition somewhere else.
+   */
+  private async reveal(file: string, start: number, end: number): Promise<void> {
+    const document = await vscode.workspace.openTextDocument(vscode.Uri.file(file));
+    const at = new vscode.Range(document.positionAt(start), document.positionAt(end));
+
+    const editor = await vscode.window.showTextDocument(document, {
+      viewColumn: vscode.ViewColumn.One,
+      preserveFocus: false,
+      selection: at,
+    });
+    editor.revealRange(at, vscode.TextEditorRevealType.InCenterIfOutsideViewport);
   }
 
   private close(): void {
