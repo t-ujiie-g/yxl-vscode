@@ -10,6 +10,7 @@ export interface Showing {
   readonly selected: { readonly row: number; readonly col: number } | null;
   readonly sources: readonly Source[] | null;
   readonly reached: Reached | null;
+  readonly refused: string | null;
 }
 
 /** What the cursor in the text is reaching, and what to call it. */
@@ -114,6 +115,7 @@ function say(under: Element, showing: Showing, asks: Asks): void {
   const { drawing } = showing;
   under.replaceChildren();
 
+  if (showing.refused !== null) under.append(refusal(showing.refused));
   if (drawing.uncomputed !== null) under.append(note(uncomputed(drawing.uncomputed)));
   if (showing.reached !== null) under.append(reaching(showing.reached));
   if (showing.sources !== null) under.append(inspector(showing, asks));
@@ -204,6 +206,14 @@ function uncomputed(said: Uncomputed): string {
   const rest = said.names.length > 3 ? `, and ${said.names.length - 3} more` : '';
 
   return `Not computed here: ${shown}${rest} — this preview does not model tables or workbook-defined names, so formulas that use them show as formulas.`;
+}
+
+/** Why an edit did not happen, said where the edit was attempted. */
+function refusal(why: string): HTMLElement {
+  const said = document.createElement('p');
+  said.className = 'refused';
+  said.textContent = why;
+  return said;
 }
 
 /** What the cursor is reaching, said above the grid so the highlight is explained. */

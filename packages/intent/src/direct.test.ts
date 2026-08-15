@@ -136,7 +136,19 @@ describe('typing a formula into a cell', () => {
     const { grid, text } = files(sources);
     const intent = setValue(grid, at('B1'), 5, text);
 
-    expect(intent.kind === 'refused' && intent.why).toContain('written as a formula');
+    expect(intent.kind === 'refused' && intent.why).toContain('holds a formula');
+  });
+
+  it('refuses it even where a cached result sits beside the formula', () => {
+    // `value:` next to `formula:` is what Excel last computed, not the cell's
+    // own value. Typing a number over it leaves the formula in place and the
+    // workbook showing something else until Excel recomputes.
+    const cell = 'B1: { formula: "SUM(A1:A2)", value: 4150000 }';
+    const sources = { [ROOT]: `${SALES}    cells:\n      ${cell}\n` };
+    const { grid, text } = files(sources);
+    const intent = setValue(grid, at('B1'), 5, text);
+
+    expect(intent.kind === 'refused' && intent.why).toContain('holds a formula');
   });
 
   it('refuses a cell that holds a value rather than a formula', () => {

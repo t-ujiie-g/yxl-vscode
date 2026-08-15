@@ -126,13 +126,15 @@ function valuePath(origin: FacetOrigin, sheet: CompiledSheet, at: A1Addr, text: 
   const holds = (key: string): boolean =>
     written.node.kind === 'map' && written.node.entries.some((entry) => entry.key.value === key);
 
-  if (holds('value')) return { ...written, path: [...written.path, 'value'] };
+  // A `value:` beside a `formula:` is the result Excel cached, not the cell's
+  // own value (`docs/spec.md` §3). Typing a number over it would leave the
+  // formula in place and the workbook showing something else until Excel
+  // recomputed — a lie with a long life. Change the formula instead.
   if (holds('formula')) {
-    return refused(
-      `\`${at}\` is written as a formula — change the formula, or give the cell a value of its own`,
-    );
+    return refused(`\`${at}\` holds a formula — type a formula to change it, starting with \`=\``);
   }
 
+  if (holds('value')) return { ...written, path: [...written.path, 'value'] };
   return refused(`\`${at}\` is not written as a value this can change`);
 }
 

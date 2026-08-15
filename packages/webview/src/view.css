@@ -172,6 +172,14 @@ body {
   text-underline-offset: 3px;
 }
 
+.refused {
+  margin: 0 0 0.4rem;
+  padding: 0.3rem 0.5rem;
+  border-left: 3px solid var(--vscode-editorWarning-foreground);
+  background: var(--vscode-inputValidation-warningBackground, transparent);
+  color: var(--vscode-foreground);
+}
+
 .reaching {
   margin: 0 0 0.4rem;
   color: var(--vscode-descriptionForeground);

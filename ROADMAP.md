@@ -1701,6 +1701,14 @@ the whole phase; what is behind it is three refusals deep.
   Typing a character opens it holding that character, because typing over a
   cell replaces it; a double-click opens it too. Enter commits and moves down,
   so a column can be typed straight through, and Escape leaves it alone.
+- **A refusal is said in the preview, under the grid**, not in a notification in
+  the corner: a notification is where a reader looks when something *finished*,
+  and a refused edit is something they are in the middle of.
+- **A cached result is not a value to type over.** `value:` beside `formula:` is
+  what Excel last computed (`docs/spec.md` §3); writing a number there would
+  leave the formula in place and the workbook showing something else until Excel
+  recomputed — the "quietly turn a formula into a constant" failure, wearing a
+  disguise. Refused, with what to type instead.
 - **The box is inside the cell, so the cell heard everything typed into it.**
   Every keystroke bubbled up to the handler that opens a box, which opened
   another over the last and refused the character on the way past — the reader

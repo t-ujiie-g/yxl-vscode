@@ -188,8 +188,20 @@ export interface Highlighted {
   readonly cells: readonly { readonly sheet: string; readonly row: number; readonly col: number }[];
 }
 
+/**
+ * Why an edit did not happen, for the view to say where the reader is looking.
+ *
+ * A refusal is an answer, so it goes next to the grid rather than into a corner
+ * of the window: an edit that appears to do nothing is the one thing worse than
+ * an edit that is refused.
+ */
+export interface Refused {
+  readonly kind: 'refused';
+  readonly why: string;
+}
+
 /** Everything the host sends the view. */
-export type ToView = Drawing | Inspected | Highlighted;
+export type ToView = Drawing | Inspected | Highlighted | Refused;
 
 /**
  * Everything the view sends back.

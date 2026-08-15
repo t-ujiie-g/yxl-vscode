@@ -62,7 +62,15 @@ function shown(of: Partial<Showing> = {}, on: Asks = asks()): HTMLElement {
   const into = document.createElement('div');
   draw(
     into,
-    { drawing: drawing(), sheet: 0, selected: null, sources: null, reached: null, ...of },
+    {
+      drawing: drawing(),
+      sheet: 0,
+      selected: null,
+      sources: null,
+      reached: null,
+      refused: null,
+      ...of,
+    },
     on,
   );
   return into;
@@ -180,6 +188,7 @@ describe('a sheet larger than the window drawn of it', () => {
       selected: null,
       sources: null,
       reached: null,
+      refused: null,
     });
 
     draw(into, showing(tall), on);
@@ -199,6 +208,7 @@ describe('a sheet larger than the window drawn of it', () => {
       selected: null,
       sources: null,
       reached: null,
+      refused: null,
     });
 
     draw(into, showing(0), on);
@@ -376,7 +386,15 @@ describe('what the view asks for', () => {
 
 describe('what changes without redrawing the grid', () => {
   function showing(of: Partial<Showing> = {}): Showing {
-    return { drawing: drawing(), sheet: 0, selected: null, sources: null, reached: null, ...of };
+    return {
+      drawing: drawing(),
+      sheet: 0,
+      selected: null,
+      sources: null,
+      reached: null,
+      refused: null,
+      ...of,
+    };
   }
 
   it('keeps the very cells it drew, so a click can be followed by another', () => {
@@ -479,6 +497,11 @@ describe('what the view says about a spec', () => {
 
   it('says nothing about computing when everything computed', () => {
     expect(shown().querySelector('.note')).toBeNull();
+  });
+
+  it('says why an edit did not happen, where the edit was made', () => {
+    const said = shown({ refused: '`B5` holds a formula — type a formula to change it' });
+    expect(said.querySelector('.refused')?.textContent).toContain('holds a formula');
   });
 
   it('says a spec with no sheets has nothing to draw', () => {

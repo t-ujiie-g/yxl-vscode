@@ -31,11 +31,6 @@ function read(typed: string): string | number | boolean | null {
   return typed.trim() !== '' && Number.isFinite(number) ? number : typed;
 }
 
-/** A refusal, said the way a message box says things. */
-function said(why: string): string {
-  return `yxl: ${why.replace(/`/g, '')}`;
-}
-
 function surprising(surprises: readonly Change[]): string {
   const cells = surprises.filter((one) => one.kind === 'cell').length;
   return `this would also change ${cells} cell${cells === 1 ? '' : 's'} it did not name, which needs the resolution dialog`;
@@ -280,7 +275,7 @@ export class Preview {
       : setValue(grid, { sheet, at }, read(typed), (file) => this.textOf(file));
 
     if (intent.kind === 'refused') {
-      void vscode.window.showWarningMessage(said(intent.why));
+      this.refuse(intent.why);
       return;
     }
 
@@ -295,19 +290,29 @@ export class Preview {
     });
 
     if (done.ok === false) {
-      const why = done.diagnostics[0]?.message ?? surprising(done.surprises);
-      void vscode.window.showWarningMessage(said(why));
+      this.refuse(done.diagnostics[0]?.message ?? surprising(done.surprises));
       return;
     }
     if (done.ok === 'ask') {
       // The dialog that offers a choice is the next phase's; until it exists,
       // an edit that would move cells it did not name is one this editor
       // declines to make silently.
-      void vscode.window.showWarningMessage(said(surprising(done.surprises)));
+      this.refuse(surprising(done.surprises));
       return;
     }
 
     await this.put(intent.file, done.text);
+  }
+
+  /**
+   * Why an edit did not happen, said in the preview rather than in a corner.
+   *
+   * A notification is where a reader looks when something *finished*; a refused
+   * edit is something they are in the middle of, and their eyes are on the cell
+   * they typed into.
+   */
+  private refuse(why: string): void {
+    void this.panel.webview.postMessage({ kind: 'refused', why: why.replace(/`/g, '') });
   }
 
   /** The file as the reader has it: the buffer if it is open, the disk if not. */

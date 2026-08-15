@@ -14,6 +14,7 @@ export type {
   FromView,
   Highlighted,
   Inspected,
+  Refused,
   Sized,
   Source,
   ToView,
@@ -42,14 +43,17 @@ function start(): void {
   let selected: Showing['selected'] = null;
   let sources: readonly Source[] | null = null;
   let reached: Reached | null = null;
+  let refused: string | null = null;
 
   const redraw = (): void => {
-    if (drawing !== null) draw(into, { drawing, sheet, selected, sources, reached }, asks);
+    if (drawing !== null) draw(into, { drawing, sheet, selected, sources, reached, refused }, asks);
   };
 
   /** The same, for what the view holds of its own: the grid stays as it is. */
   const restated = (): void => {
-    if (drawing !== null) restate(into, { drawing, sheet, selected, sources, reached }, asks);
+    if (drawing !== null) {
+      restate(into, { drawing, sheet, selected, sources, reached, refused }, asks);
+    }
   };
 
   const named = (): string => drawing?.sheets[sheet]?.name ?? '';
@@ -78,12 +82,19 @@ function start(): void {
       host.postMessage({ kind: 'window', sheet: named(), row, col });
     },
     edit: (row, col, text) => {
+      refused = null;
       host.postMessage({ kind: 'edit', sheet: named(), row, col, text });
     },
   };
 
   window.addEventListener('message', (event: MessageEvent<ToView>) => {
     const sent = event.data;
+
+    if (sent.kind === 'refused') {
+      refused = sent.why;
+      restated();
+      return;
+    }
 
     if (sent.kind === 'drawing') {
       const was = drawing?.sheets[sheet];
@@ -96,6 +107,7 @@ function start(): void {
       drawing = sent;
       sources = null;
       reached = null;
+      refused = null;
       redraw();
       return;
     }
