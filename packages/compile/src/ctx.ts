@@ -5,7 +5,7 @@ import type {
   SpecDoc,
   SpecNode,
   StyleDef,
-  Templated,
+  Template,
   ValueDef,
 } from '@yxl-vscode/spec';
 import type { FilePath } from '@yxl-vscode/units';
@@ -82,13 +82,17 @@ export function filled(ctx: Ctx, value: ScalarValue, node: SpecNode): Filled {
   return done;
 }
 
-/** The same, for a value the loader kept as a template rather than reading. */
-export function filledText<T extends string>(
-  ctx: Ctx,
-  value: Templated<T>,
-  node: SpecNode,
-): Filled {
-  return typeof value === 'string' ? asIs(value) : filled(ctx, value.text, node);
+/**
+ * The same as text, which is what almost every caller wants: an address, a
+ * name, a path, a number format. Only a cell's own value cares what type came
+ * back, and it asks `filled` directly.
+ */
+export function text(ctx: Ctx, value: ScalarValue | Template, node: SpecNode): string {
+  const done =
+    typeof value === 'object' && value !== null
+      ? filled(ctx, value.text, node)
+      : filled(ctx, value, node);
+  return String(done.value);
 }
 
 function report(ctx: Ctx, done: Filled, node: SpecNode): void {

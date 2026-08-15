@@ -12,7 +12,7 @@ export type { DataBlock, DataRow, DataSource } from './data';
 export type { Defs, FormulaDef, Override, Param, SpecDoc, StyleDef, ValueDef } from './doc';
 export { INCLUDE_KEY, MODELED_KEYS, REF_KEY } from './keys';
 export type { Opaque, SpecNode, Template, Templated } from './node';
-export { STYLE_PROPERTIES, type StyleProperty, type StyleValues } from './property';
+export type { StyleProperty, StyleValues } from './property';
 export type { FormulaRange, Merge, Sheet } from './sheet';
 export {
   type Align,

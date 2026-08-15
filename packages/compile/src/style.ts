@@ -8,7 +8,7 @@ import type {
 } from '@yxl-vscode/spec';
 import { type Color, type NodeId, parseColor, type StyleName } from '@yxl-vscode/units';
 import { CODE } from './codes';
-import { type Ctx, filled, filledText, reject } from './ctx';
+import { type Ctx, reject, text } from './ctx';
 
 /**
  * How a look reaches a cell: which construct applies it, not which one holds it.
@@ -63,7 +63,7 @@ export function layersOf(
   const layers = use === null ? [] : fromUse(ctx, node, through, use, []);
 
   if (format !== null) {
-    const code = String(filled(ctx, format, node).value);
+    const code = text(ctx, format, node);
     layers.push({ through, node: node.id, name: null, gives: { format: code } });
   }
   return layers;
@@ -77,7 +77,7 @@ function fromUse(
   chain: readonly string[],
 ): StyleLayer[] {
   if (use.kind === 'ref') {
-    const name = String(filledText(ctx, use.name, node).value);
+    const name = text(ctx, use.name, node);
     return fromName(ctx, node, through, name, chain);
   }
   return fromStyle(ctx, node, through, use.style, null, chain);
@@ -117,7 +117,7 @@ function fromStyle(
   const base =
     style.extends === null
       ? []
-      : fromName(ctx, node, through, String(filledText(ctx, style.extends, node).value), chain);
+      : fromName(ctx, node, through, text(ctx, style.extends, node), chain);
 
   return [...base, { through, node: node.id, name, gives: flatten(ctx, style, node) }];
 }
@@ -137,9 +137,9 @@ function flatten(ctx: Ctx, style: Style, node: SpecNode): StyleValues {
   function colour(of: Templated<Color> | null): Color | undefined {
     if (of === null) return undefined;
 
-    const text = String(filledText(ctx, of, node).value);
-    const read = parseColor(text);
-    if (read === null) reject(ctx, CODE.badColour, `\`${text}\` is not a hex colour`, node);
+    const spelled = text(ctx, of, node);
+    const read = parseColor(spelled);
+    if (read === null) reject(ctx, CODE.badColour, `\`${spelled}\` is not a hex colour`, node);
     return read ?? undefined;
   }
 
@@ -156,7 +156,7 @@ function flatten(ctx: Ctx, style: Style, node: SpecNode): StyleValues {
   set('align.wrap', style.align?.wrap);
   set('protection.locked', style.protection?.locked);
   set('protection.hidden', style.protection?.hidden);
-  set('format', style.format === null ? undefined : String(filled(ctx, style.format, node).value));
+  set('format', style.format === null ? undefined : text(ctx, style.format, node));
 
   for (const side of style.border ?? []) {
     for (const edge of side.side === 'all' ? EDGES : [side.side]) {

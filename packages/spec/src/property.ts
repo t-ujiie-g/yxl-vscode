@@ -39,8 +39,8 @@ export interface StyleValues {
   readonly format?: string;
 }
 
-/** Every leaf, for a reader that wants to walk them rather than name one. */
-export const STYLE_PROPERTIES = [
+/** The leaves, once, so that the type below and any walk over them agree. */
+const STYLE_PROPERTIES = [
   'font.bold',
   'font.italic',
   'font.underline',

@@ -1,27 +1,15 @@
-import { parse } from '@yxl-vscode/cst';
-import { load } from '@yxl-vscode/loader';
-import { type A1Addr, filePath, nodeId } from '@yxl-vscode/units';
+import { filePath, nodeId } from '@yxl-vscode/units';
 import { describe, expect, it } from 'vitest';
-import { cellAt, compile, styleAt } from './compile';
 import { type Editability, editabilityOf, editabilityOfLayer } from './editability';
-import type { CompiledSheet } from './grid';
-
-function sheet(source: string): CompiledSheet {
-  const { doc } = load(parse(source, { file: 'spec.yxl.yaml' }));
-  if (doc === null) throw new Error('did not load');
-
-  const first = compile(doc).sheets[0];
-  if (first === undefined) throw new Error('compiled no sheet');
-  return first;
-}
+import { cell, layers } from './harness';
 
 function valueClass(source: string, at: string): Editability | null {
-  const cell = cellAt(sheet(source), at as A1Addr);
-  return cell === null ? null : editabilityOf(cell.provenance.value);
+  const drawn = cell(source, at);
+  return drawn === null ? null : editabilityOf(drawn.provenance.value);
 }
 
 function lookClass(source: string, at: string): Editability[] {
-  return styleAt(sheet(source), at as A1Addr).map(editabilityOfLayer);
+  return layers(source, at).map(editabilityOfLayer);
 }
 
 const SHEET = 'sheets:\n  - name: Sales\n';

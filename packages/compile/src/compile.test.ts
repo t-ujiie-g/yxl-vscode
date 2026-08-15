@@ -1,31 +1,8 @@
-import { parse } from '@yxl-vscode/cst';
-import { load } from '@yxl-vscode/loader';
-import { type A1Addr, filePath } from '@yxl-vscode/units';
+import { filePath } from '@yxl-vscode/units';
 import { describe, expect, it } from 'vitest';
 import { CODE } from './codes';
-import { cellAt, compile } from './compile';
 import type { DataReader } from './ctx';
-import type { CompiledCell, CompiledSheet } from './grid';
-
-function grid(source: string) {
-  const { doc, diagnostics } = load(parse(source, { file: 'spec.yxl.yaml' }));
-  if (doc === null) throw new Error(`did not load: ${diagnostics.map((one) => one.code)}`);
-  return compile(doc);
-}
-
-function sheet(source: string): CompiledSheet {
-  const first = grid(source).sheets[0];
-  if (first === undefined) throw new Error('compiled no sheet');
-  return first;
-}
-
-function at(source: string, address: string): CompiledCell | null {
-  return cellAt(sheet(source), address as A1Addr);
-}
-
-function codes(source: string): string[] {
-  return grid(source).diagnostics.map((one) => one.code);
-}
+import { cell as at, codes, grid, sheet } from './harness';
 
 const SALES = 'sheets:\n  - name: Sales\n';
 
@@ -181,26 +158,15 @@ describe('a `data:` block that names a file', () => {
     return file === null ? null : { file, source };
   };
 
-  function drawn(source: string) {
-    const { doc } = load(parse(source, { file: 'spec.yxl.yaml' }));
-    if (doc === null) throw new Error('did not load');
-    return compile(doc, reader);
-  }
-
-  function at(source: string, address: string) {
-    const sheet = drawn(source).sheets[0];
-    return sheet === undefined ? null : cellAt(sheet, address as A1Addr);
-  }
-
   const csv = `${SALES}    data:\n      - at: A2\n        csv: sales.csv\n`;
 
   it('lays the file down from the anchor', () => {
-    expect(at(csv, 'A2')?.value).toBe('APAC');
-    expect(at(csv, 'B3')?.value).toBe(1750000);
+    expect(at(csv, 'A2', reader)?.value).toBe('APAC');
+    expect(at(csv, 'B3', reader)?.value).toBe(1750000);
   });
 
   it('says which row and field of which file a cell came from', () => {
-    expect(at(csv, 'B3')?.provenance.value).toEqual({
+    expect(at(csv, 'B3', reader)?.provenance.value).toEqual({
       kind: 'external',
       node: '["spec.yxl.yaml","sheets",0,"data",0]',
       file: 'sales.csv',
@@ -211,19 +177,19 @@ describe('a `data:` block that names a file', () => {
 
   it('takes the fields a JSON block names, in that order', () => {
     const json = `${SALES}    data:\n      - at: A1\n        json: notes.json\n        columns: [count, label]\n`;
-    expect(at(json, 'A1')?.value).toBe(1);
-    expect(at(json, 'B1')?.value).toBe('one');
+    expect(at(json, 'A1', reader)?.value).toBe(1);
+    expect(at(json, 'B1', reader)?.value).toBe('one');
   });
 
   it('says which file it could not read', () => {
     const missing = `${SALES}    data:\n      - at: A2\n        csv: gone.csv\n`;
-    expect(drawn(missing).diagnostics.map((one) => one.code)).toEqual([CODE.unreadableData]);
+    expect(codes(missing, reader)).toEqual([CODE.unreadableData]);
   });
 
   it('names the file when what is in it will not read', () => {
     files['broken.csv'] = '"unterminated';
     const broken = `${SALES}    data:\n      - at: A2\n        csv: broken.csv\n`;
-    const [diagnostic] = drawn(broken).diagnostics;
+    const [diagnostic] = grid(broken, reader).diagnostics;
     expect(diagnostic?.code).toBe(CODE.badTable);
     expect(diagnostic?.message).toContain('broken.csv');
   });
@@ -262,6 +228,58 @@ describe('the order the sheet was written in', () => {
   it('lets a later key win over an earlier one', () => {
     expect(at(`${SALES}${data}${cells}`, 'A2')?.value).toBe('written by hand');
     expect(at(`${SALES}${cells}${data}`, 'A2')?.value).toBe('from the block');
+  });
+});
+
+describe('a cell that is only a number format', () => {
+  it('holds nothing, and says its value came from nowhere', () => {
+    // The one shape that produces an `empty` origin: the node exists and no key
+    // in it says what the cell holds.
+    const cell = at(`${SALES}    cells:\n      A1: { format: "0.0%" }\n`, 'A1');
+    expect(cell?.value).toBeNull();
+    expect(cell?.provenance.value).toEqual({ kind: 'empty' });
+    expect(cell?.format).toBe('0.0%');
+  });
+});
+
+describe('what a parameter can leave unreadable', () => {
+  // Each of these reads at load time and stops reading once a placeholder is
+  // filled in — which is why the check exists here as well as in the loader.
+  it('an address', () => {
+    const spec = `params:\n  col: "!"\n${SALES}    cells:\n      "\${col}1": x\n`;
+    expect(codes(spec)).toEqual([CODE.badAddress]);
+  });
+
+  it('a range', () => {
+    const spec = `params:\n  span: nonsense\n${SALES}    formulas:\n      - at: "\${span}"\n        formula: "A1"\n`;
+    expect(codes(spec)).toEqual([CODE.badRange]);
+  });
+
+  it('a column, and a row', () => {
+    const columns = `params:\n  col: "1"\n${SALES}    columns:\n      - at: "\${col}"\n        width: 2\n`;
+    expect(codes(columns)).toEqual([CODE.badColumn]);
+
+    const rows = `params:\n  row: B\n${SALES}    rows:\n      - at: "\${row}"\n        height: 2\n`;
+    expect(codes(rows)).toEqual([CODE.badRow]);
+  });
+
+  it('a path', () => {
+    const spec = `params:\n  file: ""\n${SALES}    data:\n      - at: A1\n        csv: "\${file}"\n`;
+    expect(codes(spec)).toEqual([CODE.badPath]);
+  });
+
+  it('and a `${` that never closes is reported where it stands', () => {
+    expect(codes(`${SALES}    cells:\n      A1: "\${unclosed"\n`)).toEqual([
+      CODE.unclosedPlaceholder,
+    ]);
+  });
+});
+
+describe('a formula definition', () => {
+  it('is reported when nothing declares it', () => {
+    expect(codes(`${SALES}    cells:\n      A1: { formula: { $ref: nosuch } }\n`)).toEqual([
+      CODE.unknownFormula,
+    ]);
   });
 });
 
