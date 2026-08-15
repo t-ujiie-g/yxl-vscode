@@ -1622,6 +1622,35 @@ this at a phase boundary rather than at the end.
 - A cell's own format — written, or the one its type takes — now wins over a
   band's. Both are requests about *that* cell; a band is something reaching it.
 
+### 2026-08-15 — Sweep of Phase 5 (AGENTS.md §8)
+
+- **A field nothing read.** `Evaluation.stopped` — a workbook too large to
+  compute — was computed and dropped on the floor, so a reader of a huge spec
+  got a grid of formulas and no reason. It is on the wire now, with the reason
+  the view says: *nothing is computed here; computing some of it would make
+  every total over the rest wrong*. The wire carries **why**, as a union, rather
+  than a list that has to be empty to mean something.
+- **A composite key taken apart by the code that made it.** `evaluate` keyed its
+  answers `Sheet!A1` and then sliced the string back into two on every pass to
+  rebuild what the engine holds. It keeps the answers per sheet now and makes the
+  key once, at the edge where a consumer asks.
+- **Sheet identity was a bare `string` from `CompiledSheet` outward**, which §7
+  lists under things to avoid, and it showed: `computedAt` had widened its own
+  signature to `SheetName | string` and `evaluate` cast its way past it. Branded
+  at the compiler, once, where the doc says why a name with a parameter
+  substituted into it is not re-checked — `yxl build` is the validator of record
+  (ADR-011).
+- **`project.ts` had grown two subjects**: the pipeline (parse, load, compile,
+  evaluate) and the drawing (a compiled grid, one window of one sheet, as the
+  view is handed it). 364 lines became 87 and 308.
+- **The README said "Does not evaluate"**, and `DrawnCell`'s own doc said Excel
+  shifts a filled range's references *and this does not* — which stopped being
+  true the day the engine's offset arrived. Both now say what the code does.
+- Not actioned, with the reason: the drawing's tests still live in
+  `project.test.ts`, because they reach it through the pipeline — which is the
+  seam that matters — and splitting them would duplicate the harness without
+  changing a single assertion. 2 new tests, 767 in total.
+
 ### 2026-08-15 — What a computed preview gets wrong, and the rule that fixes it
 
 Running the new evaluation over yxl's own `workbook.yxl.yaml` showed **blank

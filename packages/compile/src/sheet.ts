@@ -18,6 +18,8 @@ import {
   parseRowSpan,
   rectOf,
   rowsOf,
+  type SheetName,
+  sheetName,
 } from '@yxl-vscode/units';
 import { address, compileFacets } from './cell';
 import { CODE } from './codes';
@@ -61,7 +63,7 @@ export function compileSheet(ctx: Ctx, sheet: Sheet): Drafted {
 
   return {
     sheet: {
-      name: text(ctx, sheet.name, sheet),
+      name: named(ctx, sheet),
       node: sheet.id,
       cells,
       fills,
@@ -189,6 +191,19 @@ function placeFill(ctx: Ctx, range: FormulaRange, fills: CompiledFill[]): void {
     formula: text(ctx, range.formula, range),
     node: range.id,
   });
+}
+
+/**
+ * The sheet's name with its parameters filled in.
+ *
+ * The loader parsed the name it was *written* as; substitution can produce
+ * something Excel would refuse, and that is not re-checked here — `yxl build`
+ * is the validator of record for what a name may be (ADR-011). What matters to
+ * this projection is that a sheet has one identity, spelled one way.
+ */
+function named(ctx: Ctx, sheet: Sheet): SheetName {
+  const spelled = text(ctx, sheet.name, sheet);
+  return sheetName(spelled) ?? (spelled as SheetName);
 }
 
 function columnBand(ctx: Ctx, band: ColumnBand): CompiledBand | null {

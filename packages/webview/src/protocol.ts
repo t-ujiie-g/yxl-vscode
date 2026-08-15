@@ -4,10 +4,8 @@ import type { ScalarValue, StyleValues } from '@yxl-vscode/spec';
 /**
  * What the host sends the view, and the only thing the view knows about a spec.
  *
- * `uncomputed` names what the preview could not resolve well enough to compute
- * anything from — a table, a workbook-defined name, a function Excel has and
- * this does not. Cells that depend on one show their formula, and this is what
- * the view says about why.
+ * `uncomputed` is why some cells show a formula rather than what it comes to,
+ * or `null` where everything computed.
  *
  * A projection, flattened for the wire: VS Code serializes a webview message as
  * JSON, so the `Map` and the branded types a `CompiledGrid` holds would not
@@ -21,8 +19,21 @@ export interface Drawing {
   readonly sheets: readonly DrawnSheet[];
   readonly params: readonly DrawnParam[];
   readonly diagnostics: readonly DrawnDiagnostic[];
-  readonly uncomputed: readonly string[];
+  readonly uncomputed: Uncomputed | null;
 }
+
+/**
+ * Why a formula shows as a formula.
+ *
+ * `names` is what the preview could not resolve well enough to compute anything
+ * from — a table, a workbook-defined name, a function Excel has and this does
+ * not. `tooMany` is a workbook past the size this will compute, where nothing is
+ * computed rather than the part that fit: a total over half a computed range is
+ * a wrong number.
+ */
+export type Uncomputed =
+  | { readonly kind: 'names'; readonly names: readonly string[] }
+  | { readonly kind: 'tooMany'; readonly limit: number };
 
 /**
  * One declared parameter, as it stands in this preview.
@@ -99,27 +110,26 @@ export interface Sized {
 /**
  * One cell as it is drawn: what it holds, what it is called, and how it looks.
  *
- * `value` and `formula` can both be present — a formula with the cached result
- * Excel shows until it recomputes — and neither has been evaluated here
- * (ADR-014).
+ * `value` and `formula` are what the *spec* holds: a formula with the cached
+ * result Excel shows until it recomputes, and neither is anything this computed.
+ * What it computed is `computed`, and it is a separate field on purpose — that
+ * is the whole of ADR-014 made structural.
  *
  * `format` is the number format that applies here, which is not always the one
  * in `style`: Excel does not apply an *inherited* format to a text cell
  * (`docs/spec.md` §4), and that is decided where the layers are.
  *
  * `filledFrom` names the anchor of the `formulas:` range this cell belongs to,
- * for every cell of it but the anchor. The formula shown is the one the range
- * holds, written as it applies **there**: Excel shifts its relative references
- * per cell and this does not, so the view says which cell it is really reading
- * rather than showing a formula that is wrong here.
+ * for every cell of it but the anchor. The `formula` is the one the range holds,
+ * written as it applies **there** rather than here — so a cell of a range that
+ * was not computed says which cell it is really reading instead of showing a
+ * formula that is wrong where it stands. A computed one shows its own result,
+ * because the shift Excel applies is what computing it applied too.
  *
  * `rich` is a cell whose text is written in runs of its own (`docs/spec.md` §3),
  * and it is what the cell *says* — a cell that has runs has no `value`.
  *
- * `computed` is what the formula came to, and it is kept apart from `value` on
- * purpose: `value` is what the *spec* holds and is the only one an edit could
- * ever be about, while a computed number is display-only and is written back
- * nowhere (ADR-014).
+ * `computed` is what the formula came to, or why it could not be computed.
  */
 export interface DrawnCell {
   readonly row: number;

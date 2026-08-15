@@ -1,7 +1,7 @@
 import { compile } from '@yxl-vscode/compile';
 import { parse } from '@yxl-vscode/cst';
 import { load } from '@yxl-vscode/loader';
-import type { A1Addr } from '@yxl-vscode/units';
+import { type A1Addr, type SheetName, sheetName } from '@yxl-vscode/units';
 import { describe, expect, it } from 'vitest';
 import type { Asked, Engine, HeldSheet } from './engine';
 import { computedAt, evaluate } from './evaluate';
@@ -73,6 +73,13 @@ function asks(source: string): Asked[] {
 
 const SALES = 'sheets:\n  - name: Sales\n';
 
+/** A sheet name, branded the way the compiler would have branded it. */
+function named(name: string): SheetName {
+  const read = sheetName(name);
+  if (read === null) throw new Error(`not a sheet name: ${name}`);
+  return read;
+}
+
 describe('what a pass asks the engine for', () => {
   it('asks about every formula a cell holds, and nothing about a value', () => {
     const spec = `${SALES}    cells:\n      A1: 2\n      B1: { formula: "A1" }\n`;
@@ -128,7 +135,7 @@ describe('what a pass asks the engine for', () => {
 describe('what a pass makes of the answers', () => {
   it('keeps what the engine said, under the cell that asked', () => {
     const spec = `${SALES}    cells:\n      A1: 2\n      B1: { formula: "A1" }\n`;
-    expect(computed(spec).values.get(computedAt('Sales', 'B1' as A1Addr))).toEqual({
+    expect(computed(spec).values.get(computedAt(named('Sales'), 'B1' as A1Addr))).toEqual({
       kind: 'value',
       value: 2,
     });
@@ -136,7 +143,7 @@ describe('what a pass makes of the answers', () => {
 
   it('runs another pass so a formula that reads a formula settles', () => {
     const spec = `${SALES}    cells:\n      A1: 2\n      A2: { formula: "A1" }\n      A3: { formula: "A2" }\n`;
-    expect(computed(spec).values.get(computedAt('Sales', 'A3' as A1Addr))).toEqual({
+    expect(computed(spec).values.get(computedAt(named('Sales'), 'A3' as A1Addr))).toEqual({
       kind: 'value',
       value: 2,
     });
@@ -144,7 +151,7 @@ describe('what a pass makes of the answers', () => {
 
   it('says a cell reading one that holds nothing is an error, not a zero', () => {
     const spec = `${SALES}    cells:\n      A1: { formula: "Z9" }\n`;
-    expect(computed(spec).values.get(computedAt('Sales', 'A1' as A1Addr))).toEqual({
+    expect(computed(spec).values.get(computedAt(named('Sales'), 'A1' as A1Addr))).toEqual({
       kind: 'error',
       error: '#REF!',
     });
@@ -167,7 +174,7 @@ describe('what a pass makes of the answers', () => {
       },
     });
 
-    expect(done.values.get(computedAt('Sales', 'A1' as A1Addr))?.kind).toBe('unsupported');
+    expect(done.values.get(computedAt(named('Sales'), 'A1' as A1Addr))?.kind).toBe('unsupported');
   });
 
   it('computes nothing at all for a workbook past the limit it was given', () => {

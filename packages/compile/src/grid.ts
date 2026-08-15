@@ -1,6 +1,6 @@
 import type { Diagnostic } from '@yxl-vscode/diag';
 import type { CellType, ScalarValue, StyleValues } from '@yxl-vscode/spec';
-import type { A1Addr, NodeId, Rect } from '@yxl-vscode/units';
+import type { A1Addr, NodeId, Rect, SheetName } from '@yxl-vscode/units';
 import type { CellProvenance } from './provenance';
 import type { StyleLayer } from './style';
 
@@ -26,7 +26,7 @@ export interface CompiledGrid {
  * consumer asks about one address without knowing which of them holds it.
  */
 export interface CompiledSheet {
-  readonly name: string;
+  readonly name: SheetName;
   readonly node: NodeId;
   readonly cells: ReadonlyMap<string, CompiledCell>;
   readonly fills: readonly CompiledFill[];

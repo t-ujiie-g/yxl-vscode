@@ -17,6 +17,7 @@ export type {
   Sized,
   Source,
   ToView,
+  Uncomputed,
 } from './protocol';
 
 /** The bridge VS Code puts in a webview, and the only way out of one. */
