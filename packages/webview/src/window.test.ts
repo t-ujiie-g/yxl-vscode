@@ -72,6 +72,23 @@ describe('the window a scrolled view wants', () => {
     expect(wanted(sheet(), { top: 0, left: 0 })).toBeNull();
   });
 
+  it('wants nothing at the end of a sheet whose last window is drawn', () => {
+    // The window that fits at the end is the last one there is. Asking to be
+    // centred past it gets that same window back, and asking again for what has
+    // already been answered is a loop with a redraw in it.
+    const drawn = sheet({ at: { row: 801, col: 1 }, of: { rows: 1000, columns: 50 } });
+    expect(wanted(drawn, { top: down(drawn, 1000), left: 0 })).toBeNull();
+  });
+
+  it('wants nothing in a sheet smaller than one window, wherever the reader is', () => {
+    // Every row of it is within a margin of an edge, so the near test is always
+    // true here — what stops the asking is that there is no other window.
+    const small = sheet({ rows: 4, columns: 4, of: { rows: 4, columns: 4 } });
+
+    expect(wanted(small, { top: 0, left: 0 })).toBeNull();
+    expect(wanted(small, { top: down(small, 4), left: across(small, 4) })).toBeNull();
+  });
+
   it('wants a window sideways as well, which a wide sheet scrolls', () => {
     const drawn = sheet({ at: { row: 1, col: 1 } });
     expect(wanted(drawn, { top: 0, left: across(drawn, 100) })).toEqual({ row: 1, col: 75 });

@@ -80,6 +80,10 @@ body {
 
 .grid th,
 .grid td {
+  /* So that a declared width is the width laid out: the geometry the view
+     scrolls by is computed from those numbers, and padding added on top of
+     them would drift the two apart a column at a time. */
+  box-sizing: border-box;
   border: 1px solid var(--vscode-panel-border);
   padding: 1px 4px;
   overflow: hidden;
@@ -94,7 +98,6 @@ body {
   color: var(--vscode-descriptionForeground);
   font-weight: 400;
   text-align: center;
-  min-width: 2rem;
 }
 
 .grid thead th {

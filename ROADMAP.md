@@ -627,6 +627,13 @@ value, and it carries none of the write-back risk.
       the wire names sheets, and a test asserts no id reaches the view.
       `id.test.ts` is unchanged, because identity is unchanged.
 
+- [ ] **Draw `rich:` cells.** A cell of mixed-font runs loads and compiles, and
+      then the drawing drops it: `DrawnCell` has no runs, so the preview shows an
+      empty cell where the workbook will hold text. Found by looking at
+      `styling.yxl.yaml` in the preview. The runs carry a font each, which is the
+      same flat style vocabulary the view already wears — the gap is the wire,
+      not the model.
+
 ### Phase 5 — Evaluated preview
 - [ ] `evaluate` seam: `CompiledGrid` → computed values, display only
 - [ ] Adapter over `@univerjs/engine-formula` (Apache-2.0 — ADR-013)
@@ -1538,6 +1545,38 @@ this at a phase boundary rather than at the end.
   two serials either side of it, so the next reader knows it is deliberate.
 - A cell's own format — written, or the one its type takes — now wins over a
   band's. Both are requests about *that* cell; a band is something reaching it.
+
+### 2026-08-15 — Two defects the preview showed when it was looked at
+
+Screenshots of the extension running over yxl's own `examples/` found two, both
+in the view and neither caught by a test that draws into jsdom, because jsdom
+has no layout and does not scroll.
+
+- **The preview froze on `workbook.yxl.yaml`.** The view asks for a window when
+  the reader nears the edge of the drawn one, centred on where they are; the
+  host clamps that ask to the last window that fits. At the end of a sheet — and
+  everywhere in a sheet smaller than one window, where every row is within a
+  margin of an edge — the clamped answer never matched the ask, so the view
+  asked again for what it had just been given: a redraw per scroll event, for
+  ever. The view now clamps the ask the way the host does, which turns "there is
+  nothing more to draw" into an answer rather than a question repeated; the host
+  also ignores a window that has not moved, so one stray ask cannot start it
+  again.
+- **`table-layout: fixed` was never in effect**, because a table laid out fixed
+  is only laid out fixed if it has a width of its own. Left to size itself it
+  reverted to the automatic algorithm, where one cell holding a 200-character
+  formula stretched its column and dragged the sheet sideways out of the panel —
+  which is what the third screenshot was. The grid now takes the width it
+  computes for itself, and a declared width is the width laid out, `box-sizing`
+  included, so the geometry the view scrolls by and the geometry the browser
+  draws are the same numbers.
+
+The lesson worth keeping: **every test here draws into a DOM with no layout.**
+jsdom answers `getBoundingClientRect` with zeros and scrolls nowhere, so a
+defect in *layout* or in *scrolling* cannot fail a test in this repo. Both of
+these were found by looking at the thing. The tests added pin the arithmetic
+either side of the layout — which window is asked for, what width the table
+declares — and that is as close as this suite can get.
 
 ### 2026-08-15 — Sweep of Phase 4 (AGENTS.md §8)
 
