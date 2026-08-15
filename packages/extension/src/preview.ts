@@ -3,7 +3,7 @@ import { addrAt, cellOf } from '@yxl-vscode/units';
 import type { FromView } from '@yxl-vscode/webview/protocol';
 import * as vscode from 'vscode';
 import { readBeside } from './files';
-import { inspect, type Nodes, nodeAt, nodesOf } from './inspect';
+import { inspect, type Nodes, nodeAt } from './inspect';
 import { type Projected, project } from './project';
 
 /** Long enough that typing does not redraw on every keystroke, short enough to feel live. */
@@ -115,7 +115,7 @@ export class Preview {
     const drawn = project(this.document.getText(), file, readBeside);
     const { drawing, diagnostics } = drawn;
     this.drawn = drawn;
-    this.nodes = drawn.doc === null ? new Map() : nodesOf(drawn.doc);
+    this.nodes = drawn.nodes;
 
     void this.panel.webview.postMessage(drawing);
     this.problems.set(

@@ -5,6 +5,7 @@ import {
   cellAt,
   compile,
   type DataReader,
+  reaches,
   resolve,
   styleAt,
 } from '@yxl-vscode/compile';
@@ -18,8 +19,10 @@ import type {
   DrawnCell,
   DrawnMerge,
   DrawnSheet,
+  MarkedCell,
   Sized,
 } from '@yxl-vscode/webview/protocol';
+import { type Nodes, nodeAt, nodesOf } from './inspect';
 
 /**
  * How far past what a spec writes a filled range is drawn.
@@ -43,6 +46,7 @@ export interface Projected {
   readonly diagnostics: readonly Diagnostic[];
   readonly doc: SpecDoc | null;
   readonly grid: CompiledGrid | null;
+  readonly nodes: Nodes;
 }
 
 /**
@@ -62,30 +66,64 @@ export function project(text: string, file: string, read: IncludeReader & DataRe
       diagnostics,
       doc: null,
       grid: null,
+      nodes: new Map(),
     };
   }
 
   const grid = compile(loaded.doc, read);
   const diagnostics = [...parsed.diagnostics, ...loaded.diagnostics, ...grid.diagnostics];
+  const nodes = nodesOf(loaded.doc);
+  const marked = marks(grid, nodes, diagnostics);
 
   return {
     drawing: {
       kind: 'drawing',
       file,
-      sheets: grid.sheets.map(drawSheet),
+      sheets: grid.sheets.map((sheet) => drawSheet(sheet, marked.get(sheet.name) ?? [])),
       diagnostics: listed(diagnostics),
     },
     diagnostics,
     doc: loaded.doc,
     grid,
+    nodes,
   };
 }
 
-function drawSheet(sheet: CompiledSheet): DrawnSheet {
+/**
+ * Each diagnostic on the cells it is about, by sheet.
+ *
+ * A diagnostic names a place in a file; the node at that place is what a reader
+ * would call the cause, and the cells it reaches are where the effect shows.
+ * One that reaches nothing — a sheet with no name, a band with an unreadable
+ * `at` — is left to the list under the grid, which is where it belongs.
+ */
+function marks(
+  grid: CompiledGrid,
+  nodes: Nodes,
+  diagnostics: readonly Diagnostic[],
+): Map<string, MarkedCell[]> {
+  const marked = new Map<string, MarkedCell[]>();
+
+  for (const problem of diagnostics) {
+    const node = nodeAt(nodes, problem.file, problem.span.start);
+    if (node === null) continue;
+
+    for (const cell of reaches(grid, node)) {
+      const on = marked.get(cell.sheet) ?? [];
+      on.push({ ...cellOf(cell.at), message: problem.message });
+      marked.set(cell.sheet, on);
+    }
+  }
+
+  return marked;
+}
+
+function drawSheet(sheet: CompiledSheet, problems: readonly MarkedCell[]): DrawnSheet {
   const { rows, columns } = extent(sheet);
 
   return {
     name: sheet.name,
+    problems,
     rows,
     columns,
     widths: sheet.columns.map(sizedRun),
@@ -184,5 +222,11 @@ function sizedRun(band: CompiledSheet['columns'][number]): Sized {
 }
 
 function listed(diagnostics: readonly Diagnostic[]): Drawing['diagnostics'] {
-  return diagnostics.map((one) => ({ code: one.code, message: one.message, file: one.file }));
+  return diagnostics.map((one) => ({
+    code: one.code,
+    message: one.message,
+    file: one.file,
+    start: one.span.start,
+    end: one.span.end,
+  }));
 }

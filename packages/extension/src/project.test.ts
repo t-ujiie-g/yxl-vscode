@@ -91,6 +91,25 @@ describe('a drawn spec', () => {
     expect(at(source, 3, 3)).toMatchObject({ formula: 'B2*0.05', filledFrom: 'C2' });
   });
 
+  it('marks the cells a diagnostic is about', () => {
+    // The node at the diagnostic's span is the cause; the cells it reaches are
+    // where a reader sees the effect.
+    const source = `${SALES}    cells:\n      A1: { $ref: nosuch }\n      B1: fine\n`;
+    const sheet = drawn(source);
+
+    expect(sheet.problems).toEqual([
+      { row: 1, col: 1, message: 'no value is declared as `nosuch`' },
+    ]);
+  });
+
+  it('leaves a diagnostic that reaches no cell to the list', () => {
+    const source = `${SALES}    columns:\n      - at: nonsense\n        width: 2\n`;
+    const { drawing } = project(source, FILE, read);
+
+    expect(drawing.sheets[0]?.problems).toEqual([]);
+    expect(drawing.diagnostics).toHaveLength(1);
+  });
+
   it('carries the sizes and merges a sheet declares', () => {
     const source = `${SALES}    columns:\n      - at: B\n        width: 18\n    merges: [A1:C1]\n    cells:\n      A1: wide\n`;
     const sheet = drawn(source);
