@@ -517,12 +517,13 @@ grid must understand to be drawn at all.
       *holds*: a band also reaches every empty address in its span, which no
       diff of two projections could show, and the band itself is the honest way
       to say "and the rest of column B".
-- [ ] Read `csv:` and `json:` `data:` through an injected reader, as `$include`
-      already is, and record the cells as `external` provenance. Until then a
-      block naming a file is reported rather than drawn, which is honest but
-      leaves a hole in the middle of the first release's grid — so this lands
-      before Phase 4 ships. Path resolution differs from `$include`'s: a `data:`
-      path resolves against the spec passed to `yxl build` (`docs/spec.md` §9).
+- [x] Read `csv:` and `json:` `data:` through an injected reader, as `$include`
+      already is, and record the cells as `external` provenance
+      **Shipped**, and with it **every upstream spec now compiles with no
+      diagnostics at all** — the CSV and JSON parsers meet real files on every
+      commit rather than only fixtures. A `data:` path resolves against the spec
+      that was opened, not against the file the block was written in
+      (`docs/spec.md` §9), which is the one place it differs from `$include`.
 
 ### Phase 4 — Read-only preview  ← **first release**
 The design note's judgement was that this alone solves most of the problem, and
@@ -1333,6 +1334,24 @@ this at a phase boundary rather than at the end.
   for upstream as [yxl#68](https://github.com/t-ujiie-g/yxl/issues/68) — §23 is
   the only section of the reference with no worked example behind it, which
   means its compile path is not exercised there either.
+
+### 2026-08-15 — Phase 3 complete: the data a spec keeps beside itself
+- `csv:` and `json:` blocks are read through an injected reader, the same shape
+  `$include` uses, and their cells carry `external` provenance — the origin
+  §4.3 named and nothing had yet produced. 23 new tests, 591 in total.
+  **Phase 3 is complete.**
+- **The corpus test lost its last exception.** Every upstream spec now compiles
+  with *no* diagnostics, so the CSV and JSON readers meet real files on every
+  commit rather than only fixtures. The same test reader serves both halves,
+  which is a small proof that ADR-004's shape is the right one: the core asks
+  for a file the same way whether an `$include` or a `csv:` block named it.
+- **The two paths resolve differently, and that is upstream's rule, not ours.**
+  An `$include` resolves against the file that wrote it; a `data:` path resolves
+  against the spec that was opened (`docs/spec.md` §9, yxl ADR-016). Written on
+  both readers, because a reader that guessed would fail quietly.
+- CSV reads narrowly on purpose: `007` quoted stays text, `0x1F` and `True` stay
+  text. That is Excel's reading of an imported file rather than YAML's core
+  schema, and the test says so where a future reader would otherwise wonder.
 
 ### 2026-08-15 — Phase 3: what an edit would cost, and whether it may happen
 - The two derivations that sit on top of provenance: **editability** (§4.3,

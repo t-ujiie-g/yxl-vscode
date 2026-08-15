@@ -1,5 +1,6 @@
 export { CODE, type Code } from './codes';
 export { cellAt, compile, styleAt } from './compile';
+export type { DataFile, DataReader } from './ctx';
 export { type Editability, editabilityOf, editabilityOfLayer } from './editability';
 export type {
   CompiledBand,

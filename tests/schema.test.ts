@@ -1,4 +1,4 @@
-import { CODE, compile } from '@yxl-vscode/compile';
+import { compile } from '@yxl-vscode/compile';
 import { parse } from '@yxl-vscode/cst';
 import { load } from '@yxl-vscode/loader';
 import type { SpecDoc } from '@yxl-vscode/spec';
@@ -55,15 +55,16 @@ describe.each(documents)('$name', (sample) => {
     expect(doc).not.toBeNull();
   });
 
-  it('draws, and the only thing it cannot draw is a file it may not open', () => {
-    // `compile` is I/O-free (ADR-004), so a `csv:` or `json:` block is a path it
-    // reports rather than reads. Any other code means the projection disagrees
-    // with a spec the compiler builds.
+  it('draws with nothing left undrawn', () => {
+    // The same reader serves both halves: the core is I/O-free (ADR-004) and
+    // asks for a file the same way whether an `$include` or a `csv:` block
+    // named it. A diagnostic here means the projection disagrees with a spec
+    // the compiler builds.
     const { doc } = read(sample);
     if (doc === null) throw new Error('did not load');
 
-    const drawn = compile(doc);
-    expect(drawn.diagnostics.filter((one) => one.code !== CODE.notReadYet)).toEqual([]);
+    const drawn = compile(doc, includeReader);
+    expect(drawn.diagnostics).toEqual([]);
     expect(drawn.sheets.length).toBeGreaterThan(0);
   });
 });
