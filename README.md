@@ -13,6 +13,9 @@ and translates grid gestures back into edits on the spec — not into a workbook
 > value and every property of every look says which line of which file it came
 > from. It is checked on every commit against the compiler that will build it.
 > `ROADMAP.md` holds the design and the phase plan.
+>
+> It needs the `yxl` compiler on your `PATH` (or `yxl.path` set to it) for the
+> **Check** and **Build** commands; the preview itself needs nothing.
 
 `yxl` made a workbook into version-controllable text. This makes that text
 direct-manipulable without giving up what made it text:

@@ -562,8 +562,13 @@ value, and it carries none of the write-back risk.
       effect shows — and the list under the grid takes you to the line. One that
       reaches no cell stays in the list, which is where a bad band selector
       belongs.
-- [ ] `yxl build` / `--check` invoked as commands, output surfaced, binary
+- [x] `yxl build` / `--check` invoked as commands, output surfaced, binary
       discovery and a clear message when it is missing
+      **Shipped**, and §8 Q6's open half is answered with it: the compiler is
+      **required, not bundled**. `yxl.path` names it, a bare name is looked up
+      on `PATH`, and a missing one is a message with the install link rather
+      than a mystery. The version is checked once a session and warned about in
+      both directions, never refused.
 - [x] Live re-projection on text edit, debounced
       **Shipped**: 150ms after the last keystroke, and on any *other* file being
       saved, since an `$include` or a `csv:` this spec reads may be what
@@ -1105,10 +1110,13 @@ project has agreed to run.
      and it already has a good error message (yxl ADR-006) — we surface it
      rather than pre-empting it.
 
-  Still open: do we bundle a binary or require one on `PATH`? Bundling means
-  shipping per-platform binaries and taking on their update cadence; requiring
-  one means an install step for the user. Decide in Phase 4, when the CLI is
-  first invoked.
+  ✅ **Answered in Phase 4: required, not bundled.** The `yxl.path` setting names
+  the compiler; a bare name is looked up on `PATH`. Bundling would mean shipping
+  a binary per platform, owning its update cadence, and publishing a `.vsix` per
+  target — for users who already have yxl, since the thing being previewed is
+  its input. A missing compiler is a message with the install link, which is the
+  whole of what bundling would have bought. If that proves wrong, an optional
+  download is a smaller change than a bundle would have been to undo.
 - **Q7 — The JSON Schema.** yxl's Phase 11 has an unchecked item: publish a JSON
   Schema generated from `docs/spec.md`. That artifact would serve this editor's
   loader directly. Worth building **upstream in yxl** rather than here, and worth
@@ -1410,6 +1418,28 @@ this at a phase boundary rather than at the end.
   for upstream as [yxl#68](https://github.com/t-ujiie-g/yxl/issues/68) — §23 is
   the only section of the reference with no worked example behind it, which
   means its compile path is not exercised there either.
+
+### 2026-08-15 — Phase 4: the compiler, from the editor
+- **yxl: Check the Spec** and **yxl: Build the Workbook** run the compiler over
+  the file being edited, with its output in a `yxl` channel and its first line
+  in a message. A successful build offers to open the workbook. 10 new tests,
+  634 in total.
+- **§8 Q6's open half is answered: required, not bundled.** Bundling means a
+  binary per platform, its update cadence, and a `.vsix` per target — for users
+  who already have yxl, since what this previews is its input. A missing
+  compiler is a message with the install link, which is the whole of what
+  bundling would have bought, and an optional download later is a smaller change
+  than undoing a bundle would be.
+- **The pin is compiled in rather than read.** §8 Q6 says the targeted version
+  lives in one place; a bundle cannot read that file at runtime, so esbuild
+  defines it from the root manifest at build time. One source, no copy to drift.
+- The version check follows Q6's rules exactly and refuses nothing: an older
+  compiler may not have a construct this editor understands, a newer one has
+  possibly moved the schema and still builds what this writes. Both are said
+  once a session.
+- `yxl build --check` is the validator of record (ADR-011), so this is how a
+  reader hears what the preview deliberately does not say — an undefined
+  reference, a sheet name Excel will refuse, a construct carried as opaque.
 
 ### 2026-08-15 — Phase 4: a diagnostic points at the cell, not just the line
 - A diagnostic now marks the cells it is about, in the grid, as well as landing
