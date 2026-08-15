@@ -588,9 +588,13 @@ value, and it carries none of the write-back risk.
       Excel serial when it compiles; this projection keeps the text, so a
       non-ISO `format:` on a date is not honoured. Converting is `compile`'s to
       do, and it is the same arithmetic yxl already documents.
-- [ ] A DOM environment for the view's own tests (jsdom or happy-dom, with the
-      licence check §9 requires). `draw` is thin and untested today; everything
-      it draws from is tested, and the drawing itself is Tier 5's to catch.
+- [x] A DOM environment for the view's own tests (jsdom or happy-dom, with the
+      licence check §9 requires)
+      **Shipped**: jsdom 30 (MIT, checked at the registry), turned on for that
+      one test file with `@vitest-environment` rather than for the suite — 19
+      tests, and the rest of the project keeps running without a DOM. jsdom
+      over happy-dom because these tests assert what CSS the drawing produced,
+      and a faithful CSSOM is the whole point of asking.
 - [ ] Measure the preview against a deliberately large spec (§9 R5), and answer
       §8 Q5 with the number rather than the guess.
 - [ ] **The session identity map** (ADR-015), moved here from Phase 2. A
@@ -1453,6 +1457,22 @@ this at a phase boundary rather than at the end.
   for upstream as [yxl#68](https://github.com/t-ujiie-g/yxl/issues/68) — §23 is
   the only section of the reference with no worked example behind it, which
   means its compile path is not exercised there either.
+
+### 2026-08-15 — Phase 4: the view, tested
+- The drawing had grown to a grid, merges, styles, an inspector, parameter
+  boxes, problems, and highlights, with nothing testing any of it. 19 tests now
+  do, under jsdom (MIT, checked at the registry), 661 in total.
+- **The DOM is on for one file, not for the suite** — `@vitest-environment` at
+  the top of the test rather than a config change, so 642 other tests keep
+  running without one. jsdom over happy-dom because these tests assert what CSS
+  the drawing produced, and a faithful CSSOM is the whole point of asking.
+- Two things the tests pinned that only a DOM could: a merge draws **no `<td>`**
+  for the cells it swallows (one would push the row along), and an Excel colour
+  reordered for CSS comes out **green rather than transparent magenta** —
+  `AARRGGBB` handed to CSS as written is a different colour, silently.
+- The view asks for four things and the tests check each is asked with what the
+  reader pointed at: select this cell, show that sheet, set this parameter, take
+  me to that source.
 
 ### 2026-08-15 — Phase 4: a number under its format
 - `0.085` with `format: "0.0%"` draws as `8.5%`, `2400000` under `#,##0` as
