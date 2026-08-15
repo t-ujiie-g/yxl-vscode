@@ -1,9 +1,10 @@
 import { parse } from '@yxl-vscode/cst';
 import { load } from '@yxl-vscode/loader';
-import type { A1Addr } from '@yxl-vscode/units';
+import { type A1Addr, filePath } from '@yxl-vscode/units';
 import { describe, expect, it } from 'vitest';
 import { CODE } from './codes';
 import { cellAt, compile } from './compile';
+import type { DataReader } from './ctx';
 import type { CompiledCell, CompiledSheet } from './grid';
 
 function grid(source: string) {
@@ -159,10 +160,72 @@ describe('a `data:` block', () => {
     });
   });
 
-  it('says so rather than guessing when the rows are in a file', () => {
+  it('says which file it could not read when nothing was given to read it with', () => {
     expect(codes(`${SALES}    data:\n      - at: A2\n        csv: sales.csv\n`)).toEqual([
-      CODE.notReadYet,
+      CODE.noDataReader,
     ]);
+  });
+});
+
+describe('a `data:` block that names a file', () => {
+  const files: Record<string, string> = {
+    'sales.csv': 'APAC,2400000\nEMEA,1750000\n',
+    'notes.json': '[{ "label": "one", "count": 1 }]',
+  };
+
+  const reader: DataReader = (_from, path) => {
+    const source = files[path];
+    if (source === undefined) return null;
+
+    const file = filePath(path);
+    return file === null ? null : { file, source };
+  };
+
+  function drawn(source: string) {
+    const { doc } = load(parse(source, { file: 'spec.yxl.yaml' }));
+    if (doc === null) throw new Error('did not load');
+    return compile(doc, reader);
+  }
+
+  function at(source: string, address: string) {
+    const sheet = drawn(source).sheets[0];
+    return sheet === undefined ? null : cellAt(sheet, address as A1Addr);
+  }
+
+  const csv = `${SALES}    data:\n      - at: A2\n        csv: sales.csv\n`;
+
+  it('lays the file down from the anchor', () => {
+    expect(at(csv, 'A2')?.value).toBe('APAC');
+    expect(at(csv, 'B3')?.value).toBe(1750000);
+  });
+
+  it('says which row and field of which file a cell came from', () => {
+    expect(at(csv, 'B3')?.provenance.value).toEqual({
+      kind: 'external',
+      node: '["spec.yxl.yaml","sheets",0,"data",0]',
+      file: 'sales.csv',
+      row: 1,
+      col: 1,
+    });
+  });
+
+  it('takes the fields a JSON block names, in that order', () => {
+    const json = `${SALES}    data:\n      - at: A1\n        json: notes.json\n        columns: [count, label]\n`;
+    expect(at(json, 'A1')?.value).toBe(1);
+    expect(at(json, 'B1')?.value).toBe('one');
+  });
+
+  it('says which file it could not read', () => {
+    const missing = `${SALES}    data:\n      - at: A2\n        csv: gone.csv\n`;
+    expect(drawn(missing).diagnostics.map((one) => one.code)).toEqual([CODE.unreadableData]);
+  });
+
+  it('names the file when what is in it will not read', () => {
+    files['broken.csv'] = '"unterminated';
+    const broken = `${SALES}    data:\n      - at: A2\n        csv: broken.csv\n`;
+    const [diagnostic] = drawn(broken).diagnostics;
+    expect(diagnostic?.code).toBe(CODE.badTable);
+    expect(diagnostic?.message).toContain('broken.csv');
   });
 });
 

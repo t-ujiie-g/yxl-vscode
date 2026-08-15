@@ -8,29 +8,49 @@ import type {
   Templated,
   ValueDef,
 } from '@yxl-vscode/spec';
+import type { FilePath } from '@yxl-vscode/units';
 import { CODE, type Code } from './codes';
 import { asIs, type Filled, fill, resolveParams } from './params';
 
 /**
+ * A file a `data:` block names, opened.
+ *
+ * Its path resolves against **the spec that was opened**, not against the file
+ * the block was written in — which is where it differs from `$include`, and is
+ * `docs/spec.md` §9's rule rather than a choice made here.
+ */
+export interface DataFile {
+  readonly file: FilePath;
+  readonly source: string;
+}
+
+/** How the compiler reaches a `csv:` or `json:` file without knowing what a file is (ADR-004). */
+export type DataReader = (from: FilePath, path: FilePath) => DataFile | null;
+
+/**
  * What compiling a document has in hand throughout: the parameters resolved
- * once, the definitions indexed once, and somewhere to put what it could not
- * draw.
+ * once, the definitions indexed once, the way out to a data file, and somewhere
+ * to put what it could not draw.
  *
  * A definition is looked up by name rather than walked for, because a spec of
  * any size references far more often than it declares.
  */
 export interface Ctx {
   readonly diagnostics: Diagnostic[];
+  readonly from: FilePath;
+  readonly read: DataReader | null;
   readonly params: ReadonlyMap<string, ScalarValue>;
   readonly values: ReadonlyMap<string, ValueDef>;
   readonly formulas: ReadonlyMap<string, FormulaDef>;
   readonly styles: ReadonlyMap<string, StyleDef>;
 }
 
-export function context(doc: SpecDoc): Ctx {
+export function context(doc: SpecDoc, read: DataReader | null): Ctx {
   const { values, cycles } = resolveParams(doc.params);
   const ctx: Ctx = {
     diagnostics: [],
+    from: doc.file,
+    read,
     params: values,
     values: new Map(doc.defs.values.map((def) => [def.name, def])),
     formulas: new Map(doc.defs.formulas.map((def) => [def.name, def])),

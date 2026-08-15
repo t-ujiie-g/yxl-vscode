@@ -1,8 +1,18 @@
-import type { ColumnBand, DataBlock, FormulaRange, RowBand, Sheet } from '@yxl-vscode/spec';
+import type {
+  ColumnBand,
+  DataBlock,
+  DataRow,
+  FormulaRange,
+  RowBand,
+  Sheet,
+} from '@yxl-vscode/spec';
 import {
+  type A1Addr,
   addrAt,
   cellOf,
   columnsOf,
+  type FilePath,
+  filePath,
   parseA1Range,
   parseColumnSpan,
   parseRowSpan,
@@ -19,7 +29,9 @@ import type {
   CompiledMerge,
   CompiledSheet,
 } from './grid';
+import type { FacetOrigin } from './provenance';
 import { layersOf } from './style';
+import { readCsv, readJson } from './table';
 
 /**
  * A sheet under construction: the compiled form, and the cell map still open
@@ -79,28 +91,84 @@ function placeData(ctx: Ctx, block: DataBlock, cells: Map<string, CompiledCell>)
   const anchor = address(ctx, block.at, block);
   if (anchor === null) return;
 
-  if (block.source.kind !== 'inline') {
-    const path = String(filledText(ctx, block.source.path, block).value);
-    const message = `this preview does not read \`${path}\` yet`;
-    reject(ctx, CODE.notReadYet, message, block);
+  if (block.source.kind === 'inline') {
+    const rows = block.source.rows.map((row) =>
+      row.map((field) => filled(ctx, field, block).value),
+    );
+    place(cells, anchor, rows, (row, col) => ({ kind: 'inline', node: block.id, row, col }));
     return;
   }
 
+  const opened = readTable(ctx, block, block.source);
+  if (opened === null) return;
+
+  const { file, rows } = opened;
+  place(cells, anchor, rows, (row, col) => ({ kind: 'external', node: block.id, file, row, col }));
+}
+
+/**
+ * The rows a block names, read through the injected reader (ADR-004).
+ *
+ * The path resolves against the spec that was opened rather than against the
+ * file the block was written in — `docs/spec.md` §9's rule, and the one place
+ * it differs from `$include`.
+ */
+function readTable(
+  ctx: Ctx,
+  block: DataBlock,
+  source: Exclude<DataBlock['source'], { kind: 'inline' }>,
+): { file: FilePath; rows: readonly DataRow[] } | null {
+  const text = String(filledText(ctx, source.path, block).value);
+  const path = filePath(text);
+  if (path === null) {
+    reject(ctx, CODE.badPath, 'a `data` entry needs a path', block);
+    return null;
+  }
+
+  if (ctx.read === null) {
+    reject(ctx, CODE.noDataReader, `nothing here can read \`${path}\``, block);
+    return null;
+  }
+
+  const opened = ctx.read(ctx.from, path);
+  if (opened === null) {
+    reject(ctx, CODE.unreadableData, `cannot read \`${path}\``, block);
+    return null;
+  }
+
+  const columns = source.kind === 'json' ? source.columns : null;
+  const table = source.kind === 'csv' ? readCsv(opened.source) : readJson(opened.source, columns);
+  if ('problem' in table) {
+    reject(ctx, CODE.badTable, `\`${opened.file}\`: ${table.problem}`, block);
+    return null;
+  }
+
+  return { file: opened.file, rows: table.rows };
+}
+
+/** Rows laid down from an anchor, each field taking its origin from where it came from. */
+function place(
+  cells: Map<string, CompiledCell>,
+  anchor: A1Addr,
+  rows: readonly DataRow[],
+  origin: (row: number, col: number) => FacetOrigin,
+): void {
   const corner = cellOf(anchor);
-  for (const [row, fields] of block.source.rows.entries()) {
+
+  for (const [row, fields] of rows.entries()) {
     for (const [col, field] of fields.entries()) {
       if (field === null) continue;
 
       const at = addrAt({ col: corner.col + col, row: corner.row + row });
       cells.set(at, {
         at,
-        value: filled(ctx, field, block).value,
+        value: field,
         type: null,
         formula: null,
         format: null,
         rich: null,
         style: [],
-        provenance: { value: { kind: 'inline', node: block.id, row, col }, format: null },
+        provenance: { value: origin(row, col), format: null },
       });
     }
   }

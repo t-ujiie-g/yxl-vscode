@@ -14,13 +14,16 @@ export const CODE = {
   unknownFormula: 'compile.unknown-formula',
   badAddress: 'compile.bad-address',
   badRange: 'compile.bad-range',
+  badPath: 'compile.bad-path',
   badColumn: 'compile.bad-column',
   badRow: 'compile.bad-row',
   unknownStyle: 'compile.unknown-style',
   styleCycle: 'compile.style-cycle',
   badColour: 'compile.bad-colour',
   unknownSheet: 'compile.unknown-sheet',
-  notReadYet: 'compile.not-read-yet',
+  noDataReader: 'compile.no-data-reader',
+  unreadableData: 'compile.unreadable-data',
+  badTable: 'compile.bad-table',
 } as const;
 
 export type Code = (typeof CODE)[keyof typeof CODE];

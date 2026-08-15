@@ -8,7 +8,7 @@ import {
 } from '@yxl-vscode/units';
 import { compileFacets } from './cell';
 import { CODE } from './codes';
-import { type Ctx, context, filled, reject } from './ctx';
+import { type Ctx, context, type DataReader, filled, reject } from './ctx';
 import type { CompiledCell, CompiledGrid, CompiledSheet } from './grid';
 import { compileSheet, type Drafted } from './sheet';
 import type { StyleLayer } from './style';
@@ -17,11 +17,12 @@ import type { StyleLayer } from './style';
  * The grid a spec projects to: pure, deterministic, and computed forward only
  * (ADR-001).
  *
- * No filesystem and no host (ADR-004) — a `csv:` or `json:` block names a file
- * this cannot open, and says so rather than guessing at its contents.
+ * No filesystem and no host (ADR-004): `read` is how it reaches the file a
+ * `csv:` or `json:` block names. Without one it says which file it did not
+ * read, rather than guessing at what was in it.
  */
-export function compile(doc: SpecDoc): CompiledGrid {
-  const ctx = context(doc);
+export function compile(doc: SpecDoc, read?: DataReader): CompiledGrid {
+  const ctx = context(doc, read ?? null);
   const drafts = doc.sheets.map((sheet) => compileSheet(ctx, sheet));
 
   for (const override of doc.overrides) applyOverride(ctx, override, drafts);
