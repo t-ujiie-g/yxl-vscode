@@ -702,10 +702,15 @@ the inverse is unique, so no dialog is needed yet.
       it in full when selected — with the way out named. The badge comes from
       `editabilityOf`, the same rule the write path refuses by, so the two can
       never disagree.
-- [ ] Prove ADR-011's preservation half: load a spec that uses opaque constructs,
+- [x] Prove ADR-011's preservation half: load a spec that uses opaque constructs,
       write an edit through `patch`, and assert every opaque region came back
       byte for byte. Owed from Phase 2, which could mark the constructs but had
       no writer to test them against.
+      **Proved**, over yxl's own examples and real constructs — charts, pivots,
+      validations, sparklines, shapes, print setup, protection. The suite also
+      checks that a key the loader stops reading cannot fall through unmarked,
+      and that seven specs actually have both halves, so it cannot pass by
+      skipping.
 - [ ] Rewrite a block scalar. `set` over a `|` or `>` value is refused today:
       its span is the indented body, so writing a plain scalar over it would
       take the lines under it too. Doing it properly means keeping the
@@ -1675,6 +1680,26 @@ this at a phase boundary rather than at the end.
   two serials either side of it, so the next reader knows it is deliberate.
 - A cell's own format — written, or the one its type takes — now wins over a
   band's. Both are requests about *that* cell; a band is something reaching it.
+
+### 2026-08-16 — Phase 6: what it does not model, it does not touch
+
+ADR-011's second half, owed since Phase 2: the constructs this editor carries
+rather than reads are now *tested* against a writer, over yxl's own examples.
+
+- **24 carried constructs across seven specs** — `charts`, `pivots`,
+  `validations`, `sparklines`, `shapes`, `slicers`, `comments`, `controls`,
+  `links`, `filter`, `protect`, `freeze`, `print`, `images`, `background`,
+  `gridlines`, `tab_color`, `conditional`, `calc`, `properties`, `active`,
+  `visibility` — each sliced out of the file before an edit and compared byte
+  for byte with what came back after one. In order, too: a construct that
+  survived but moved would be a diff nobody asked for.
+- **A key that stops being read cannot fall through.** The suite computes what
+  the file writes, subtracts what `MODELED_KEYS` says the loader reads, and
+  demands the rest be *marked* — so the day a key leaves the model, the test
+  says so rather than the construct quietly vanishing.
+- **And it cannot pass by skipping**: both halves have to meet in one file for
+  the comparison to mean anything, so the count of files where they do is
+  asserted too.
 
 ### 2026-08-16 — Two things a reader saw that the tests could not
 
