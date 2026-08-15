@@ -76,6 +76,10 @@ export interface Sized {
  * Excel shows until it recomputes — and neither has been evaluated here
  * (ADR-014).
  *
+ * `format` is the number format that applies here, which is not always the one
+ * in `style`: Excel does not apply an *inherited* format to a text cell
+ * (`docs/spec.md` §4), and that is decided where the layers are.
+ *
  * `filledFrom` names the anchor of the `formulas:` range this cell belongs to,
  * for every cell of it but the anchor. The formula shown is the one the range
  * holds, written as it applies **there**: Excel shifts its relative references
@@ -88,6 +92,7 @@ export interface DrawnCell {
   readonly value: ScalarValue;
   readonly formula: string | null;
   readonly filledFrom: string | null;
+  readonly format: string | null;
   readonly style: StyleValues;
 }
 

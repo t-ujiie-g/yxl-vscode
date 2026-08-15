@@ -1,4 +1,5 @@
 import type { StyleValues } from '@yxl-vscode/spec';
+import { format as excel } from 'numfmt';
 import type { Drawing, DrawnCell, DrawnSheet, Source } from './protocol';
 
 /** What the view is showing: the drawing, and the little it holds of its own. */
@@ -310,12 +311,19 @@ function drawCell(
  * agreed to (ADR-014). A cached value beside it is what Excel would show, so it
  * wins.
  *
+ * A number wears its format, so `0.085` under `0.0%` reads `8.5%` here as it
+ * will in Excel. A pattern the formatter cannot read shows its own error rather
+ * than throwing the view away.
+ *
  * A cell **filled** by a `formulas:` range shows where it is filled from
  * instead. The range holds one formula, written as it applies at its anchor,
  * and Excel shifts the references per cell (§8 Q2) — printing that text in
  * every cell would be printing something false in all but one of them.
  */
 function shown(cell: DrawnCell): string {
+  if (typeof cell.value === 'number' && cell.format !== null) {
+    return excel(cell.format, cell.value, { throws: false });
+  }
   if (cell.value !== null) return String(cell.value);
   if (cell.formula === null) return '';
 

@@ -123,6 +123,29 @@ describe('a drawn spec', () => {
     expect(diagnostics.map((one) => one.code)).toEqual(['compile.no-such-param']);
   });
 
+  it('gives a cell the number format that applies to it', () => {
+    const source = `${SALES}    cells:\n      A1: { value: 0.085, format: "0.0%" }\n`;
+    expect(at(source, 1, 1)?.format).toBe('0.0%');
+  });
+
+  it('lets a band give a number its format', () => {
+    const source = `${SALES}    columns:\n      - at: B\n        format: "#,##0"\n    cells:\n      B2: 2400000\n`;
+    expect(at(source, 2, 2)?.format).toBe('#,##0');
+  });
+
+  it('keeps an inherited format off a text cell, as Excel does', () => {
+    // `docs/spec.md` §4: a code with fewer than four sections says nothing about
+    // text, so a band's format leaves a heading alone.
+    const source = `${SALES}    columns:\n      - at: B\n        format: "#,##0"\n    cells:\n      B1: Revenue\n      B2: 2400000\n`;
+    expect(at(source, 2, 1)?.format).toBeNull();
+    expect(at(source, 2, 2)?.format).toBe('#,##0');
+  });
+
+  it('honours a format written on the text cell itself, which is a request', () => {
+    const source = `${SALES}    cells:\n      B1: { value: Revenue, format: "@" }\n`;
+    expect(at(source, 2, 1)?.format).toBe('@');
+  });
+
   it('marks the cells a diagnostic is about', () => {
     // The node at the diagnostic's span is the cause; the cells it reaches are
     // where a reader sees the effect.

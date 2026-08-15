@@ -13,6 +13,7 @@
     "@yxl-vscode/compile": "workspace:*",
     "@yxl-vscode/diag": "workspace:*",
     "@yxl-vscode/spec": "workspace:*",
-    "@yxl-vscode/units": "workspace:*"
+    "@yxl-vscode/units": "workspace:*",
+    "numfmt": "^3.2.6"
   }
 }

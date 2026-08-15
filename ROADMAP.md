@@ -578,10 +578,16 @@ value, and it carries none of the write-back risk.
       there is read the way `--set` reads one — `0.15` stays a number — and
       emptying the box gives the parameter back to the spec's own default.
       Nothing is written to the file: it changes what is *drawn*.
-- [ ] Apply number formats when drawing a value: a spec writes `0.085` with
-      `format: "0.0%"` and Excel shows `8.5%`. Until this lands the preview
-      shows the stored value, which is honest but not what the workbook looks
-      like.
+- [x] Apply number formats when drawing a value: a spec writes `0.085` with
+      `format: "0.0%"` and Excel shows `8.5%`
+      **Shipped** through `numfmt` (**ADR-022**), including Excel's own rule
+      that an *inherited* format does not apply to a text cell. A date or a
+      duration still shows as the text the spec wrote — see below.
+- [ ] Show a `type: date` and a `type: duration` under their format. The spec
+      writes `"2026-07-23"` and `"36:00:00"` as text and yxl turns each into an
+      Excel serial when it compiles; this projection keeps the text, so a
+      non-ISO `format:` on a date is not honoured. Converting is `compile`'s to
+      do, and it is the same arithmetic yxl already documents.
 - [ ] A DOM environment for the view's own tests (jsdom or happy-dom, with the
       licence check §9 requires). `draw` is thin and untested today; everything
       it draws from is tested, and the drawing itself is Tier 5's to catch.
@@ -1056,6 +1062,31 @@ script unless it is named, and esbuild has one — it unpacks a platform binary.
 script is arbitrary code from a dependency, and the file now says which one this
 project has agreed to run.
 
+### ADR-022 — Number formats are applied by `numfmt`
+**Accepted.** The view renders a number under its format code with
+[`numfmt`](https://github.com/borgar/numfmt) 3.2.6 — MIT, no dependencies,
+maintained (last published 2026-04), all checked at the registry and in the
+package's own `LICENSE` rather than recalled.
+
+*Why a library at all:* an Excel format code is a small language — four
+sections, `0`/`#`/`?` placeholders, thousands and percent, quoted literals,
+date and `[h]` elapsed codes, `[Red]` colours, `[>100]` conditions. A subset
+would draw *wrong numbers* for anything outside it, and this project has already
+learned the price of that: the filled-formula bug (§11) was exactly a preview
+showing something false rather than something less.
+
+*Where:* in the view, which is where drawing decisions belong. The wire carries
+the value and the pattern; the host decides *which* pattern applies, since that
+needs the style layers (Excel does not apply an inherited format to a text cell,
+`docs/spec.md` §4).
+
+*What it costs:* the view's bundle goes from 7KB to 120KB. It is loaded once,
+from disk, inside a webview — the same trade a syntax highlighter makes.
+
+*What it does not fix:* a `type: date` or `type: duration` is still drawn as the
+text the spec wrote, because this projection never converts either to an Excel
+serial. That is `compile`'s to do and is now an item of its own.
+
 ## 8. Open questions
 
 - **Q1 — `cells:` A1 keys and row insertion.** Inserting a row rewrites every
@@ -1422,6 +1453,24 @@ this at a phase boundary rather than at the end.
   for upstream as [yxl#68](https://github.com/t-ujiie-g/yxl/issues/68) — §23 is
   the only section of the reference with no worked example behind it, which
   means its compile path is not exercised there either.
+
+### 2026-08-15 — Phase 4: a number under its format
+- `0.085` with `format: "0.0%"` draws as `8.5%`, `2400000` under `#,##0` as
+  `2,400,000`. **ADR-022**: through `numfmt` (MIT, no dependencies, checked at
+  the registry), because an Excel format code is a small language and a subset
+  of it would draw wrong numbers — the lesson the filled-formula bug already
+  taught, paid once.
+- **Excel's inheritance rule is honoured, and it is Excel's rather than yxl's**:
+  a band's `#,##0` leaves a heading alone, because a code with fewer than four
+  sections says nothing about text (`docs/spec.md` §4). A `format:` written on
+  the cell itself is a request and is always applied. Deciding that needs the
+  style *layers*, so the host decides which pattern applies and the view applies
+  it — each on the side that has what the decision needs.
+- An unreadable pattern draws `######`, which is Excel's own answer, rather than
+  throwing the view away.
+- Still not right: a `type: date` or `type: duration` shows the text the spec
+  wrote, since this projection never converts either to a serial. Now an item,
+  with the note that it is the arithmetic yxl already documents.
 
 ### 2026-08-15 — Phase 4: one spec, several workbooks
 - A box per declared parameter sits above the grid. Type in it and the spec is
