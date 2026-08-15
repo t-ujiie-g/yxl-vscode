@@ -22,14 +22,24 @@ export function inspect(nodes: Nodes, sheet: CompiledSheet, at: A1Addr): Source[
     }
   }
 
+  // Layers are in the order they apply, and the last to give a leaf is the one
+  // the cell wears — so a later layer replaces an earlier answer rather than
+  // adding a second one. Two lines for `font.size` would be two claims about one
+  // fact, with nothing saying which of them the reader is looking at.
+  const wears = new Map<string, Source>();
   for (const layer of styleAt(sheet, at)) {
     const where = nodes.get(layer.node);
     const said =
       layer.name === null ? through(layer.through, where) : `the style \`${layer.name}\``;
 
     for (const property of Object.keys(layer.gives)) {
-      found.push({ facet: property, says: said, ...sited(where) });
+      wears.set(property, { facet: property, says: said, ...sited(where) });
     }
+  }
+
+  const answered = new Set(found.map((one) => one.facet));
+  for (const [property, source] of wears) {
+    if (!answered.has(property)) found.push(source);
   }
 
   return found;
@@ -112,6 +122,18 @@ export function nodeAt(nodes: Nodes, file: string, offset: number): NodeId | nul
   }
 
   return found;
+}
+
+/**
+ * Whether the spec was read from this file at all.
+ *
+ * A modular workbook writes almost everything in `$include`d files, so a
+ * preview that followed only the file it was opened on would follow nothing
+ * worth following.
+ */
+export function knows(nodes: Nodes, file: string): boolean {
+  for (const node of nodes.values()) if (node.file === file) return true;
+  return false;
 }
 
 interface Described {

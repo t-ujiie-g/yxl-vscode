@@ -1,11 +1,11 @@
 import { type CompiledSheet, compile } from '@yxl-vscode/compile';
 import { parse } from '@yxl-vscode/cst';
-import { load } from '@yxl-vscode/loader';
+import { type IncludeReader, load } from '@yxl-vscode/loader';
 import type { SpecDoc } from '@yxl-vscode/spec';
-import type { A1Addr } from '@yxl-vscode/units';
+import { type A1Addr, filePath } from '@yxl-vscode/units';
 import type { Source } from '@yxl-vscode/webview/protocol';
 import { describe, expect, it } from 'vitest';
-import { inspect, nodeAt, nodesOf } from './inspect';
+import { inspect, knows, nodeAt, nodesOf } from './inspect';
 
 const FILE = 'spec.yxl.yaml';
 
@@ -69,6 +69,26 @@ describe('what the inspector says about a look', () => {
     expect(said).toContainEqual(['font.bold', 'the style `header`']);
   });
 
+  it('answers a property once, with the layer the cell is wearing', () => {
+    // Two styles reaching the same cell both extend `base`, so `base` supplies
+    // `font.size` twice. Two lines would be two claims about one fact, with
+    // nothing saying which of them the reader is looking at.
+    const spec = `${SHEET}    columns:\n      - at: A\n        style: money\n    cells:\n      A1: { value: 1, style: total }\ndefs:\n  styles:\n    base: { font: { size: 11 } }\n    money: { extends: base, format: "#,##0" }\n    total: { extends: base, font: { bold: true } }\n`;
+    const said = sources(spec, 'A1').map((one) => one.facet);
+
+    expect(said.filter((facet) => facet === 'font.size')).toEqual(['font.size']);
+    expect(said).toContain('font.bold');
+  });
+
+  it('lets the cell keep the answer when a style would give the same facet', () => {
+    // The value's own provenance is the authority on where a value came from;
+    // a style reaching the cell says nothing about that.
+    const spec = `${SHEET}    cells:\n      A1: { value: 1, format: "0.0%", style: money }\ndefs:\n  styles:\n    money: { format: "#,##0" }\n`;
+    const said = sources(spec, 'A1').filter((one) => one.facet === 'format');
+
+    expect(said.map((one) => one.says)).toEqual(['written at `A1`']);
+  });
+
   it('names the base of an `extends:` chain for what the base gave', () => {
     const spec = `${SHEET}    cells:\n      A1: { value: 1, style: header }\ndefs:\n  styles:\n    base: { font: { size: 11 } }\n    header: { extends: base, font: { bold: true } }\n`;
     expect(saying(spec, 'A1', 'font.size')).toBe('the style `base`');
@@ -90,6 +110,22 @@ describe('the node under a cursor', () => {
   it('is nothing where no node reaches', () => {
     const { doc } = read(spec);
     expect(nodeAt(nodesOf(doc), 'another.yaml', 0)).toBeNull();
+  });
+
+  it('knows which files the spec was read from, includes and all', () => {
+    // A modular workbook writes almost everything in `$include`d files, and a
+    // cursor there is a cursor in the spec.
+    const main = 'sheets:\n  - $include: sales.yaml\n';
+    const beside: IncludeReader = (_from, path) => {
+      const file = filePath(`/${path}`);
+      return file === null ? null : { file, source: 'name: Sales\ncells:\n  A1: Region\n' };
+    };
+    const { doc } = load(parse(main, { file: FILE }), beside);
+    if (doc === null) throw new Error('did not load');
+    const nodes = nodesOf(doc);
+
+    expect(knows(nodes, '/sales.yaml')).toBe(true);
+    expect(knows(nodes, '/elsewhere.yaml')).toBe(false);
   });
 });
 

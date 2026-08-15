@@ -3,7 +3,7 @@ import { addrAt, cellOf } from '@yxl-vscode/units';
 import type { FromView } from '@yxl-vscode/webview/protocol';
 import * as vscode from 'vscode';
 import { readBeside } from './files';
-import { inspect, type Nodes, nodeAt } from './inspect';
+import { inspect, knows, type Nodes, nodeAt } from './inspect';
 import { type Projected, project, redraw, type Window } from './project';
 
 /** Long enough that typing does not redraw on every keystroke, short enough to feel live. */
@@ -65,9 +65,7 @@ export class Preview {
         // A `$include` or a `csv:` this spec reads may have been what changed.
         if (saved.uri.toString() !== document.uri.toString()) this.later();
       }),
-      vscode.window.onDidChangeTextEditorSelection((moved) => {
-        if (moved.textEditor.document.uri.toString() === document.uri.toString()) this.follow();
-      }),
+      vscode.window.onDidChangeTextEditorSelection((moved) => this.follow(moved.textEditor)),
     );
 
     this.listeners.push(this.panel.webview.onDidReceiveMessage((asked) => this.answer(asked)));
@@ -87,29 +85,48 @@ export class Preview {
    * the one being pointed at: the cell rather than the sheet, the definition
    * rather than the document.
    */
-  private follow(): void {
+  private follow(editor: vscode.TextEditor): void {
+    if (!this.reads(editor.document)) return;
+
     clearTimeout(this.following);
-    this.following = setTimeout(() => this.reaching(), FOLLOW);
+    this.following = setTimeout(() => this.reaching(editor), FOLLOW);
   }
 
-  private reaching(): void {
-    const editor = vscode.window.visibleTextEditors.find(
-      (one) => one.document.uri.toString() === this.document.uri.toString(),
+  /** Whether a cursor in this document is a cursor in the spec being previewed. */
+  private reads(document: vscode.TextDocument): boolean {
+    return (
+      document.uri.toString() === this.document.uri.toString() ||
+      knows(this.nodes, document.uri.fsPath)
     );
+  }
+
+  /** The editor whose cursor to answer about, of those a reader can see. */
+  private cursor(): vscode.TextEditor | undefined {
+    const active = vscode.window.activeTextEditor;
+    if (active !== undefined && this.reads(active.document)) return active;
+
+    return vscode.window.visibleTextEditors.find((one) => this.reads(one.document));
+  }
+
+  private reaching(editor: vscode.TextEditor | undefined = this.cursor()): void {
     const grid = this.drawn?.grid;
     if (editor === undefined || grid === undefined || grid === null) return;
 
     // Spans are offsets into the text they were read from. Asking one about a
     // cursor in text that has since been edited names whatever node the shift
     // happens to land in, so nothing is said until the read catches up — which
-    // the redraw below does, and then says it.
-    if (this.document.version !== this.read) {
+    // the redraw below does, and then says it. The spec's own file is read from
+    // the editor holding it, so its version is the test; an `$include` is read
+    // from disk, so what matters there is whether the editor has saved.
+    const own = editor.document.uri.toString() === this.document.uri.toString();
+    const inStep = own ? this.document.version === this.read : !editor.document.isDirty;
+    if (!inStep) {
       void this.panel.webview.postMessage({ kind: 'highlighted', says: '', cells: [] });
       return;
     }
 
-    const at = this.document.offsetAt(editor.selection.active);
-    const node = nodeAt(this.nodes, this.document.uri.fsPath, at);
+    const at = editor.document.offsetAt(editor.selection.active);
+    const node = nodeAt(this.nodes, editor.document.uri.fsPath, at);
     if (node === null) {
       void this.panel.webview.postMessage({ kind: 'highlighted', says: '', cells: [] });
       return;
