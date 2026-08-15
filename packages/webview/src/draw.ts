@@ -147,7 +147,8 @@ function drawCell(
   if (cell === undefined) return drawn;
 
   drawn.textContent = shown(cell);
-  if (cell.formula !== null) drawn.title = `=${cell.formula}`;
+  if (cell.formula !== null) drawn.title = told(cell);
+  if (cell.filledFrom !== null) drawn.classList.add('filled');
   apply(drawn, cell.style);
   return drawn;
 }
@@ -159,10 +160,32 @@ function drawCell(
  * a preview that guessed at one would be inventing a number Excel had not
  * agreed to (ADR-014). A cached value beside it is what Excel would show, so it
  * wins.
+ *
+ * A cell **filled** by a `formulas:` range shows where it is filled from
+ * instead. The range holds one formula, written as it applies at its anchor,
+ * and Excel shifts the references per cell (§8 Q2) — printing that text in
+ * every cell would be printing something false in all but one of them.
  */
 function shown(cell: DrawnCell): string {
   if (cell.value !== null) return String(cell.value);
-  return cell.formula === null ? '' : `=${cell.formula}`;
+  if (cell.formula === null) return '';
+
+  return cell.filledFrom === null ? `=${cell.formula}` : `↧ ${cell.filledFrom}`;
+}
+
+/**
+ * What the cell says about its own formula on hover.
+ *
+ * A cell of a filled range holds the formula as it applies at the range's
+ * anchor; Excel shifts the relative references per cell and nothing here does
+ * (§8 Q2), so the view says where it is reading from rather than letting the
+ * text be read as this cell's own.
+ */
+function told(cell: DrawnCell): string {
+  const formula = `=${cell.formula ?? ''}`;
+  if (cell.filledFrom === null) return formula;
+
+  return `${formula} — filled from ${cell.filledFrom}; Excel shifts the references per cell`;
 }
 
 function apply(drawn: HTMLElement, style: StyleValues): void {

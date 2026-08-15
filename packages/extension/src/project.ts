@@ -1,4 +1,5 @@
 import {
+  type CompiledCell,
   type CompiledSheet,
   cellAt,
   compile,
@@ -138,12 +139,25 @@ function drawCells(sheet: CompiledSheet, rows: number, columns: number): DrawnCe
         col,
         value: cell?.value ?? null,
         formula: cell?.formula ?? null,
+        filledFrom: filledFrom(cell),
         style,
       });
     }
   }
 
   return drawn;
+}
+
+/**
+ * The anchor of the range a cell was filled from, and `null` at the anchor
+ * itself — where the formula is written as it applies.
+ */
+function filledFrom(cell: CompiledCell | null): string | null {
+  const origin = cell?.provenance.value;
+  if (origin?.kind !== 'formulaRange') return null;
+
+  const [across, down] = origin.offset;
+  return across === 0 && down === 0 ? null : origin.anchor;
 }
 
 function sizedRun(band: CompiledSheet['columns'][number]): Sized {

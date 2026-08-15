@@ -82,6 +82,15 @@ describe('a drawn spec', () => {
     expect(diagnostics.map((one) => one.code)).toEqual(['loader.not-a-mapping']);
   });
 
+  it('says where a filled cell reads from, rather than a formula that is wrong there', () => {
+    // The range holds one formula, written as it applies at its anchor, and
+    // Excel shifts the references per cell (§8 Q2). Printing that text in every
+    // cell of the range would print something false in all but one.
+    const source = `${SALES}    formulas:\n      - at: C2:C3\n        formula: "B2*0.05"\n`;
+    expect(at(source, 3, 2)).toMatchObject({ formula: 'B2*0.05', filledFrom: null });
+    expect(at(source, 3, 3)).toMatchObject({ formula: 'B2*0.05', filledFrom: 'C2' });
+  });
+
   it('carries the sizes and merges a sheet declares', () => {
     const source = `${SALES}    columns:\n      - at: B\n        width: 18\n    merges: [A1:C1]\n    cells:\n      A1: wide\n`;
     const sheet = drawn(source);

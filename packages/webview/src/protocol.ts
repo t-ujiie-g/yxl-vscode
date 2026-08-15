@@ -47,12 +47,19 @@ export interface Sized {
  * `value` and `formula` can both be present — a formula with the cached result
  * Excel shows until it recomputes — and neither has been evaluated here
  * (ADR-014).
+ *
+ * `filledFrom` names the anchor of the `formulas:` range this cell belongs to,
+ * for every cell of it but the anchor. The formula shown is the one the range
+ * holds, written as it applies **there**: Excel shifts its relative references
+ * per cell and this does not, so the view says which cell it is really reading
+ * rather than showing a formula that is wrong here (§8 Q2).
  */
 export interface DrawnCell {
   readonly row: number;
   readonly col: number;
   readonly value: ScalarValue;
   readonly formula: string | null;
+  readonly filledFrom: string | null;
   readonly style: StyleValues;
 }
 

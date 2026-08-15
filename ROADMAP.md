@@ -1397,6 +1397,20 @@ this at a phase boundary rather than at the end.
   the only section of the reference with no worked example behind it, which
   means its compile path is not exercised there either.
 
+### 2026-08-15 — Phase 4: what a filled cell says
+- Trying the preview on yxl's own `quickstart.yxl.yaml` showed the first real
+  defect: every cell of a `formulas:` range drew the range's formula verbatim,
+  so `C3` said `=B2*0.05` where Excel will hold `=B3*0.05`.
+- **The display was the thing that was wrong, not the deferral.** §8 Q2 already
+  says relative-reference translation waits for the parser Phase 5 brings, and
+  writing a regex for it now would break on `LOG10(x)` and on a quoted `"A1"` —
+  the guess this project exists not to make. So a filled cell now says **where
+  it reads from** (`↧ C2`, dimmed, with the whole story on hover) instead of
+  printing a formula that is false everywhere but the anchor.
+- Worth keeping as a lesson about previews: showing something wrong is worse
+  than showing less, and the difference only became obvious with a real spec in
+  front of a real person. Tier 5 earning its place on day one.
+
 ### 2026-08-15 — Phase 4: the preview exists
 - Open a `*.yxl.yaml` and press *yxl: Open Preview to the Side*: the spec is
   parsed, loaded, compiled, and drawn as a grid beside the text, redrawn 150ms
