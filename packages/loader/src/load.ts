@@ -6,7 +6,7 @@ import { CODE } from './codes';
 import { type Ctx, type IncludeReader, keyOf, nodeAt } from './ctx';
 import { NO_DEFS, readDefs, readParams } from './defs';
 import { readOverrides } from './override';
-import { entriesOf, openMap } from './read';
+import { openEntries } from './read';
 import { readSheets } from './sheet';
 
 /**
@@ -49,7 +49,7 @@ export function load(parsed: Parsed, include?: IncludeReader): Loaded {
 function readDocument(ctx: Ctx, parsed: Parsed): SpecDoc | null {
   if (parsed.root === null) return null;
 
-  const opened = openMap(ctx, parsed.root, [], 'a spec');
+  const opened = openEntries(ctx, parsed.root, [], 'a spec');
   if (opened === null) return null;
   const here = opened.ctx;
 
@@ -59,7 +59,7 @@ function readDocument(ctx: Ctx, parsed: Parsed): SpecDoc | null {
   let overrides: Override[] = [];
   const opaque: Opaque[] = [];
 
-  for (const entry of entriesOf(here, opened.node)) {
+  for (const entry of opened.entries) {
     const key = keyOf(entry);
     const at = [...opened.path, key];
     switch (key) {

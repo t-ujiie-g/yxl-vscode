@@ -1,10 +1,31 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import type { IncludeReader } from '@yxl-vscode/loader';
+import { filePath } from '@yxl-vscode/units';
 
 const here = dirname(fileURLToPath(import.meta.url));
 
 export const REPO_ROOT = resolve(here, '..');
+
+/**
+ * The half of `$include` that belongs to the shell (ADR-004): resolve the path
+ * against the file that wrote it, and read it.
+ *
+ * The core is I/O-free, so this is what a test has to bring; the extension will
+ * bring the same thing over VS Code's filesystem API.
+ */
+export const includeReader: IncludeReader = (from, path) => {
+  const resolved = resolve(dirname(from), path);
+  const file = filePath(resolved);
+  if (file === null) return null;
+
+  try {
+    return { file, source: readFileSync(resolved, 'utf8') };
+  } catch {
+    return null;
+  }
+};
 
 export interface Sample {
   readonly name: string;
@@ -14,8 +35,8 @@ export interface Sample {
 
 /**
  * The awkward-YAML fixtures: comments in every position, flow style, block
- * scalars, CRLF, a BOM, odd indentation. Written to be hostile to a serializer
- * that re-prints rather than patches.
+ * scalars, CRLF, a BOM, odd indentation, an anchor, a tab inside a string.
+ * Written to be hostile to a serializer that re-prints rather than patches.
  */
 export function awkward(): Sample[] {
   return read(join(here, 'fixtures', 'awkward'));

@@ -1,4 +1,4 @@
-import type { Entry, Node, Path } from '@yxl-vscode/cst';
+import type { Node, Path } from '@yxl-vscode/cst';
 import {
   type ColumnBand,
   MODELED_KEYS,
@@ -7,15 +7,15 @@ import {
   type Templated,
 } from '@yxl-vscode/spec';
 import { CODE } from './codes';
-import { type Ctx, keyOf, nodeAt, reject, type Site } from './ctx';
+import { type Ctx, keyOf, nodeAt, reject } from './ctx';
 import {
-  entriesOf,
   expectBool,
   expectNumber,
   expectText,
   findEntry,
-  itemsOf,
-  openMap,
+  type Opened,
+  openEntries,
+  readEach,
   rejectUnknownKey,
   scalarText,
 } from './read';
@@ -25,68 +25,33 @@ import { COLUMN, type Kind, ROW, readTextAs } from './template';
 /** A sheet's `columns:` sequence, sized in character units. */
 export function readColumnBands(ctx: Ctx, node: Node, path: Path): ColumnBand[] {
   const what = 'a `columns` entry';
-  const bands: ColumnBand[] = [];
 
-  for (const item of itemsOf(ctx, node, path, '`columns`')) {
-    const band = openBand(item, what);
-    if (band === null) continue;
+  return readEach(ctx, node, path, '`columns`', (site) => {
+    const band = openEntries(site.ctx, site.node, site.path, what);
+    if (band === null) return null;
 
     const at = readSelector(band, what, COLUMN);
-    if (at === null) continue;
+    if (at === null) return null;
 
     const body = readBandBody(band, what, 'width', MODELED_KEYS.columnBand);
-    bands.push({
-      ...nodeAt(band.ctx, band.path, band.node.span),
-      at,
-      width: body.size,
-      ...body.rest,
-    });
-  }
-
-  return bands;
+    return { ...nodeAt(band.ctx, band.path, band.node.span), at, width: body.size, ...body.rest };
+  });
 }
 
 /** The same over rows, sized in points. */
 export function readRowBands(ctx: Ctx, node: Node, path: Path): RowBand[] {
   const what = 'a `rows` entry';
-  const bands: RowBand[] = [];
 
-  for (const item of itemsOf(ctx, node, path, '`rows`')) {
-    const band = openBand(item, what);
-    if (band === null) continue;
+  return readEach(ctx, node, path, '`rows`', (site) => {
+    const band = openEntries(site.ctx, site.node, site.path, what);
+    if (band === null) return null;
 
     const at = readSelector(band, what, ROW);
-    if (at === null) continue;
+    if (at === null) return null;
 
     const body = readBandBody(band, what, 'height', MODELED_KEYS.rowBand);
-    bands.push({
-      ...nodeAt(band.ctx, band.path, band.node.span),
-      at,
-      height: body.size,
-      ...body.rest,
-    });
-  }
-
-  return bands;
-}
-
-interface Band {
-  readonly ctx: Ctx;
-  readonly node: Node;
-  readonly path: Path;
-  readonly entries: readonly Entry[];
-}
-
-function openBand(site: Site, what: string): Band | null {
-  const opened = openMap(site.ctx, site.node, site.path, what);
-  if (opened === null) return null;
-
-  return {
-    ctx: opened.ctx,
-    node: opened.node,
-    path: opened.path,
-    entries: entriesOf(opened.ctx, opened.node),
-  };
+    return { ...nodeAt(band.ctx, band.path, band.node.span), at, height: body.size, ...body.rest };
+  });
 }
 
 interface BandBody {
@@ -104,7 +69,7 @@ interface BandBody {
  * apart from the key their size is written under.
  */
 function readBandBody(
-  band: Band,
+  band: Opened,
   what: string,
   sizeKey: string,
   known: ReadonlySet<string>,
@@ -146,7 +111,7 @@ function readBandBody(
 }
 
 /** A band's `at`, which a row may write as a number. */
-function readSelector<T>(band: Band, what: string, kind: Kind<T>): Templated<T> | null {
+function readSelector<T>(band: Opened, what: string, kind: Kind<T>): Templated<T> | null {
   const entry = findEntry(band.entries, 'at');
   if (entry === undefined) {
     reject(band.ctx, CODE.missingKey, `${what} needs an \`at\``, band.node.span);

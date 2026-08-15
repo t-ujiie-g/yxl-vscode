@@ -1,30 +1,17 @@
 import { readdirSync, readFileSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse } from '@yxl-vscode/cst';
-import { type IncludeReader, load } from '@yxl-vscode/loader';
-import { filePath } from '@yxl-vscode/units';
+import { load } from '@yxl-vscode/loader';
 import { describe, expect, it } from 'vitest';
-import { yxlExamples } from './corpus';
+import { includeReader, yxlExamples } from './corpus';
 import { check, oracleVersion, PINNED } from './oracle';
 
 const here = dirname(fileURLToPath(import.meta.url));
 
-const include: IncludeReader = (from, path) => {
-  const resolved = resolve(dirname(from), path);
-  const file = filePath(resolved);
-  if (file === null) return null;
-
-  try {
-    return { file, source: readFileSync(resolved, 'utf8') };
-  } catch {
-    return null;
-  }
-};
-
 /** What this editor made of a spec: whether it could read all of it. */
 function read(spec: string): { ok: boolean; said: string } {
-  const { diagnostics } = load(parse(readFileSync(spec, 'utf8'), { file: spec }), include);
+  const { diagnostics } = load(parse(readFileSync(spec, 'utf8'), { file: spec }), includeReader);
   return { ok: diagnostics.length === 0, said: diagnostics.map((one) => one.code).join(', ') };
 }
 

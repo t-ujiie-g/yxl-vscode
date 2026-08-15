@@ -12,7 +12,7 @@ import { formulaName, paramName, styleName, valueName } from '@yxl-vscode/units'
 import { withoutLeadingEquals } from './cell';
 import { CODE } from './codes';
 import { type Ctx, keyOf, nodeAt, reject } from './ctx';
-import { entriesOf, expectText, expectValue, openMap, rejectUnknownKey } from './read';
+import { expectText, expectValue, openEntries, rejectUnknownKey } from './read';
 import { readStyle } from './style';
 
 export const NO_DEFS: Defs = { styles: [], values: [], formulas: [] };
@@ -26,7 +26,7 @@ export const NO_DEFS: Defs = { styles: [], values: [], formulas: [] };
  * the compiler substitutes both sides of the lookup.
  */
 export function readDefs(ctx: Ctx, node: Node, path: Path): Defs {
-  const opened = openMap(ctx, node, path, '`defs`');
+  const opened = openEntries(ctx, node, path, '`defs`');
   if (opened === null) return NO_DEFS;
   const here = opened.ctx;
 
@@ -34,7 +34,7 @@ export function readDefs(ctx: Ctx, node: Node, path: Path): Defs {
   let values: ValueDef[] = [];
   let formulas: FormulaDef[] = [];
 
-  for (const entry of entriesOf(here, opened.node)) {
+  for (const entry of opened.entries) {
     const at = [...opened.path, keyOf(entry)];
     switch (keyOf(entry)) {
       case 'styles':
@@ -55,12 +55,12 @@ export function readDefs(ctx: Ctx, node: Node, path: Path): Defs {
 }
 
 function readStyleDefs(ctx: Ctx, node: Node, path: Path): StyleDef[] {
-  const opened = openMap(ctx, node, path, '`defs.styles`');
+  const opened = openEntries(ctx, node, path, '`defs.styles`');
   if (opened === null) return [];
   const here = opened.ctx;
 
   const defs: StyleDef[] = [];
-  for (const entry of entriesOf(here, opened.node)) {
+  for (const entry of opened.entries) {
     const key = keyOf(entry);
     const name = styleName(key);
     if (name === null) {
@@ -76,12 +76,12 @@ function readStyleDefs(ctx: Ctx, node: Node, path: Path): StyleDef[] {
 }
 
 function readValueDefs(ctx: Ctx, node: Node, path: Path): ValueDef[] {
-  const opened = openMap(ctx, node, path, '`defs.values`');
+  const opened = openEntries(ctx, node, path, '`defs.values`');
   if (opened === null) return [];
   const here = opened.ctx;
 
   const defs: ValueDef[] = [];
-  for (const entry of entriesOf(here, opened.node)) {
+  for (const entry of opened.entries) {
     const key = keyOf(entry);
     const name = valueName(key);
     if (name === null) {
@@ -97,12 +97,12 @@ function readValueDefs(ctx: Ctx, node: Node, path: Path): ValueDef[] {
 }
 
 function readFormulaDefs(ctx: Ctx, node: Node, path: Path): FormulaDef[] {
-  const opened = openMap(ctx, node, path, '`defs.formulas`');
+  const opened = openEntries(ctx, node, path, '`defs.formulas`');
   if (opened === null) return [];
   const here = opened.ctx;
 
   const defs: FormulaDef[] = [];
-  for (const entry of entriesOf(here, opened.node)) {
+  for (const entry of opened.entries) {
     const key = keyOf(entry);
     const name = formulaName(key);
     if (name === null) {
@@ -121,12 +121,12 @@ function readFormulaDefs(ctx: Ctx, node: Node, path: Path): FormulaDef[] {
 
 /** The `params:` block, each entry holding the default it declares. */
 export function readParams(ctx: Ctx, node: Node, path: Path): Param[] {
-  const opened = openMap(ctx, node, path, '`params`');
+  const opened = openEntries(ctx, node, path, '`params`');
   if (opened === null) return [];
   const here = opened.ctx;
 
   const params: Param[] = [];
-  for (const entry of entriesOf(here, opened.node)) {
+  for (const entry of opened.entries) {
     const key = keyOf(entry);
     const name = paramName(key);
     if (name === null) {

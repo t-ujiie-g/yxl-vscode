@@ -4,17 +4,14 @@ import { CODE } from './codes';
 import { type Ctx, keyOf, reject, type Site } from './ctx';
 import { follow } from './include';
 
-export { keyOf } from './ctx';
-
 /**
  * A mapping, wherever it turned out to be, or `null` with the reason reported.
  *
- * Every construct opens through here or through `openSeq`, which is what makes
- * `$include` work everywhere it is allowed to stand: what comes back carries
- * the file and the path the reader must go on with, and they are not always the
- * ones it asked about.
+ * Following the `$include` here is what makes one work everywhere the schema
+ * allows it to stand: what comes back carries the file and the path the reader
+ * must go on with, and they are not always the ones it asked about.
  */
-export function openMap(ctx: Ctx, node: Node, path: Path, what: string): Site<Mapping> | null {
+function openMap(ctx: Ctx, node: Node, path: Path, what: string): Site<Mapping> | null {
   const here = follow(ctx, node, path);
   if (here === null) return null;
 
@@ -37,13 +34,27 @@ export function openSeq(ctx: Ctx, node: Node, path: Path, what: string): Site<Se
   return { ctx: here.ctx, node: here.node, path: here.path };
 }
 
+/** A mapping opened for reading: where it turned out to be, and its entries. */
+export interface Opened extends Site<Mapping> {
+  readonly entries: readonly Entry[];
+}
+
+/**
+ * How every construct that is a mapping starts: follow an `$include` to
+ * wherever the mapping really is, then take its entries with no key read twice.
+ */
+export function openEntries(ctx: Ctx, node: Node, path: Path, what: string): Opened | null {
+  const opened = openMap(ctx, node, path, what);
+  return opened === null ? null : { ...opened, entries: entriesOf(opened.ctx, opened.node) };
+}
+
 /**
  * Each item of a sequence, as a site of its own.
  *
  * An item may be an `$include` in its own right — one sheet of a workbook kept
  * in its own file — so following happens per item as well as for the sequence.
  */
-export function itemsOf(ctx: Ctx, node: Node, path: Path, what: string): Site[] {
+function itemsOf(ctx: Ctx, node: Node, path: Path, what: string): Site[] {
   const opened = openSeq(ctx, node, path, what);
   if (opened === null) return [];
 
@@ -52,6 +63,22 @@ export function itemsOf(ctx: Ctx, node: Node, path: Path, what: string): Site[] 
     node: item,
     path: [...opened.path, index],
   }));
+}
+
+/** Read every item of a sequence, leaving out the ones that could not be read. */
+export function readEach<T>(
+  ctx: Ctx,
+  node: Node,
+  path: Path,
+  what: string,
+  read: (site: Site) => T | null,
+): T[] {
+  const kept: T[] = [];
+  for (const site of itemsOf(ctx, node, path, what)) {
+    const one = read(site);
+    if (one !== null) kept.push(one);
+  }
+  return kept;
 }
 
 /** Text, or `null` with the reason reported. A number is not text. */
@@ -123,7 +150,7 @@ export function expectSpelling<T extends string>(
  * A repeat is reported and dropped rather than layered, which is what yxl does
  * with one and what keeps two nodes from deriving the same identity.
  */
-export function entriesOf(ctx: Ctx, map: Mapping): Entry[] {
+function entriesOf(ctx: Ctx, map: Mapping): Entry[] {
   const seen = new Set<string>();
   const kept: Entry[] = [];
 

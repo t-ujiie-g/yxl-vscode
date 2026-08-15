@@ -3,7 +3,7 @@ import { MODELED_KEYS, type Override } from '@yxl-vscode/spec';
 import { holdsSomething, readFacets } from './cell';
 import { CODE } from './codes';
 import { type Ctx, keyOf, nodeAt, reject, type Site } from './ctx';
-import { entriesOf, expectText, findEntry, itemsOf, openMap, rejectUnknownKey } from './read';
+import { expectText, findEntry, openEntries, readEach, rejectUnknownKey } from './read';
 import { QUALIFIED, readAs } from './template';
 
 /**
@@ -15,20 +15,15 @@ import { QUALIFIED, readAs } from './template';
  * exists, not here.
  */
 export function readOverrides(ctx: Ctx, node: Node, path: Path): Override[] {
-  const overrides: Override[] = [];
-  for (const item of itemsOf(ctx, node, path, '`overrides`')) {
-    const override = readOverride(item);
-    if (override !== null) overrides.push(override);
-  }
-  return overrides;
+  return readEach(ctx, node, path, '`overrides`', readOverride);
 }
 
 function readOverride(site: Site): Override | null {
-  const opened = openMap(site.ctx, site.node, site.path, 'an override');
+  const opened = openEntries(site.ctx, site.node, site.path, 'an override');
   if (opened === null) return null;
 
   const here = opened.ctx;
-  const entries = entriesOf(here, opened.node);
+  const { entries } = opened;
 
   const anchor = findEntry(entries, 'at');
   if (anchor === undefined) {

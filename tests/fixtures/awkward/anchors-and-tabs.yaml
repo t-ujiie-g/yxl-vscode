@@ -1,0 +1,11 @@
+# An anchor that is never aliased: legal YAML, and nothing here models it.
+defs: &theme
+  styles:
+    header: { font: { bold: true } }
+
+sheets:
+  - name: Sales
+    cells:
+      A1: "a	tab inside a quoted string"
+      A2: "and a trailing space in the key below"
+      B1: 1
