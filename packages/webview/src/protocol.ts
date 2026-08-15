@@ -217,8 +217,20 @@ export interface Typed {
   readonly text: string;
 }
 
+/**
+ * Something the host did, said where the reader asked for it.
+ *
+ * The counterpart of a refusal: an edit that *worked* is usually its own
+ * announcement — the grid changes — but one that lands somewhere the reader
+ * cannot see needs a word, and one that lands nowhere needs it more.
+ */
+export interface Said {
+  readonly kind: 'said';
+  readonly text: string;
+}
+
 /** Everything the host sends the view. */
-export type ToView = Drawing | Inspected | Highlighted | Refused;
+export type ToView = Drawing | Inspected | Highlighted | Refused | Said;
 
 /**
  * Everything the view sends back.

@@ -45,15 +45,18 @@ function start(): void {
   let sources: readonly Source[] | null = null;
   let reached: Reached | null = null;
   let refused: Refused | null = null;
+  let said: string | null = null;
 
   const redraw = (): void => {
-    if (drawing !== null) draw(into, { drawing, sheet, selected, sources, reached, refused }, asks);
+    if (drawing !== null) {
+      draw(into, { drawing, sheet, selected, sources, reached, refused, said }, asks);
+    }
   };
 
   /** The same, for what the view holds of its own: the grid stays as it is. */
   const restated = (): void => {
     if (drawing !== null) {
-      restate(into, { drawing, sheet, selected, sources, reached, refused }, asks);
+      restate(into, { drawing, sheet, selected, sources, reached, refused, said }, asks);
     }
   };
 
@@ -84,6 +87,7 @@ function start(): void {
     },
     edit: (row, col, text) => {
       refused = null;
+      said = null;
       host.postMessage({ kind: 'edit', sheet: named(), row, col, text });
     },
     overrideWith: (typed, reason) => {
@@ -100,6 +104,14 @@ function start(): void {
 
     if (sent.kind === 'refused') {
       refused = sent;
+      said = null;
+      restated();
+      return;
+    }
+
+    if (sent.kind === 'said') {
+      said = sent.text;
+      refused = null;
       restated();
       return;
     }

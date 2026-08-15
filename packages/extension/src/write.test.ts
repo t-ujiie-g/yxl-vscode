@@ -22,6 +22,7 @@ function editor(sources: Record<string, string>) {
 
   const spec: Spec = { root: ROOT, doc, grid: compile(doc, { read }), read, params: new Map() };
   const offers: (Typed | null)[] = [];
+  const told: string[] = [];
   const port: Port = {
     text: (file) => files[file] ?? null,
     put: (file, text) => {
@@ -31,9 +32,12 @@ function editor(sources: Record<string, string>) {
       refusals.push(why);
       offers.push(override);
     },
+    said: (what) => {
+      told.push(what);
+    },
   };
 
-  return { spec, port, files, refusals, offers };
+  return { spec, port, files, refusals, offers, told };
 }
 
 const typed = (of: Partial<Typed> = {}): Typed => ({
@@ -110,11 +114,34 @@ describe('the exception, when the ordinary edit is refused', () => {
   });
 
   it('writes the override when it is asked for, with the reason given', async () => {
-    const { spec, port, files } = editor({ [ROOT]: FILLED });
+    const { spec, port, files, told } = editor({ [ROOT]: FILLED });
 
     await writeOverride(spec, typed({ col: 2, row: 2, text: '99' }), 'this row is settled', port);
     expect(files[ROOT]).toContain('overrides:\n  - at: Sales!B2\n    value: 99');
     expect(files[ROOT]).toContain('reason: "this row is settled"');
+
+    // An override lands at the end of the file, where the reader is not
+    // looking, so it says so.
+    expect(told[0]).toContain('Sales!B2');
+  });
+
+  it('says nothing about a write it did not make', async () => {
+    const { spec, port, told, refusals } = editor({ [ROOT]: FILLED });
+
+    // Already overridden once, so the second is refused.
+    await writeOverride(spec, typed({ col: 2, row: 2, text: '1' }), undefined, port);
+    const {
+      spec: again,
+      port: twice,
+      told: quiet,
+    } = editor({
+      [ROOT]: `${FILLED}overrides:\n  - at: Sales!B2\n    value: 1\n`,
+    });
+    await writeOverride(again, typed({ col: 2, row: 2, text: '2' }), undefined, twice);
+
+    expect(told).toHaveLength(1);
+    expect(quiet).toHaveLength(0);
+    expect(refusals).toHaveLength(0);
   });
 
   it('writes one without a reason, since the reason is the reader\u2019s to give', async () => {

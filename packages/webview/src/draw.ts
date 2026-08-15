@@ -29,6 +29,7 @@ export interface Showing {
   readonly sources: readonly Source[] | null;
   readonly reached: Reached | null;
   readonly refused: Refused | null;
+  readonly said: string | null;
 }
 
 /** What the cursor in the text is reaching, and what to call it. */
@@ -134,6 +135,7 @@ function say(under: Element, showing: Showing, asks: Asks): void {
   const { drawing } = showing;
   under.replaceChildren();
 
+  if (showing.said !== null) under.append(note(showing.said));
   if (showing.refused !== null) under.append(refusal(showing.refused, asks));
   if (drawing.uncomputed !== null) under.append(note(uncomputed(drawing.uncomputed)));
   if (showing.reached !== null) under.append(reaching(showing.reached));

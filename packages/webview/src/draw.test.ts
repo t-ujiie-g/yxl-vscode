@@ -71,6 +71,7 @@ function shown(of: Partial<Showing> = {}, on: Asks = asks()): HTMLElement {
       sources: null,
       reached: null,
       refused: null,
+      said: null,
       ...of,
     },
     on,
@@ -191,6 +192,7 @@ describe('a sheet larger than the window drawn of it', () => {
       sources: null,
       reached: null,
       refused: null,
+      said: null,
     });
 
     draw(into, showing(tall), on);
@@ -211,6 +213,7 @@ describe('a sheet larger than the window drawn of it', () => {
       sources: null,
       reached: null,
       refused: null,
+      said: null,
     });
 
     draw(into, showing(0), on);
@@ -395,6 +398,7 @@ describe('what changes without redrawing the grid', () => {
       sources: null,
       reached: null,
       refused: null,
+      said: null,
       ...of,
     };
   }

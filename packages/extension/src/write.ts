@@ -25,6 +25,7 @@ export interface Port {
   readonly text: (file: FilePath) => string | null;
   readonly put: (file: FilePath, text: string) => void | Promise<void>;
   readonly refuse: (why: string, override: Typed | null) => void;
+  readonly said: (what: string) => void;
 }
 
 export interface Spec {
@@ -46,7 +47,10 @@ export interface Spec {
  */
 export async function write(spec: Spec, typed: Typed, port: Port): Promise<void> {
   const sheet = sheetName(typed.sheet);
-  if (sheet === null) return;
+  if (sheet === null) {
+    port.refuse(`\`${typed.sheet}\` is not a name a sheet can have`, null);
+    return;
+  }
 
   const at = addrAt({ col: typed.col, row: typed.row });
   const where = { sheet, at };
@@ -80,27 +84,35 @@ export async function writeOverride(
   port: Port,
 ): Promise<void> {
   const sheet = sheetName(typed.sheet);
-  if (sheet === null) return;
+  if (sheet === null) {
+    port.refuse(`\`${typed.sheet}\` is not a name a sheet can have`, null);
+    return;
+  }
 
-  const where = { sheet, at: addrAt({ col: typed.col, row: typed.row }) };
+  const at = addrAt({ col: typed.col, row: typed.row });
   const says: Says = typed.text.startsWith('=')
     ? { formula: typed.text.slice(1), ...(reason === undefined ? {} : { reason }) }
     : { value: meant(typed.text), ...(reason === undefined ? {} : { reason }) };
 
-  await applied(spec, override(spec.doc, spec.grid, where, says, port.text), port);
+  const done = await applied(
+    spec,
+    override(spec.doc, spec.grid, { sheet, at }, says, port.text),
+    port,
+  );
+  if (done) port.said(`${sheet}!${at} is now written as an override.`);
 }
 
 /** The half of a write that is the same whichever intent produced it. */
-async function applied(spec: Spec, intent: Intent, port: Port): Promise<void> {
+async function applied(spec: Spec, intent: Intent, port: Port): Promise<boolean> {
   if (intent.kind === 'refused') {
     port.refuse(intent.why, null);
-    return;
+    return false;
   }
 
   const source = port.text(intent.file);
   if (source === null) {
     port.refuse(`${intent.file} could not be read`, null);
-    return;
+    return false;
   }
 
   const done = checked(source, intent.patch, intent.expects, {
@@ -112,14 +124,15 @@ async function applied(spec: Spec, intent: Intent, port: Port): Promise<void> {
 
   if (done.ok === false) {
     port.refuse(done.diagnostics[0]?.message ?? surprising(done.surprises), null);
-    return;
+    return false;
   }
   if (done.ok === 'ask') {
     port.refuse(surprising(done.surprises), null);
-    return;
+    return false;
   }
 
   await port.put(intent.file, done.text);
+  return true;
 }
 
 /**

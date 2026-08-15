@@ -244,7 +244,12 @@ export class Preview {
   /** What a reader typed, handed to the write path with the world it needs. */
   private async write(typed: Typed): Promise<void> {
     const spec = this.spec();
-    if (spec !== null) await write(spec, typed, this.port());
+    if (spec === null) {
+      this.refuse('this spec has not finished loading', null);
+      return;
+    }
+
+    await write(spec, typed, this.port());
   }
 
   /**
@@ -256,7 +261,10 @@ export class Preview {
    */
   private async overrideWith(asked: Extract<FromView, { kind: 'override' }>): Promise<void> {
     const spec = this.spec();
-    if (spec === null) return;
+    if (spec === null) {
+      this.refuse('this spec has not finished loading', null);
+      return;
+    }
 
     const { reason, ...typed } = asked;
     await writeOverride(spec, typed, reason === '' ? undefined : reason, this.port());
@@ -289,6 +297,9 @@ export class Preview {
       text: (file) => this.textOf(file),
       put: (file, text) => this.put(file, text),
       refuse: (why, override) => this.refuse(why, override),
+      said: (what) => {
+        void this.panel.webview.postMessage({ kind: 'said', text: what });
+      },
     };
   }
 
