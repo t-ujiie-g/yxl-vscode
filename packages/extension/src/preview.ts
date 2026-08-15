@@ -29,8 +29,9 @@ export class Preview {
   private following: ReturnType<typeof setTimeout> | undefined;
   private drawn: Projected | undefined;
   private nodes: Nodes = new Map();
+  private read = -1;
   private readonly params = new Map<string, string>();
-  private readonly windows = new Map<number, Window>();
+  private readonly windows = new Map<string, Window>();
 
   static show(document: vscode.TextDocument, extension: vscode.Uri): void {
     const already = Preview.open.get(document.uri.toString());
@@ -98,6 +99,15 @@ export class Preview {
     const grid = this.drawn?.grid;
     if (editor === undefined || grid === undefined || grid === null) return;
 
+    // Spans are offsets into the text they were read from. Asking one about a
+    // cursor in text that has since been edited names whatever node the shift
+    // happens to land in, so nothing is said until the read catches up — which
+    // the redraw below does, and then says it.
+    if (this.document.version !== this.read) {
+      void this.panel.webview.postMessage({ kind: 'highlighted', says: '', cells: [] });
+      return;
+    }
+
     const at = this.document.offsetAt(editor.selection.active);
     const node = nodeAt(this.nodes, this.document.uri.fsPath, at);
     if (node === null) {
@@ -114,6 +124,7 @@ export class Preview {
 
   private redraw(): void {
     const file = this.document.uri.fsPath;
+    this.read = this.document.version;
     const drawn = project(this.document.getText(), file, readBeside, this.params, this.windows);
     const { drawing, diagnostics } = drawn;
     this.drawn = drawn;
@@ -135,6 +146,8 @@ export class Preview {
           return shown;
         }),
     );
+
+    this.reaching();
   }
 
   /**
@@ -169,7 +182,7 @@ export class Preview {
       return;
     }
 
-    const sheet = this.drawn?.grid?.sheets[asked.sheet];
+    const sheet = this.drawn?.grid?.sheets.find((one) => one.name === asked.sheet);
     if (sheet === undefined) return;
 
     void this.panel.webview.postMessage({

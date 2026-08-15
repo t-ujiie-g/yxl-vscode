@@ -129,7 +129,7 @@ export interface Source {
 /** The answer to one `inspect`, for the cell that asked. */
 export interface Inspected {
   readonly kind: 'inspected';
-  readonly sheet: number;
+  readonly sheet: string;
   readonly row: number;
   readonly col: number;
   readonly sources: readonly Source[];
@@ -158,9 +158,13 @@ export type ToView = Drawing | Inspected | Highlighted;
  * come from*, *take me there*, *draw it as though this parameter were something
  * else*, and *draw the part of the sheet I have scrolled to*. Nothing here
  * writes: the file on disk is untouched.
+ *
+ * A sheet is named rather than numbered, here and in the answers: the spec may
+ * have been read again since the view drew it, and a name is what the reader
+ * pointed at (ADR-023).
  */
 export type FromView =
-  | { readonly kind: 'inspect'; readonly sheet: number; readonly row: number; readonly col: number }
+  | { readonly kind: 'inspect'; readonly sheet: string; readonly row: number; readonly col: number }
   | {
       readonly kind: 'reveal';
       readonly file: string;
@@ -170,7 +174,7 @@ export type FromView =
   | { readonly kind: 'setParam'; readonly name: string; readonly value: string }
   | {
       readonly kind: 'window';
-      readonly sheet: number;
+      readonly sheet: string;
       readonly row: number;
       readonly col: number;
     };

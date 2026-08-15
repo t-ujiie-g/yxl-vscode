@@ -3,7 +3,7 @@ import type { IncludeReader } from '@yxl-vscode/loader';
 import { filePath } from '@yxl-vscode/units';
 import type { DrawnSheet } from '@yxl-vscode/webview/protocol';
 import { describe, expect, it } from 'vitest';
-import { project, redraw, type Window } from './project';
+import { project, redraw, type Windows } from './project';
 
 const FILE = '/specs/report.yxl.yaml';
 
@@ -15,7 +15,7 @@ const read: IncludeReader & DataReader = (_from, path) => {
   return file === null ? null : { file, source: 'APAC,1\nEMEA,2\n' };
 };
 
-function drawn(source: string, windows?: ReadonlyMap<number, Window>): DrawnSheet {
+function drawn(source: string, windows?: Windows): DrawnSheet {
   const sheet = project(source, FILE, read, new Map(), windows).drawing.sheets[0];
   if (sheet === undefined) throw new Error('drew no sheet');
   return sheet;
@@ -160,7 +160,7 @@ describe('a drawn spec', () => {
   });
 
   it('draws the window the view scrolled to, and nothing either side of it', () => {
-    const sheet = drawn(TALL, new Map([[0, { row: 150, col: 1 }]]));
+    const sheet = drawn(TALL, new Map([['Sales', { row: 150, col: 1 }]]));
 
     expect(sheet.at.row).toBe(150);
     expect(sheet.cells.map((cell) => cell.row)).toEqual(
@@ -170,19 +170,45 @@ describe('a drawn spec', () => {
 
   it('keeps a window inside the sheet, however far the view asks to go', () => {
     // The last window is the last 200 rows, not 200 rows of nothing past the end.
-    const sheet = drawn(TALL, new Map([[0, { row: 9000, col: 1 }]]));
+    const sheet = drawn(TALL, new Map([['Sales', { row: 9000, col: 1 }]]));
 
     expect([sheet.at.row, sheet.rows]).toEqual([201, 200]);
   });
 
   it('draws a window of a sheet too small to fill one', () => {
-    const sheet = drawn(`${SALES}    cells:\n      B2: x\n`, new Map([[0, { row: 5, col: 5 }]]));
+    const sheet = drawn(
+      `${SALES}    cells:\n      B2: x\n`,
+      new Map([['Sales', { row: 5, col: 5 }]]),
+    );
     expect([sheet.at.row, sheet.at.col, sheet.rows, sheet.columns]).toEqual([1, 1, 2, 2]);
+  });
+
+  it('draws the window at the sheet it belongs to, whatever number that sheet is now', () => {
+    // The spec is read again with a sheet in front of the one being looked at.
+    // A window kept by position would have moved to the newcomer.
+    const before = `sheets:\n  - name: Summary\n${TALL.slice('sheets:\n'.length)}`;
+    const windows = new Map([['Sales', { row: 150, col: 1 }]]);
+    const { drawing } = project(before, FILE, read, new Map(), windows);
+
+    expect(drawing.sheets.map((sheet) => [sheet.name, sheet.at.row])).toEqual([
+      ['Summary', 1],
+      ['Sales', 150],
+    ]);
+  });
+
+  it('sends the view no node id, so nothing the view keeps can go stale', () => {
+    // What the view holds across a read is what the reader pointed at — a sheet
+    // by name, a cell by address (ADR-023). An id would be positional.
+    const projected = project(TALL, FILE, read);
+    const sent = JSON.stringify(projected.drawing);
+
+    expect([...projected.nodes.keys()].filter((id) => sent.includes(id))).toEqual([]);
+    expect(projected.nodes.size).toBeGreaterThan(0);
   });
 
   it('draws another window without reading or compiling the spec again', () => {
     const projected = project(TALL, FILE, read);
-    const moved = redraw(projected, new Map(), new Map([[0, { row: 150, col: 1 }]]));
+    const moved = redraw(projected, new Map(), new Map([['Sales', { row: 150, col: 1 }]]));
 
     expect(moved.sheets[0]?.at.row).toBe(150);
     expect(moved.sheets[0]?.cells[0]?.row).toBe(150);
