@@ -288,6 +288,45 @@ describe('what the view asks for', () => {
     expect(on.select).toHaveBeenCalledWith(2, 1);
   });
 
+  it('lets the reader keep typing, rather than opening a box per keystroke', () => {
+    // The box is inside the cell, so its keys reach the cell's own handlers
+    // unless something stops them — and every one of those opened another box
+    // over the last, swallowing the character on the way.
+    const on = asks();
+    const into = shown({}, on);
+
+    at(into, 1, 1)?.dispatchEvent(new KeyboardEvent('keydown', { key: 'E' }));
+    const box = into.querySelector('.typing');
+    if (!(box instanceof HTMLInputElement)) throw new Error('nothing to type into');
+
+    for (const key of ['M', 'E', 'A']) {
+      const stroke = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
+      box.dispatchEvent(stroke);
+      // Not refused on the way past: a swallowed keystroke is a character the
+      // reader typed and did not get.
+      expect(stroke.defaultPrevented).toBe(false);
+    }
+
+    expect(into.querySelectorAll('.typing')).toHaveLength(1);
+    expect(on.edit).not.toHaveBeenCalled();
+  });
+
+  it('commits once, from the box the reader was typing in', () => {
+    const on = asks();
+    const into = shown({}, on);
+
+    at(into, 1, 1)?.dispatchEvent(new MouseEvent('dblclick'));
+    const box = into.querySelector('.typing');
+    if (!(box instanceof HTMLInputElement)) throw new Error('nothing to type into');
+
+    box.value = 'EMEA';
+    box.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+
+    expect(on.edit).toHaveBeenCalledTimes(1);
+    expect(on.edit).toHaveBeenCalledWith(1, 1, 'EMEA');
+    expect(into.querySelector('.typing')).toBeNull();
+  });
+
   it('leaves the cell alone when the typing is abandoned', () => {
     const on = asks();
     const into = shown({}, on);

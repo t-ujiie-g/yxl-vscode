@@ -1696,10 +1696,17 @@ the whole phase; what is behind it is three refusals deep.
   gone before a second click could reach it, so *no cell could ever be
   double-clicked*. What the view holds of its own now updates in place, and the
   grid is rebuilt only when the spec changes.
-- **The way into a cell is a spreadsheet's.** Enter or F2 opens it holding what
-  the spec holds; typing a character opens it holding *that character*, because
-  typing over a cell replaces it; a double-click opens it too. Enter commits and
-  moves down, so a column can be typed straight through. Escape leaves it alone.
+- **The way into a cell is a spreadsheet's** — Google Sheets', not Excel's,
+  which is a real difference: Enter *opens* the cell rather than moving down.
+  Typing a character opens it holding that character, because typing over a
+  cell replaces it; a double-click opens it too. Enter commits and moves down,
+  so a column can be typed straight through, and Escape leaves it alone.
+- **The box is inside the cell, so the cell heard everything typed into it.**
+  Every keystroke bubbled up to the handler that opens a box, which opened
+  another over the last and refused the character on the way past — the reader
+  got stacked boxes, a swallowed keystroke, and a white rectangle left over the
+  grid when the cell that positioned it was redrawn. Keys typed in the box stay
+  in the box now, a cell holds one box, and leaving takes every box with it.
 - Verified against yxl's own examples before wiring: editing `Summary!A17`
   rewrites `sheets/summary.yaml` and keeps its style; `Masters!B2` refuses and
   names the CSV; `Summary!B15` refuses and says to change the formula. 27 new

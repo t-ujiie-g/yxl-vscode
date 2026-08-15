@@ -441,6 +441,10 @@ function line(
       drawn.title = said.join('\n');
     }
     const type = (seed?: string): void => {
+      // The box lives *inside* the cell, so a second one would be a second box
+      // in the same cell rather than a replacement.
+      if (drawn.querySelector('.typing') !== null) return;
+
       typeInto(drawn, held.get(cellKey(col, row)), seed, (text) => {
         asks.edit(row, col, text);
         asks.select(row + 1, col);
@@ -454,6 +458,10 @@ function line(
     drawn.addEventListener('click', () => asks.select(row, col));
     drawn.addEventListener('dblclick', () => type());
     drawn.addEventListener('keydown', (event) => {
+      // Typing *in* the box is not typing *at* the cell, and the box is a child
+      // of the cell — so its keys arrive here too unless this says otherwise.
+      if (event.target !== drawn) return;
+
       if (event.key === 'Enter' || event.key === 'F2') {
         event.preventDefault();
         type();

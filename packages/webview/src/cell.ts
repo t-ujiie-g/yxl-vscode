@@ -62,11 +62,18 @@ export function typeInto(
 
   let sent = false;
   const leave = (): void => {
-    box.remove();
+    // Every box in this cell, not only this one: a box left behind is a white
+    // rectangle over the grid, positioned against whatever is positioned above
+    // it once the cell stops being.
+    for (const other of cell.querySelectorAll('.typing')) other.remove();
     cell.classList.remove('editing');
   };
 
   box.addEventListener('keydown', (event) => {
+    // The cell under this box has keys of its own; what is typed here is typed
+    // here.
+    event.stopPropagation();
+
     if (event.key === 'Enter') {
       sent = true;
       done(box.value);
@@ -78,9 +85,10 @@ export function typeInto(
     if (!sent) leave();
   });
 
+  for (const other of cell.querySelectorAll('.typing')) other.remove();
   cell.classList.add('editing');
   cell.append(box);
-  box.focus();
+  box.focus({ preventScroll: true });
   if (seed === undefined) box.select();
 }
 
