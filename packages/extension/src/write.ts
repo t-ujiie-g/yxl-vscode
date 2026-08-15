@@ -1,16 +1,10 @@
-import type { CompiledGrid, DataReader, Setting } from '@yxl-vscode/compile';
-import { setFormula, setValue } from '@yxl-vscode/intent';
+import { type CompiledGrid, cellAt, type DataReader, type Setting } from '@yxl-vscode/compile';
+import { type Intent, override, type Says, setFormula, setValue } from '@yxl-vscode/intent';
 import type { IncludeReader } from '@yxl-vscode/loader';
-import { addrAt, type FilePath, sheetName } from '@yxl-vscode/units';
+import type { SpecDoc } from '@yxl-vscode/spec';
+import { type A1Addr, addrAt, type FilePath, type SheetName, sheetName } from '@yxl-vscode/units';
 import { type Change, checked } from '@yxl-vscode/verify';
-
-/** What a reader typed into a cell, as the view sends it. */
-export interface Typed {
-  readonly sheet: string;
-  readonly row: number;
-  readonly col: number;
-  readonly text: string;
-}
+import type { Typed } from '@yxl-vscode/webview/protocol';
 
 /**
  * What the write needs of the world outside it.
@@ -23,11 +17,13 @@ export interface Typed {
 export interface Port {
   readonly text: (file: FilePath) => string | null;
   readonly put: (file: FilePath, text: string) => void | Promise<void>;
-  readonly refuse: (why: string) => void;
+  readonly refuse: (why: string, override: Typed | null) => void;
+  readonly said: (what: string) => void;
 }
 
 export interface Spec {
   readonly root: FilePath;
+  readonly doc: SpecDoc;
   readonly grid: CompiledGrid;
   readonly read: IncludeReader & DataReader;
   readonly params: Setting;
@@ -44,7 +40,10 @@ export interface Spec {
  */
 export async function write(spec: Spec, typed: Typed, port: Port): Promise<void> {
   const sheet = sheetName(typed.sheet);
-  if (sheet === null) return;
+  if (sheet === null) {
+    port.refuse(`\`${typed.sheet}\` is not a name a sheet can have`, null);
+    return;
+  }
 
   const at = addrAt({ col: typed.col, row: typed.row });
   const where = { sheet, at };
@@ -56,14 +55,57 @@ export async function write(spec: Spec, typed: Typed, port: Port): Promise<void>
     : setValue(spec.grid, where, meant(typed.text), port.text);
 
   if (intent.kind === 'refused') {
-    port.refuse(intent.why);
+    port.refuse(intent.why, exception(spec, where, typed));
     return;
+  }
+
+  await applied(spec, intent, port);
+}
+
+/**
+ * The same edit as an `overrides:` entry, which is where an edit with no other
+ * home goes (`docs/spec.md` §23).
+ *
+ * Written only because a reader asked for it after being told why an ordinary
+ * edit was refused (ADR-007), and `reason` is theirs to give — nothing in the
+ * compiler reads it, and whoever opens the spec in six months does.
+ */
+export async function writeOverride(
+  spec: Spec,
+  typed: Typed,
+  reason: string | undefined,
+  port: Port,
+): Promise<void> {
+  const sheet = sheetName(typed.sheet);
+  if (sheet === null) {
+    port.refuse(`\`${typed.sheet}\` is not a name a sheet can have`, null);
+    return;
+  }
+
+  const at = addrAt({ col: typed.col, row: typed.row });
+  const says: Says = typed.text.startsWith('=')
+    ? { formula: typed.text.slice(1), ...(reason === undefined ? {} : { reason }) }
+    : { value: meant(typed.text), ...(reason === undefined ? {} : { reason }) };
+
+  const done = await applied(
+    spec,
+    override(spec.doc, spec.grid, { sheet, at }, says, port.text),
+    port,
+  );
+  if (done) port.said(`${sheet}!${at} is now written as an override.`);
+}
+
+/** The half of a write that is the same whichever intent produced it. */
+async function applied(spec: Spec, intent: Intent, port: Port): Promise<boolean> {
+  if (intent.kind === 'refused') {
+    port.refuse(intent.why, null);
+    return false;
   }
 
   const source = port.text(intent.file);
   if (source === null) {
-    port.refuse(`${intent.file} could not be read`);
-    return;
+    port.refuse(`${intent.file} could not be read`, null);
+    return false;
   }
 
   const done = checked(source, intent.patch, intent.expects, {
@@ -74,18 +116,37 @@ export async function write(spec: Spec, typed: Typed, port: Port): Promise<void>
   });
 
   if (done.ok === false) {
-    port.refuse(done.diagnostics[0]?.message ?? surprising(done.surprises));
-    return;
+    port.refuse(done.diagnostics[0]?.message ?? surprising(done.surprises), null);
+    return false;
   }
   if (done.ok === 'ask') {
-    // The dialog that offers a choice is the next phase's; until it exists, an
-    // edit that would move cells it did not name is one this editor declines to
-    // make silently.
-    port.refuse(surprising(done.surprises));
-    return;
+    port.refuse(surprising(done.surprises), null);
+    return false;
   }
 
   await port.put(intent.file, done.text);
+  return true;
+}
+
+/**
+ * The gesture, offered back as an override — where there is a cell to name.
+ *
+ * An address nothing is written at has nothing to except; the offer would be
+ * the editor inventing a cell for a reader who mistyped.
+ */
+function exception(
+  spec: Spec,
+  where: { sheet: SheetName; at: A1Addr },
+  typed: Typed,
+): Typed | null {
+  const sheet = spec.grid.sheets.find((one) => one.name === where.sheet);
+  if (sheet === undefined || cellAt(sheet, where.at) === null) return null;
+
+  // Built rather than passed through: what arrives here is the *message* that
+  // asked for the edit, and a message carries its own `kind`. Handing that back
+  // for the view to send again is how an override went out as an edit and came
+  // back refused by the rule it was the exception to.
+  return { sheet: typed.sheet, row: typed.row, col: typed.col, text: typed.text };
 }
 
 /**

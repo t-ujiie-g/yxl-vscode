@@ -1,6 +1,6 @@
 import { columnLabel } from '@yxl-vscode/units';
 import type { Asks, Reached, Showing } from './draw';
-import type { Drawing, Uncomputed } from './protocol';
+import type { Drawing, Refused, Uncomputed } from './protocol';
 
 /**
  * Everything the preview says around the grid: the parameters to turn, the tabs
@@ -11,14 +11,14 @@ import type { Drawing, Uncomputed } from './protocol';
  * file that draws a spreadsheet and writes prose is two files.
  */
 
-export /**
+/**
  * The parameters, as boxes to turn.
  *
  * One spec stands for several workbooks (`docs/spec.md` §7); this is how a
  * reader looks at the others without editing anything. Emptying a box gives the
  * parameter back to the spec's own default.
  */
-function parameters(drawing: Drawing, asks: Asks): HTMLElement {
+export function parameters(drawing: Drawing, asks: Asks): HTMLElement {
   const panel = document.createElement('details');
   panel.className = 'params';
   panel.open = drawing.params.some((param) => param.set);
@@ -50,14 +50,14 @@ function parameters(drawing: Drawing, asks: Asks): HTMLElement {
   return panel;
 }
 
-export /**
+/**
  * Why some cells show a formula rather than what it comes to.
  *
  * Said once, under the grid, rather than on every cell: a reader who sees one
  * formula among numbers is owed the reason, and the reason is the same for all
  * of them.
  */
-function uncomputed(said: Uncomputed): string {
+export function uncomputed(said: Uncomputed): string {
   if (said.kind === 'tooMany') {
     return `Nothing is computed here: this workbook holds more than ${said.limit} formulas, and computing some of them would make every total over the rest wrong.`;
   }
@@ -68,16 +68,45 @@ function uncomputed(said: Uncomputed): string {
   return `Not computed here: ${shown}${rest} — this preview does not model tables or workbook-defined names, so formulas that use them show as formulas.`;
 }
 
-export /** Why an edit did not happen, said where the edit was attempted. */
-function refusal(why: string): HTMLElement {
+/**
+ * Why an edit did not happen, said where the edit was attempted — and, where
+ * there is one, the way it could still be made.
+ *
+ * The way is `overrides:`, which is the exception said out loud
+ * (`docs/spec.md` §23). It is offered rather than taken: an escape hatch that
+ * opens on its own is not an escape hatch (ADR-007).
+ */
+export function refusal(refused: Refused, asks: Asks): HTMLElement {
   const said = document.createElement('p');
   said.className = 'refused';
-  said.textContent = why;
+  said.append(refused.why);
+
+  const typed = refused.override;
+  if (typed === null) return said;
+
+  // The reason is asked for here rather than in a box of the editor's, because
+  // the reader is looking at this sentence and because an override with no
+  // reason is the thing this construct exists to avoid (`docs/spec.md` §23).
+  const why = document.createElement('input');
+  why.type = 'text';
+  why.className = 'reason';
+  why.placeholder = 'why this cell differs (optional)';
+
+  const go = document.createElement('button');
+  go.type = 'button';
+  go.className = 'go';
+  go.textContent = 'Write it as an override';
+  go.addEventListener('click', () => asks.overrideWith(typed, why.value));
+  why.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') asks.overrideWith(typed, why.value);
+  });
+
+  said.append(' ', why, ' ', go);
   return said;
 }
 
-export /** What the cursor is reaching, said above the grid so the highlight is explained. */
-function reaching(reached: Reached): HTMLElement {
+/** What the cursor is reaching, said above the grid so the highlight is explained. */
+export function reaching(reached: Reached): HTMLElement {
   const said = document.createElement('p');
   said.className = 'reaching';
 
@@ -90,13 +119,13 @@ function reaching(reached: Reached): HTMLElement {
   return said;
 }
 
-export /**
+/**
  * Where each facet of the selected cell came from.
  *
  * Every line is a place in a file, so every line can be gone to — which is half
  * of the bidirectional jump this release is for.
  */
-function inspector(showing: Showing, asks: Asks): HTMLElement {
+export function inspector(showing: Showing, asks: Asks): HTMLElement {
   const panel = document.createElement('section');
   panel.className = 'inspector';
 

@@ -1,12 +1,12 @@
 import { reaches } from '@yxl-vscode/compile';
 import { type Engine, univerEngine } from '@yxl-vscode/evaluate';
 import { addrAt, cellOf, type FilePath, filePath } from '@yxl-vscode/units';
-import type { FromView } from '@yxl-vscode/webview/protocol';
+import type { FromView, Typed } from '@yxl-vscode/webview/protocol';
 import * as vscode from 'vscode';
 import { readBeside } from './files';
 import { inspect, knows, type Nodes, nodeAt } from './inspect';
 import { type Projected, project, redraw, type Window } from './project';
-import { type Typed, write } from './write';
+import { type Port, type Spec, write, writeOverride } from './write';
 
 /** Long enough that typing does not redraw on every keystroke, short enough to feel live. */
 const SETTLE = 150;
@@ -211,7 +211,13 @@ export class Preview {
     }
 
     if (asked.kind === 'edit') {
-      void this.write(asked);
+      const { kind, ...typed } = asked;
+      this.tried(this.write(typed));
+      return;
+    }
+
+    if (asked.kind === 'override') {
+      this.tried(this.overrideWith(asked));
       return;
     }
 
@@ -238,15 +244,64 @@ export class Preview {
 
   /** What a reader typed, handed to the write path with the world it needs. */
   private async write(typed: Typed): Promise<void> {
-    const grid = this.drawn?.grid;
-    const root = filePath(this.document.uri.fsPath);
-    if (grid === undefined || grid === null || root === null) return;
+    const spec = this.spec();
+    if (spec === null) {
+      this.refuse('this spec has not finished loading', null);
+      return;
+    }
 
-    await write({ root, grid, read: readBeside, params: this.params }, typed, {
+    await write(spec, typed, this.port());
+  }
+
+  /**
+   * The same edit, written as an override — after asking what it is for.
+   *
+   * The reason came with the asking, from a box beside the refusal itself: an
+   * override is an exception somebody made on purpose, and that is where they
+   * got to say so (`docs/spec.md` §23).
+   */
+  private async overrideWith(asked: Extract<FromView, { kind: 'override' }>): Promise<void> {
+    const spec = this.spec();
+    if (spec === null) {
+      this.refuse('this spec has not finished loading', null);
+      return;
+    }
+
+    const { kind, reason, ...typed } = asked;
+    await writeOverride(spec, typed, reason === '' ? undefined : reason, this.port());
+  }
+
+  /**
+   * Work that may fail, with the failure said rather than dropped.
+   *
+   * A rejected promise from a message handler goes nowhere anyone can see, and
+   * an edit that vanishes without a word is the worst thing this editor can do
+   * — the reader cannot tell it from one that was never sent.
+   */
+  private tried(work: Promise<void>): void {
+    void work.catch((failed: unknown) => {
+      this.refuse(failed instanceof Error ? failed.message : String(failed), null);
+    });
+  }
+
+  /** The spec as the write path needs it, or nothing where it is not readable. */
+  private spec(): Spec | null {
+    const drawn = this.drawn;
+    const root = filePath(this.document.uri.fsPath);
+    if (drawn?.grid == null || drawn.doc == null || root === null) return null;
+
+    return { root, doc: drawn.doc, grid: drawn.grid, read: readBeside, params: this.params };
+  }
+
+  private port(): Port {
+    return {
       text: (file) => this.textOf(file),
       put: (file, text) => this.put(file, text),
-      refuse: (why) => this.refuse(why),
-    });
+      refuse: (why, override) => this.refuse(why, override),
+      said: (what) => {
+        void this.panel.webview.postMessage({ kind: 'said', text: what });
+      },
+    };
   }
 
   /**
@@ -256,8 +311,12 @@ export class Preview {
    * edit is something they are in the middle of, and their eyes are on the cell
    * they typed into.
    */
-  private refuse(why: string): void {
-    void this.panel.webview.postMessage({ kind: 'refused', why: why.replace(/`/g, '') });
+  private refuse(why: string, override: Typed | null): void {
+    void this.panel.webview.postMessage({
+      kind: 'refused',
+      why: why.replace(/`/g, ''),
+      override,
+    });
   }
 
   /** The file as the reader has it: the buffer if it is open, the disk if not. */

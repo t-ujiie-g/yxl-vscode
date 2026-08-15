@@ -158,6 +158,20 @@ body {
   font: inherit;
 }
 
+.grid td.overridden::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  border: 4px solid transparent;
+  border-top-color: #d13438;
+  border-right-color: #d13438;
+}
+
+.grid td.overridden {
+  position: relative;
+}
+
 .grid td.selected {
   outline: 2px solid #107c41;
   outline-offset: -2px;
@@ -178,6 +192,15 @@ body {
   border-left: 3px solid var(--vscode-editorWarning-foreground);
   background: var(--vscode-inputValidation-warningBackground, transparent);
   color: var(--vscode-foreground);
+}
+
+.reason {
+  padding: 1px 4px;
+  border: 1px solid var(--vscode-input-border, var(--vscode-panel-border));
+  background: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+  font: inherit;
+  min-width: 18rem;
 }
 
 .reaching {

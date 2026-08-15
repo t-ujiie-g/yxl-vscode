@@ -84,7 +84,120 @@ function editFor(source: string, op: Op, site: Site, refuse: Refuse): Edit | und
 
     case 'add':
       return addition(source, op, site, refuse);
+
+    case 'insertSource':
+      return insertedBlock(source, op, site, refuse);
+
+    case 'addSource':
+      return addedBlock(source, op, site, refuse);
   }
+}
+
+/**
+ * A construct written into a sequence, on lines of its own.
+ *
+ * The lines arrive as the caller spelled them and are indented into place here,
+ * because where they land is this layer's business and what they say is not.
+ */
+function insertedBlock(
+  source: string,
+  op: Extract<Op, { op: 'insertSource' }>,
+  site: Site,
+  refuse: Refuse,
+): Edit | undefined {
+  const target = site.node;
+  if (target.kind !== 'seq') {
+    refuse(CODE.notASequence, `\`${formatPath(op.path)}\` is not a sequence`, target.span);
+    return undefined;
+  }
+  if (target.flow) {
+    refuse(CODE.flowNotSupported, insideFlow(op.path), target.span);
+    return undefined;
+  }
+
+  const neighbour = target.items[Math.min(op.index, target.items.length - 1)];
+  if (!neighbour) {
+    refuse(
+      CODE.emptySequence,
+      `\`${formatPath(op.path)}\` has no item to take its layout from`,
+      target.span,
+    );
+    return undefined;
+  }
+
+  const prefix = source.slice(lineStart(source, neighbour.span.start), neighbour.span.start);
+  const written = `${item(op.source, prefix)}${lineBreak(source)}`;
+
+  const append = op.index >= target.items.length;
+  const at = append
+    ? lineEnd(source, neighbour.span.end)
+    : aboveComments(source, lineStart(source, neighbour.span.start));
+  return { span: span(at, at), text: written };
+}
+
+/**
+ * A key with a construct under it, where the key is not there yet.
+ *
+ * Written at the end of the mapping, because a key that was never there has no
+ * place it belongs, and the end is where a reader looks for what was added.
+ */
+function addedBlock(
+  source: string,
+  op: Extract<Op, { op: 'addSource' }>,
+  site: Site,
+  refuse: Refuse,
+): Edit | undefined {
+  const target = site.node;
+  if (target.kind !== 'map') {
+    refuse(CODE.notAMapping, `\`${formatPath(op.path)}\` is not a mapping`, target.span);
+    return undefined;
+  }
+  if (target.flow) {
+    refuse(CODE.flowNotSupported, insideFlow(op.path), target.span);
+    return undefined;
+  }
+  if (target.entries.some((entry) => entry.key.value === op.key)) {
+    refuse(CODE.keyExists, `\`${op.key}\` is already there`, target.span);
+    return undefined;
+  }
+
+  const last = target.entries[target.entries.length - 1];
+  if (!last) {
+    refuse(
+      CODE.emptyMapping,
+      `\`${formatPath(op.path)}\` has no entry to take its layout from`,
+      target.span,
+    );
+    return undefined;
+  }
+
+  const prefix = source.slice(lineStart(source, last.span.start), last.span.start);
+  const step = stepOf(source);
+  const break_ = lineBreak(source);
+  const written = `${prefix}${renderScalar(op.key)}:${break_}${item(op.source, `${prefix}${step}`)}${break_}`;
+
+  const at = lineEnd(source, last.span.end);
+  return { span: span(at, at), text: written };
+}
+
+/** Lines as they go into the file: the first where it lands, the rest under it. */
+function item(source: string, prefix: string): string {
+  const [first, ...rest] = source.split('\n');
+  const under = prefix.endsWith('- ') ? `${prefix.slice(0, -2)}  ` : prefix;
+
+  return [`${prefix}${first ?? ''}`, ...rest.map((line) => `${under}${line}`)].join('\n');
+}
+
+/**
+ * How far this file indents one level.
+ *
+ * Read off the file rather than assumed, because a spec written with four
+ * spaces is not one this editor should start writing two into. Two where there
+ * is nothing to read it from, which is what every example uses.
+ */
+function stepOf(source: string): string {
+  const nested = /\n( +)\S/.exec(source);
+  return nested?.[1] ?? '  ';
 }
 
 /**

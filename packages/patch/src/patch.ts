@@ -110,9 +110,13 @@ function inverseOf(root: Node, op: Op, options: Options, into: Diagnostic[]): Op
     }
 
     case 'insert':
+    case 'insertSource':
       return { op: 'remove', path: [...op.path, op.index] };
 
     case 'add':
+      return { op: 'remove', path: [...op.path, op.key] };
+
+    case 'addSource':
       return { op: 'remove', path: [...op.path, op.key] };
 
     case 'remove': {

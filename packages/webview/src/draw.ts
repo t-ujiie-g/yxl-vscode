@@ -10,7 +10,15 @@ import {
   tabs,
   uncomputed,
 } from './panels';
-import type { Drawing, DrawnCell, DrawnMerge, DrawnSheet, Source } from './protocol';
+import type {
+  Drawing,
+  DrawnCell,
+  DrawnMerge,
+  DrawnSheet,
+  Refused,
+  Source,
+  Typed,
+} from './protocol';
 import { across, down, heightOf, type Where, wanted, widthOf } from './window';
 
 /** What the view is showing: the drawing, and the little it holds of its own. */
@@ -20,7 +28,8 @@ export interface Showing {
   readonly selected: { readonly row: number; readonly col: number } | null;
   readonly sources: readonly Source[] | null;
   readonly reached: Reached | null;
-  readonly refused: string | null;
+  readonly refused: Refused | null;
+  readonly said: string | null;
 }
 
 /** What the cursor in the text is reaching, and what to call it. */
@@ -42,6 +51,7 @@ export interface Asks {
   readonly setParam: (name: string, value: string) => void;
   readonly showWindow: (row: number, col: number) => void;
   readonly edit: (row: number, col: number, text: string) => void;
+  readonly overrideWith: (typed: Typed, reason: string) => void;
 }
 
 /**
@@ -125,9 +135,12 @@ function say(under: Element, showing: Showing, asks: Asks): void {
   const { drawing } = showing;
   under.replaceChildren();
 
-  if (showing.refused !== null) under.append(refusal(showing.refused));
+  if (showing.said !== null) under.append(note(showing.said));
+  if (showing.refused !== null) under.append(refusal(showing.refused, asks));
   if (drawing.uncomputed !== null) under.append(note(uncomputed(drawing.uncomputed)));
-  if (showing.reached !== null) under.append(reaching(showing.reached));
+  if (showing.reached !== null && showing.reached.says !== '') {
+    under.append(reaching(showing.reached));
+  }
   if (showing.sources !== null) under.append(inspector(showing, asks));
   if (drawing.diagnostics.length > 0) under.append(problems(drawing, asks));
 }

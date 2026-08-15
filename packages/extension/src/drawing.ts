@@ -241,6 +241,7 @@ function drawCells(
         filledFrom: filledFrom(cell),
         rich: cell?.rich?.map((run) => ({ text: run.text, style: run.look })) ?? null,
         computed,
+        overridden: cell?.provenance.value.kind === 'override',
         format: applies(layers, cell?.value ?? null, cell?.format ?? null),
         style,
       });

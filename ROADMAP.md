@@ -688,9 +688,13 @@ the inverse is unique, so no dialog is needed yet.
       whichever *file* wrote the cell, `$include`d or not. A leading `=` makes it
       a formula, as it does in Excel. The way in is a spreadsheet's: Enter, F2,
       a double-click, or simply typing; Enter commits and moves down.
-- [ ] `overrides:` as an explicit escape hatch, with the "manually edited" badge
+- [x] `overrides:` as an explicit escape hatch, with the "manually edited" badge
       and the optional `reason:` — writing the construct yxl v0.3.4 shipped
       (`docs/spec.md` §23), which Phase 2 already reads
+      **Shipped**: every refusal that is about a real cell now carries the way
+      out — a box to say why, and *Write it as an override* — which writes the
+      entry (creating `overrides:` where the spec has none) and marks the cell.
+      Never taken on its own: an escape hatch that opens by itself is the door.
 - [ ] Everything not `direct` is visibly, explainedly read-only — the editor is
       honest about what it cannot yet do
 - [ ] Prove ADR-011's preservation half: load a spec that uses opaque constructs,
@@ -1666,6 +1670,63 @@ this at a phase boundary rather than at the end.
   two serials either side of it, so the next reader knows it is deliberate.
 - A cell's own format — written, or the one its type takes — now wins over a
   band's. Both are requests about *that* cell; a band is something reaching it.
+
+### 2026-08-16 — Sweep after the override work (AGENTS.md §8)
+
+- **The wire's own shape was declared twice** — `Typed` in `protocol.ts` and
+  again in the extension — which is precisely the confusion that cost an hour:
+  a *message* was handed back where a *value* belonged, and its `kind` rode
+  along. One declaration now, in the package that owns the wire.
+- **The view's wiring had no tests, and that is where the bug lived.** It reads
+  the page and VS Code's bridge out of the global scope, so nothing could hold
+  it. It takes both as arguments now and returns the function that answers the
+  host — and the test that pins *an override goes out as an override, whatever
+  the offer arrived carrying* fails against the old code.
+- **A note with nothing to say said it anyway**: a cursor touching no node
+  produced *reaches no cell the grid holds*, a sentence with no subject, because
+  the host says "nothing" by sending an empty name. Nothing is said now.
+- Doc comments that the last split had left *after* their `export` are back in
+  front of it, and the README says what the escape hatch is rather than
+  promising it. 7 new tests, 923 in total.
+
+### 2026-08-15 — Phase 6: the exception, said out loud
+
+- **A refusal now carries the way out.** *`C3` is filled by the range anchored
+  at `C2`* is followed by a box to say why and **Write it as an override**,
+  which writes `at: Sales!C3`, the value or the formula, and the `reason` if one
+  was given. This is the answer to every refusal `direct` editing gives, and the
+  reason the refusals could be firm.
+- **The reason is asked for in the panel, not in a box of the editor's.** The
+  first attempt used VS Code's own input box, and pressing the button appeared
+  to do nothing: the question opened somewhere the reader was not looking, in a
+  path no test in this repo can reach. Asked where the sentence is, it is both
+  visible and testable.
+- **And then it still did nothing, for a better reason.** The offer handed back
+  to the view was the *message* that had asked for the edit — and a message
+  carries its own `kind`. Spread into the next one, `{ kind: 'override',
+  ...typed }` put `'edit'` back on top of `'override'`, so the override was sent
+  as an ordinary edit and came back refused by the very rule it was the
+  exception to. The offer is built from what was typed now, not passed through.
+  What found it was making every outcome say something: the same refusal coming
+  back twice is a sentence, where silence was not.
+- Every silent return in the write path is gone with it — a spec still loading,
+  a sheet name that will not parse, and a successful override, which lands at
+  the end of a file nobody is looking at and now says so. An edit that vanishes
+  without a word cannot be told from one that was never sent.
+- **It is offered, never taken.** An override that the editor reaches for by
+  itself is not an escape hatch, it is the door (ADR-007) — so it appears only
+  after an ordinary edit was refused, only where there is a cell it could name,
+  and only when the reader clicks it.
+- **The cell wears a corner mark afterwards**, and says *written as an override*
+  on hover: an exception somebody made on purpose is worth seeing without asking.
+- **The algebra grew the two ops it needed.** `overrides:` is a sequence of
+  mappings, and a value has a renderer while a construct does not — so
+  `insertSource` and `addSource` write *lines*, indented to the file's own step,
+  read off the file rather than assumed. Their inverse is `remove`, which is what
+  makes them safe to have (ADR-026).
+- A second override for a cell that has one is refused, naming which entry to
+  change: two answers to one question, where the compiler takes the last.
+  35 new tests, 907 in total.
 
 ### 2026-08-15 — Sweep of Phase 6 so far (AGENTS.md §8)
 

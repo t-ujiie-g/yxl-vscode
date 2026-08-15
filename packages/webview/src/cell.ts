@@ -32,6 +32,10 @@ export function drawCell(
   else drawn.append(...cell.rich.map(run));
 
   if (cell.formula !== null) drawn.title = told(cell);
+  if (cell.overridden) {
+    drawn.classList.add('overridden');
+    drawn.title = `${drawn.title === '' ? '' : `${drawn.title} — `}written as an override`;
+  }
   if (cell.computed?.kind === 'error') drawn.classList.add('problem');
   else if (cell.computed === null && cell.filledFrom !== null) drawn.classList.add('filled');
   apply(drawn, cell.style);
