@@ -1,6 +1,6 @@
 import { columnLabel } from '@yxl-vscode/units';
 import { drawCell } from './cell';
-import type { Drawing, DrawnCell, DrawnMerge, DrawnSheet, Source } from './protocol';
+import type { Drawing, DrawnCell, DrawnMerge, DrawnSheet, Source, Uncomputed } from './protocol';
 import { across, down, heightOf, type Where, wanted, widthOf } from './window';
 
 /** What the view is showing: the drawing, and the little it holds of its own. */
@@ -67,7 +67,7 @@ export function draw(into: HTMLElement, showing: Showing, asks: Asks): void {
     box.scrollLeft = kept.left;
   }
 
-  if (drawing.uncomputed.length > 0) into.append(note(uncomputed(drawing.uncomputed)));
+  if (drawing.uncomputed !== null) into.append(note(uncomputed(drawing.uncomputed)));
   if (showing.reached !== null) into.append(reaching(showing.reached));
   if (showing.sources !== null) into.append(inspector(showing, asks));
   if (drawing.diagnostics.length > 0) into.append(problems(drawing, asks));
@@ -148,9 +148,13 @@ function scroller(sheet: DrawnSheet, showing: Showing, asks: Asks): HTMLElement 
  * formula among numbers is owed the reason, and the reason is the same for all
  * of them.
  */
-function uncomputed(names: readonly string[]): string {
-  const shown = names.slice(0, 3).join(', ');
-  const rest = names.length > 3 ? `, and ${names.length - 3} more` : '';
+function uncomputed(said: Uncomputed): string {
+  if (said.kind === 'tooMany') {
+    return `Nothing is computed here: this workbook holds more than ${said.limit} formulas, and computing some of them would make every total over the rest wrong.`;
+  }
+
+  const shown = said.names.slice(0, 3).join(', ');
+  const rest = said.names.length > 3 ? `, and ${said.names.length - 3} more` : '';
 
   return `Not computed here: ${shown}${rest} — this preview does not model tables or workbook-defined names, so formulas that use them show as formulas.`;
 }

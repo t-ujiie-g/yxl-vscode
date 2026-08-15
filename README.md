@@ -19,10 +19,11 @@ not into a workbook.
 
 | | |
 |---|---|
-| **Draws** | Values, formulas as their own text, number formats, fonts, fills, borders, alignment, merges, column widths and row heights, hidden bands — for a spec assembled from `$include`, `csv:`, `json:`, `defs:`, `params:`, and `overrides:`. |
+| **Draws** | Values, number formats, fonts, fills, borders, alignment, merges, column widths and row heights, hidden bands, mixed-font rich text — for a spec assembled from `$include`, `csv:`, `json:`, `defs:`, `params:`, and `overrides:`. |
 | **Explains** | Select a cell and the inspector says where each part of it came from — the definition, the band, the file — and takes you to that line. Put the cursor on a definition and the cells it reaches light up. |
 | **Answers** | Turn a parameter in the preview and the whole spec redraws as that workbook, without touching the file. Problems the projection found are marked on the cell and listed under the grid. |
-| **Does not evaluate** | A formula shows as a formula. No cell here holds a computed number, and none ever will be written back. |
+| **Computes** | Formulas are evaluated for display — 500-odd Excel functions, `#DIV/0!` and the rest of Excel's error text included, and a `formulas:` range computed per cell the way Excel shifts a shared formula. A formula that names something this does not model (a table, a workbook-defined name) is **not computed at all**, and the sheet says so: a number that is not the workbook's number is worse than no number. |
+| **Never writes a computed value** | What was computed is display-only and is kept apart from what the spec holds, everywhere, so no edit can ever be about it. |
 | **Does not edit** | Nothing in the preview writes to the spec — that is the next phase. The text editor beside it is how you change a spec today. |
 
 ## Getting it

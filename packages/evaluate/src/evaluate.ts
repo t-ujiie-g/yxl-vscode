@@ -13,11 +13,12 @@ import type { Asked, Computed, Engine, Held, HeldSheet } from './engine';
 export interface Evaluation {
   readonly values: ReadonlyMap<string, Computed>;
   readonly stopped: boolean;
+  readonly limit: number;
   readonly unknown: readonly string[];
 }
 
 /** How a cell is named in an evaluation, across sheets. */
-export function computedAt(sheet: SheetName | string, at: A1Addr): string {
+export function computedAt(sheet: SheetName, at: A1Addr): string {
   return `${sheet}!${at}`;
 }
 
@@ -36,38 +37,54 @@ export function evaluate(grid: CompiledGrid, engine: Engine, limit = LIMIT): Eva
   const asked: Asked[] = [];
   for (const sheet of grid.sheets) gather(sheet, held, asked);
 
-  if (asked.length > limit) return { values: new Map(), stopped: true, unknown: [] };
+  if (asked.length > limit) return { values: new Map(), stopped: true, limit, unknown: [] };
 
   const doubted = doubt(asked, engine);
-  const values = new Map<string, Computed>();
+  const computed = new Map<SheetName, Map<A1Addr, Computed>>();
+  const answer = (one: Asked, said: Computed): void => {
+    const sheet = computed.get(one.sheet) ?? new Map<A1Addr, Computed>();
+    sheet.set(one.at, said);
+    computed.set(one.sheet, sheet);
+  };
+
   for (const one of asked) {
     const why = doubted.why.get(one.sheet);
-    if (why !== undefined) values.set(computedAt(one.sheet, one.at), { kind: 'unsupported', why });
+    if (why !== undefined) answer(one, { kind: 'unsupported', why });
   }
 
   const computable = asked.filter((one) => !doubted.why.has(one.sheet));
   for (let pass = 0; pass < PASSES; pass += 1) {
-    engine.holds(book(held, values));
+    engine.holds(book(held, computed));
 
     let settled = true;
     for (const one of computable) {
-      const before = values.get(computedAt(one.sheet, one.at));
+      const before = computed.get(one.sheet)?.get(one.at);
       const now = engine.compute(one);
       if (!same(before, now)) settled = false;
-      values.set(computedAt(one.sheet, one.at), now);
+      answer(one, now);
     }
 
-    if (settled) return { values, stopped: false, unknown: doubted.unknown };
+    if (settled) {
+      return { values: flat(computed), stopped: false, limit, unknown: doubted.unknown };
+    }
   }
 
   for (const one of computable) {
-    const key = computedAt(one.sheet, one.at);
-    if (values.get(key)?.kind === 'value') {
-      values.set(key, { kind: 'unsupported', why: 'this never settles — it may be circular' });
+    if (computed.get(one.sheet)?.get(one.at)?.kind === 'value') {
+      answer(one, { kind: 'unsupported', why: 'this never settles — it may be circular' });
     }
   }
 
-  return { values, stopped: false, unknown: doubted.unknown };
+  return { values: flat(computed), stopped: false, limit, unknown: doubted.unknown };
+}
+
+/** The answers as one map, which is how a consumer asks about one address. */
+function flat(computed: ReadonlyMap<SheetName, ReadonlyMap<A1Addr, Computed>>) {
+  const values = new Map<string, Computed>();
+  for (const [sheet, cells] of computed) {
+    for (const [at, said] of cells) values.set(computedAt(sheet, at), said);
+  }
+  return values;
 }
 
 /**
@@ -197,19 +214,22 @@ function gather(sheet: CompiledSheet, held: Map<SheetName, Held[]>, asked: Asked
 }
 
 /** The workbook as the engine is given it: what the spec wrote, and what settled. */
-function book(held: ReadonlyMap<SheetName, Held[]>, values: ReadonlyMap<string, Computed>) {
-  const sheets: HeldSheet[] = [...held].map(([name, cells]) => ({ name, cells: [...cells] }));
+function book(
+  held: ReadonlyMap<SheetName, Held[]>,
+  computed: ReadonlyMap<SheetName, ReadonlyMap<A1Addr, Computed>>,
+): HeldSheet[] {
+  return [...held].map(([name, cells]) => ({
+    name,
+    cells: [...cells, ...settled(computed.get(name))],
+  }));
+}
 
-  for (const [key, computed] of values) {
-    if (computed.kind !== 'value') continue;
-
-    const cut = key.lastIndexOf('!');
-    const sheet = sheets.find((one) => one.name === key.slice(0, cut));
-    if (sheet === undefined) continue;
-    (sheet.cells as Held[]).push({ at: key.slice(cut + 1) as A1Addr, value: computed.value });
+function settled(cells: ReadonlyMap<A1Addr, Computed> | undefined): Held[] {
+  const held: Held[] = [];
+  for (const [at, said] of cells ?? []) {
+    if (said.kind === 'value') held.push({ at, value: said.value });
   }
-
-  return sheets;
+  return held;
 }
 
 function same(before: Computed | undefined, now: Computed): boolean {

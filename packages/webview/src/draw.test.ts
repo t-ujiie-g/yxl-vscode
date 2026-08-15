@@ -52,7 +52,7 @@ function drawing(of: Partial<Drawing> = {}): Drawing {
     sheets: [sheet()],
     params: [],
     diagnostics: [],
-    uncomputed: [],
+    uncomputed: null,
     ...of,
   };
 }
@@ -281,12 +281,18 @@ describe('what the view says about a spec', () => {
   });
 
   it('says what it could not compute, once, under the grid', () => {
-    const said = shown({
-      drawing: drawing({ uncomputed: ['StoreMaster[name', 'target_revenue'] }),
-    });
+    const names = { kind: 'names', names: ['StoreMaster[name]', 'target_revenue'] } as const;
+    const said = shown({ drawing: drawing({ uncomputed: names }) });
 
-    expect(said.querySelector('.note')?.textContent).toContain('StoreMaster[name');
+    expect(said.querySelector('.note')?.textContent).toContain('StoreMaster[name]');
     expect(said.querySelector('.note')?.textContent).toContain('does not model tables');
+  });
+
+  it('says when a workbook was too large to compute any of', () => {
+    // Computing the part that fits would make every total over the rest wrong,
+    // so nothing is computed and the reader is told which it is.
+    const said = shown({ drawing: drawing({ uncomputed: { kind: 'tooMany', limit: 20000 } }) });
+    expect(said.querySelector('.note')?.textContent).toContain('more than 20000 formulas');
   });
 
   it('says nothing about computing when everything computed', () => {

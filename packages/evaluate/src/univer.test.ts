@@ -1,7 +1,7 @@
 import { compile } from '@yxl-vscode/compile';
 import { parse } from '@yxl-vscode/cst';
 import { load } from '@yxl-vscode/loader';
-import { type A1Addr, sheetName } from '@yxl-vscode/units';
+import { type A1Addr, type SheetName, sheetName } from '@yxl-vscode/units';
 import { describe, expect, it } from 'vitest';
 import { computedAt, evaluate } from './evaluate';
 import { univerEngine } from './univer';
@@ -13,10 +13,17 @@ function values(source: string) {
 }
 
 function at(source: string, addr: string, sheet = 'Sales') {
-  return values(source).get(computedAt(sheet, addr as A1Addr));
+  return values(source).get(computedAt(named(sheet), addr as A1Addr));
 }
 
 const SALES = 'sheets:\n  - name: Sales\n';
+
+/** A sheet name, branded the way the compiler would have branded it. */
+function named(name: string): SheetName {
+  const read = sheetName(name);
+  if (read === null) throw new Error(`not a sheet name: ${name}`);
+  return read;
+}
 
 describe('a workbook computed', () => {
   it('adds up a range of written cells', () => {
@@ -106,6 +113,11 @@ describe('a workbook computed', () => {
   });
 
   it('names a cell by its sheet, because two sheets have an A1', () => {
-    expect(computedAt(sheetName('Q3 data') ?? 'x', 'A1' as A1Addr)).toBe('Q3 data!A1');
+    expect(computedAt(named('Q3 data'), 'A1' as A1Addr)).toBe('Q3 data!A1');
+  });
+
+  it('reads a cell on a sheet whose name has to be quoted, as Excel writes it', () => {
+    const spec = `sheets:\n  - name: Q3 data\n    cells:\n      A1: 7\n  - name: Sales\n    cells:\n      A1: { formula: "'Q3 data'!A1*3" }\n`;
+    expect(at(spec, 'A1')).toEqual({ kind: 'value', value: 21 });
   });
 });
