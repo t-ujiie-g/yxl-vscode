@@ -1,5 +1,12 @@
 import type { CompiledGrid, CompiledSheet } from '@yxl-vscode/compile';
-import { type A1Addr, addrAt, cellOf, type SheetName, sheetName } from '@yxl-vscode/units';
+import {
+  type A1Addr,
+  addrAt,
+  cellOf,
+  qualified,
+  type SheetName,
+  sheetName,
+} from '@yxl-vscode/units';
 import type { Asked, Computed, Engine, Held, HeldSheet } from './engine';
 
 /**
@@ -15,11 +22,6 @@ export interface Evaluation {
   readonly stopped: boolean;
   readonly limit: number;
   readonly unknown: readonly string[];
-}
-
-/** How a cell is named in an evaluation, across sheets. */
-export function computedAt(sheet: SheetName, at: A1Addr): string {
-  return `${sheet}!${at}`;
 }
 
 /**
@@ -82,7 +84,7 @@ export function evaluate(grid: CompiledGrid, engine: Engine, limit = LIMIT): Eva
 function flat(computed: ReadonlyMap<SheetName, ReadonlyMap<A1Addr, Computed>>) {
   const values = new Map<string, Computed>();
   for (const [sheet, cells] of computed) {
-    for (const [at, said] of cells) values.set(computedAt(sheet, at), said);
+    for (const [at, said] of cells) values.set(qualified(sheet, at), said);
   }
   return values;
 }

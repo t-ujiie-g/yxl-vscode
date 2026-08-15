@@ -1,9 +1,8 @@
 import type { DataReader } from '@yxl-vscode/compile';
 import type { Op } from '@yxl-vscode/cst';
 import type { IncludeReader } from '@yxl-vscode/loader';
-import { type A1Addr, type FilePath, filePath, type SheetName } from '@yxl-vscode/units';
+import { type A1Addr, type FilePath, filePath, qualified, type SheetName } from '@yxl-vscode/units';
 import { describe, expect, it } from 'vitest';
-import { changedAt } from './diff';
 import { type Ctx, checked, type Expects, nothingChanges } from './verify';
 
 const read: IncludeReader & DataReader = () => null;
@@ -29,7 +28,7 @@ defs:
 function about(...cells: string[]): Expects {
   const claimed = cells.map((cell) => {
     const [sheet, at] = cell.split('!');
-    return changedAt(sheet as SheetName, at as A1Addr);
+    return qualified(sheet as SheetName, at as A1Addr);
   });
 
   return { cells: new Set(claimed), beyond: 'ask' };

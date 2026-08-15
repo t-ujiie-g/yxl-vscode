@@ -1,13 +1,12 @@
 import { reaches } from '@yxl-vscode/compile';
 import { type Engine, univerEngine } from '@yxl-vscode/evaluate';
-import { setFormula, setValue } from '@yxl-vscode/intent';
-import { addrAt, cellOf, type FilePath, filePath, sheetName } from '@yxl-vscode/units';
-import { type Change, checked } from '@yxl-vscode/verify';
+import { addrAt, cellOf, type FilePath, filePath } from '@yxl-vscode/units';
 import type { FromView } from '@yxl-vscode/webview/protocol';
 import * as vscode from 'vscode';
 import { readBeside } from './files';
 import { inspect, knows, type Nodes, nodeAt } from './inspect';
 import { type Projected, project, redraw, type Window } from './project';
+import { type Typed, write } from './write';
 
 /** Long enough that typing does not redraw on every keystroke, short enough to feel live. */
 const SETTLE = 150;
@@ -22,20 +21,6 @@ const FOLLOW = 80;
  * a second editor for it (ADR-001), and everything it shows is recomputed from
  * the file rather than kept in step with it.
  */
-/** What the reader typed, as the value it stands for. */
-function read(typed: string): string | number | boolean | null {
-  if (typed === '') return null;
-  if (typed === 'true' || typed === 'false') return typed === 'true';
-
-  const number = Number(typed);
-  return typed.trim() !== '' && Number.isFinite(number) ? number : typed;
-}
-
-function surprising(surprises: readonly Change[]): string {
-  const cells = surprises.filter((one) => one.kind === 'cell').length;
-  return `this would also change ${cells} cell${cells === 1 ? '' : 's'} it did not name, which needs the resolution dialog`;
-}
-
 export class Preview {
   private static open = new Map<string, Preview>();
 
@@ -251,57 +236,17 @@ export class Preview {
     });
   }
 
-  /**
-   * What a reader typed into a cell, as an edit to the spec.
-   *
-   * Three things have to agree before a byte moves: the gesture has to name one
-   * node of the spec (ADR-006), the checker has to find that the edit changed
-   * what it said it would (ADR-009), and the patch has to be one that can be
-   * taken back (ADR-026). Each refusal is a sentence, because an edit that
-   * quietly does nothing is worse than one that says why not.
-   */
-  private async write(asked: Extract<FromView, { kind: 'edit' }>): Promise<void> {
+  /** What a reader typed, handed to the write path with the world it needs. */
+  private async write(typed: Typed): Promise<void> {
     const grid = this.drawn?.grid;
     const root = filePath(this.document.uri.fsPath);
     if (grid === undefined || grid === null || root === null) return;
 
-    const sheet = sheetName(asked.sheet);
-    const at = addrAt({ col: asked.col, row: asked.row });
-    if (sheet === null) return;
-
-    const typed = asked.text;
-    const intent = typed.startsWith('=')
-      ? setFormula(grid, { sheet, at }, typed.slice(1), (file) => this.textOf(file))
-      : setValue(grid, { sheet, at }, read(typed), (file) => this.textOf(file));
-
-    if (intent.kind === 'refused') {
-      this.refuse(intent.why);
-      return;
-    }
-
-    const source = this.textOf(intent.file);
-    if (source === null) return;
-
-    const done = checked(source, intent.patch, intent.expects, {
-      root,
-      file: intent.file,
-      read: readBeside,
-      params: this.params,
+    await write({ root, grid, read: readBeside, params: this.params }, typed, {
+      text: (file) => this.textOf(file),
+      put: (file, text) => this.put(file, text),
+      refuse: (why) => this.refuse(why),
     });
-
-    if (done.ok === false) {
-      this.refuse(done.diagnostics[0]?.message ?? surprising(done.surprises));
-      return;
-    }
-    if (done.ok === 'ask') {
-      // The dialog that offers a choice is the next phase's; until it exists,
-      // an edit that would move cells it did not name is one this editor
-      // declines to make silently.
-      this.refuse(surprising(done.surprises));
-      return;
-    }
-
-    await this.put(intent.file, done.text);
   }
 
   /**

@@ -1667,6 +1667,33 @@ this at a phase boundary rather than at the end.
 - A cell's own format — written, or the one its type takes — now wins over a
   band's. Both are requests about *that* cell; a band is something reaching it.
 
+### 2026-08-15 — Sweep of Phase 6 so far (AGENTS.md §8)
+
+- **One spelling, three names.** `Sheet!A1` was built by `evaluate.computedAt`
+  and by `verify.changedAt` and read by `units.parseQualifiedAddr` — a
+  convention with a parser in one package and two writers in others. It lives in
+  `units` now, beside the parser that is its other half.
+- **Three walkers down a path.** `cst` had `locate` (the node *and* what holds
+  it), and `patch` and `intent` had a copy each of the short version. `cst`
+  exports `nodeAt` now and the copies are gone.
+- **The write path is out of the VS Code adapter.** It was inside `preview.ts`,
+  which is the one file no test can reach — so the riskiest code in the tree was
+  also the only code with no test. It takes a port of three functions now — read
+  a file, put a file, refuse with a reason — and has tests over a fake one:
+  values read the way the spec would read them, a formula from a leading `=`,
+  the edit landing in the `$include`d file, and every refusal leaving every file
+  alone.
+- **`draw.ts` had grown to 530 lines and two jobs**: drawing a spreadsheet and
+  writing prose. The prose — parameters, tabs, the inspector, the problems, the
+  notes — is `panels.ts`.
+- **The README said the preview does not edit**, which stopped being true with
+  the change above it. It now says what is edited and what is refused, which is
+  the honest pair.
+- Kept, with the reason recorded: `patch`'s history is still unused, because a
+  write to an open document goes on VS Code's own undo stack. It earns its place
+  when an edit has to be taken back against a file that has moved since — which
+  is what ADR-010 was written for. 8 new tests, 892 in total.
+
 ### 2026-08-15 — Phase 6: the first byte the grid writes
 
 Double-click a cell, type, press Enter, and the YAML changes. That sentence is

@@ -10,9 +10,9 @@ import {
   styleAt,
 } from '@yxl-vscode/compile';
 import type { Diagnostic } from '@yxl-vscode/diag';
-import { computedAt, type Evaluation } from '@yxl-vscode/evaluate';
+import type { Evaluation } from '@yxl-vscode/evaluate';
 import type { ScalarValue, SpecDoc } from '@yxl-vscode/spec';
-import { addrAt, cellOf } from '@yxl-vscode/units';
+import { addrAt, cellOf, qualified } from '@yxl-vscode/units';
 import type {
   Drawing,
   DrawnCell,
@@ -228,7 +228,7 @@ function drawCells(
       const layers = styleAt(sheet, addr);
       const style = resolve(layers);
 
-      const computed = evaluation?.values.get(computedAt(sheet.name, addr)) ?? null;
+      const computed = evaluation?.values.get(qualified(sheet.name, addr)) ?? null;
       const holds =
         cell !== null && (cell.value !== null || cell.formula !== null || cell.rich !== null);
       if (!holds && Object.keys(style).length === 0) continue;

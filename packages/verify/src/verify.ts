@@ -3,8 +3,8 @@ import { parse } from '@yxl-vscode/cst';
 import type { Diagnostic } from '@yxl-vscode/diag';
 import { type IncludeReader, load } from '@yxl-vscode/loader';
 import { applyPatch, type Patch } from '@yxl-vscode/patch';
-import type { FilePath } from '@yxl-vscode/units';
-import { type Change, changedAt, diff } from './diff';
+import { type FilePath, qualified } from '@yxl-vscode/units';
+import { type Change, diff } from './diff';
 
 /**
  * What a patch says it may change, and what to do about anything else.
@@ -102,7 +102,7 @@ export function checked(source: string, patch: Patch, expects: Expects, ctx: Ctx
 }
 
 function covers(expects: Expects, change: Change): boolean {
-  return change.kind === 'cell' && expects.cells.has(changedAt(change.sheet, change.at));
+  return change.kind === 'cell' && expects.cells.has(qualified(change.sheet, change.at));
 }
 
 interface Read {

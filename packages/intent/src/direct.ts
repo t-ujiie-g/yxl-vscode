@@ -4,11 +4,11 @@ import {
   cellAt,
   type FacetOrigin,
 } from '@yxl-vscode/compile';
-import { type Node, type Path, parse } from '@yxl-vscode/cst';
+import { type Node, nodeAt, type Path, parse } from '@yxl-vscode/cst';
 import { pathOf } from '@yxl-vscode/loader';
 import type { Patch } from '@yxl-vscode/patch';
-import type { A1Addr, FilePath, SheetName } from '@yxl-vscode/units';
-import { changedAt, type Expects } from '@yxl-vscode/verify';
+import { type A1Addr, type FilePath, qualified, type SheetName } from '@yxl-vscode/units';
+import type { Expects } from '@yxl-vscode/verify';
 
 /**
  * What a gesture on the grid came to.
@@ -58,7 +58,7 @@ export function setValue(
     kind: 'edit',
     file: found.file,
     patch: { ops: [{ op: 'set', path: found.path, value }] },
-    expects: { cells: new Set([changedAt(where.sheet, where.at)]), beyond: 'ask' },
+    expects: { cells: new Set([qualified(where.sheet, where.at)]), beyond: 'ask' },
   };
 }
 
@@ -95,7 +95,7 @@ export function setFormula(
     kind: 'edit',
     file: written.file,
     patch: { ops: [{ op: 'set', path: [...written.path, 'formula'], value: formula }] },
-    expects: { cells: new Set([changedAt(sheet.name, where.at)]), beyond: 'ask' },
+    expects: { cells: new Set([qualified(sheet.name, where.at)]), beyond: 'ask' },
   };
 }
 
@@ -178,32 +178,11 @@ function located(id: string, text: Text): Found {
   if (source === null) return refused(`\`${where.file}\` could not be read`);
 
   const { root } = parse(source, { file: where.file });
-  const node = root === null ? null : at(root, where.path);
+  const node = root === null ? null : nodeAt(root, where.path);
   if (node === null)
     return refused(`nothing is at \`${where.path.join('.')}\` in \`${where.file}\``);
 
   return { kind: 'found', file: where.file, path: where.path, node };
-}
-
-function at(root: Node, path: Path): Node | null {
-  let node: Node = root;
-
-  for (const step of path) {
-    if (typeof step === 'string') {
-      if (node.kind !== 'map') return null;
-      const entry = node.entries.find((one) => one.key.value === step);
-      if (entry === undefined) return null;
-      node = entry.value;
-      continue;
-    }
-
-    if (node.kind !== 'seq') return null;
-    const item = node.items[step];
-    if (item === undefined) return null;
-    node = item;
-  }
-
-  return node;
 }
 
 /** A file as a reader would name it, which is not the whole way there. */

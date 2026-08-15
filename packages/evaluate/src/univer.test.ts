@@ -1,9 +1,9 @@
 import { compile } from '@yxl-vscode/compile';
 import { parse } from '@yxl-vscode/cst';
 import { load } from '@yxl-vscode/loader';
-import { type A1Addr, type SheetName, sheetName } from '@yxl-vscode/units';
+import { type A1Addr, qualified, type SheetName, sheetName } from '@yxl-vscode/units';
 import { describe, expect, it } from 'vitest';
-import { computedAt, evaluate } from './evaluate';
+import { evaluate } from './evaluate';
 import { univerEngine } from './univer';
 
 function values(source: string) {
@@ -13,7 +13,7 @@ function values(source: string) {
 }
 
 function at(source: string, addr: string, sheet = 'Sales') {
-  return values(source).get(computedAt(named(sheet), addr as A1Addr));
+  return values(source).get(qualified(named(sheet), addr as A1Addr));
 }
 
 const SALES = 'sheets:\n  - name: Sales\n';
@@ -113,7 +113,7 @@ describe('a workbook computed', () => {
   });
 
   it('names a cell by its sheet, because two sheets have an A1', () => {
-    expect(computedAt(named('Q3 data'), 'A1' as A1Addr)).toBe('Q3 data!A1');
+    expect(qualified(named('Q3 data'), 'A1' as A1Addr)).toBe('Q3 data!A1');
   });
 
   it('reads a cell on a sheet whose name has to be quoted, as Excel writes it', () => {
