@@ -194,10 +194,14 @@ export type ToView = Drawing | Inspected | Highlighted;
 /**
  * Everything the view sends back.
  *
- * Questions and knobs, none of which touches the spec: *where did this cell
- * come from*, *take me there*, *draw it as though this parameter were something
- * else*, and *draw the part of the sheet I have scrolled to*. Nothing here
- * writes: the file on disk is untouched.
+ * Questions, knobs, and — since the phase that writes — one edit: *where did
+ * this cell come from*, *take me there*, *draw it as though this parameter were
+ * something else*, *draw the part of the sheet I have scrolled to*, and *put
+ * this in that cell*.
+ *
+ * `edit` carries what the reader typed, not what it means. A leading `=` makes
+ * it a formula, exactly as it does in Excel, and deciding that here would be
+ * deciding it twice.
  *
  * A sheet is named rather than numbered, here and in the answers: the spec may
  * have been read again since the view drew it, and a name is what the reader
@@ -212,6 +216,13 @@ export type FromView =
       readonly end: number;
     }
   | { readonly kind: 'setParam'; readonly name: string; readonly value: string }
+  | {
+      readonly kind: 'edit';
+      readonly sheet: string;
+      readonly row: number;
+      readonly col: number;
+      readonly text: string;
+    }
   | {
       readonly kind: 'window';
       readonly sheet: string;

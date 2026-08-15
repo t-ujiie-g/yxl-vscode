@@ -2,7 +2,7 @@ import { parse } from '@yxl-vscode/cst';
 import type { SpecDoc } from '@yxl-vscode/spec';
 import { type FilePath, filePath } from '@yxl-vscode/units';
 import { describe, expect, it } from 'vitest';
-import { nodeIdAt } from './id';
+import { nodeIdAt, pathOf } from './id';
 import { load } from './load';
 
 function file(name: string): FilePath {
@@ -29,6 +29,21 @@ describe('nodeIdAt', () => {
     // `$include` makes two files one document, and the first sheet of each is
     // `sheets/0` in its own.
     expect(nodeIdAt(FILE, ['sheets', 0])).not.toBe(nodeIdAt(OTHER, ['sheets', 0]));
+  });
+
+  it('gives the path back, which is how a node is edited', () => {
+    const path = ['sheets', 0, 'cells', 'A1'];
+    expect(pathOf(nodeIdAt(FILE, path))).toEqual({ file: FILE, path });
+  });
+
+  it('gives back a path with a step that holds a quote', () => {
+    const path = ['defs', 'styles', 'a","b'];
+    expect(pathOf(nodeIdAt(FILE, path))).toEqual({ file: FILE, path });
+  });
+
+  it('gives back nothing for an id it did not write', () => {
+    expect(pathOf('not an id' as never)).toBeNull();
+    expect(pathOf('{"file":"a"}' as never)).toBeNull();
   });
 
   it('keeps two nodes apart when a step holds the separator', () => {

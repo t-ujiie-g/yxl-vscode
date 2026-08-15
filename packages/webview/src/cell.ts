@@ -39,6 +39,56 @@ export function drawCell(
 }
 
 /**
+ * Type into a cell, over the top of what it shows.
+ *
+ * The box is seeded with what the *spec* holds — a formula as `=SUM(A1:A2)`,
+ * not as the number it came to — because that is what the reader is about to
+ * change. Enter sends it, Escape and clicking away leave the cell alone: a
+ * gesture that only *might* have been an edit is not one (ADR-001).
+ */
+export function typeInto(
+  cell: HTMLTableCellElement,
+  drawn: DrawnCell | undefined,
+  done: (text: string) => void,
+): void {
+  const box = document.createElement('input');
+  box.type = 'text';
+  box.className = 'typing';
+  box.value = written(drawn);
+
+  let sent = false;
+  const leave = (): void => {
+    box.remove();
+    cell.classList.remove('editing');
+  };
+
+  box.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      sent = true;
+      done(box.value);
+      leave();
+    }
+    if (event.key === 'Escape') leave();
+  });
+  box.addEventListener('blur', () => {
+    if (!sent) leave();
+  });
+
+  cell.classList.add('editing');
+  cell.append(box);
+  box.focus();
+  box.select();
+}
+
+/** What the spec holds for this cell, as a reader would type it. */
+function written(cell: DrawnCell | undefined): string {
+  if (cell === undefined) return '';
+  if (cell.formula !== null) return `=${cell.formula}`;
+
+  return cell.value === null ? '' : String(cell.value);
+}
+
+/**
  * One run of a cell written in runs, wearing the font that run alone was given.
  *
  * Excel keeps a rich string's fonts on the string, so a run's look is not a

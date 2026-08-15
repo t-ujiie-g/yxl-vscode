@@ -1,13 +1,14 @@
 import type { DataReader } from '@yxl-vscode/compile';
 import type { Op } from '@yxl-vscode/cst';
 import type { IncludeReader } from '@yxl-vscode/loader';
-import type { A1Addr, SheetName } from '@yxl-vscode/units';
+import { type A1Addr, type FilePath, filePath, type SheetName } from '@yxl-vscode/units';
 import { describe, expect, it } from 'vitest';
 import { changedAt } from './diff';
 import { type Ctx, checked, type Expects, nothingChanges } from './verify';
 
 const read: IncludeReader & DataReader = () => null;
-const ctx: Ctx = { file: 'spec.yxl.yaml', read };
+const SPEC_FILE = filePath('spec.yxl.yaml') ?? ('' as FilePath);
+const ctx: Ctx = { root: SPEC_FILE, file: SPEC_FILE, read };
 
 const SPEC = `sheets:
   - name: Sales

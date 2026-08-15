@@ -11,6 +11,7 @@ function asks(): Asks {
     reveal: vi.fn(),
     setParam: vi.fn(),
     showWindow: vi.fn(),
+    edit: vi.fn(),
   };
 }
 
@@ -215,6 +216,47 @@ describe('what the view asks for', () => {
     at(into, 2, 1)?.click();
 
     expect(on.select).toHaveBeenCalledWith(2, 1);
+  });
+
+  it('asks to put what was typed into the cell it was typed in', () => {
+    const on = asks();
+    const cells = [cell(1, 1, { value: 'APAC' })];
+    const into = shown({ drawing: drawing({ sheets: [sheet({ cells })] }) }, on);
+
+    at(into, 1, 1)?.dispatchEvent(new MouseEvent('dblclick'));
+    const box = into.querySelector('.typing');
+    if (!(box instanceof HTMLInputElement)) throw new Error('nothing to type into');
+
+    expect(box.value).toBe('APAC');
+    box.value = 'EMEA';
+    box.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+
+    expect(on.edit).toHaveBeenCalledWith(1, 1, 'EMEA');
+  });
+
+  it('seeds the box with the formula the spec holds, not what it came to', () => {
+    const on = asks();
+    const computed = { kind: 'value', value: 4150000 } as const;
+    const cells = [cell(1, 1, { formula: 'SUM(B1:B2)', computed })];
+    const into = shown({ drawing: drawing({ sheets: [sheet({ cells })] }) }, on);
+
+    at(into, 1, 1)?.dispatchEvent(new MouseEvent('dblclick'));
+    expect(into.querySelector<HTMLInputElement>('.typing')?.value).toBe('=SUM(B1:B2)');
+  });
+
+  it('leaves the cell alone when the typing is abandoned', () => {
+    const on = asks();
+    const into = shown({}, on);
+
+    at(into, 1, 1)?.dispatchEvent(new MouseEvent('dblclick'));
+    const box = into.querySelector('.typing');
+    if (!(box instanceof HTMLInputElement)) throw new Error('nothing to type into');
+
+    box.value = 'never mind';
+    box.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+
+    expect(on.edit).not.toHaveBeenCalled();
+    expect(into.querySelector('.typing')).toBeNull();
   });
 
   it('asks to show the sheet whose tab was clicked', () => {

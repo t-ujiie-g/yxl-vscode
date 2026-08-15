@@ -72,6 +72,9 @@ function start(): void {
     showWindow: (row, col) => {
       host.postMessage({ kind: 'window', sheet: named(), row, col });
     },
+    edit: (row, col, text) => {
+      host.postMessage({ kind: 'edit', sheet: named(), row, col, text });
+    },
   };
 
   window.addEventListener('message', (event: MessageEvent<ToView>) => {

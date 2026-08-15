@@ -1,5 +1,5 @@
 import { columnLabel } from '@yxl-vscode/units';
-import { drawCell } from './cell';
+import { drawCell, typeInto } from './cell';
 import type { Drawing, DrawnCell, DrawnMerge, DrawnSheet, Source, Uncomputed } from './protocol';
 import { across, down, heightOf, type Where, wanted, widthOf } from './window';
 
@@ -30,6 +30,7 @@ export interface Asks {
   readonly reveal: (source: Source) => void;
   readonly setParam: (name: string, value: string) => void;
   readonly showWindow: (row: number, col: number) => void;
+  readonly edit: (row: number, col: number, text: string) => void;
 }
 
 /**
@@ -388,6 +389,10 @@ function line(
       drawn.title = said.join('\n');
     }
     drawn.addEventListener('click', () => asks.select(row, col));
+    drawn.addEventListener('dblclick', () => {
+      asks.select(row, col);
+      typeInto(drawn, held.get(cellKey(col, row)), (text) => asks.edit(row, col, text));
+    });
     line.append(drawn);
   }
 

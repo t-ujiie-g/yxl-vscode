@@ -141,6 +141,23 @@ body {
   font-style: italic;
 }
 
+.grid td.editing {
+  position: relative;
+  padding: 0;
+}
+
+.typing {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  box-sizing: border-box;
+  border: 2px solid #107c41;
+  padding: 0 3px;
+  background: #ffffff;
+  color: #000000;
+  font: inherit;
+}
+
 .grid td.selected {
   outline: 2px solid #107c41;
   outline-offset: -2px;

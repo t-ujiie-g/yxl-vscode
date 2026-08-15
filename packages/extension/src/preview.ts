@@ -1,6 +1,8 @@
 import { reaches } from '@yxl-vscode/compile';
 import { type Engine, univerEngine } from '@yxl-vscode/evaluate';
-import { addrAt, cellOf } from '@yxl-vscode/units';
+import { setFormula, setValue } from '@yxl-vscode/intent';
+import { addrAt, cellOf, type FilePath, filePath, sheetName } from '@yxl-vscode/units';
+import { type Change, checked } from '@yxl-vscode/verify';
 import type { FromView } from '@yxl-vscode/webview/protocol';
 import * as vscode from 'vscode';
 import { readBeside } from './files';
@@ -20,6 +22,25 @@ const FOLLOW = 80;
  * a second editor for it (ADR-001), and everything it shows is recomputed from
  * the file rather than kept in step with it.
  */
+/** What the reader typed, as the value it stands for. */
+function read(typed: string): string | number | boolean | null {
+  if (typed === '') return null;
+  if (typed === 'true' || typed === 'false') return typed === 'true';
+
+  const number = Number(typed);
+  return typed.trim() !== '' && Number.isFinite(number) ? number : typed;
+}
+
+/** A refusal, said the way a message box says things. */
+function said(why: string): string {
+  return `yxl: ${why.replace(/`/g, '')}`;
+}
+
+function surprising(surprises: readonly Change[]): string {
+  const cells = surprises.filter((one) => one.kind === 'cell').length;
+  return `this would also change ${cells} cell${cells === 1 ? '' : 's'} it did not name, which needs the resolution dialog`;
+}
+
 export class Preview {
   private static open = new Map<string, Preview>();
 
@@ -209,6 +230,11 @@ export class Preview {
       return;
     }
 
+    if (asked.kind === 'edit') {
+      void this.write(asked);
+      return;
+    }
+
     if (asked.kind === 'setParam') {
       // Emptying the box gives the parameter back to the spec's own default.
       if (asked.value === '') this.params.delete(asked.name);
@@ -228,6 +254,82 @@ export class Preview {
       col: asked.col,
       sources: inspect(this.nodes, sheet, addrAt({ col: asked.col, row: asked.row })),
     });
+  }
+
+  /**
+   * What a reader typed into a cell, as an edit to the spec.
+   *
+   * Three things have to agree before a byte moves: the gesture has to name one
+   * node of the spec (ADR-006), the checker has to find that the edit changed
+   * what it said it would (ADR-009), and the patch has to be one that can be
+   * taken back (ADR-026). Each refusal is a sentence, because an edit that
+   * quietly does nothing is worse than one that says why not.
+   */
+  private async write(asked: Extract<FromView, { kind: 'edit' }>): Promise<void> {
+    const grid = this.drawn?.grid;
+    const root = filePath(this.document.uri.fsPath);
+    if (grid === undefined || grid === null || root === null) return;
+
+    const sheet = sheetName(asked.sheet);
+    const at = addrAt({ col: asked.col, row: asked.row });
+    if (sheet === null) return;
+
+    const typed = asked.text;
+    const intent = typed.startsWith('=')
+      ? setFormula(grid, { sheet, at }, typed.slice(1), (file) => this.textOf(file))
+      : setValue(grid, { sheet, at }, read(typed), (file) => this.textOf(file));
+
+    if (intent.kind === 'refused') {
+      void vscode.window.showWarningMessage(said(intent.why));
+      return;
+    }
+
+    const source = this.textOf(intent.file);
+    if (source === null) return;
+
+    const done = checked(source, intent.patch, intent.expects, {
+      root,
+      file: intent.file,
+      read: readBeside,
+      params: this.params,
+    });
+
+    if (done.ok === false) {
+      const why = done.diagnostics[0]?.message ?? surprising(done.surprises);
+      void vscode.window.showWarningMessage(said(why));
+      return;
+    }
+    if (done.ok === 'ask') {
+      // The dialog that offers a choice is the next phase's; until it exists,
+      // an edit that would move cells it did not name is one this editor
+      // declines to make silently.
+      void vscode.window.showWarningMessage(said(surprising(done.surprises)));
+      return;
+    }
+
+    await this.put(intent.file, done.text);
+  }
+
+  /** The file as the reader has it: the buffer if it is open, the disk if not. */
+  private textOf(file: FilePath): string | null {
+    const open = vscode.workspace.textDocuments.find((one) => one.uri.fsPath === file);
+    if (open !== undefined) return open.getText();
+
+    const here = filePath(this.document.uri.fsPath);
+    return here === null ? null : (readBeside(here, file)?.source ?? null);
+  }
+
+  /** The whole file, replaced — the patch already decided what changed in it. */
+  private async put(file: FilePath, text: string): Promise<void> {
+    const document = await vscode.workspace.openTextDocument(vscode.Uri.file(file));
+    const whole = new vscode.Range(
+      document.positionAt(0),
+      document.positionAt(document.getText().length),
+    );
+
+    const edit = new vscode.WorkspaceEdit();
+    edit.replace(document.uri, whole, text);
+    await vscode.workspace.applyEdit(edit);
   }
 
   /**
