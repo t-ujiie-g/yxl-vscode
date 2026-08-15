@@ -4,6 +4,7 @@ import { CODE } from './codes';
 import { type Ctx, filled, filledText, reject } from './ctx';
 import type { CompiledCell } from './grid';
 import type { FacetOrigin } from './provenance';
+import { layersOf, type StyleSource } from './style';
 
 /** An address after its parameters are substituted, or `null` with the reason reported. */
 export function address(ctx: Ctx, at: Templated<A1Addr>, node: SpecNode): A1Addr | null {
@@ -27,6 +28,7 @@ export function compileFacets(
   node: SpecNode & CellFacets,
   at: A1Addr,
   own: FacetOrigin,
+  through: StyleSource,
 ): CompiledCell {
   const { value, origin } = compileValue(ctx, node, own);
   const format = node.format === null ? null : String(filled(ctx, node.format, node).value);
@@ -38,6 +40,7 @@ export function compileFacets(
     formula: compileFormula(ctx, node),
     format,
     rich: compileRich(ctx, node),
+    style: layersOf(ctx, node, through, node.style, node.format),
     provenance: { value: origin, format: node.format === null ? null : own },
   };
 }

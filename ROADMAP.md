@@ -185,12 +185,10 @@ everything above (§8 Q8). Nothing below them may know which shell it is in.
 Compilation records, for every cell, *where each facet came from*:
 
 ```ts
-interface CellProvenance {
-  addr:   FullAddr;
-  value:  FacetOrigin;
-  format: FacetOrigin | null;
-  style:  StyleLayer[];          // stacked bottom-up; each layer names only
-}                                // the properties it contributed
+interface CellProvenance {       // the address is the cell's own; the style
+  value:  FacetOrigin;           // stack is asked for by address, not held
+  format: FacetOrigin | null;    // here — see the note below
+}
 
 type FacetOrigin =
   | { kind: 'literal';      node: NodeId }
@@ -203,10 +201,18 @@ type FacetOrigin =
   | { kind: 'empty' };
 ```
 
-Keeping `style` as a **layer list** rather than a resolved blob is what lets the
+Keeping the style a **layer list** rather than a resolved blob is what lets the
 inspector answer "this is bold because `defs.styles.header` says so, and blue
 because column B's band says so" — and lets the resolver generate one candidate
 per layer without inventing anything. (ADR-005)
+
+*As built*, that list is answered by `styleAt(sheet, addr)` rather than stored on
+the cell: a band reaches every address in its span, written or not, so a look is
+a property of an address and only a value is a property of a cell. A layer names
+what holds the properties **and** how they reach the cell (`through: 'column'`
+for a band, even when the properties live in a `defs.styles` entry), which is
+what makes §4.4's two candidates — edit the definition, or edit the band —
+distinguishable.
 
 Each origin carries an **editability class**, and that class alone drives the UI:
 
@@ -481,9 +487,15 @@ grid must understand to be drawn at all.
       **Shipped**: `literal`, `inline`, `defRef`, `param`, `formulaRange`, and
       `override` are all produced and tested. `external` waits for the reader
       below; the style layers wait for the item below that.
-- [ ] Style resolution as an ordered layer list — workbook default, column band,
+- [x] Style resolution as an ordered layer list — workbook default, column band,
       row band, named style (with `extends:` chains), inline, override — each
       layer recording only what it contributed
+      **Shipped**, minus the workbook default, which waits for `default_font` to
+      be modeled at all. A layer says both what holds the properties and *how it
+      reaches* the cell — a column band naming `header` gives the definition's
+      layers `through: 'column'` — because those are the two different answers
+      §4.4 has to offer. Asked by address rather than by cell (`styleAt`), since
+      a band reaches the cells in its span whether a spec wrote them or not.
 - [x] `params` substitution recorded as `param` provenance, not flattened away
       **Shipped**, following `docs/spec.md` §7 exactly: `$$` is a literal `$`, a
       value that is *exactly* one placeholder keeps the parameter's type, a
@@ -1309,6 +1321,26 @@ this at a phase boundary rather than at the end.
   for upstream as [yxl#68](https://github.com/t-ujiie-g/yxl/issues/68) — §23 is
   the only section of the reference with no worked example behind it, which
   means its compile path is not exercised there either.
+
+### 2026-08-15 — Phase 3: a look as the layers that made it
+- Style resolution lands as ADR-005 asked for it: an ordered list where each
+  layer holds **only the leaves it set**. 17 new tests, 545 in total.
+- **A style is flattened to its leaves** — `font.bold`, `border.left.color` —
+  named by the path that reaches them in a spec. That is what makes "layer per
+  attribute" (`docs/spec.md` §4, §6) a fold rather than a merge algorithm, and
+  what will let §4.4 ask "which layer supplies *this* property" without a search.
+  `border: all` is spread over the four sides on the way in, so no reader of a
+  border has to know the shorthand exists.
+- **A layer records how it reaches the cell, not just what holds it.** A column
+  band naming `header` gives the definition's layers with `through: 'column'`.
+  Without that, §4.4's two candidates — edit the definition, or edit the band —
+  are indistinguishable, which is the whole reason the list exists.
+- **The look belongs to an address, not to a cell.** A band reaches every cell
+  in its span, written or not, so `styleAt(sheet, addr)` answers where a stored
+  `CellProvenance.style` could not. §4.3's sketch is corrected to what was built.
+- The workbook-default layer is the one piece missing, and only because
+  `default_font` is not modeled yet: it is a document key this editor still
+  carries as opaque.
 
 ### 2026-08-15 — Phase 3: the grid's values, and where each of them came from
 - `compile` turns a `SpecDoc` into the grid: `cells:`, inline `data:`,
