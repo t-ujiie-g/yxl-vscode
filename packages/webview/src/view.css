@@ -1,0 +1,67 @@
+:root {
+  color-scheme: light dark;
+}
+
+body {
+  margin: 0;
+  padding: 0.5rem;
+  font-family: var(--vscode-font-family);
+  font-size: var(--vscode-font-size);
+  color: var(--vscode-foreground);
+}
+
+.tabs {
+  display: flex;
+  gap: 0.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.tab {
+  padding: 0.2rem 0.6rem;
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 3px 3px 0 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.tab.showing {
+  background: var(--vscode-tab-activeBackground);
+  border-bottom-color: transparent;
+  font-weight: 600;
+}
+
+.grid {
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.grid th,
+.grid td {
+  border: 1px solid var(--vscode-panel-border);
+  padding: 1px 4px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-align: left;
+  vertical-align: bottom;
+}
+
+.grid thead th,
+.grid tbody th {
+  background: var(--vscode-editorGroupHeader-tabsBackground);
+  color: var(--vscode-descriptionForeground);
+  font-weight: 400;
+  text-align: center;
+  min-width: 2rem;
+}
+
+.problems {
+  margin: 0.75rem 0 0;
+  padding-left: 1.2rem;
+  color: var(--vscode-errorForeground);
+}
+
+.note {
+  color: var(--vscode-descriptionForeground);
+}

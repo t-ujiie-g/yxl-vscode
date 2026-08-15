@@ -6,6 +6,13 @@
   "description": "The grid, the provenance inspector, and the resolution dialog.",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./protocol": "./src/protocol.ts"
+  },
+  "dependencies": {
+    "@yxl-vscode/compile": "workspace:*",
+    "@yxl-vscode/diag": "workspace:*",
+    "@yxl-vscode/spec": "workspace:*",
+    "@yxl-vscode/units": "workspace:*"
   }
 }

@@ -1,1 +1,1 @@
-export {};
+export { activate } from './extension';

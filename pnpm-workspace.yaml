@@ -1,3 +1,9 @@
 packages:
   - packages/*
   - tests
+
+# esbuild ships a platform binary and unpacks it from a postinstall script.
+# pnpm 11 refuses to run one unless it is named here, which is the right
+# default: a build script is arbitrary code from a dependency.
+allowBuilds:
+  esbuild: true
