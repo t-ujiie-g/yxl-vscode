@@ -1150,6 +1150,29 @@ and later, and the natural keys above may not reach it. Then this decision is
 the thing to supersede, with a consumer to check the choice against, which is
 what was missing both times before.
 
+### ADR-024 — The sheet is drawn as a workbook, not as a panel
+**Accepted.** The grid is painted white with black text and Excel's own gridline
+grey, in every editor theme. Everything around it — the tabs, the parameter
+boxes, the inspector, the problem list — keeps VS Code's theme.
+
+*Why:* a spec's colours are the *workbook's* colours, and the preview's one job
+is to say what Excel will show. On a dark surface it says something else: an
+unfilled cell reads dark where the workbook is white, a light fill loses the
+contrast it was chosen for, and `font: { color: "000000" }` — black, the most
+ordinary colour a spec can name — is invisible here and perfectly legible there.
+That is the preview showing something *false* rather than something less, which
+is the failure this project has already paid for once (the filled-formula
+formula, §11).
+
+*What it costs:* a white rectangle in a dark editor. That is a real cost and it
+is the point — the sheet is a different kind of thing from the panel it sits in,
+and looking like one is honest. Excel 365's own dark canvas is opt-in and
+inverts only *automatic* colours, which a spec's explicit colours are not, so
+matching the theme would not even match a dark-mode Excel.
+
+*What would reopen this:* a reader who wants the dark canvas, at which point it
+is a setting with two values, not a different default. Nobody has asked.
+
 ## 8. Open questions
 
 - **Q1 — `cells:` A1 keys and row insertion.** Inserting a row rewrites every
@@ -1545,6 +1568,30 @@ this at a phase boundary rather than at the end.
   two serials either side of it, so the next reader knows it is deliberate.
 - A cell's own format — written, or the one its type takes — now wins over a
   band's. Both are requests about *that* cell; a band is something reaching it.
+
+### 2026-08-15 — What the preview looked like, once it was looked at
+
+Three things the screenshots of a running preview showed, none of which a test
+in this repo could have.
+
+- **The sheet is now a workbook, not a panel (ADR-024).** It was inheriting the
+  editor's theme, so in a dark one an unfilled cell read dark where the workbook
+  is white, and a spec that names black — the most ordinary colour there is —
+  drew black on near-black. The preview's job is to say what Excel will show, so
+  the grid is white paper with black ink and Excel's gridline grey in every
+  theme, at 11pt in Calibri, and the chrome around it stays themed.
+- **The inspector answered one facet twice.** Two styles reaching a cell that
+  both `extends: base` made `base` supply `font.size` twice, and the panel listed
+  both — two claims about one fact, with nothing saying which the reader is
+  looking at. The layer a cell *wears* is the last one to give a leaf, and that
+  is the one named now; a facet the cell's own provenance answered keeps its
+  answer.
+- **The cursor did nothing in an `$include`d file**, which in a modular workbook
+  is every file worth putting a cursor in — `workbook.yxl.yaml` is twenty lines
+  of includes, and all the cells are in `sheets/*.yaml`. The preview follows a
+  cursor in any file the spec was read from now. Those are read from disk rather
+  than from the editor holding them, so an unsaved one says nothing until it is
+  saved, the same rule the spec's own file gets from its version.
 
 ### 2026-08-15 — Two defects the preview showed when it was looked at
 
