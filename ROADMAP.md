@@ -471,14 +471,34 @@ grid must understand to be drawn at all.
       refuses that we carry are enumerated so ADR-011's gap is measured.
 
 ### Phase 3 — L2/L3: compile and provenance
-- [ ] `compile`: SpecDoc → CompiledGrid, deterministic, no I/O
-- [ ] Per-facet provenance for value and format (§4.3)
+- [x] `compile`: SpecDoc → CompiledGrid, deterministic, no I/O
+      **Shipped** for everything that puts a value in a cell: `cells:`, inline
+      `data:`, `formulas:` ranges, and `overrides:` applied last. The projection
+      is **sparse** — a filled range stays a range and `cellAt` answers for the
+      cells it covers (**ADR-019**), because `at: D2:D1048576` is two words in a
+      spec and would be a million objects here.
+- [x] Per-facet provenance for value and format (§4.3)
+      **Shipped**: `literal`, `inline`, `defRef`, `param`, `formulaRange`, and
+      `override` are all produced and tested. `external` waits for the reader
+      below; the style layers wait for the item below that.
 - [ ] Style resolution as an ordered layer list — workbook default, column band,
       row band, named style (with `extends:` chains), inline, override — each
       layer recording only what it contributed
-- [ ] `params` substitution recorded as `param` provenance, not flattened away
+- [x] `params` substitution recorded as `param` provenance, not flattened away
+      **Shipped**, following `docs/spec.md` §7 exactly: `$$` is a literal `$`, a
+      value that is *exactly* one placeholder keeps the parameter's type, a
+      default may name another parameter, and a cycle stops at the text as
+      written. A placeholder nothing declares is left standing in the value and
+      reported — a grid drawn from a half-written spec should show `${region}`
+      where the value will be, not a blank.
 - [ ] Editability classification derived from origins (§4.3)
 - [ ] Impact estimation: given a definition node, which cells does it reach
+- [ ] Read `csv:` and `json:` `data:` through an injected reader, as `$include`
+      already is, and record the cells as `external` provenance. Until then a
+      block naming a file is reported rather than drawn, which is honest but
+      leaves a hole in the middle of the first release's grid — so this lands
+      before Phase 4 ships. Path resolution differs from `$include`'s: a `data:`
+      path resolves against the spec passed to `yxl build` (`docs/spec.md` §9).
 
 ### Phase 4 — Read-only preview  ← **first release**
 The design note's judgement was that this alone solves most of the problem, and
@@ -914,6 +934,26 @@ machine-readable model dump from the compiler (an upstream ask) or a comparison
 through `yxl extract`'s output (lossy, §22). Neither is worth building until the
 two disagree in a way a verdict cannot catch; §9 R1 carries the residue.
 
+### ADR-019 — The projection is sparse; a filled range stays a range
+**Accepted.** `CompiledGrid` holds what a spec *wrote*: the cells it names, the
+`formulas:` ranges as ranges, and the bands as bands. `cellAt(sheet, addr)`
+answers for an address by consulting the written cells first and the ranges
+after, so no consumer has to know which of them holds the one it asked about.
+
+*Why:* `at: D2:D1048576` is two words in a spec and one stored formula in the
+workbook (ECMA-376's shared formula, which is the construct's whole point). A
+projection that multiplied it out would turn a small file into a million objects
+before the grid drew a single row, and would do it again on every keystroke
+(§9 R5). Bands are the same shape of problem — one line reaching a whole column
+— and get the same answer.
+
+*The consequence worth naming:* provenance for a cell inside a range is computed
+when it is asked for rather than stored, which is why `FacetOrigin`'s
+`formulaRange` carries the anchor and the offset instead of a per-cell node.
+A written cell wins over a range it sits inside, which is exactly what makes an
+`overrides:` entry able to take one row out of a filled column (`docs/spec.md`
+§23, ADR-007) without the range losing its shape.
+
 ## 8. Open questions
 
 - **Q1 — `cells:` A1 keys and row insertion.** Inserting a row rewrites every
@@ -1269,6 +1309,35 @@ this at a phase boundary rather than at the end.
   for upstream as [yxl#68](https://github.com/t-ujiie-g/yxl/issues/68) — §23 is
   the only section of the reference with no worked example behind it, which
   means its compile path is not exercised there either.
+
+### 2026-08-15 — Phase 3: the grid's values, and where each of them came from
+- `compile` turns a `SpecDoc` into the grid: `cells:`, inline `data:`,
+  `formulas:` ranges, and `overrides:` applied last, with per-facet provenance
+  on every one. 40 new tests, 517 in total. Every upstream spec now **compiles**
+  with no diagnostic but the one saying a `csv:` file was not read.
+- **ADR-019: the projection is sparse.** A `formulas:` range stays a range and
+  `cellAt` answers for the cells it covers. `at: D2:D1048576` is two words in a
+  spec and would have been a million objects here, rebuilt on every keystroke —
+  and the same argument covers bands. The write-up is short because the
+  alternative fails on a number, not on a judgement.
+- **Provenance is the point, not a decoration.** `literal`, `inline`, `defRef`,
+  `param`, `formulaRange`, and `override` all get produced and tested. The one
+  that shows why §4.3 insisted on *per facet*: an override that writes a value
+  leaves the format where it was, so a cell reads `override` for one and
+  `literal` for the other, and a resolver can offer the right change for each.
+- **Parameters are substituted here, not in the loader**, which is what lets the
+  origin say `param` with the template and the names it used. `docs/spec.md` §7
+  is followed to the letter, including the rule that a value which is *exactly*
+  one placeholder keeps the parameter's type. A name nothing declares is left
+  standing in the text and reported — showing `${region}` beats showing a blank.
+- **A `csv:` block is reported, not drawn.** The core may not open files
+  (ADR-004) and no reader is injected yet; that is now its own Phase 3 item,
+  ahead of Phase 4, because a first release whose grid has a hole where the data
+  was is not a first release.
+- **A filled range's formula is not shifted per cell.** §8 Q2 already says
+  relative-reference translation waits for the parser Phase 5 brings; until then
+  the provenance carries the anchor and the offset, which is what a UI needs to
+  say "filled from D2" honestly.
 
 ### 2026-08-15 — pnpm 11
 - The bump the sweep left for its own change: **pnpm 10.27.0 → 11.21.0**, which

@@ -6,6 +6,7 @@
   "description": "The corpus harnesses of ROADMAP §5 — no product code, only the tiers that need real files.",
   "type": "module",
   "dependencies": {
+    "@yxl-vscode/compile": "workspace:*",
     "@yxl-vscode/cst": "workspace:*",
     "@yxl-vscode/loader": "workspace:*",
     "@yxl-vscode/spec": "workspace:*",

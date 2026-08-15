@@ -1,4 +1,5 @@
 import type { Brand } from './brand';
+import { columnIndex, endpoints } from './grid';
 
 /** What a `columns:` band selects: one column label or an inclusive range — `B`, `D-F`. */
 export type ColumnSpan = Brand<string, 'ColumnSpan'>;
@@ -25,16 +26,4 @@ export function parseRowSpan(text: string): RowSpan | null {
   if (last === null) return text as RowSpan;
   if (!ROW.test(last) || Number(last) < Number(first)) return null;
   return text as RowSpan;
-}
-
-/** A selector splits on its *first* `-`, so `B-` has an empty end and is refused. */
-function endpoints(text: string): [string, string | null] {
-  const dash = text.indexOf('-');
-  return dash < 0 ? [text, null] : [text.slice(0, dash), text.slice(dash + 1)];
-}
-
-function columnIndex(label: string): number {
-  let index = 0;
-  for (const letter of label) index = index * 26 + (letter.charCodeAt(0) - 64);
-  return index;
 }
