@@ -1,5 +1,5 @@
 import type { Diagnostic } from '@yxl-vscode/diag';
-import type { CellType, RichRun, ScalarValue } from '@yxl-vscode/spec';
+import type { CellType, ScalarValue, StyleValues } from '@yxl-vscode/spec';
 import type { A1Addr, NodeId, Rect } from '@yxl-vscode/units';
 import type { CellProvenance } from './provenance';
 import type { StyleLayer } from './style';
@@ -62,13 +62,25 @@ export interface CompiledFill {
  * contributes is the band's, so how the cell finally looks is `styleAt` — an
  * address has a look whether a cell was written there or not.
  */
+/**
+ * One run of a `rich:` cell: a piece of its text, and the look that piece alone
+ * wears (`docs/spec.md` §3).
+ *
+ * A run's font is a look in its own right rather than a layer over the cell's:
+ * Excel keeps it on the string, and nothing else in the workbook can reach it.
+ */
+export interface CompiledRun {
+  readonly text: string;
+  readonly look: StyleValues;
+}
+
 export interface CompiledCell {
   readonly at: A1Addr;
   readonly value: ScalarValue;
   readonly type: CellType | null;
   readonly formula: string | null;
   readonly format: string | null;
-  readonly rich: readonly RichRun[] | null;
+  readonly rich: readonly CompiledRun[] | null;
   readonly style: readonly StyleLayer[];
   readonly provenance: CellProvenance;
 }

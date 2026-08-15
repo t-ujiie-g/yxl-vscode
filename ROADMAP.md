@@ -627,12 +627,15 @@ value, and it carries none of the write-back risk.
       the wire names sheets, and a test asserts no id reaches the view.
       `id.test.ts` is unchanged, because identity is unchanged.
 
-- [ ] **Draw `rich:` cells.** A cell of mixed-font runs loads and compiles, and
+- [x] **Draw `rich:` cells.** A cell of mixed-font runs loads and compiles, and
       then the drawing drops it: `DrawnCell` has no runs, so the preview shows an
       empty cell where the workbook will hold text. Found by looking at
       `styling.yxl.yaml` in the preview. The runs carry a font each, which is the
       same flat style vocabulary the view already wears — the gap is the wire,
       not the model.
+      **Shipped**: a run compiles to its text and the flat leaves of its own
+      font — the same vocabulary a style layer speaks, so the view draws a run
+      the way it draws a cell — and the cell is drawn as one `<span>` per run.
 
 ### Phase 5 — Evaluated preview
 - [ ] `evaluate` seam: `CompiledGrid` → computed values, display only
@@ -1568,6 +1571,22 @@ this at a phase boundary rather than at the end.
   two serials either side of it, so the next reader knows it is deliberate.
 - A cell's own format — written, or the one its type takes — now wins over a
   band's. Both are requests about *that* cell; a band is something reaching it.
+
+### 2026-08-15 — Rich text is drawn
+
+- **A `rich:` cell is no longer an empty cell.** The runs loaded and compiled all
+  along; the drawing had nowhere to put them, so `styling.yxl.yaml`'s A8 showed
+  nothing where the workbook holds *Figures are `unaudited` as of Q3.* A run now
+  compiles to its text and the flat leaves of its own font — the same vocabulary
+  a style layer speaks — and the view draws a `<span>` per run through the same
+  code that dresses a cell.
+- A run's font is the run's own, not a layer over the cell's: Excel keeps it on
+  the string, and nothing else in the workbook can reach it. That is why the runs
+  arrive resolved rather than as another `StyleLayer`, which would have implied a
+  resolution that does not happen.
+- A rich cell holds no `value`, and the inspector already said the right thing
+  about it — `written at \`A8\`` — because a cell holding runs was already
+  counted as a cell that holds something.
 
 ### 2026-08-15 — What the preview looked like, once it was looked at
 

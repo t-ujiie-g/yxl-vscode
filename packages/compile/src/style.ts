@@ -127,7 +127,8 @@ const EDGES = ['left', 'right', 'top', 'bottom'] as const;
 type Setting = { -readonly [K in StyleProperty]?: StyleValues[K] };
 
 /** A style as the leaves it sets, with `border: all` spread over the four sides. */
-function flatten(ctx: Ctx, style: Style, node: SpecNode): StyleValues {
+/** A style as the leaves it sets, with every template in it resolved. */
+export function flatten(ctx: Ctx, style: Style, node: SpecNode): StyleValues {
   const values: Setting = {};
 
   function set<K extends StyleProperty>(key: K, value: StyleValues[K] | null | undefined): void {

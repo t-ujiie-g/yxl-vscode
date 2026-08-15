@@ -1,8 +1,8 @@
-import type { CellFacets, RichRun, ScalarValue, SpecNode, Templated } from '@yxl-vscode/spec';
+import type { CellFacets, ScalarValue, SpecNode, Style, Templated } from '@yxl-vscode/spec';
 import { type A1Addr, parseA1Addr } from '@yxl-vscode/units';
 import { CODE } from './codes';
 import { type Ctx, filled, reject, text } from './ctx';
-import type { CompiledCell } from './grid';
+import type { CompiledCell, CompiledRun } from './grid';
 import type { FacetOrigin } from './provenance';
 import {
   DATE_FORMAT,
@@ -11,7 +11,7 @@ import {
   dateSerial,
   durationSerial,
 } from './serial';
-import { layersOf, type StyleSource } from './style';
+import { flatten, layersOf, type StyleSource } from './style';
 
 /** An address after its parameters are substituted, or `null` with the reason reported. */
 export function address(ctx: Ctx, at: Templated<A1Addr>, node: SpecNode): A1Addr | null {
@@ -142,7 +142,22 @@ function compileFormula(ctx: Ctx, node: SpecNode & CellFacets): string | null {
   return text(ctx, node.formula.body, node);
 }
 
-function compileRich(ctx: Ctx, node: SpecNode & CellFacets): readonly RichRun[] | null {
+function compileRich(ctx: Ctx, node: SpecNode & CellFacets): readonly CompiledRun[] | null {
   if (node.rich === null) return null;
-  return node.rich.map((run) => ({ ...run, text: text(ctx, run.text, node) }));
+
+  return node.rich.map((run) => ({
+    text: text(ctx, run.text, node),
+    look: flatten(ctx, { ...NO_STYLE, font: run.font }, node),
+  }));
 }
+
+/** A run sets a font and nothing else, so everything a style could say is absent. */
+const NO_STYLE: Style = {
+  extends: null,
+  font: null,
+  fill: null,
+  border: null,
+  align: null,
+  protection: null,
+  format: null,
+};

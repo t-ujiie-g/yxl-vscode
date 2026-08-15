@@ -22,6 +22,7 @@ function cell(row: number, col: number, of: Partial<DrawnCell> = {}): DrawnCell 
     formula: null,
     filledFrom: null,
     format: null,
+    rich: null,
     style: {},
     ...of,
   };

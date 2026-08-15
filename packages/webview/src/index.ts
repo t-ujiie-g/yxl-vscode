@@ -9,6 +9,7 @@ export type {
   DrawnCell,
   DrawnDiagnostic,
   DrawnMerge,
+  DrawnRun,
   DrawnSheet,
   FromView,
   Highlighted,
