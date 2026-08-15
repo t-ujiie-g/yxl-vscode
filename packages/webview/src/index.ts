@@ -58,6 +58,9 @@ function start(): void {
     reveal: (source) => {
       host.postMessage({ kind: 'reveal', file: source.file, start: source.start, end: source.end });
     },
+    setParam: (name, value) => {
+      host.postMessage({ kind: 'setParam', name, value });
+    },
   };
 
   window.addEventListener('message', (event: MessageEvent<ToView>) => {

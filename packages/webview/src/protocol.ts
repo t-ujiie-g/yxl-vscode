@@ -13,7 +13,21 @@ export interface Drawing {
   readonly kind: 'drawing';
   readonly file: string;
   readonly sheets: readonly DrawnSheet[];
+  readonly params: readonly DrawnParam[];
   readonly diagnostics: readonly DrawnDiagnostic[];
+}
+
+/**
+ * One declared parameter, as it stands in this preview.
+ *
+ * `set` is true when the reader has given it a value here rather than letting
+ * the spec's default stand — one spec drawn as several workbooks, which is what
+ * `--set` does on the command line (`docs/spec.md` §7).
+ */
+export interface DrawnParam {
+  readonly name: string;
+  readonly value: string;
+  readonly set: boolean;
 }
 
 /**
@@ -128,8 +142,10 @@ export type ToView = Drawing | Inspected | Highlighted;
 /**
  * Everything the view sends back.
  *
- * Two questions, and neither of them changes anything: *where did this cell
- * come from*, and *take me there*. A read-only preview asks nothing else.
+ * Two questions and one knob, and none of them touches the spec: *where did
+ * this cell come from*, *take me there*, and *draw it as though this parameter
+ * were something else*. Setting a parameter changes what is drawn, not what is
+ * written — the file on disk is untouched.
  */
 export type FromView =
   | { readonly kind: 'inspect'; readonly sheet: number; readonly row: number; readonly col: number }
@@ -138,7 +154,8 @@ export type FromView =
       readonly file: string;
       readonly start: number;
       readonly end: number;
-    };
+    }
+  | { readonly kind: 'setParam'; readonly name: string; readonly value: string };
 
 /**
  * Something the projection could not do, as the view lists it.

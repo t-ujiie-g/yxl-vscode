@@ -1,5 +1,6 @@
 import type { Param, ScalarValue } from '@yxl-vscode/spec';
 import type { ParamName } from '@yxl-vscode/units';
+import { infer } from './table';
 
 /**
  * What a `${...}` came out as (`docs/spec.md` §7).
@@ -87,10 +88,19 @@ export function fill(text: string, lookup: Lookup): Filled {
  * A default may name another parameter (`title: "${quarter} ${region}"`), so
  * resolution is depth-first with the chain carried along: a cycle stops at the
  * text as written and is named in `cycles` for the caller to report.
+ *
+ * `set` is what a caller wants the parameters to be — the preview's switcher,
+ * and `yxl build --set` on the command line. A name it holds that the spec does
+ * not declare comes back in `unknown`, because a typo there should say so
+ * rather than quietly do nothing.
  */
-export function resolveParams(declared: readonly Param[]): {
+export function resolveParams(
+  declared: readonly Param[],
+  set: ReadonlyMap<string, string> = new Map(),
+): {
   readonly values: ReadonlyMap<string, ScalarValue>;
   readonly cycles: readonly string[];
+  readonly unknown: readonly string[];
 } {
   const values = new Map<string, ScalarValue>();
   const cycles: string[] = [];
@@ -98,6 +108,15 @@ export function resolveParams(declared: readonly Param[]): {
   function resolve(param: Param, chain: readonly string[]): ScalarValue {
     const known = values.get(param.name);
     if (known !== undefined) return known;
+
+    const given = set.get(param.name);
+    if (given !== undefined) {
+      // A given value replaces the default outright: it is what the caller
+      // wants the parameter to be, not a template to fill in.
+      const read = infer(given);
+      values.set(param.name, read);
+      return read;
+    }
 
     if (chain.includes(param.name)) {
       cycles.push([...chain, param.name].join(' → '));
@@ -118,5 +137,7 @@ export function resolveParams(declared: readonly Param[]): {
   }
 
   for (const param of declared) resolve(param, []);
-  return { values, cycles };
+
+  const unknown = [...set.keys()].filter((name) => !declared.some((one) => one.name === name));
+  return { values, cycles, unknown };
 }

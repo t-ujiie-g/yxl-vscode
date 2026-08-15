@@ -165,7 +165,20 @@ function fieldsOf(
 
 function csvField(text: string, quoted: boolean): ScalarValue {
   if (quoted) return text;
-  if (text === '') return null;
+  return text === '' ? null : infer(text);
+}
+
+/**
+ * Text as the scalar it looks like.
+ *
+ * The reading a bare CSV field gets and the reading a `--set` value gets are
+ * the same one (`docs/spec.md` §7, §9), so they are the same function: `--set
+ * rate=0.15` stays a number, and so does a `0.15` in a column of them.
+ *
+ * Narrower than YAML's core schema — no `0x1F`, no `.inf`, no `True` — because
+ * neither of these is a YAML document.
+ */
+export function infer(text: string): ScalarValue {
   if (text === 'true') return true;
   if (text === 'false') return false;
   return NUMBER.test(text) ? Number(text) : text;

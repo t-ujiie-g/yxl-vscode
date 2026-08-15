@@ -63,7 +63,7 @@ describe.each(documents)('$name', (sample) => {
     const { doc } = read(sample);
     if (doc === null) throw new Error('did not load');
 
-    const drawn = compile(doc, includeReader);
+    const drawn = compile(doc, { read: includeReader });
     expect(drawn.diagnostics).toEqual([]);
     expect(drawn.sheets.length).toBeGreaterThan(0);
   });

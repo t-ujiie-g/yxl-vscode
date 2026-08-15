@@ -91,6 +91,38 @@ describe('a drawn spec', () => {
     expect(at(source, 3, 3)).toMatchObject({ formula: 'B2*0.05', filledFrom: 'C2' });
   });
 
+  it('draws the spec as the parameters the reader set, not only as its defaults', () => {
+    const source = `params:\n  region: APAC\n${SALES}    cells:\n      A1: "\${region}"\n`;
+    const set = new Map([['region', 'EMEA']]);
+
+    expect(project(source, FILE, read).drawing.sheets[0]?.cells[0]?.value).toBe('APAC');
+    expect(project(source, FILE, read, set).drawing.sheets[0]?.cells[0]?.value).toBe('EMEA');
+  });
+
+  it('reads a set value as the scalar it looks like, as `--set` does', () => {
+    const source = `params:\n  rate: 0.085\n${SALES}    cells:\n      A1: "\${rate}"\n`;
+    const set = new Map([['rate', '0.15']]);
+
+    expect(project(source, FILE, read, set).drawing.sheets[0]?.cells[0]?.value).toBe(0.15);
+  });
+
+  it('lists the parameters a reader may turn, and which are turned', () => {
+    const source = `params:\n  region: APAC\n  quarter: Q3\n${SALES}    cells:\n      A1: x\n`;
+    const { drawing } = project(source, FILE, read, new Map([['region', 'EMEA']]));
+
+    expect(drawing.params).toEqual([
+      { name: 'region', value: 'EMEA', set: true },
+      { name: 'quarter', value: 'Q3', set: false },
+    ]);
+  });
+
+  it('says so when a set parameter is not one the spec declares', () => {
+    const source = `params:\n  region: APAC\n${SALES}    cells:\n      A1: x\n`;
+    const { diagnostics } = project(source, FILE, read, new Map([['reigon', 'EMEA']]));
+
+    expect(diagnostics.map((one) => one.code)).toEqual(['compile.no-such-param']);
+  });
+
   it('marks the cells a diagnostic is about', () => {
     // The node at the diagnostic's span is the cause; the cells it reaches are
     // where a reader sees the effect.

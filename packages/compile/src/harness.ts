@@ -19,7 +19,7 @@ const FILE = 'spec.yxl.yaml';
 export function grid(source: string, read?: DataReader): CompiledGrid {
   const { doc, diagnostics } = load(parse(source, { file: FILE }));
   if (doc === null) throw new Error(`did not load: ${diagnostics.map((one) => one.code)}`);
-  return compile(doc, read);
+  return compile(doc, read === undefined ? {} : { read });
 }
 
 export function sheet(source: string, read?: DataReader): CompiledSheet {

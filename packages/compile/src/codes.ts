@@ -8,6 +8,7 @@
  */
 export const CODE = {
   unknownParam: 'compile.unknown-param',
+  noSuchParam: 'compile.no-such-param',
   paramCycle: 'compile.param-cycle',
   unclosedPlaceholder: 'compile.unclosed-placeholder',
   unknownValue: 'compile.unknown-value',

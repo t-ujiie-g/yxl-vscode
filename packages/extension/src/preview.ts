@@ -29,6 +29,7 @@ export class Preview {
   private following: ReturnType<typeof setTimeout> | undefined;
   private drawn: Projected | undefined;
   private nodes: Nodes = new Map();
+  private readonly params = new Map<string, string>();
 
   static show(document: vscode.TextDocument, extension: vscode.Uri): void {
     const already = Preview.open.get(document.uri.toString());
@@ -112,7 +113,7 @@ export class Preview {
 
   private redraw(): void {
     const file = this.document.uri.fsPath;
-    const drawn = project(this.document.getText(), file, readBeside);
+    const drawn = project(this.document.getText(), file, readBeside, this.params);
     const { drawing, diagnostics } = drawn;
     this.drawn = drawn;
     this.nodes = drawn.nodes;
@@ -136,12 +137,23 @@ export class Preview {
   }
 
   /**
-   * The two questions the view may ask, neither of which changes anything: where
-   * a cell came from, and take me there.
+   * What the view may ask for: where a cell came from, take me there, and draw
+   * it as though a parameter were something else. None of them touches the file
+   * (ADR-001) — the last one changes what is *drawn*, which is the point of a
+   * preview that stands for several workbooks.
    */
   private answer(asked: FromView): void {
     if (asked.kind === 'reveal') {
       void this.reveal(asked.file, asked.start, asked.end);
+      return;
+    }
+
+    if (asked.kind === 'setParam') {
+      // Emptying the box gives the parameter back to the spec's own default.
+      if (asked.value === '') this.params.delete(asked.name);
+      else this.params.set(asked.name, asked.value);
+
+      this.redraw();
       return;
     }
 
