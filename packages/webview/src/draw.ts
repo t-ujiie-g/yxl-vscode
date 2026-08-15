@@ -1,5 +1,20 @@
 import type { StyleValues } from '@yxl-vscode/spec';
-import type { Drawing, DrawnCell, DrawnSheet } from './protocol';
+import type { Drawing, DrawnCell, DrawnSheet, Source } from './protocol';
+
+/** What the view is showing: the drawing, and the little it holds of its own. */
+export interface Showing {
+  readonly drawing: Drawing;
+  readonly sheet: number;
+  readonly selected: { readonly row: number; readonly col: number } | null;
+  readonly sources: readonly Source[] | null;
+}
+
+/** What the view can ask for. None of it changes anything (ADR-001). */
+export interface Asks {
+  readonly showSheet: (index: number) => void;
+  readonly select: (row: number, col: number) => void;
+  readonly reveal: (source: Source) => void;
+}
 
 const EDGES = [
   ['left', 'borderLeft'],
@@ -19,12 +34,8 @@ const PER_POINT = 4 / 3;
  * a projection is (ADR-001) — there is no state here to reconcile, and the
  * spec is the only thing that changed.
  */
-export function draw(
-  into: HTMLElement,
-  drawing: Drawing,
-  showing: number,
-  onShow: (index: number) => void,
-): void {
+export function draw(into: HTMLElement, showing: Showing, asks: Asks): void {
+  const { drawing } = showing;
   into.replaceChildren();
 
   if (drawing.sheets.length === 0) {
@@ -32,12 +43,58 @@ export function draw(
     return;
   }
 
-  if (drawing.sheets.length > 1) into.append(tabs(drawing, showing, onShow));
+  if (drawing.sheets.length > 1) into.append(tabs(drawing, showing.sheet, asks.showSheet));
 
-  const sheet = drawing.sheets[Math.min(showing, drawing.sheets.length - 1)];
-  if (sheet !== undefined) into.append(grid(sheet));
+  const sheet = drawing.sheets[Math.min(showing.sheet, drawing.sheets.length - 1)];
+  if (sheet !== undefined) into.append(grid(sheet, showing, asks));
 
+  if (showing.sources !== null) into.append(inspector(showing, asks));
   if (drawing.diagnostics.length > 0) into.append(problems(drawing));
+}
+
+/**
+ * Where each facet of the selected cell came from (§4.3).
+ *
+ * Every line is a place in a file, so every line can be gone to — which is half
+ * of the bidirectional jump this release is for.
+ */
+function inspector(showing: Showing, asks: Asks): HTMLElement {
+  const panel = document.createElement('section');
+  panel.className = 'inspector';
+
+  const at = showing.selected;
+  const heading = document.createElement('h2');
+  heading.textContent = at === null ? 'Nothing selected' : `${label(at.col)}${at.row}`;
+  panel.append(heading);
+
+  if (showing.sources?.length === 0) {
+    panel.append(note('Nothing writes this cell.'));
+    return panel;
+  }
+
+  const list = document.createElement('dl');
+  for (const source of showing.sources ?? []) {
+    const facet = document.createElement('dt');
+    facet.textContent = source.facet;
+
+    const says = document.createElement('dd');
+    if (source.file === '') {
+      says.textContent = source.says;
+    } else {
+      const go = document.createElement('button');
+      go.type = 'button';
+      go.className = 'go';
+      go.textContent = source.says;
+      go.title = source.file;
+      go.addEventListener('click', () => asks.reveal(source));
+      says.append(go);
+    }
+
+    list.append(facet, says);
+  }
+
+  panel.append(list);
+  return panel;
 }
 
 function tabs(drawing: Drawing, showing: number, onShow: (index: number) => void): HTMLElement {
@@ -56,7 +113,7 @@ function tabs(drawing: Drawing, showing: number, onShow: (index: number) => void
   return bar;
 }
 
-function grid(sheet: DrawnSheet): HTMLElement {
+function grid(sheet: DrawnSheet, showing: Showing, asks: Asks): HTMLElement {
   const table = document.createElement('table');
   table.className = 'grid';
   table.append(headings(sheet));
@@ -66,7 +123,7 @@ function grid(sheet: DrawnSheet): HTMLElement {
   const covered = coveredBy(sheet);
 
   for (let row = 1; row <= sheet.rows; row += 1) {
-    body.append(line(sheet, row, held, covered));
+    body.append(line(sheet, row, held, covered, showing, asks));
   }
 
   table.append(body);
@@ -114,6 +171,8 @@ function line(
   row: number,
   held: ReadonlyMap<string, DrawnCell>,
   covered: ReadonlySet<string>,
+  showing: Showing,
+  asks: Asks,
 ): HTMLElement {
   const line = document.createElement('tr');
   const height = sized(sheet.heights, row);
@@ -125,7 +184,13 @@ function line(
 
   for (let col = 1; col <= sheet.columns; col += 1) {
     if (covered.has(`${col}:${row}`)) continue;
-    line.append(drawCell(sheet, held.get(`${col}:${row}`), col, row));
+
+    const drawn = drawCell(sheet, held.get(`${col}:${row}`), col, row);
+    if (showing.selected?.row === row && showing.selected.col === col) {
+      drawn.classList.add('selected');
+    }
+    drawn.addEventListener('click', () => asks.select(row, col));
+    line.append(drawn);
   }
 
   return line;

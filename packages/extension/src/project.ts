@@ -1,5 +1,6 @@
 import {
   type CompiledCell,
+  type CompiledGrid,
   type CompiledSheet,
   cellAt,
   compile,
@@ -10,6 +11,7 @@ import {
 import { parse } from '@yxl-vscode/cst';
 import type { Diagnostic } from '@yxl-vscode/diag';
 import { type IncludeReader, load } from '@yxl-vscode/loader';
+import type { SpecDoc } from '@yxl-vscode/spec';
 import { addrAt, cellOf } from '@yxl-vscode/units';
 import type {
   Drawing,
@@ -29,10 +31,18 @@ import type {
  */
 const BEYOND = 50;
 
-/** A spec, read and drawn — and everything that could not be, said once. */
+/**
+ * A spec, read and drawn — and everything that could not be, said once.
+ *
+ * The `doc` and the `grid` come back too: the drawing is what the view needs,
+ * and a question about *why* a cell looks the way it does is answered from
+ * these. Recomputing them per question would be the same work done twice.
+ */
 export interface Projected {
   readonly drawing: Drawing;
   readonly diagnostics: readonly Diagnostic[];
+  readonly doc: SpecDoc | null;
+  readonly grid: CompiledGrid | null;
 }
 
 /**
@@ -50,6 +60,8 @@ export function project(text: string, file: string, read: IncludeReader & DataRe
     return {
       drawing: { kind: 'drawing', file, sheets: [], diagnostics: listed(diagnostics) },
       diagnostics,
+      doc: null,
+      grid: null,
     };
   }
 
@@ -64,6 +76,8 @@ export function project(text: string, file: string, read: IncludeReader & DataRe
       diagnostics: listed(diagnostics),
     },
     diagnostics,
+    doc: loaded.doc,
+    grid,
   };
 }
 
