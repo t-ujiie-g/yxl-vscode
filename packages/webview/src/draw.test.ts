@@ -27,6 +27,7 @@ function cell(row: number, col: number, of: Partial<DrawnCell> = {}): DrawnCell 
     rich: null,
     computed: null,
     overridden: false,
+    editable: 'direct',
     style: {},
     ...of,
   };
@@ -72,6 +73,7 @@ function shown(of: Partial<Showing> = {}, on: Asks = asks()): HTMLElement {
       reached: null,
       refused: null,
       said: null,
+      editable: null,
       ...of,
     },
     on,
@@ -193,6 +195,7 @@ describe('a sheet larger than the window drawn of it', () => {
       reached: null,
       refused: null,
       said: null,
+      editable: null,
     });
 
     draw(into, showing(tall), on);
@@ -214,6 +217,7 @@ describe('a sheet larger than the window drawn of it', () => {
       reached: null,
       refused: null,
       said: null,
+      editable: null,
     });
 
     draw(into, showing(0), on);
@@ -399,6 +403,7 @@ describe('what changes without redrawing the grid', () => {
       reached: null,
       refused: null,
       said: null,
+      editable: null,
       ...of,
     };
   }
@@ -553,6 +558,19 @@ describe('what the view says about a spec', () => {
   it('offers nothing where there is nothing an override could name', () => {
     const refused = { kind: 'refused', why: 'nothing is written there', override: null } as const;
     expect(shown({ refused }).querySelector('.refused .go')).toBeNull();
+  });
+
+  it('says a cell cannot be typed into, and what to do about it', () => {
+    const said = shown({ selected: { row: 1, col: 1 }, sources: [], editable: 'external' });
+    const locked = said.querySelector('.inspector .locked')?.textContent ?? '';
+
+    expect(locked).toContain('cannot be typed into');
+    expect(locked).toContain('offered an override');
+  });
+
+  it('says nothing of the sort about a cell one node of the spec writes', () => {
+    const said = shown({ selected: { row: 1, col: 1 }, sources: [], editable: 'direct' });
+    expect(said.querySelector('.inspector .locked')).toBeNull();
   });
 
   it('says a spec with no sheets has nothing to draw', () => {

@@ -15,6 +15,7 @@ import type {
   DrawnCell,
   DrawnMerge,
   DrawnSheet,
+  Editable,
   Refused,
   Source,
   Typed,
@@ -30,6 +31,9 @@ export interface Showing {
   readonly reached: Reached | null;
   readonly refused: Refused | null;
   readonly said: string | null;
+
+  /** Whether the selected cell can be typed into, where one is selected. */
+  readonly editable: Editable | null;
 }
 
 /** What the cursor in the text is reaching, and what to call it. */

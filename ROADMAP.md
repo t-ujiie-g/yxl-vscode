@@ -695,8 +695,13 @@ the inverse is unique, so no dialog is needed yet.
       out — a box to say why, and *Write it as an override* — which writes the
       entry (creating `overrides:` where the spec has none) and marks the cell.
       Never taken on its own: an escape hatch that opens by itself is the door.
-- [ ] Everything not `direct` is visibly, explainedly read-only — the editor is
+- [x] Everything not `direct` is visibly, explainedly read-only — the editor is
       honest about what it cannot yet do
+      **Shipped**: a cell one node of the spec does not write carries a grey
+      corner, says which of the two things stands in its way on hover, and says
+      it in full when selected — with the way out named. The badge comes from
+      `editabilityOf`, the same rule the write path refuses by, so the two can
+      never disagree.
 - [ ] Prove ADR-011's preservation half: load a spec that uses opaque constructs,
       write an edit through `patch`, and assert every opaque region came back
       byte for byte. Owed from Phase 2, which could mark the constructs but had
@@ -1670,6 +1675,22 @@ this at a phase boundary rather than at the end.
   two serials either side of it, so the next reader knows it is deliberate.
 - A cell's own format — written, or the one its type takes — now wins over a
   band's. Both are requests about *that* cell; a band is something reaching it.
+
+### 2026-08-16 — Phase 6: honest before you type, not after
+
+- **A cell that cannot be typed into says so.** A grey corner in the grid, the
+  reason on hover, and the whole sentence in the inspector when it is selected —
+  *this cell cannot be typed into: its value comes from a file beside the spec.
+  Type into it anyway to be offered an override.*
+- **Two marks, two meanings, kept apart**: red in the top-right corner is an
+  exception somebody made on purpose; grey in the bottom-left is one the spec
+  makes. A reader can tell which without reading anything.
+- **The badge and the refusal come from one rule.** `editabilityOf` decides
+  both, so the grid cannot promise an edit the write path will refuse — which
+  is the failure a second, kinder rule for the badge would have produced.
+- A formula cell is *not* marked: it can be edited, with a formula. What it
+  refuses is a plain number typed over a cached result, and that is a sentence
+  when it happens rather than a lock in the grid. 6 new tests, 929 in total.
 
 ### 2026-08-16 — Sweep after the override work (AGENTS.md §8)
 

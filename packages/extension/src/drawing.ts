@@ -3,6 +3,7 @@ import {
   type CompiledGrid,
   type CompiledSheet,
   cellAt,
+  editabilityOf,
   reaches,
   resolve,
   type Setting,
@@ -19,6 +20,7 @@ import type {
   DrawnMerge,
   DrawnParam,
   DrawnSheet,
+  Editable,
   MarkedCell,
   Sized,
   Uncomputed,
@@ -242,6 +244,7 @@ function drawCells(
         rich: cell?.rich?.map((run) => ({ text: run.text, style: run.look })) ?? null,
         computed,
         overridden: cell?.provenance.value.kind === 'override',
+        editable: typeable(cell),
         format: applies(layers, cell?.value ?? null, cell?.format ?? null),
         style,
       });
@@ -249,6 +252,21 @@ function drawCells(
   }
 
   return drawn;
+}
+
+/**
+ * Whether this cell can be typed into, said before the reader tries rather
+ * than after.
+ *
+ * The same answer `editabilityOf` gives, which is the same answer the write
+ * path gives when it refuses one — a badge that disagreed with the refusal
+ * would be worse than no badge.
+ */
+function typeable(cell: CompiledCell | null): Editable {
+  if (cell === null) return 'mediated';
+
+  const said = editabilityOf(cell.provenance.value);
+  return said === 'readonly' ? 'mediated' : said;
 }
 
 /**

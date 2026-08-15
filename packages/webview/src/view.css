@@ -168,8 +168,22 @@ body {
   border-right-color: #d13438;
 }
 
-.grid td.overridden {
+.grid td.overridden,
+.grid td.locked {
   position: relative;
+}
+
+/* Quiet, and in a corner of its own: an override is an exception somebody made,
+   a lock is one the spec makes, and a reader should be able to tell which
+   without reading anything. */
+.grid td.locked::before {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  border: 4px solid transparent;
+  border-bottom-color: #9a9a9a;
+  border-left-color: #9a9a9a;
 }
 
 .grid td.selected {
@@ -184,6 +198,11 @@ body {
 .grid td.problem {
   text-decoration: #d13438 wavy underline;
   text-underline-offset: 3px;
+}
+
+.inspector .locked {
+  margin: 0 0 0.4rem;
+  color: var(--vscode-descriptionForeground);
 }
 
 .refused {

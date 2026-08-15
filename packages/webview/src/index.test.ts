@@ -15,6 +15,7 @@ function cell(of: Partial<DrawnCell> = {}): DrawnCell {
     rich: null,
     computed: null,
     overridden: false,
+    editable: 'direct',
     style: {},
     ...of,
   };
