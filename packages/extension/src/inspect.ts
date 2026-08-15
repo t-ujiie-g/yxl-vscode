@@ -1,6 +1,6 @@
 import { type CompiledSheet, cellAt, type FacetOrigin, styleAt } from '@yxl-vscode/compile';
 import type { Sheet, SpecDoc, SpecNode } from '@yxl-vscode/spec';
-import type { A1Addr } from '@yxl-vscode/units';
+import type { A1Addr, NodeId } from '@yxl-vscode/units';
 import type { Source } from '@yxl-vscode/webview/protocol';
 
 /**
@@ -11,8 +11,7 @@ import type { Source } from '@yxl-vscode/webview/protocol';
  * value came from row 12 of `sales.csv`*. Each answer carries the file and the
  * span it lives at, so the view can offer to go there.
  */
-export function inspect(doc: SpecDoc, sheet: CompiledSheet, at: A1Addr): Source[] {
-  const nodes = index(doc);
+export function inspect(nodes: Nodes, sheet: CompiledSheet, at: A1Addr): Source[] {
   const cell = cellAt(sheet, at);
   const found: Source[] = [];
 
@@ -90,13 +89,39 @@ function sited(where: Described | undefined): { file: string; start: number; end
     : { file: where.file, start: where.span.start, end: where.span.end };
 }
 
+/**
+ * The innermost node whose span holds an offset, which is the one a cursor is
+ * *in* rather than merely inside.
+ *
+ * A cell sits inside a sheet which sits inside the document, and all three
+ * spans hold the cursor; the smallest is the one the reader is looking at.
+ */
+export function nodeAt(nodes: Nodes, file: string, offset: number): NodeId | null {
+  let found: NodeId | null = null;
+  let narrowest = Number.POSITIVE_INFINITY;
+
+  for (const [id, node] of nodes) {
+    if (node.file !== file) continue;
+    if (offset < node.span.start || offset > node.span.end) continue;
+
+    const width = node.span.end - node.span.start;
+    if (width >= narrowest) continue;
+
+    narrowest = width;
+    found = id as NodeId;
+  }
+
+  return found;
+}
+
 interface Described {
   readonly file: string;
   readonly span: { readonly start: number; readonly end: number };
   readonly what: string;
 }
 
-type Nodes = ReadonlyMap<string, Described>;
+/** Every node a provenance can name, by its id. */
+export type Nodes = ReadonlyMap<string, Described>;
 
 /**
  * Every node a provenance can name, and what to call it.
@@ -105,7 +130,7 @@ type Nodes = ReadonlyMap<string, Described>;
  * read, and the core is UI-free (ADR-004). What the core carries is the
  * identity; this turns it into a sentence.
  */
-function index(doc: SpecDoc): Nodes {
+export function nodesOf(doc: SpecDoc): Nodes {
   const nodes = new Map<string, Described>();
   const put = (node: SpecNode, what: string): void => {
     nodes.set(node.id, { file: node.file, span: node.span, what });

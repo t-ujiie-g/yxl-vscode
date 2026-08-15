@@ -7,6 +7,13 @@ export interface Showing {
   readonly sheet: number;
   readonly selected: { readonly row: number; readonly col: number } | null;
   readonly sources: readonly Source[] | null;
+  readonly reached: Reached | null;
+}
+
+/** What the cursor in the text is reaching, and what to call it. */
+export interface Reached {
+  readonly says: string;
+  readonly cells: ReadonlySet<string>;
 }
 
 /** What the view can ask for. None of it changes anything (ADR-001). */
@@ -48,8 +55,23 @@ export function draw(into: HTMLElement, showing: Showing, asks: Asks): void {
   const sheet = drawing.sheets[Math.min(showing.sheet, drawing.sheets.length - 1)];
   if (sheet !== undefined) into.append(grid(sheet, showing, asks));
 
+  if (showing.reached !== null) into.append(reaching(showing.reached));
   if (showing.sources !== null) into.append(inspector(showing, asks));
   if (drawing.diagnostics.length > 0) into.append(problems(drawing));
+}
+
+/** What the cursor is reaching, said above the grid so the highlight is explained. */
+function reaching(reached: Reached): HTMLElement {
+  const said = document.createElement('p');
+  said.className = 'reaching';
+
+  const count = reached.cells.size;
+  said.textContent =
+    count === 0
+      ? `${reached.says} reaches no cell the grid holds`
+      : `${reached.says} reaches ${count} cell${count === 1 ? '' : 's'}`;
+
+  return said;
 }
 
 /**
@@ -189,6 +211,7 @@ function line(
     if (showing.selected?.row === row && showing.selected.col === col) {
       drawn.classList.add('selected');
     }
+    if (showing.reached?.cells.has(`${col}:${row}`) === true) drawn.classList.add('reached');
     drawn.addEventListener('click', () => asks.select(row, col));
     line.append(drawn);
   }

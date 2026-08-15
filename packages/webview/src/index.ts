@@ -1,7 +1,7 @@
-import { type Asks, draw, type Showing } from './draw';
+import { type Asks, draw, type Reached, type Showing } from './draw';
 import type { Drawing, FromView, Source, ToView } from './protocol';
 
-export { type Asks, draw, type Showing } from './draw';
+export { type Asks, draw, type Reached, type Showing } from './draw';
 export type {
   Drawing,
   DrawnCell,
@@ -9,6 +9,7 @@ export type {
   DrawnMerge,
   DrawnSheet,
   FromView,
+  Highlighted,
   Inspected,
   Sized,
   Source,
@@ -34,9 +35,10 @@ function start(): void {
   let sheet = 0;
   let selected: Showing['selected'] = null;
   let sources: readonly Source[] | null = null;
+  let reached: Reached | null = null;
 
   const redraw = (): void => {
-    if (drawing !== null) draw(into, { drawing, sheet, selected, sources }, asks);
+    if (drawing !== null) draw(into, { drawing, sheet, selected, sources, reached }, asks);
   };
 
   const asks: Asks = {
@@ -44,6 +46,7 @@ function start(): void {
       sheet = index;
       selected = null;
       sources = null;
+      reached = null;
       redraw();
     },
     select: (row, col) => {
@@ -67,6 +70,15 @@ function start(): void {
       }
       drawing = sent;
       sources = null;
+      reached = null;
+      redraw();
+      return;
+    }
+
+    if (sent.kind === 'highlighted') {
+      const showing = drawing?.sheets[sheet]?.name;
+      const here = sent.cells.filter((cell) => cell.sheet === showing);
+      reached = { says: sent.says, cells: new Set(here.map((one) => `${one.col}:${one.row}`)) };
       redraw();
       return;
     }

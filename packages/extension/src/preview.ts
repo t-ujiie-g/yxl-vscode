@@ -1,12 +1,16 @@
-import { addrAt } from '@yxl-vscode/units';
+import { reaches } from '@yxl-vscode/compile';
+import { addrAt, cellOf } from '@yxl-vscode/units';
 import type { FromView } from '@yxl-vscode/webview/protocol';
 import * as vscode from 'vscode';
 import { readBeside } from './files';
-import { inspect } from './inspect';
+import { inspect, type Nodes, nodeAt, nodesOf } from './inspect';
 import { type Projected, project } from './project';
 
 /** Long enough that typing does not redraw on every keystroke, short enough to feel live. */
 const SETTLE = 150;
+
+/** The same, for a cursor, which moves more often and costs less to answer. */
+const FOLLOW = 80;
 
 /**
  * The preview: one panel per spec, beside the text.
@@ -22,7 +26,9 @@ export class Preview {
   private readonly problems: vscode.DiagnosticCollection;
   private readonly listeners: vscode.Disposable[] = [];
   private settling: ReturnType<typeof setTimeout> | undefined;
+  private following: ReturnType<typeof setTimeout> | undefined;
   private drawn: Projected | undefined;
+  private nodes: Nodes = new Map();
 
   static show(document: vscode.TextDocument, extension: vscode.Uri): void {
     const already = Preview.open.get(document.uri.toString());
@@ -56,6 +62,9 @@ export class Preview {
         // A `$include` or a `csv:` this spec reads may have been what changed.
         if (saved.uri.toString() !== document.uri.toString()) this.later();
       }),
+      vscode.window.onDidChangeTextEditorSelection((moved) => {
+        if (moved.textEditor.document.uri.toString() === document.uri.toString()) this.follow();
+      }),
     );
 
     this.listeners.push(this.panel.webview.onDidReceiveMessage((asked) => this.answer(asked)));
@@ -68,11 +77,45 @@ export class Preview {
     this.settling = setTimeout(() => this.redraw(), SETTLE);
   }
 
+  /**
+   * Which cells the node under the cursor reaches — the other half of the jump.
+   *
+   * A cursor sits inside every span that holds it, so the *innermost* node is
+   * the one being pointed at: the cell rather than the sheet, the definition
+   * rather than the document.
+   */
+  private follow(): void {
+    clearTimeout(this.following);
+    this.following = setTimeout(() => this.reaching(), FOLLOW);
+  }
+
+  private reaching(): void {
+    const editor = vscode.window.visibleTextEditors.find(
+      (one) => one.document.uri.toString() === this.document.uri.toString(),
+    );
+    const grid = this.drawn?.grid;
+    if (editor === undefined || grid === undefined || grid === null) return;
+
+    const at = this.document.offsetAt(editor.selection.active);
+    const node = nodeAt(this.nodes, this.document.uri.fsPath, at);
+    if (node === null) {
+      void this.panel.webview.postMessage({ kind: 'highlighted', says: '', cells: [] });
+      return;
+    }
+
+    void this.panel.webview.postMessage({
+      kind: 'highlighted',
+      says: this.nodes.get(node)?.what ?? 'the cursor',
+      cells: reaches(grid, node).map((one) => ({ sheet: one.sheet, ...cellOf(one.at) })),
+    });
+  }
+
   private redraw(): void {
     const file = this.document.uri.fsPath;
     const drawn = project(this.document.getText(), file, readBeside);
     const { drawing, diagnostics } = drawn;
     this.drawn = drawn;
+    this.nodes = drawn.doc === null ? new Map() : nodesOf(drawn.doc);
 
     void this.panel.webview.postMessage(drawing);
     this.problems.set(
@@ -103,15 +146,14 @@ export class Preview {
     }
 
     const sheet = this.drawn?.grid?.sheets[asked.sheet];
-    const doc = this.drawn?.doc;
-    if (sheet === undefined || doc === undefined || doc === null) return;
+    if (sheet === undefined) return;
 
     void this.panel.webview.postMessage({
       kind: 'inspected',
       sheet: asked.sheet,
       row: asked.row,
       col: asked.col,
-      sources: inspect(doc, sheet, addrAt({ col: asked.col, row: asked.row })),
+      sources: inspect(this.nodes, sheet, addrAt({ col: asked.col, row: asked.row })),
     });
   }
 
@@ -134,6 +176,7 @@ export class Preview {
   private close(): void {
     Preview.open.delete(this.document.uri.toString());
     clearTimeout(this.settling);
+    clearTimeout(this.following);
     for (const listener of this.listeners) listener.dispose();
     this.problems.dispose();
   }

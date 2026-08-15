@@ -95,8 +95,21 @@ export interface Inspected {
   readonly sources: readonly Source[];
 }
 
+/**
+ * The cells one node of the spec reaches, for the cursor that is sitting in it.
+ *
+ * The other half of the jump: a reader with the cursor on `defs.styles.header`
+ * sees which cells wear it. A cell is named by its sheet, because a definition
+ * reaches across all of them.
+ */
+export interface Highlighted {
+  readonly kind: 'highlighted';
+  readonly says: string;
+  readonly cells: readonly { readonly sheet: string; readonly row: number; readonly col: number }[];
+}
+
 /** Everything the host sends the view. */
-export type ToView = Drawing | Inspected;
+export type ToView = Drawing | Inspected | Highlighted;
 
 /**
  * Everything the view sends back.
