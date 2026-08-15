@@ -247,7 +247,7 @@ export type FromView =
     }
   | { readonly kind: 'setParam'; readonly name: string; readonly value: string }
   | ({ readonly kind: 'edit' } & Typed)
-  | ({ readonly kind: 'override' } & Typed)
+  | ({ readonly kind: 'override'; readonly reason: string } & Typed)
   | {
       readonly kind: 'window';
       readonly sheet: string;

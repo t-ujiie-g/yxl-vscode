@@ -86,10 +86,12 @@ function start(): void {
       refused = null;
       host.postMessage({ kind: 'edit', sheet: named(), row, col, text });
     },
-    overrideWith: (typed) => {
-      refused = null;
-      host.postMessage({ kind: 'override', ...typed });
-      restated();
+    overrideWith: (typed, reason) => {
+      // Nothing is redrawn here: the host is about to ask the reader a question
+      // in a box of its own, and anything this touches now takes the focus back
+      // before they can answer it. The answer arrives as a drawing or as
+      // another refusal.
+      host.postMessage({ kind: 'override', ...typed, reason });
     },
   };
 

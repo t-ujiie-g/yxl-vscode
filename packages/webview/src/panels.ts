@@ -82,16 +82,26 @@ function refusal(refused: Refused, asks: Asks): HTMLElement {
   said.append(refused.why);
 
   const typed = refused.override;
-  if (typed !== null) {
-    const go = document.createElement('button');
-    go.type = 'button';
-    go.className = 'go';
-    go.textContent = 'Write it as an override…';
-    go.addEventListener('click', () => asks.overrideWith(typed));
+  if (typed === null) return said;
 
-    said.append(' ', go);
-  }
+  // The reason is asked for here rather than in a box of the editor's, because
+  // the reader is looking at this sentence and because an override with no
+  // reason is the thing this construct exists to avoid (`docs/spec.md` §23).
+  const why = document.createElement('input');
+  why.type = 'text';
+  why.className = 'reason';
+  why.placeholder = 'why this cell differs (optional)';
 
+  const go = document.createElement('button');
+  go.type = 'button';
+  go.className = 'go';
+  go.textContent = 'Write it as an override';
+  go.addEventListener('click', () => asks.overrideWith(typed, why.value));
+  why.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') asks.overrideWith(typed, why.value);
+  });
+
+  said.append(' ', why, ' ', go);
   return said;
 }
 

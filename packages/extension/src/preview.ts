@@ -211,12 +211,12 @@ export class Preview {
     }
 
     if (asked.kind === 'edit') {
-      void this.write(asked);
+      this.tried(this.write(asked));
       return;
     }
 
     if (asked.kind === 'override') {
-      void this.overrideWith(asked);
+      this.tried(this.overrideWith(asked));
       return;
     }
 
@@ -250,22 +250,29 @@ export class Preview {
   /**
    * The same edit, written as an override — after asking what it is for.
    *
-   * The reason is optional and the asking is not: an override is an exception
-   * somebody made on purpose, and the box is where they get to say so
-   * (`docs/spec.md` §23).
+   * The reason came with the asking, from a box beside the refusal itself: an
+   * override is an exception somebody made on purpose, and that is where they
+   * got to say so (`docs/spec.md` §23).
    */
-  private async overrideWith(typed: Typed): Promise<void> {
+  private async overrideWith(asked: Extract<FromView, { kind: 'override' }>): Promise<void> {
     const spec = this.spec();
     if (spec === null) return;
 
-    const reason = await vscode.window.showInputBox({
-      title: `Override ${typed.sheet}!${addrAt({ col: typed.col, row: typed.row })}`,
-      prompt: 'Why does this cell differ? Left empty, the override is written without a reason.',
-      placeHolder: 'audit asked for this one figure',
-    });
-    if (reason === undefined) return;
-
+    const { reason, ...typed } = asked;
     await writeOverride(spec, typed, reason === '' ? undefined : reason, this.port());
+  }
+
+  /**
+   * Work that may fail, with the failure said rather than dropped.
+   *
+   * A rejected promise from a message handler goes nowhere anyone can see, and
+   * an edit that vanishes without a word is the worst thing this editor can do
+   * — the reader cannot tell it from one that was never sent.
+   */
+  private tried(work: Promise<void>): void {
+    void work.catch((failed: unknown) => {
+      this.refuse(failed instanceof Error ? failed.message : String(failed), null);
+    });
   }
 
   /** The spec as the write path needs it, or nothing where it is not readable. */

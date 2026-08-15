@@ -692,8 +692,8 @@ the inverse is unique, so no dialog is needed yet.
       and the optional `reason:` — writing the construct yxl v0.3.4 shipped
       (`docs/spec.md` §23), which Phase 2 already reads
       **Shipped**: every refusal that is about a real cell now carries the way
-      out — *Write it as an override…* — which asks what it is for, writes the
-      entry (creating `overrides:` where the spec has none), and marks the cell.
+      out — a box to say why, and *Write it as an override* — which writes the
+      entry (creating `overrides:` where the spec has none) and marks the cell.
       Never taken on its own: an escape hatch that opens by itself is the door.
 - [ ] Everything not `direct` is visibly, explainedly read-only — the editor is
       honest about what it cannot yet do
@@ -1674,10 +1674,17 @@ this at a phase boundary rather than at the end.
 ### 2026-08-15 — Phase 6: the exception, said out loud
 
 - **A refusal now carries the way out.** *`C3` is filled by the range anchored
-  at `C2`* is followed by **Write it as an override…**, which asks what the
-  exception is for and writes it: `at: Sales!C3`, the value or the formula, and
-  the `reason` if one was given. This is the answer to every refusal `direct`
-  editing gives, and the reason the refusals could be firm.
+  at `C2`* is followed by a box to say why and **Write it as an override**,
+  which writes `at: Sales!C3`, the value or the formula, and the `reason` if one
+  was given. This is the answer to every refusal `direct` editing gives, and the
+  reason the refusals could be firm.
+- **The reason is asked for in the panel, not in a box of the editor's.** The
+  first attempt used VS Code's own input box, and pressing the button appeared
+  to do nothing: the question opened somewhere the reader was not looking, in a
+  path no test in this repo can reach. Asked where the sentence is, it is both
+  visible and testable — and the messages that carry it now report a failure
+  rather than dropping it, because an edit that vanishes without a word is worse
+  than one refused.
 - **It is offered, never taken.** An override that the editor reaches for by
   itself is not an escape hatch, it is the door (ADR-007) — so it appears only
   after an ordinary edit was refused, only where there is a cell it could name,

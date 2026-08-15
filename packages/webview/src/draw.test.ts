@@ -513,7 +513,37 @@ describe('what the view says about a spec', () => {
     const into = shown({ refused }, on);
 
     into.querySelector<HTMLElement>('.refused .go')?.click();
-    expect(on.overrideWith).toHaveBeenCalledWith(typed);
+    expect(on.overrideWith).toHaveBeenCalledWith(typed, '');
+  });
+
+  it('takes the reason from the box beside it, where one was given', () => {
+    const typed = { sheet: 'Sales', row: 5, col: 2, text: '5' };
+    const refused = { kind: 'refused', why: 'B5 is filled by a range', override: typed } as const;
+    const on = asks();
+    const into = shown({ refused }, on);
+
+    const why = into.querySelector('.refused .reason');
+    if (!(why instanceof HTMLInputElement)) throw new Error('nowhere to say why');
+
+    why.value = 'the audit settled this row';
+    into.querySelector<HTMLElement>('.refused .go')?.click();
+
+    expect(on.overrideWith).toHaveBeenCalledWith(typed, 'the audit settled this row');
+  });
+
+  it('takes Enter in that box as the same answer', () => {
+    const typed = { sheet: 'Sales', row: 5, col: 2, text: '5' };
+    const refused = { kind: 'refused', why: 'B5 is filled by a range', override: typed } as const;
+    const on = asks();
+    const into = shown({ refused }, on);
+
+    const why = into.querySelector('.refused .reason');
+    if (!(why instanceof HTMLInputElement)) throw new Error('nowhere to say why');
+
+    why.value = 'settled';
+    why.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+
+    expect(on.overrideWith).toHaveBeenCalledWith(typed, 'settled');
   });
 
   it('offers nothing where there is nothing an override could name', () => {

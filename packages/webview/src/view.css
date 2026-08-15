@@ -194,6 +194,15 @@ body {
   color: var(--vscode-foreground);
 }
 
+.reason {
+  padding: 1px 4px;
+  border: 1px solid var(--vscode-input-border, var(--vscode-panel-border));
+  background: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+  font: inherit;
+  min-width: 18rem;
+}
+
 .reaching {
   margin: 0 0 0.4rem;
   color: var(--vscode-descriptionForeground);
