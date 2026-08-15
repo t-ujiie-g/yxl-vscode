@@ -31,6 +31,20 @@ export interface DrawnSheet {
   readonly heights: readonly Sized[];
   readonly cells: readonly DrawnCell[];
   readonly merges: readonly DrawnMerge[];
+  readonly problems: readonly MarkedCell[];
+}
+
+/**
+ * A diagnostic on the cells it is about.
+ *
+ * Not every diagnostic has one: a sheet with no name or a band with a bad `at`
+ * reaches no cell, and those stay in the list under the grid. The ones that do
+ * are worth marking where the reader is looking.
+ */
+export interface MarkedCell {
+  readonly row: number;
+  readonly col: number;
+  readonly message: string;
 }
 
 /** A run of columns or rows the spec gave a size, in the spec's own units. */
@@ -129,12 +143,13 @@ export type FromView =
 /**
  * Something the projection could not do, as the view lists it.
  *
- * No position: a span is an offset into a file the view does not have, and
- * where a reader wants to *go* to one, VS Code's own Problems panel is already
- * holding it with a line and a column.
+ * The span is an offset into `file`, which the view cannot read — it carries it
+ * only to ask the host to go there, the same way an inspector line does.
  */
 export interface DrawnDiagnostic {
   readonly code: string;
   readonly message: string;
   readonly file: string;
+  readonly start: number;
+  readonly end: number;
 }

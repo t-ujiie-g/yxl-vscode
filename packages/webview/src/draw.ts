@@ -57,7 +57,7 @@ export function draw(into: HTMLElement, showing: Showing, asks: Asks): void {
 
   if (showing.reached !== null) into.append(reaching(showing.reached));
   if (showing.sources !== null) into.append(inspector(showing, asks));
-  if (drawing.diagnostics.length > 0) into.append(problems(drawing));
+  if (drawing.diagnostics.length > 0) into.append(problems(drawing, asks));
 }
 
 /** What the cursor is reaching, said above the grid so the highlight is explained. */
@@ -143,13 +143,26 @@ function grid(sheet: DrawnSheet, showing: Showing, asks: Asks): HTMLElement {
   const body = document.createElement('tbody');
   const held = new Map(sheet.cells.map((cell) => [`${cell.col}:${cell.row}`, cell]));
   const covered = coveredBy(sheet);
+  const problems = markedBy(sheet);
 
   for (let row = 1; row <= sheet.rows; row += 1) {
-    body.append(line(sheet, row, held, covered, showing, asks));
+    body.append(line(sheet, row, held, covered, problems, showing, asks));
   }
 
   table.append(body);
   return table;
+}
+
+/** The diagnostics on each cell, gathered so a cell can be asked about once. */
+function markedBy(sheet: DrawnSheet): Map<string, string[]> {
+  const problems = new Map<string, string[]>();
+
+  for (const problem of sheet.problems) {
+    const at = `${problem.col}:${problem.row}`;
+    problems.set(at, [...(problems.get(at) ?? []), problem.message]);
+  }
+
+  return problems;
 }
 
 /**
@@ -193,6 +206,7 @@ function line(
   row: number,
   held: ReadonlyMap<string, DrawnCell>,
   covered: ReadonlySet<string>,
+  problems: ReadonlyMap<string, readonly string[]>,
   showing: Showing,
   asks: Asks,
 ): HTMLElement {
@@ -212,6 +226,12 @@ function line(
       drawn.classList.add('selected');
     }
     if (showing.reached?.cells.has(`${col}:${row}`) === true) drawn.classList.add('reached');
+
+    const said = problems.get(`${col}:${row}`);
+    if (said !== undefined) {
+      drawn.classList.add('problem');
+      drawn.title = said.join('\n');
+    }
     drawn.addEventListener('click', () => asks.select(row, col));
     line.append(drawn);
   }
@@ -354,13 +374,20 @@ function note(text: string): HTMLElement {
   return said;
 }
 
-function problems(drawing: Drawing): HTMLElement {
+function problems(drawing: Drawing, asks: Asks): HTMLElement {
   const list = document.createElement('ul');
   list.className = 'problems';
 
   for (const problem of drawing.diagnostics) {
     const item = document.createElement('li');
-    item.textContent = `${problem.file}: ${problem.message}`;
+    const go = document.createElement('button');
+    go.type = 'button';
+    go.className = 'go';
+    go.textContent = problem.message;
+    go.title = problem.file;
+    go.addEventListener('click', () => asks.reveal({ facet: problem.code, says: '', ...problem }));
+
+    item.append(go);
     list.append(item);
   }
 

@@ -115,7 +115,7 @@ export class Preview {
     const drawn = project(this.document.getText(), file, readBeside);
     const { drawing, diagnostics } = drawn;
     this.drawn = drawn;
-    this.nodes = drawn.doc === null ? new Map() : nodesOf(drawn.doc);
+    this.nodes = drawn.nodes;
 
     void this.panel.webview.postMessage(drawing);
     this.problems.set(

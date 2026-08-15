@@ -555,8 +555,13 @@ value, and it carries none of the write-back risk.
       cell it reaches and says how many, so a cursor on `defs.styles.header`
       lights up the cells wearing it. The innermost node wins, since a cursor
       sits inside every span that holds it.
-- [ ] Diagnostics from the loader shown inline in the grid and as VS Code
+- [x] Diagnostics from the loader shown inline in the grid and as VS Code
       problems
+      **Shipped, both.** A diagnostic marks the cells it is *about* — the node
+      at its span is the cause, and the cells that node reaches are where the
+      effect shows — and the list under the grid takes you to the line. One that
+      reaches no cell stays in the list, which is where a bad band selector
+      belongs.
 - [ ] `yxl build` / `--check` invoked as commands, output surfaced, binary
       discovery and a clear message when it is missing
 - [x] Live re-projection on text edit, debounced
@@ -1405,6 +1410,20 @@ this at a phase boundary rather than at the end.
   for upstream as [yxl#68](https://github.com/t-ujiie-g/yxl/issues/68) — §23 is
   the only section of the reference with no worked example behind it, which
   means its compile path is not exercised there either.
+
+### 2026-08-15 — Phase 4: a diagnostic points at the cell, not just the line
+- A diagnostic now marks the cells it is about, in the grid, as well as landing
+  in VS Code's Problems panel with a range. 2 new tests, 624 in total.
+- **The path from a diagnostic to a cell was already built.** A diagnostic names
+  a place in a file; `nodeAt` turns that into the node a reader would call the
+  cause; `reaches` turns the node into the cells where the effect shows. Two
+  functions written for the jump, reused whole.
+- **A diagnostic that reaches no cell stays in the list.** A band whose `at`
+  will not read, a sheet with no name: there is no cell to point at, and
+  inventing one would be worse than the list. The distinction falls out of
+  `reaches` returning nothing rather than being coded for.
+- The list under the grid is clickable now too, on the same message channel the
+  inspector uses — one way to say "take me there", not two.
 
 ### 2026-08-15 — Phase 4: the jump closes
 - The other half: put the cursor in a node and the grid highlights every cell it
