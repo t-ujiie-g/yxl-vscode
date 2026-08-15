@@ -547,12 +547,14 @@ value, and it carries none of the write-back risk.
       where its format came from, and — per style property — which layer
       supplied it. Every line that names a node is a link into the file it lives
       in, which is half the jump below.
-- [ ] **Bidirectional jump**: grid cell → the YAML node that produced it, and
+- [x] **Bidirectional jump**: grid cell → the YAML node that produced it, and
       cursor in YAML → the cells it produces (highlighted). This is the feature
       that makes the release worth shipping.
-      *Half of it is in*: an inspector line takes you to the node, in whichever
-      file it lives — a definition reached through an `$include` opens that
-      file. The other direction, cursor to cells, is what `reaches` is for.
+      **Shipped, both ways.** An inspector line takes you to the node in
+      whichever file it lives; putting the cursor in a node highlights every
+      cell it reaches and says how many, so a cursor on `defs.styles.header`
+      lights up the cells wearing it. The innermost node wins, since a cursor
+      sits inside every span that holds it.
 - [ ] Diagnostics from the loader shown inline in the grid and as VS Code
       problems
 - [ ] `yxl build` / `--check` invoked as commands, output surfaced, binary
@@ -1403,6 +1405,23 @@ this at a phase boundary rather than at the end.
   for upstream as [yxl#68](https://github.com/t-ujiie-g/yxl/issues/68) — §23 is
   the only section of the reference with no worked example behind it, which
   means its compile path is not exercised there either.
+
+### 2026-08-15 — Phase 4: the jump closes
+- The other half: put the cursor in a node and the grid highlights every cell it
+  reaches, with a line above the grid saying what and how many. A cursor on
+  `defs.styles.header` lights up the cells wearing it; on a `cells:` entry, that
+  one cell. 2 new tests, 622 in total.
+- **The innermost node wins.** A cursor sits inside the document, the sheet, and
+  the cell all at once, so the narrowest span holding it is the one being
+  pointed at. That rule is the whole of `nodeAt`, and it is why a cursor inside
+  a definition does not light up the whole workbook.
+- **`reaches` was already there**, built in Phase 3 with no consumer. It cost
+  nothing to build then and nothing to use now — the one case where writing a
+  thing before its caller paid, because it was a fact about the grid rather than
+  a guess about a UI.
+- Cross-sheet is deliberately quiet: a definition reaches cells on sheets that
+  are not showing, and the view highlights only the sheet you are on rather than
+  switching under you. The count says how many were found in all.
 
 ### 2026-08-15 — Phase 4: why a cell looks the way it does
 - Click a cell and the inspector answers §4.3's promise in the words it was

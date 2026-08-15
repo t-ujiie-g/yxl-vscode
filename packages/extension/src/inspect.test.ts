@@ -5,7 +5,7 @@ import type { SpecDoc } from '@yxl-vscode/spec';
 import type { A1Addr } from '@yxl-vscode/units';
 import type { Source } from '@yxl-vscode/webview/protocol';
 import { describe, expect, it } from 'vitest';
-import { inspect } from './inspect';
+import { inspect, nodeAt, nodesOf } from './inspect';
 
 const FILE = 'spec.yxl.yaml';
 
@@ -20,7 +20,7 @@ function read(source: string): { doc: SpecDoc; sheet: CompiledSheet } {
 
 function sources(source: string, at: string): Source[] {
   const { doc, sheet } = read(source);
-  return inspect(doc, sheet, at as A1Addr);
+  return inspect(nodesOf(doc), sheet, at as A1Addr);
 }
 
 function saying(source: string, at: string, facet: string): string {
@@ -73,6 +73,23 @@ describe('what the inspector says about a look', () => {
     const spec = `${SHEET}    cells:\n      A1: { value: 1, style: header }\ndefs:\n  styles:\n    base: { font: { size: 11 } }\n    header: { extends: base, font: { bold: true } }\n`;
     expect(saying(spec, 'A1', 'font.size')).toBe('the style `base`');
     expect(saying(spec, 'A1', 'font.bold')).toBe('the style `header`');
+  });
+});
+
+describe('the node under a cursor', () => {
+  const spec = `${SHEET}    cells:\n      A1: Region\n      B1: 2\n`;
+
+  it('is the innermost one whose span holds the offset', () => {
+    const { doc } = read(spec);
+    const nodes = nodesOf(doc);
+    const found = nodeAt(nodes, FILE, spec.indexOf('A1: Region') + 2);
+
+    expect(nodes.get(found ?? '')?.what).toBe('`A1`');
+  });
+
+  it('is nothing where no node reaches', () => {
+    const { doc } = read(spec);
+    expect(nodeAt(nodesOf(doc), 'another.yaml', 0)).toBeNull();
   });
 });
 
