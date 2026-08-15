@@ -8,7 +8,7 @@ import {
 } from '@yxl-vscode/units';
 import { compileFacets } from './cell';
 import { CODE } from './codes';
-import { type Ctx, context, type DataReader, reject, text } from './ctx';
+import { type Ctx, context, type DataReader, reject, type Setting, text } from './ctx';
 import type { CompiledCell, CompiledGrid, CompiledSheet } from './grid';
 import { compileSheet, type Drafted } from './sheet';
 import type { StyleLayer } from './style';
@@ -20,9 +20,18 @@ import type { StyleLayer } from './style';
  * No filesystem and no host (ADR-004): `read` is how it reaches the file a
  * `csv:` or `json:` block names. Without one it says which file it did not
  * read, rather than guessing at what was in it.
+ *
+ * `params` is what the caller wants the spec's parameters to be — one spec
+ * drawn as several workbooks, which is what `--set` does on the command line.
  */
-export function compile(doc: SpecDoc, read?: DataReader): CompiledGrid {
-  const ctx = context(doc, read ?? null);
+export interface Options {
+  readonly read?: DataReader;
+  readonly params?: Setting;
+}
+
+/** As above. */
+export function compile(doc: SpecDoc, options: Options = {}): CompiledGrid {
+  const ctx = context(doc, options.read ?? null, options.params ?? new Map());
   const drafts = doc.sheets.map((sheet) => compileSheet(ctx, sheet));
 
   for (const override of doc.overrides) applyOverride(ctx, override, drafts);

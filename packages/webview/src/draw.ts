@@ -21,6 +21,7 @@ export interface Asks {
   readonly showSheet: (index: number) => void;
   readonly select: (row: number, col: number) => void;
   readonly reveal: (source: Source) => void;
+  readonly setParam: (name: string, value: string) => void;
 }
 
 const EDGES = [
@@ -50,6 +51,7 @@ export function draw(into: HTMLElement, showing: Showing, asks: Asks): void {
     return;
   }
 
+  if (drawing.params.length > 0) into.append(parameters(drawing, asks));
   if (drawing.sheets.length > 1) into.append(tabs(drawing, showing.sheet, asks.showSheet));
 
   const sheet = drawing.sheets[Math.min(showing.sheet, drawing.sheets.length - 1)];
@@ -58,6 +60,45 @@ export function draw(into: HTMLElement, showing: Showing, asks: Asks): void {
   if (showing.reached !== null) into.append(reaching(showing.reached));
   if (showing.sources !== null) into.append(inspector(showing, asks));
   if (drawing.diagnostics.length > 0) into.append(problems(drawing, asks));
+}
+
+/**
+ * The parameters, as boxes to turn.
+ *
+ * One spec stands for several workbooks (`docs/spec.md` §7); this is how a
+ * reader looks at the others without editing anything. Emptying a box gives the
+ * parameter back to the spec's own default.
+ */
+function parameters(drawing: Drawing, asks: Asks): HTMLElement {
+  const panel = document.createElement('details');
+  panel.className = 'params';
+  panel.open = drawing.params.some((param) => param.set);
+
+  const heading = document.createElement('summary');
+  const changed = drawing.params.filter((param) => param.set).length;
+  heading.textContent = changed === 0 ? 'Parameters' : `Parameters (${changed} set)`;
+  panel.append(heading);
+
+  const form = document.createElement('div');
+  form.className = 'boxes';
+
+  for (const param of drawing.params) {
+    const label = document.createElement('label');
+    label.textContent = param.name;
+
+    const box = document.createElement('input');
+    box.type = 'text';
+    box.value = param.value;
+    box.size = 12;
+    if (param.set) box.classList.add('set');
+    box.addEventListener('change', () => asks.setParam(param.name, box.value));
+
+    label.append(box);
+    form.append(label);
+  }
+
+  panel.append(form);
+  return panel;
 }
 
 /** What the cursor is reaching, said above the grid so the highlight is explained. */

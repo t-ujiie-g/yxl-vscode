@@ -45,8 +45,8 @@ export interface Ctx {
   readonly styles: ReadonlyMap<string, StyleDef>;
 }
 
-export function context(doc: SpecDoc, read: DataReader | null): Ctx {
-  const { values, cycles } = resolveParams(doc.params);
+export function context(doc: SpecDoc, read: DataReader | null, set: Setting): Ctx {
+  const { values, cycles, unknown } = resolveParams(doc.params, set);
   const ctx: Ctx = {
     diagnostics: [],
     from: doc.file,
@@ -60,8 +60,14 @@ export function context(doc: SpecDoc, read: DataReader | null): Ctx {
   for (const cycle of cycles) {
     reject(ctx, CODE.paramCycle, `a parameter's default comes back round: ${cycle}`, doc);
   }
+  for (const name of unknown) {
+    reject(ctx, CODE.noSuchParam, `this spec declares no parameter \`${name}\` to set`, doc);
+  }
   return ctx;
 }
+
+/** What a caller wants the parameters to be, by name, as text (`docs/spec.md` §7). */
+export type Setting = ReadonlyMap<string, string>;
 
 export function reject(ctx: Ctx, code: Code, message: string, node: SpecNode): void {
   ctx.diagnostics.push(error(code, message, { file: node.file, span: node.span }));

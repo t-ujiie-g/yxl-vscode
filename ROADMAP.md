@@ -573,7 +573,11 @@ value, and it carries none of the write-back risk.
       **Shipped**: 150ms after the last keystroke, and on any *other* file being
       saved, since an `$include` or a `csv:` this spec reads may be what
       changed.
-- [ ] `params` switcher, so one spec previews as several workbooks
+- [x] `params` switcher, so one spec previews as several workbooks
+      **Shipped** as a box per declared parameter above the grid. A value typed
+      there is read the way `--set` reads one — `0.15` stays a number — and
+      emptying the box gives the parameter back to the spec's own default.
+      Nothing is written to the file: it changes what is *drawn*.
 - [ ] Apply number formats when drawing a value: a spec writes `0.085` with
       `format: "0.0%"` and Excel shows `8.5%`. Until this lands the preview
       shows the stored value, which is honest but not what the workbook looks
@@ -1418,6 +1422,23 @@ this at a phase boundary rather than at the end.
   for upstream as [yxl#68](https://github.com/t-ujiie-g/yxl/issues/68) — §23 is
   the only section of the reference with no worked example behind it, which
   means its compile path is not exercised there either.
+
+### 2026-08-15 — Phase 4: one spec, several workbooks
+- A box per declared parameter sits above the grid. Type in it and the spec is
+  drawn as though the parameter were that; empty it and the spec's own default
+  comes back. **Nothing is written to the file** — it changes what is drawn,
+  which is what a preview standing for several workbooks has to mean. 4 new
+  tests, 638 in total.
+- **A set value is read the way `--set` reads one**, and that turned out to be
+  the same reading a bare CSV field gets: `0.15` is a number, `007` is text.
+  Upstream shares one function for the two (`infer_scalar`), and so do we now —
+  the CSV reader and the parameter switcher call the same six lines.
+- A name set that the spec does not declare is reported rather than ignored: a
+  typo in a parameter box should say so, which is upstream's rule for `--set`
+  and the same one here.
+- The view now asks for three things and touches the file with none of them:
+  where a cell came from, take me there, and draw it as though this were
+  something else.
 
 ### 2026-08-15 — Phase 4: the compiler, from the editor
 - **yxl: Check the Spec** and **yxl: Build the Workbook** run the compiler over

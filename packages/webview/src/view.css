@@ -10,6 +10,41 @@ body {
   color: var(--vscode-foreground);
 }
 
+.params {
+  margin-bottom: 0.5rem;
+}
+
+.params summary {
+  color: var(--vscode-descriptionForeground);
+  cursor: pointer;
+}
+
+.boxes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.4rem 0 0.2rem;
+}
+
+.boxes label {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: var(--vscode-descriptionForeground);
+}
+
+.boxes input {
+  padding: 1px 4px;
+  border: 1px solid var(--vscode-input-border, var(--vscode-panel-border));
+  background: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+  font: inherit;
+}
+
+.boxes input.set {
+  border-color: var(--vscode-focusBorder);
+}
+
 .tabs {
   display: flex;
   gap: 0.25rem;

@@ -7,6 +7,7 @@ import {
   type DataReader,
   reaches,
   resolve,
+  type Setting,
   styleAt,
 } from '@yxl-vscode/compile';
 import { parse } from '@yxl-vscode/cst';
@@ -18,6 +19,7 @@ import type {
   Drawing,
   DrawnCell,
   DrawnMerge,
+  DrawnParam,
   DrawnSheet,
   MarkedCell,
   Sized,
@@ -56,13 +58,18 @@ export interface Projected {
  * to reason about — the host below it only decides *when* to call this and
  * where to put what comes back.
  */
-export function project(text: string, file: string, read: IncludeReader & DataReader): Projected {
+export function project(
+  text: string,
+  file: string,
+  read: IncludeReader & DataReader,
+  params: Setting = new Map(),
+): Projected {
   const parsed = parse(text, { file });
   const loaded = load(parsed, read);
   if (loaded.doc === null) {
     const diagnostics = [...parsed.diagnostics, ...loaded.diagnostics];
     return {
-      drawing: { kind: 'drawing', file, sheets: [], diagnostics: listed(diagnostics) },
+      drawing: { kind: 'drawing', file, sheets: [], params: [], diagnostics: listed(diagnostics) },
       diagnostics,
       doc: null,
       grid: null,
@@ -70,7 +77,7 @@ export function project(text: string, file: string, read: IncludeReader & DataRe
     };
   }
 
-  const grid = compile(loaded.doc, read);
+  const grid = compile(loaded.doc, { read, params });
   const diagnostics = [...parsed.diagnostics, ...loaded.diagnostics, ...grid.diagnostics];
   const nodes = nodesOf(loaded.doc);
   const marked = marks(grid, nodes, diagnostics);
@@ -80,6 +87,7 @@ export function project(text: string, file: string, read: IncludeReader & DataRe
       kind: 'drawing',
       file,
       sheets: grid.sheets.map((sheet) => drawSheet(sheet, marked.get(sheet.name) ?? [])),
+      params: declared(loaded.doc, params),
       diagnostics: listed(diagnostics),
     },
     diagnostics,
@@ -116,6 +124,20 @@ function marks(
   }
 
   return marked;
+}
+
+/**
+ * The parameters a reader may turn, with what they are set to now.
+ *
+ * A default that names another parameter shows as the text the spec wrote,
+ * since that is what a reader would edit — the resolved value is on the cells.
+ */
+function declared(doc: SpecDoc, params: Setting): DrawnParam[] {
+  return doc.params.map((param) => ({
+    name: param.name,
+    value: params.get(param.name) ?? String(param.value ?? ''),
+    set: params.has(param.name),
+  }));
 }
 
 function drawSheet(sheet: CompiledSheet, problems: readonly MarkedCell[]): DrawnSheet {
