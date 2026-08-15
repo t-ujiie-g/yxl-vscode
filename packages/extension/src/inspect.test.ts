@@ -20,7 +20,7 @@ function read(source: string): { doc: SpecDoc; sheet: CompiledSheet } {
 
 function sources(source: string, at: string): Source[] {
   const { doc, sheet } = read(source);
-  return inspect(nodesOf(doc), sheet, at as A1Addr);
+  return inspect(nodesOf(doc), sheet, at as A1Addr, FILE);
 }
 
 function saying(source: string, at: string, facet: string): string {
@@ -93,6 +93,27 @@ describe('what the inspector says about a look', () => {
     const spec = `${SHEET}    cells:\n      A1: { value: 1, style: header }\ndefs:\n  styles:\n    base: { font: { size: 11 } }\n    header: { extends: base, font: { bold: true } }\n`;
     expect(saying(spec, 'A1', 'font.size')).toBe('the style `base`');
     expect(saying(spec, 'A1', 'font.bold')).toBe('the style `header`');
+  });
+});
+
+describe('what the inspector says about a file beside the spec', () => {
+  it('names it the way the spec named it, not the way this machine spells it', () => {
+    // The absolute path is this machine's business, and it is the same file
+    // spelled differently on every machine on the team.
+    const spec = `${SHEET}    data:\n      - at: A1\n        csv: sales.csv\n`;
+    const beside = (_from: string, path: string) => {
+      const file = filePath(`/specs/${path}`);
+      return file === null ? null : { file, source: 'APAC,1\n' };
+    };
+
+    const { doc } = load(parse(spec, { file: '/specs/report.yxl.yaml' }), beside);
+    if (doc === null) throw new Error('did not load');
+
+    const sheet = compile(doc, { read: beside }).sheets[0];
+    if (sheet === undefined) throw new Error('compiled no sheet');
+
+    const said = inspect(nodesOf(doc), sheet, 'A1' as A1Addr, '/specs/report.yxl.yaml');
+    expect(said[0]?.says).toBe('row 1, field 1 of `sales.csv`');
   });
 });
 

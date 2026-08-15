@@ -1676,6 +1676,24 @@ this at a phase boundary rather than at the end.
 - A cell's own format — written, or the one its type takes — now wins over a
   band's. Both are requests about *that* cell; a band is something reaching it.
 
+### 2026-08-16 — Two things a reader saw that the tests could not
+
+Both found by looking at the preview over yxl's own examples, and both about
+saying *where* something comes from.
+
+- **A `formulas:` range reached nothing.** Put the cursor on one and the note
+  said *the range `C2:C3` reaches no cell the grid holds* — of every construct,
+  the one whose reach a reader most wants to see. `reaches` counted the cells a
+  sheet *holds*, and a range is held as a range (ADR-019). It now names the
+  cells the range covers, down to where the sheet writes something: `D2:D1048576`
+  is two words in a spec, and a count a reader can act on is not the height of a
+  sheet.
+- **The inspector spelled a CSV as this machine spells it** —
+  `/Users/…/examples/workbook/data/sales-2026-07.csv` — where the spec says
+  `data/sales-2026-07.csv`. The absolute path is the same file on every machine
+  on the team, spelled differently on each. Named relative to the spec now, as
+  the refusals already did.
+
 ### 2026-08-16 — Phase 6: honest before you type, not after
 
 - **A cell that cannot be typed into says so.** A grey corner in the grid, the
