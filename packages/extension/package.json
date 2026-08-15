@@ -21,6 +21,16 @@
         "command": "yxl.showPreview",
         "title": "Open Preview to the Side",
         "category": "yxl"
+      },
+      {
+        "command": "yxl.check",
+        "title": "Check the Spec",
+        "category": "yxl"
+      },
+      {
+        "command": "yxl.build",
+        "title": "Build the Workbook",
+        "category": "yxl"
       }
     ],
     "menus": {
@@ -30,7 +40,31 @@
           "when": "resourceFilename =~ /\\.yxl\\.ya?ml$/",
           "group": "navigation"
         }
+      ],
+      "commandPalette": [
+        {
+          "command": "yxl.check",
+          "when": "resourceFilename =~ /\\.yxl\\.ya?ml$/"
+        },
+        {
+          "command": "yxl.build",
+          "when": "resourceFilename =~ /\\.yxl\\.ya?ml$/"
+        },
+        {
+          "command": "yxl.showPreview",
+          "when": "resourceFilename =~ /\\.yxl\\.ya?ml$/"
+        }
       ]
+    },
+    "configuration": {
+      "title": "yxl",
+      "properties": {
+        "yxl.path": {
+          "type": "string",
+          "default": "yxl",
+          "markdownDescription": "The `yxl` compiler this extension runs. A bare name is looked up on `PATH`; an absolute path is used as given."
+        }
+      }
     }
   },
   "scripts": {
