@@ -11,14 +11,14 @@ import type { Drawing, Refused, Uncomputed } from './protocol';
  * file that draws a spreadsheet and writes prose is two files.
  */
 
-export /**
+/**
  * The parameters, as boxes to turn.
  *
  * One spec stands for several workbooks (`docs/spec.md` §7); this is how a
  * reader looks at the others without editing anything. Emptying a box gives the
  * parameter back to the spec's own default.
  */
-function parameters(drawing: Drawing, asks: Asks): HTMLElement {
+export function parameters(drawing: Drawing, asks: Asks): HTMLElement {
   const panel = document.createElement('details');
   panel.className = 'params';
   panel.open = drawing.params.some((param) => param.set);
@@ -50,14 +50,14 @@ function parameters(drawing: Drawing, asks: Asks): HTMLElement {
   return panel;
 }
 
-export /**
+/**
  * Why some cells show a formula rather than what it comes to.
  *
  * Said once, under the grid, rather than on every cell: a reader who sees one
  * formula among numbers is owed the reason, and the reason is the same for all
  * of them.
  */
-function uncomputed(said: Uncomputed): string {
+export function uncomputed(said: Uncomputed): string {
   if (said.kind === 'tooMany') {
     return `Nothing is computed here: this workbook holds more than ${said.limit} formulas, and computing some of them would make every total over the rest wrong.`;
   }
@@ -68,7 +68,7 @@ function uncomputed(said: Uncomputed): string {
   return `Not computed here: ${shown}${rest} — this preview does not model tables or workbook-defined names, so formulas that use them show as formulas.`;
 }
 
-export /**
+/**
  * Why an edit did not happen, said where the edit was attempted — and, where
  * there is one, the way it could still be made.
  *
@@ -76,7 +76,7 @@ export /**
  * (`docs/spec.md` §23). It is offered rather than taken: an escape hatch that
  * opens on its own is not an escape hatch (ADR-007).
  */
-function refusal(refused: Refused, asks: Asks): HTMLElement {
+export function refusal(refused: Refused, asks: Asks): HTMLElement {
   const said = document.createElement('p');
   said.className = 'refused';
   said.append(refused.why);
@@ -105,8 +105,8 @@ function refusal(refused: Refused, asks: Asks): HTMLElement {
   return said;
 }
 
-export /** What the cursor is reaching, said above the grid so the highlight is explained. */
-function reaching(reached: Reached): HTMLElement {
+/** What the cursor is reaching, said above the grid so the highlight is explained. */
+export function reaching(reached: Reached): HTMLElement {
   const said = document.createElement('p');
   said.className = 'reaching';
 
@@ -119,13 +119,13 @@ function reaching(reached: Reached): HTMLElement {
   return said;
 }
 
-export /**
+/**
  * Where each facet of the selected cell came from.
  *
  * Every line is a place in a file, so every line can be gone to — which is half
  * of the bidirectional jump this release is for.
  */
-function inspector(showing: Showing, asks: Asks): HTMLElement {
+export function inspector(showing: Showing, asks: Asks): HTMLElement {
   const panel = document.createElement('section');
   panel.className = 'inspector';
 

@@ -4,14 +4,7 @@ import type { IncludeReader } from '@yxl-vscode/loader';
 import type { SpecDoc } from '@yxl-vscode/spec';
 import { type A1Addr, addrAt, type FilePath, type SheetName, sheetName } from '@yxl-vscode/units';
 import { type Change, checked } from '@yxl-vscode/verify';
-
-/** What a reader typed into a cell, as the view sends it. */
-export interface Typed {
-  readonly sheet: string;
-  readonly row: number;
-  readonly col: number;
-  readonly text: string;
-}
+import type { Typed } from '@yxl-vscode/webview/protocol';
 
 /**
  * What the write needs of the world outside it.

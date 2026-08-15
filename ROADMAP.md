@@ -1671,6 +1671,24 @@ this at a phase boundary rather than at the end.
 - A cell's own format — written, or the one its type takes — now wins over a
   band's. Both are requests about *that* cell; a band is something reaching it.
 
+### 2026-08-16 — Sweep after the override work (AGENTS.md §8)
+
+- **The wire's own shape was declared twice** — `Typed` in `protocol.ts` and
+  again in the extension — which is precisely the confusion that cost an hour:
+  a *message* was handed back where a *value* belonged, and its `kind` rode
+  along. One declaration now, in the package that owns the wire.
+- **The view's wiring had no tests, and that is where the bug lived.** It reads
+  the page and VS Code's bridge out of the global scope, so nothing could hold
+  it. It takes both as arguments now and returns the function that answers the
+  host — and the test that pins *an override goes out as an override, whatever
+  the offer arrived carrying* fails against the old code.
+- **A note with nothing to say said it anyway**: a cursor touching no node
+  produced *reaches no cell the grid holds*, a sentence with no subject, because
+  the host says "nothing" by sending an empty name. Nothing is said now.
+- Doc comments that the last split had left *after* their `export` are back in
+  front of it, and the README says what the escape hatch is rather than
+  promising it. 7 new tests, 923 in total.
+
 ### 2026-08-15 — Phase 6: the exception, said out loud
 
 - **A refusal now carries the way out.** *`C3` is filled by the range anchored

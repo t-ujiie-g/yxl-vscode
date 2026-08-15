@@ -138,7 +138,9 @@ function say(under: Element, showing: Showing, asks: Asks): void {
   if (showing.said !== null) under.append(note(showing.said));
   if (showing.refused !== null) under.append(refusal(showing.refused, asks));
   if (drawing.uncomputed !== null) under.append(note(uncomputed(drawing.uncomputed)));
-  if (showing.reached !== null) under.append(reaching(showing.reached));
+  if (showing.reached !== null && showing.reached.says !== '') {
+    under.append(reaching(showing.reached));
+  }
   if (showing.sources !== null) under.append(inspector(showing, asks));
   if (drawing.diagnostics.length > 0) under.append(problems(drawing, asks));
 }

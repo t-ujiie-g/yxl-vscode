@@ -2,8 +2,9 @@ import { compile } from '@yxl-vscode/compile';
 import { parse } from '@yxl-vscode/cst';
 import { type IncludeReader, load } from '@yxl-vscode/loader';
 import { type FilePath, filePath } from '@yxl-vscode/units';
+import type { Typed } from '@yxl-vscode/webview/protocol';
 import { describe, expect, it } from 'vitest';
-import { type Port, type Spec, type Typed, write, writeOverride } from './write';
+import { type Port, type Spec, write, writeOverride } from './write';
 
 const ROOT = filePath('/specs/report.yxl.yaml') ?? ('' as FilePath);
 

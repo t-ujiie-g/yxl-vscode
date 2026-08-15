@@ -25,20 +25,25 @@ export type {
 /** The bridge VS Code puts in a webview, and the only way out of one. */
 declare function acquireVsCodeApi(): { postMessage: (message: FromView) => void };
 
+/** Where the view sends what it wants, which is the editor and nothing else. */
+export interface Host {
+  readonly postMessage: (message: FromView) => void;
+}
+
 /**
  * The view, driven by the host's messages.
  *
- * It holds three things of its own — which sheet is showing, which cell is
- * selected, and the answer to the last question it asked — and redraws outright
- * for everything else, because a projection has nothing to reconcile (ADR-001).
- * The three are named, not numbered, so that a spec read again finds them where
- * the reader left them (ADR-023).
+ * It holds a few things of its own — which sheet is showing, which cell is
+ * selected, the answer to the last question it asked, and what the host last
+ * said about an edit — and redraws outright for everything else, because a
+ * projection has nothing to reconcile (ADR-001). They are named, not numbered,
+ * so that a spec read again finds them where the reader left them (ADR-023).
+ *
+ * Takes the page and the host rather than reaching for them, so that what it
+ * *sends* can be tested: a message going out under the wrong `kind` is a bug
+ * neither the type checker nor a drawing test can see (§11).
  */
-function start(): void {
-  const into = document.getElementById('grid');
-  if (into === null) return;
-
-  const host = acquireVsCodeApi();
+export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
   let drawing: Drawing | null = null;
   let sheet = 0;
   let selected: Showing['selected'] = null;
@@ -95,19 +100,13 @@ function start(): void {
       host.postMessage({ kind: 'edit', sheet: named(), row, col, text });
     },
     overrideWith: (typed, reason) => {
-      // Nothing is redrawn here: the host is about to ask the reader a question
-      // in a box of its own, and anything this touches now takes the focus back
-      // before they can answer it. The answer arrives as a drawing or as
-      // another refusal.
-      // `kind` last: whatever the host handed back, this message is an
-      // override, and a spread that ends in someone else's `kind` is not.
+      // `kind` last: whatever the host handed back is spread first, and a
+      // message that ends in someone else's `kind` is that other message.
       host.postMessage({ ...typed, reason, kind: 'override' });
     },
   };
 
-  window.addEventListener('message', (event: MessageEvent<ToView>) => {
-    const sent = event.data;
-
+  return (sent: ToView): void => {
     if (sent.kind === 'refused') {
       refused = sent;
       said = null;
@@ -154,7 +153,17 @@ function start(): void {
       sources = sent.sources;
       restated();
     }
-  });
+  };
+}
+
+/** The view as the webview runs it: the page it was given, and VS Code's bridge. */
+function start(): void {
+  const into = document.getElementById('grid');
+  if (into === null) return;
+
+  const host = acquireVsCodeApi();
+  const told = wire(into, host);
+  window.addEventListener('message', (event: MessageEvent<ToView>) => told(event.data));
 }
 
 if (typeof document !== 'undefined') start();

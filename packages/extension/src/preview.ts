@@ -1,12 +1,12 @@
 import { reaches } from '@yxl-vscode/compile';
 import { type Engine, univerEngine } from '@yxl-vscode/evaluate';
 import { addrAt, cellOf, type FilePath, filePath } from '@yxl-vscode/units';
-import type { FromView } from '@yxl-vscode/webview/protocol';
+import type { FromView, Typed } from '@yxl-vscode/webview/protocol';
 import * as vscode from 'vscode';
 import { readBeside } from './files';
 import { inspect, knows, type Nodes, nodeAt } from './inspect';
 import { type Projected, project, redraw, type Window } from './project';
-import { type Port, type Spec, type Typed, write, writeOverride } from './write';
+import { type Port, type Spec, write, writeOverride } from './write';
 
 /** Long enough that typing does not redraw on every keystroke, short enough to feel live. */
 const SETTLE = 150;
