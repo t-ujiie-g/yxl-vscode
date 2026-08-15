@@ -4,6 +4,11 @@ import type { ScalarValue, StyleValues } from '@yxl-vscode/spec';
 /**
  * What the host sends the view, and the only thing the view knows about a spec.
  *
+ * `uncomputed` names what the preview could not resolve well enough to compute
+ * anything from — a table, a workbook-defined name, a function Excel has and
+ * this does not. Cells that depend on one show their formula, and this is what
+ * the view says about why.
+ *
  * A projection, flattened for the wire: VS Code serializes a webview message as
  * JSON, so the `Map` and the branded types a `CompiledGrid` holds would not
  * survive the trip. Flattening here rather than in the view keeps every
@@ -16,6 +21,7 @@ export interface Drawing {
   readonly sheets: readonly DrawnSheet[];
   readonly params: readonly DrawnParam[];
   readonly diagnostics: readonly DrawnDiagnostic[];
+  readonly uncomputed: readonly string[];
 }
 
 /**

@@ -91,7 +91,14 @@ export function project(
   if (loaded.doc === null) {
     const diagnostics = [...parsed.diagnostics, ...loaded.diagnostics];
     return {
-      drawing: { kind: 'drawing', file, sheets: [], params: [], diagnostics: listed(diagnostics) },
+      drawing: {
+        kind: 'drawing',
+        file,
+        sheets: [],
+        params: [],
+        diagnostics: listed(diagnostics),
+        uncomputed: [],
+      },
       evaluation: null,
       diagnostics,
       doc: null,
@@ -146,6 +153,7 @@ function drawn(
     ),
     params: declared(doc, params),
     diagnostics: listed(diagnostics),
+    uncomputed: evaluation?.unknown ?? [],
   };
 }
 

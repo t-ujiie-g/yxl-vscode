@@ -22,6 +22,7 @@ function reader(): Engine & { readonly asked: Asked[] } {
     holds: (given) => {
       book = given;
     },
+    about: (one) => ({ unknown: [], reads: [one.sheet] }),
     compute: (one) => {
       asked.push(one);
       const [across, down] = one.offset;
@@ -63,6 +64,7 @@ function asks(source: string): Asked[] {
       passes += 1;
       engine.holds(book);
     },
+    about: engine.about,
     compute: (one) => (passes === 1 ? engine.compute(one) : { kind: 'value', value: null }),
   });
 
@@ -115,6 +117,7 @@ describe('what a pass asks the engine for', () => {
         given = book;
         engine.holds(book);
       },
+      about: engine.about,
       compute: engine.compute,
     });
 
@@ -157,6 +160,7 @@ describe('what a pass makes of the answers', () => {
     let answers = 0;
     const done = evaluate(compile(doc), {
       holds: () => {},
+      about: (one) => ({ unknown: [], reads: [one.sheet] }),
       compute: () => {
         answers += 1;
         return { kind: 'value', value: answers };

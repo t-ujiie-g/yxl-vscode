@@ -44,10 +44,42 @@ describe('a workbook computed', () => {
   });
 
   it("keeps Excel's own error text, which is what the workbook will show", () => {
-    const spec = `${SALES}    cells:\n      A1: { formula: "1/0" }\n      A2: { formula: "NOSUCHFN(1)" }\n`;
-
+    const spec = `${SALES}    cells:\n      A1: { formula: "1/0" }\n`;
     expect(at(spec, 'A1')).toEqual({ kind: 'error', error: '#DIV/0!' });
-    expect(at(spec, 'A2')).toEqual({ kind: 'error', error: '#NAME?' });
+  });
+
+  it('refuses a formula naming something it was not given, rather than answering anyway', () => {
+    // A table reference and a workbook-defined name are both constructs this
+    // editor does not model yet, and the engine has nothing behind either. It
+    // would answer `#NAME?`, an `IFERROR` around it would answer `""`, and a
+    // `SUM` over that would answer a number the workbook will not show.
+    const spec = `${SALES}    cells:\n      A1: { formula: "IFERROR(INDEX(StoreMaster[name], 1), \\"\\")" }\n      A2: { formula: "B1*target_revenue" }\n`;
+
+    expect(at(spec, 'A1')?.kind).toBe('unsupported');
+    expect(at(spec, 'A2')?.kind).toBe('unsupported');
+  });
+
+  it('says what it could not resolve, so the gap is visible rather than silent', () => {
+    const spec = `${SALES}    cells:\n      A1: { formula: "SUM(StoreMaster[amount])" }\n`;
+    const { doc } = load(parse(spec, { file: 'spec.yxl.yaml' }));
+    if (doc === null) throw new Error('did not load');
+
+    expect(evaluate(compile(doc), univerEngine()).unknown).toEqual(['StoreMaster[amount]']);
+  });
+
+  it('doubts a whole sheet, because a total over cells it could not compute is wrong', () => {
+    const spec = `${SALES}    cells:\n      B1: 1\n      B2: { formula: "SUM(B1)" }\n      B3: { formula: "target_revenue" }\n`;
+    expect(at(spec, 'B2')?.kind).toBe('unsupported');
+  });
+
+  it('doubts a sheet that reads one it could not compute', () => {
+    const spec = `sheets:\n  - name: Sales\n    cells:\n      A1: { formula: "target_revenue" }\n  - name: Notes\n    cells:\n      A1: { formula: "Sales!A1+1" }\n`;
+    expect(at(spec, 'A1', 'Notes')?.kind).toBe('unsupported');
+  });
+
+  it('computes a sheet that reads only sheets it could compute', () => {
+    const spec = `sheets:\n  - name: Sales\n    cells:\n      A1: 40\n  - name: Notes\n    cells:\n      A1: { formula: "Sales!A1*2" }\n`;
+    expect(at(spec, 'A1', 'Notes')).toEqual({ kind: 'value', value: 80 });
   });
 
   it('computes text and logic, not only arithmetic', () => {

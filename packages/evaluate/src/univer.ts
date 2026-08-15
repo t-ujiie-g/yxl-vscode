@@ -13,11 +13,13 @@ import {
   IFunctionService,
   Interpreter,
   Lexer,
+  LexerTreeBuilder,
+  sequenceNodeType,
   UniverFormulaEnginePlugin,
 } from '@univerjs/engine-formula';
 import type { ScalarValue } from '@yxl-vscode/spec';
-import { cellOf } from '@yxl-vscode/units';
-import type { Asked, Computed, Engine, Held, HeldSheet } from './engine';
+import { cellOf, type SheetName, sheetName } from '@yxl-vscode/units';
+import type { About, Asked, Computed, Engine, Held, HeldSheet } from './engine';
 
 /**
  * The formula engine, as this project uses it (ADR-013, ADR-025).
@@ -39,10 +41,10 @@ export function univerEngine(): Engine {
   const lexer = injector.get(Lexer);
   const parser = injector.get(AstTreeBuilder);
   const interpreter = injector.get(Interpreter);
+  const tokens = injector.get(LexerTreeBuilder);
+  const functions = injector.get(IFunctionService);
 
-  injector
-    .get(IFunctionService)
-    .registerExecutors(...ALL_IMPLEMENTED_FUNCTIONS.map(([Fn, name]) => new Fn(name)));
+  functions.registerExecutors(...ALL_IMPLEMENTED_FUNCTIONS.map(([Fn, name]) => new Fn(name)));
 
   let sheets: string[] = [];
   let loaded = 0;
@@ -60,6 +62,8 @@ export function univerEngine(): Engine {
       config.registerSheetNameMap({ [BOOK]: named(sheets, `${born}-${loaded}`) });
     },
 
+    about: (asked) => about(asked, tokens, functions),
+
     compute: (asked) => {
       const at = cellOf(asked.at);
       const sheet = idOf(sheets, asked.sheet, `${born}-${loaded}`);
@@ -69,6 +73,59 @@ export function univerEngine(): Engine {
       return computed(asked, lexer, parser, interpreter);
     },
   };
+}
+
+/**
+ * What a formula names, read off the lexer's own tokens.
+ *
+ * The lexer has no registry to check a bare name against, so it calls anything
+ * that could be called a function: `SUM`, and `target_revenue`, and the
+ * `StoreMaster[store_name` of a table reference alike. A name with no executor
+ * behind it is therefore exactly the set this cannot compute — a table, a
+ * defined name, or a function Excel has and this engine does not.
+ */
+function about(asked: Asked, tokens: LexerTreeBuilder, functions: IFunctionService): About {
+  const said = tokens.sequenceNodesBuilder(asked.formula) ?? [];
+  const unknown: string[] = [];
+  const reads = new Set<SheetName>([asked.sheet]);
+
+  for (const node of said) {
+    if (typeof node === 'string') continue;
+
+    if (node.nodeType === sequenceNodeType.FUNCTION) {
+      if (!functions.hasExecutor(node.token.toUpperCase())) unknown.push(whole(node.token));
+    } else if (
+      node.nodeType === sequenceNodeType.DEFINED_NAME ||
+      node.nodeType === sequenceNodeType.TABLE
+    ) {
+      unknown.push(whole(node.token));
+    } else if (node.nodeType === sequenceNodeType.REFERENCE) {
+      const elsewhere = sheetOf(node.token);
+      if (elsewhere !== null) reads.add(elsewhere);
+    }
+  }
+
+  return { unknown, reads: [...reads] };
+}
+
+/**
+ * A name as the spec wrote it.
+ *
+ * The lexer hands back a table reference without its closing bracket, because
+ * the bracket is a token of its own to it. A reader is owed the name they wrote.
+ */
+function whole(token: string): string {
+  return token.includes('[') && !token.endsWith(']') ? `${token}]` : token;
+}
+
+/** The sheet a reference names, or `null` where it names the one it sits in. */
+function sheetOf(token: string): SheetName | null {
+  const cut = token.lastIndexOf('!');
+  if (cut < 0) return null;
+
+  const spelled = token.slice(0, cut);
+  const bare = spelled.startsWith("'") ? spelled.slice(1, -1).replaceAll("''", "'") : spelled;
+  return sheetName(bare);
 }
 
 function computed(

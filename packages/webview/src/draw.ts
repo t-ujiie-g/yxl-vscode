@@ -67,6 +67,7 @@ export function draw(into: HTMLElement, showing: Showing, asks: Asks): void {
     box.scrollLeft = kept.left;
   }
 
+  if (drawing.uncomputed.length > 0) into.append(note(uncomputed(drawing.uncomputed)));
   if (showing.reached !== null) into.append(reaching(showing.reached));
   if (showing.sources !== null) into.append(inspector(showing, asks));
   if (drawing.diagnostics.length > 0) into.append(problems(drawing, asks));
@@ -138,6 +139,20 @@ function scroller(sheet: DrawnSheet, showing: Showing, asks: Asks): HTMLElement 
   });
 
   return box;
+}
+
+/**
+ * Why some cells show a formula rather than what it comes to.
+ *
+ * Said once, under the grid, rather than on every cell: a reader who sees one
+ * formula among numbers is owed the reason, and the reason is the same for all
+ * of them.
+ */
+function uncomputed(names: readonly string[]): string {
+  const shown = names.slice(0, 3).join(', ');
+  const rest = names.length > 3 ? `, and ${names.length - 3} more` : '';
+
+  return `Not computed here: ${shown}${rest} — this preview does not model tables or workbook-defined names, so formulas that use them show as formulas.`;
 }
 
 /** What the cursor is reaching, said above the grid so the highlight is explained. */

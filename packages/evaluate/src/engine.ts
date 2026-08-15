@@ -48,14 +48,30 @@ export interface Asked {
 }
 
 /**
+ * What a formula names, before anything is computed from it.
+ *
+ * `unknown` is every name in it that this engine has nothing behind — a table,
+ * a workbook-defined name, a function it does not implement. A formula holding
+ * one is not computed at all: the engine would answer *something*, and that
+ * answer is a number the workbook will not show.
+ *
+ * `reads` is the sheets it reads from, which is how far the doubt spreads.
+ */
+export interface About {
+  readonly unknown: readonly string[];
+  readonly reads: readonly SheetName[];
+}
+
+/**
  * A formula engine, as little of one as this needs (ADR-013).
  *
- * Two calls: here is what the workbook holds, and what does this formula come
- * to. Everything else — which order to compute in, what to do with a cell that
- * depends on another — is `evaluate`'s, because that part is about the *spec*
- * and would be the same behind any engine.
+ * Three calls: here is what the workbook holds, what does this formula name,
+ * and what does it come to. Everything else — which order to compute in, what
+ * to do with a cell that depends on another — is `evaluate`'s, because that
+ * part is about the *spec* and would be the same behind any engine.
  */
 export interface Engine {
   holds: (book: readonly HeldSheet[]) => void;
+  about: (asked: Asked) => About;
   compute: (asked: Asked) => Computed;
 }

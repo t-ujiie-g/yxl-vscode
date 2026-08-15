@@ -13,6 +13,7 @@ import type { Asked, Computed, Engine, Held, HeldSheet } from './engine';
 export interface Evaluation {
   readonly values: ReadonlyMap<string, Computed>;
   readonly stopped: boolean;
+  readonly unknown: readonly string[];
 }
 
 /** How a cell is named in an evaluation, across sheets. */
@@ -35,32 +36,103 @@ export function evaluate(grid: CompiledGrid, engine: Engine, limit = LIMIT): Eva
   const asked: Asked[] = [];
   for (const sheet of grid.sheets) gather(sheet, held, asked);
 
-  if (asked.length > limit) return { values: new Map(), stopped: true };
+  if (asked.length > limit) return { values: new Map(), stopped: true, unknown: [] };
 
+  const doubted = doubt(asked, engine);
   const values = new Map<string, Computed>();
+  for (const one of asked) {
+    const why = doubted.why.get(one.sheet);
+    if (why !== undefined) values.set(computedAt(one.sheet, one.at), { kind: 'unsupported', why });
+  }
+
+  const computable = asked.filter((one) => !doubted.why.has(one.sheet));
   for (let pass = 0; pass < PASSES; pass += 1) {
     engine.holds(book(held, values));
 
     let settled = true;
-    for (const one of asked) {
+    for (const one of computable) {
       const before = values.get(computedAt(one.sheet, one.at));
       const now = engine.compute(one);
       if (!same(before, now)) settled = false;
       values.set(computedAt(one.sheet, one.at), now);
     }
 
-    if (settled) return { values, stopped: false };
+    if (settled) return { values, stopped: false, unknown: doubted.unknown };
   }
 
-  for (const one of asked) {
+  for (const one of computable) {
     const key = computedAt(one.sheet, one.at);
-    const now = values.get(key);
-    if (now?.kind === 'value') {
+    if (values.get(key)?.kind === 'value') {
       values.set(key, { kind: 'unsupported', why: 'this never settles — it may be circular' });
     }
   }
 
-  return { values, stopped: false };
+  return { values, stopped: false, unknown: doubted.unknown };
+}
+
+/**
+ * Which sheets cannot be computed, and what is missing from them.
+ *
+ * A formula naming something the engine was not given — a table, a defined
+ * name — cannot be computed, and neither can anything that *reads* it: a total
+ * over cells that were not computed is a total of blanks, which is a wrong
+ * number wearing the look of a right one. Without a dependency graph the line
+ * is drawn at the sheet, and doubt crosses a sheet boundary wherever a formula
+ * reads across one.
+ *
+ * Coarse on purpose: a sheet is where a reader looks, and "some of these
+ * numbers are computed and some are not" is a worse thing to hand them than a
+ * sheet of formulas and a sentence saying why (ADR-025).
+ */
+function doubt(
+  asked: readonly Asked[],
+  engine: Engine,
+): { why: Map<SheetName, string>; unknown: string[] } {
+  const unknown = new Map<SheetName, Set<string>>();
+  const reads = new Map<SheetName, Set<SheetName>>();
+
+  for (const one of asked) {
+    const said = engine.about(one);
+    const names = unknown.get(one.sheet) ?? new Set<string>();
+    const from = reads.get(one.sheet) ?? new Set<SheetName>();
+
+    for (const name of said.unknown) names.add(name);
+    for (const sheet of said.reads) from.add(sheet);
+
+    unknown.set(one.sheet, names);
+    reads.set(one.sheet, from);
+  }
+
+  const why = new Map<SheetName, string>();
+  for (const [sheet, names] of unknown) {
+    if (names.size > 0) {
+      why.set(sheet, `this sheet names ${said(names)}, which this preview does not model`);
+    }
+  }
+
+  for (let pass = 0; pass < unknown.size; pass += 1) {
+    const spread = [...reads].filter(
+      ([sheet, from]) => !why.has(sheet) && [...from].some((one) => why.has(one)),
+    );
+    if (spread.length === 0) break;
+
+    for (const [sheet] of spread) {
+      why.set(sheet, 'this sheet reads one whose formulas could not be computed');
+    }
+  }
+
+  return {
+    why,
+    unknown: [...new Set([...unknown.values()].flatMap((names) => [...names]))].sort(),
+  };
+}
+
+/** A list of names as a reader would say it. */
+function said(names: ReadonlySet<string>): string {
+  const all = [...names].map((name) => `\`${name}\``);
+  if (all.length <= 2) return all.join(' and ');
+
+  return `${all.slice(0, 2).join(', ')} and ${all.length - 2} more`;
 }
 
 /** How many formulas one call will compute, and how many passes it will take. */
