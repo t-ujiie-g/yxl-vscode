@@ -25,11 +25,6 @@ export type Change =
     }
   | { readonly kind: 'sheet'; readonly name: SheetName; readonly what: 'added' | 'removed' };
 
-/** How a cell is named in a claim about what an edit may change. */
-export function changedAt(sheet: SheetName, at: A1Addr): string {
-  return `${sheet}!${at}`;
-}
-
 /**
  * Everything two compilations of a spec disagree about.
  *

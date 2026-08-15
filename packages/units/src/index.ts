@@ -29,4 +29,4 @@ export {
   type ValueName,
   valueName,
 } from './name';
-export { parseQualifiedAddr, type QualifiedAddr } from './qualified';
+export { parseQualifiedAddr, type QualifiedAddr, qualified } from './qualified';

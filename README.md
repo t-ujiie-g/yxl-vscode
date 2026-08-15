@@ -5,7 +5,7 @@ A VS Code extension that renders a `*.yxl.yaml` spec as a spreadsheet grid
 beside its text, and will translate grid gestures back into edits on the spec —
 not into a workbook.
 
-> ⚠️ **Status: the read-only preview is complete; nothing writes yet.**
+> ⚠️ **Status: the preview is complete, and the first edits write back.**
 > *yxl: Open Preview to the Side* draws a spec as a grid next to the text and
 > redraws it as you type. Under it: YAML parses into a span-carrying tree, edits
 > apply as minimal byte patches that leave every untouched byte alone, a whole
@@ -24,7 +24,8 @@ not into a workbook.
 | **Answers** | Turn a parameter in the preview and the whole spec redraws as that workbook, without touching the file. Problems the projection found are marked on the cell and listed under the grid. |
 | **Computes** | Formulas are evaluated for display — 500-odd Excel functions, `#DIV/0!` and the rest of Excel's error text included, and a `formulas:` range computed per cell the way Excel shifts a shared formula. A formula that names something this does not model (a table, a workbook-defined name) is **not computed at all**, and the sheet says so: a number that is not the workbook's number is worse than no number. |
 | **Never writes a computed value** | What was computed is display-only and is kept apart from what the spec holds, everywhere, so no edit can ever be about it. |
-| **Does not edit** | Nothing in the preview writes to the spec — that is the next phase. The text editor beside it is how you change a spec today. |
+| **Edits, where the answer is one thing** | Type into a cell — Enter, or just start typing, as in Sheets — and the YAML changes: the smallest possible diff, in whichever `$include`d file wrote that cell, with your comments and quoting untouched. Every write is checked by compiling before and after and comparing what moved against what the edit said it would move; an edit that cannot be undone is not made. |
+| **Refuses the rest, out loud** | A value that comes from a definition, a CSV, a parameter, or a `formulas:` range has more than one answer or none, so the preview says which — under the grid, where you typed — rather than guessing or going quiet. Those become dialogs in the next phase. |
 
 ## Getting it
 

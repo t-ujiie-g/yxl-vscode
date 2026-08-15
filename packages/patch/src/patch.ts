@@ -1,4 +1,4 @@
-import { type Applied, apply, type Node, type Op, type Path, parse } from '@yxl-vscode/cst';
+import { type Applied, apply, type Node, nodeAt, type Op, type Path, parse } from '@yxl-vscode/cst';
 import { type Diagnostic, error, type Span, span } from '@yxl-vscode/diag';
 import { CODE } from './codes';
 
@@ -79,7 +79,7 @@ export function invert(source: string, patch: Patch, options: Options): Inverted
 }
 
 function inverseOf(root: Node, op: Op, options: Options, into: Diagnostic[]): Op | null {
-  const found = at(root, op.path);
+  const found = nodeAt(root, op.path);
   const refuse = (message: string): null => {
     const where: Span = found?.span ?? span(0, 0);
     into.push(error(CODE.noInverse, message, { file: options.file, span: where }));
@@ -139,34 +139,12 @@ function inverseOf(root: Node, op: Op, options: Options, into: Diagnostic[]): Op
   }
 }
 
-/** The node a path reaches, or `null` where the path reaches nothing. */
-function at(root: Node, path: Path): Node | null {
-  let node: Node = root;
-
-  for (const step of path) {
-    if (typeof step === 'string') {
-      if (node.kind !== 'map') return null;
-      const entry = node.entries.find((one) => one.key.value === step);
-      if (entry === undefined) return null;
-      node = entry.value;
-      continue;
-    }
-
-    if (node.kind !== 'seq') return null;
-    const item = node.items[step];
-    if (item === undefined) return null;
-    node = item;
-  }
-
-  return node;
-}
-
 /** The key an entry is written as, which is the last step of its own path. */
 function keyOf(root: Node, path: Path): string | null {
   const step = path[path.length - 1];
   if (typeof step !== 'string') return null;
 
-  const holder = at(root, path.slice(0, -1));
+  const holder = nodeAt(root, path.slice(0, -1));
   if (holder === null || holder.kind !== 'map') return null;
 
   return holder.entries.some((one) => one.key.value === step) ? step : null;
@@ -174,7 +152,7 @@ function keyOf(root: Node, path: Path): string | null {
 
 /** The key of the entry after this one, which is where "back where it was" means. */
 function after(root: Node, path: Path): string | null {
-  const holder = at(root, path.slice(0, -1));
+  const holder = nodeAt(root, path.slice(0, -1));
   if (holder === null || holder.kind !== 'map') return null;
 
   const index = holder.entries.findIndex((one) => one.key.value === path[path.length - 1]);

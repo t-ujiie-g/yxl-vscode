@@ -11,6 +11,17 @@ export interface QualifiedAddr {
 }
 
 /**
+ * A cell named with its sheet, in the spelling everything here reads back.
+ *
+ * One convention, in the package that owns addresses: a computed value, a
+ * changed cell, and an override's `at:` all name a cell the same way, and
+ * `parseQualifiedAddr` is the other half of this function.
+ */
+export function qualified(sheet: SheetName, at: A1Addr): string {
+  return `${sheet}!${at}`;
+}
+
+/**
  * Read a sheet-qualified cell reference, in either of Excel's two spellings:
  * bare (`Sales!E37`), or quoted where the name needs it (`'Q3 data'!A1`, an
  * apostrophe inside written `''`).

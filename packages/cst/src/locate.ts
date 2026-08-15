@@ -47,6 +47,17 @@ function step_(node: Node, step: string | number): Site | undefined {
   return item ? { in: 'seq', node: item, parent: node, index: step } : undefined;
 }
 
+/**
+ * The node a path reaches, or `null` where it reaches nothing.
+ *
+ * `locate` answers with what *holds* the node as well, which an edit needs and
+ * a reader of one does not. This is the short question, asked often enough to
+ * be worth not asking the long one.
+ */
+export function nodeAt(root: Node, path: Path): Node | null {
+  return locate(root, path)?.node ?? null;
+}
+
 /** `sheets[0].name` — how a path reads in a diagnostic. */
 export function formatPath(path: Path): string {
   return path.reduce<string>((text, step) => {
