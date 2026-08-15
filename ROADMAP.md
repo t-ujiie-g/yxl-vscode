@@ -674,7 +674,13 @@ the inverse is unique, so no dialog is needed yet.
       old text is still there — and it puts back **text**, not a value, which is
       what makes an undo byte-exact. Two ops were missing from the algebra
       (`add` an entry, `clear` a value) and one was new (`write` the bytes back).
-- [ ] `verify` loop wired in front of every apply (ADR-009)
+- [x] `verify` loop wired in front of every apply (ADR-009)
+      **Shipped**, and *wired* structurally rather than by discipline: `checked`
+      is the only export in the tree that writes a spec, and it compiles before,
+      applies, compiles after, and compares what moved against the patch's own
+      claim. Three verdicts — applied, ask about the surprises, refused — and the
+      refactor case (a claim of *nothing changes*) is the one where a single
+      surprised cell is a refusal.
 - [ ] `setValue` / `setFormula` on `literal` and `inline` origins
 - [ ] `overrides:` as an explicit escape hatch, with the "manually edited" badge
       and the optional `reason:` — writing the construct yxl v0.3.4 shipped
@@ -1654,6 +1660,29 @@ this at a phase boundary rather than at the end.
   two serials either side of it, so the next reader knows it is deliberate.
 - A cell's own format — written, or the one its type takes — now wins over a
   band's. Both are requests about *that* cell; a band is something reaching it.
+
+### 2026-08-15 — Phase 6: the gate every write passes
+
+- **`verify`**: compile the spec, apply the patch to the *text*, compile again,
+  and diff the two grids (ADR-009). What moved is compared against what the
+  patch said it would move; anything else is a surprise, and what a surprise
+  means is the patch's own business — a cell edit that ripples is worth asking
+  about, a refactor that claims to change nothing is refused for one changed
+  cell.
+- **The wiring is structural.** `checked` verifies *and* applies, and it is the
+  only export in the tree that writes a spec — so there is no fast path to
+  forget to take, which is what ADR-009 asks for and what a convention would
+  eventually fail to deliver.
+- **A diff is about the grid, not the file.** Adding a comment, changing a
+  quote, moving a line: no change. A value, a formula, a number format, a
+  resolved look: a change, named by which of those moved, at an address a
+  reader can find. A cell that arrives holding nothing is not a change — a
+  reader cannot tell it from the empty address it replaced.
+- **An error the spec already had is not this edit's fault.** Someone is
+  mid-keystroke elsewhere in the file; refusing every edit until the rest of it
+  is valid would fail exactly when the editor is most wanted. What is refused is
+  an error the edit *added*.
+- 21 new tests, 852 in total.
 
 ### 2026-08-15 — Phase 6: edits that can be taken back
 
