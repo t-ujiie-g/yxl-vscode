@@ -7,9 +7,9 @@ export type Path = readonly (string | number)[];
 /**
  * An edit expressed against the tree rather than against the text.
  *
- * These are deliberately fewer than the spec-level operations of `ROADMAP.md`
- * §4.5 — that algebra addresses spec constructs and is `patch`'s job; this one
- * addresses YAML nodes and is all the syntax layer needs to be asked for.
+ * These are deliberately fewer than the spec-level operations `patch` will
+ * take — that algebra addresses spec constructs; this one addresses YAML nodes
+ * and is all the syntax layer needs to be asked for.
  */
 export type Op =
   | { readonly op: 'set'; readonly path: Path; readonly value: Value }

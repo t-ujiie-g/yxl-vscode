@@ -92,7 +92,7 @@ export function columnIndex(label: string): number {
 }
 
 /** The inverse: 1 is `A`, 27 is `AA`. */
-function columnLabel(index: number): string {
+export function columnLabel(index: number): string {
   let label = '';
   for (let left = index; left > 0; left = Math.floor((left - 1) / 26)) {
     label = String.fromCharCode(65 + ((left - 1) % 26)) + label;

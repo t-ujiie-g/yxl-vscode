@@ -1,5 +1,5 @@
 import { sheetAgain } from './again';
-import { type Asks, draw, type Reached, type Showing } from './draw';
+import { type Asks, cellKey, draw, type Reached, type Showing } from './draw';
 import type { Drawing, FromView, Source, ToView } from './protocol';
 
 export { type Kept, sheetAgain } from './again';
@@ -92,7 +92,7 @@ function start(): void {
 
     if (sent.kind === 'highlighted') {
       const here = sent.cells.filter((cell) => cell.sheet === named());
-      reached = { says: sent.says, cells: new Set(here.map((one) => `${one.col}:${one.row}`)) };
+      reached = { says: sent.says, cells: new Set(here.map((one) => cellKey(one.col, one.row))) };
       redraw();
       return;
     }

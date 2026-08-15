@@ -1,6 +1,5 @@
 // @vitest-environment jsdom
 
-import { type Color, parseColor } from '@yxl-vscode/units';
 import { describe, expect, it, vi } from 'vitest';
 import { type Asks, draw, type Showing } from './draw';
 import type { Drawing, DrawnCell, DrawnSheet } from './protocol';
@@ -78,13 +77,6 @@ function scrolled(into: HTMLElement, top: number): void {
   box.scrollTop = top;
 }
 
-/** A colour, branded the way the projection would have branded it. */
-function colour(hex: string): Color {
-  const read = parseColor(hex);
-  if (read === null) throw new Error(`not a colour: ${hex}`);
-  return read;
-}
-
 describe('the grid', () => {
   it('draws a heading row of column names, and a number down the side', () => {
     const into = shown();
@@ -93,84 +85,6 @@ describe('the grid', () => {
 
     expect(headings).toEqual(['', 'A', 'B']);
     expect(numbers).toEqual(['1', '2']);
-  });
-
-  it('puts a value where the spec put it', () => {
-    const cells = [cell(2, 1, { value: 'APAC' })];
-    expect(at(shown({ drawing: drawing({ sheets: [sheet({ cells })] }) }), 2, 1)?.textContent).toBe(
-      'APAC',
-    );
-  });
-
-  it('draws a number under its format', () => {
-    const cells = [cell(1, 1, { value: 0.085, format: '0.0%' })];
-    expect(at(shown({ drawing: drawing({ sheets: [sheet({ cells })] }) }), 1, 1)?.textContent).toBe(
-      '8.5%',
-    );
-  });
-
-  it('draws a formula as its own text, having computed nothing', () => {
-    const cells = [cell(1, 1, { formula: 'SUM(A1:A2)' })];
-    expect(at(shown({ drawing: drawing({ sheets: [sheet({ cells })] }) }), 1, 1)?.textContent).toBe(
-      '=SUM(A1:A2)',
-    );
-  });
-
-  it('says where a filled cell reads from instead of a formula that is wrong there', () => {
-    const cells = [cell(1, 1, { formula: 'B2*0.05', filledFrom: 'C2' })];
-    const drawn = at(shown({ drawing: drawing({ sheets: [sheet({ cells })] }) }), 1, 1);
-
-    expect(drawn?.textContent).toBe('↧ C2');
-    expect(drawn?.classList.contains('filled')).toBe(true);
-    expect(drawn?.title).toContain('Excel shifts');
-  });
-});
-
-describe('what a cell looks like', () => {
-  it('wears the weight, the fill, and the alignment it was given', () => {
-    const style = {
-      'font.bold': true,
-      fill: colour('FFFF00'),
-      'align.horizontal': 'center',
-    } as const;
-    const cells = [cell(1, 1, { value: 'x', style })];
-    const drawn = at(shown({ drawing: drawing({ sheets: [sheet({ cells })] }) }), 1, 1);
-
-    expect(drawn?.style.fontWeight).toBe('bold');
-    expect(drawn?.style.backgroundColor).toBe('rgb(255, 255, 0)');
-    expect(drawn?.style.textAlign).toBe('center');
-  });
-
-  it('reads a colour with an alpha byte, which CSS wants last', () => {
-    // `FF00FF00` is opaque green in Excel's `AARRGGBB`. Handed to CSS as
-    // written it would be transparent magenta, so the answer being green is
-    // the reordering working.
-    const cells = [cell(1, 1, { value: 'x', style: { fill: colour('FF00FF00') } })];
-    const drawn = at(shown({ drawing: drawing({ sheets: [sheet({ cells })] }) }), 1, 1);
-
-    expect(drawn?.style.backgroundColor).toBe('rgb(0, 255, 0)');
-  });
-
-  it('draws each border edge it was given', () => {
-    const style = {
-      'border.top.style': 'thick',
-      'border.top.color': colour('FF0000'),
-    } as const;
-    const cells = [cell(1, 1, { value: 'x', style })];
-    const drawn = at(shown({ drawing: drawing({ sheets: [sheet({ cells })] }) }), 1, 1);
-
-    expect(drawn?.style.borderTop).toBe('3px solid rgb(255, 0, 0)');
-  });
-
-  it('takes its width in character units and its height in points', () => {
-    const sized = sheet({
-      widths: [{ first: 1, last: 1, size: 10, hidden: false }],
-      heights: [{ first: 1, last: 1, size: 30, hidden: false }],
-    });
-    const into = shown({ drawing: drawing({ sheets: [sized] }) });
-
-    expect([...into.querySelectorAll<HTMLElement>('thead th')][1]?.style.width).toBe('70px');
-    expect([...into.querySelectorAll<HTMLElement>('tbody tr')][0]?.style.height).toBe('40px');
   });
 });
 

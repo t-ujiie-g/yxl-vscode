@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { Compiler } from './commands';
 import { Preview } from './preview';
 
-/** The yxl this preview targets, compiled in from the one place it is pinned (§8 Q6). */
+/** The yxl this preview targets, compiled in from the one place it is pinned. */
 declare const YXL_TARGET: string;
 
 /**

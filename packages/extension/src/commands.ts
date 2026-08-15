@@ -71,7 +71,7 @@ export class Compiler {
     return ran;
   }
 
-  /** Said once per session: a warning about the version, never a refusal (§8 Q6). */
+  /** Said once per session: a warning about the version, never a refusal. */
   private async checkVersion(binary: string): Promise<void> {
     if (this.warned) return;
     this.warned = true;

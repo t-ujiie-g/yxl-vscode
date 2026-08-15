@@ -87,8 +87,8 @@ describe('identity across two reads', () => {
   it('gives a sequence item a new id when one is inserted before it', () => {
     // The weakness ADR-015's identity map exists to cover, pinned so that the
     // day it is covered, this test is what changes. Until a caller holds an id
-    // across an edit — the first is the Phase 4 UI — nothing is hurt by it
-    // (§8 Q3). Note the id itself is not free either: it stays a valid id and
+    // across an edit — the preview does not — nothing is hurt by it
+    // (ADR-023). Note the id itself is not free either: it stays a valid id and
     // starts naming the band next door.
     const inserted =
       'sheets:\n  - name: Sales\n    columns:\n      - at: A\n      - at: B\n      - at: D\n';

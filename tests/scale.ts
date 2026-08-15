@@ -1,3 +1,4 @@
+import { columnLabel } from '@yxl-vscode/units';
 /**
  * A spec as large as anyone would plausibly write, built rather than stored.
  *
@@ -8,7 +9,7 @@
 export function largeSpec(rows: number, columns: number): string {
   const bands = Array.from(
     { length: columns },
-    (_, at) => `      - at: ${label(at + 1)}\n        width: 14\n        format: "#,##0"`,
+    (_, at) => `      - at: ${columnLabel(at + 1)}\n        width: 14\n        format: "#,##0"`,
   ).join('\n');
 
   const values = Array.from(
@@ -30,7 +31,7 @@ export function largeSpec(rows: number, columns: number): string {
     '      - at: 1',
     '        style: header',
     '    formulas:',
-    `      - at: ${label(columns + 1)}2:${label(columns + 1)}${rows + 1}`,
+    `      - at: ${columnLabel(columns + 1)}2:${columnLabel(columns + 1)}${rows + 1}`,
     '        formula: "A2*2"',
     '    data:',
     '      - at: A2',
@@ -38,12 +39,4 @@ export function largeSpec(rows: number, columns: number): string {
     values,
     '',
   ].join('\n');
-}
-
-function label(col: number): string {
-  let name = '';
-  for (let left = col; left > 0; left = Math.floor((left - 1) / 26)) {
-    name = String.fromCharCode(65 + ((left - 1) % 26)) + name;
-  }
-  return name;
 }

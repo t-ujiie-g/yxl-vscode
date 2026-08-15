@@ -2,7 +2,7 @@ import type { FacetOrigin } from './provenance';
 import type { StyleLayer } from './style';
 
 /**
- * What happens when someone edits this facet (§4.3, ADR-006).
+ * What happens when someone edits this facet (ADR-006).
  *
  * Derived from where the facet came from and from nothing else, so that the UI
  * holds no second opinion about what is editable: a phase that adds an origin
@@ -21,10 +21,10 @@ export type Editability = 'direct' | 'mediated' | 'external' | 'readonly';
  * How editable a value or a format is.
  *
  * `empty` is `mediated` rather than refused: a cell nothing wrote can be
- * written, and §4.4 gives that gesture two candidates — a new `cells:` entry,
- * or extending the `data:` rectangle next to it — which is what asking is for.
- * The `readonly` half of §4.3's row is a sealed region and an evaluated result,
- * neither of which exists yet; both arrive with the phase that introduces them.
+ * written, and that gesture has two candidates — a new `cells:` entry, or
+ * extending the `data:` rectangle next to it — which is what asking is for.
+ * Nothing is `readonly` yet: that answer belongs to a sealed region and to an
+ * evaluated result, and both arrive with the work that introduces them.
  */
 export function editabilityOf(origin: FacetOrigin): Editability {
   switch (origin.kind) {
@@ -44,7 +44,7 @@ export function editabilityOf(origin: FacetOrigin): Editability {
  *
  * A definition is `mediated` however it was reached: forty cells may wear it,
  * so the answer is a choice between changing them all and forking this one
- * (§4.4). A band is `mediated` for the same reason at column scale. What the
+ * A band is `mediated` for the same reason at column scale. What the
  * cell itself said, or an override did, is one node and applies directly.
  */
 export function editabilityOfLayer(layer: StyleLayer): Editability {

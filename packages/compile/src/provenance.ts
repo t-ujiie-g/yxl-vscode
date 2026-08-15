@@ -1,7 +1,7 @@
 import type { A1Addr, FilePath, NodeId, ParamName } from '@yxl-vscode/units';
 
 /**
- * Where one facet of a cell came from (`ROADMAP.md` §4.3).
+ * Where one facet of a cell came from.
  *
  * This is what makes the editor able to answer an edit rather than guess at it:
  * a value the spec typed at the cell is one thing to change, and the same value

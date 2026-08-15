@@ -87,7 +87,7 @@ describe('a drawn spec', () => {
 
   it('says where a filled cell reads from, rather than a formula that is wrong there', () => {
     // The range holds one formula, written as it applies at its anchor, and
-    // Excel shifts the references per cell (§8 Q2). Printing that text in every
+    // Excel shifts the references per cell, and nothing here does. Printing that text in every
     // cell of the range would print something false in all but one.
     const source = `${SALES}    formulas:\n      - at: C2:C3\n        formula: "B2*0.05"\n`;
     expect(at(source, 3, 2)).toMatchObject({ formula: 'B2*0.05', filledFrom: null });
@@ -150,7 +150,7 @@ describe('a drawn spec', () => {
   });
 
   it('draws a window of a sheet, and says how far the sheet really reaches', () => {
-    // Measured rather than guessed (§9 R5): the cost that does not survive a
+    // Measured rather than guessed: the cost that does not survive a
     // hundred thousand cells is the DOM, not the projection.
     const sheet = drawn(TALL);
 
@@ -238,6 +238,13 @@ describe('a drawn spec', () => {
 
     expect(drawing.sheets[0]?.problems).toEqual([]);
     expect(drawing.diagnostics).toHaveLength(1);
+  });
+
+  it('sends no size for a band that declared none, rather than a size of nothing', () => {
+    // The view reads a size as a size; a `0` standing for "unsaid" draws a
+    // column no cell can be seen in.
+    const source = `${SALES}    columns:\n      - at: A\n        style: { font: { bold: true } }\n    cells:\n      A1: x\n`;
+    expect(drawn(source).widths).toEqual([{ first: 1, last: 1, size: null, hidden: false }]);
   });
 
   it('carries the sizes and merges a sheet declares', () => {

@@ -17,7 +17,7 @@ export interface Filled {
 }
 
 /** Where a placeholder's value comes from; `undefined` for a name nothing declares. */
-export type Lookup = (name: string) => ScalarValue | undefined;
+type Lookup = (name: string) => ScalarValue | undefined;
 
 /** A value with no placeholder in it, which is the common case. */
 export function asIs(value: ScalarValue): Filled {

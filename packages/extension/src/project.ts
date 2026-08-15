@@ -33,14 +33,14 @@ import { type Nodes, nodeAt, nodesOf } from './inspect';
  * `at: D2:D1048576` is a legal thing to write and the whole point of the
  * construct; drawing it out would be a million rows of nothing. The written
  * content is what the reader is looking at, and this is enough beyond it to see
- * that the range continues. Virtualizing instead is §9 R5's business.
+ * that the range continues.
  */
 const BEYOND = 50;
 
 /**
  * How much of a sheet is drawn at once, wherever in it the reader is.
  *
- * Measured rather than guessed (§9 R5): a hundred thousand written cells parse,
+ * Measured rather than guessed: a hundred thousand written cells parse,
  * load, compile, and flatten in under half a second, and the cost that does not
  * survive that size is the DOM — a hundred thousand `<td>`s is a page that
  * stops responding. Ten thousand is a screenful many times over with enough
@@ -259,9 +259,9 @@ function drawCells(sheet: CompiledSheet, at: Window, rows: number, columns: numb
 
   for (let row = at.row; row < at.row + rows; row += 1) {
     for (let col = at.col; col < at.col + columns; col += 1) {
-      const at = addrAt({ col, row });
-      const cell = cellAt(sheet, at);
-      const layers = styleAt(sheet, at);
+      const addr = addrAt({ col, row });
+      const cell = cellAt(sheet, addr);
+      const layers = styleAt(sheet, addr);
       const style = resolve(layers);
 
       const holds = cell !== null && (cell.value !== null || cell.formula !== null);
@@ -323,7 +323,7 @@ function sizedRun(band: CompiledSheet['columns'][number]): Sized {
   return {
     first: band.first,
     last: band.last,
-    size: band.size ?? 0,
+    size: band.size ?? null,
     hidden: band.hidden ?? false,
   };
 }
