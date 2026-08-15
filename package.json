@@ -6,9 +6,9 @@
   "license": "Apache-2.0",
   "description": "An Excel-like editor for yxl specs. The grid is a projection of the spec; edits resolve back into it.",
   "repository": "github:t-ujiie-g/yxl-vscode",
-  "packageManager": "pnpm@10.27.0",
+  "packageManager": "pnpm@11.21.0",
   "engines": {
-    "node": ">=22"
+    "node": ">=22.13"
   },
   "yxl": {
     "targetVersion": "0.3.4",
