@@ -168,7 +168,7 @@ a higher one. The rows below are in dependency order, and that order is
 | `cst` | L0 | `eemeli/yaml` behind our own seam: source → span-carrying tree; apply an op list as a minimal byte patch. The *only* package that knows YAML syntax exists. (ADR-003) |
 | `spec` | L1 | The `SpecDoc` AST — the TypeScript shape of `docs/spec.md` — and the schema's own vocabulary: `MODELED_KEYS`, which is where the line ADR-011 draws is written down. Types and tables, no logic. |
 | `loader` | L1 | CST tree → `SpecDoc`, with the validation projection requires and `$include` expanded through an injected reader. Preserves unmodeled-but-valid constructs verbatim, marked `opaque`. (ADR-011) |
-| `compile` | L2/L3 | `SpecDoc` → `CompiledGrid` + per-facet provenance and style layers. Pure and deterministic; the workhorse. (ADR-005) |
+| `compile` | L2/L3 | `SpecDoc` → `CompiledGrid` + per-facet provenance and style layers. Pure and deterministic; the workhorse. Reaches a `csv:` / `json:` file only through an injected reader. (ADR-005, ADR-019) |
 | `normalize` | L4 | The style normalizer: an applied style becomes a reference, an `extends:`, or a new definition — in that order of preference. (ADR-008) |
 | `patch` | L0/L1 | `Patch` → `cst` ops, and the inverse patch that makes undo AST-level. (ADR-010) |
 | `verify` | L4 | The double-compile diff gate every patch passes. (ADR-009) |
@@ -314,8 +314,8 @@ how it was produced. (ADR-009)
   promise in §1; it runs on every commit.
 - **Tier 3 — differential conformance against `yxl` itself.** The pinned
   compiler, run as a **test-only oracle** (ADR-012, mechanism revised by
-  ADR-018). Three assertions, on every commit: every spec in `examples/` builds
-  *and* reads clean; every spec **this editor refuses, the compiler refuses too**
+  ADR-018). Three assertions, on every commit: every spec in `examples/` builds,
+  *and* reads and draws with no diagnostic at all; every spec **this editor refuses, the compiler refuses too**
   — we are never the stricter of the two; and a listed corpus of specs the
   compiler refuses and we deliberately carry, so the gap ADR-011 opens is
   measured rather than claimed. This is the direct answer to "we now maintain a
@@ -1334,6 +1334,29 @@ this at a phase boundary rather than at the end.
   for upstream as [yxl#68](https://github.com/t-ujiie-g/yxl/issues/68) — §23 is
   the only section of the reference with no worked example behind it, which
   means its compile path is not exercised there either.
+
+### 2026-08-15 — Refactoring pass at the Phase 3 boundary (`AGENTS.md` §8)
+Walked the lenses in order over everything Phase 3 landed.
+
+- **One idiom, nineteen times.** `String(filled…(ctx, x, node).value)` was how
+  every reader in `compile` asked for substituted text. It is `text(ctx, x,
+  node)` now, and `filledText` folded into it — the typed result is wanted in
+  exactly one place, a cell's own value, and that one asks for it directly.
+- **Six diagnostics had no test.** `unclosedPlaceholder`, `unknownFormula`, and
+  the four bad-address family are reachable *only* through a parameter — the
+  loader has already read the literal forms — so nothing exercised them by
+  accident. Covered now, 17 of 17, and the tests say why the check exists at
+  compile time at all. The `empty` origin was in the same position: one shape
+  produces it (a cell that is only a number format) and nothing pinned it.
+- **Four test files, one harness.** Each had its own five-line parse-load-
+  compile. Shared, in a module the package index deliberately does not export —
+  a caller with a `SpecDoc` calls `compile`, and one without has a loader.
+- `STYLE_PROPERTIES` was exported with no reader. The type still derives from
+  it; the array is an implementation detail until something walks it.
+- Documentation: the README described a project that stopped at the model, and
+  §5's Tier 3 claim was a sentence weaker than what CI now asserts.
+- Typecheck, 598 tests, lint, the layer check, and build clean. Dependencies are
+  all at their latest, pnpm included.
 
 ### 2026-08-15 — Phase 3 complete: the data a spec keeps beside itself
 - `csv:` and `json:` blocks are read through an injected reader, the same shape

@@ -21,7 +21,7 @@ import {
 } from '@yxl-vscode/units';
 import { address, compileFacets } from './cell';
 import { CODE } from './codes';
-import { type Ctx, filled, filledText, reject } from './ctx';
+import { type Ctx, filled, reject, text } from './ctx';
 import type {
   CompiledBand,
   CompiledCell,
@@ -61,7 +61,7 @@ export function compileSheet(ctx: Ctx, sheet: Sheet): Drafted {
 
   return {
     sheet: {
-      name: String(filledText(ctx, sheet.name, sheet).value),
+      name: text(ctx, sheet.name, sheet),
       node: sheet.id,
       cells,
       fills,
@@ -118,8 +118,8 @@ function readTable(
   block: DataBlock,
   source: Exclude<DataBlock['source'], { kind: 'inline' }>,
 ): { file: FilePath; rows: readonly DataRow[] } | null {
-  const text = String(filledText(ctx, source.path, block).value);
-  const path = filePath(text);
+  const spelled = text(ctx, source.path, block);
+  const path = filePath(spelled);
   if (path === null) {
     reject(ctx, CODE.badPath, 'a `data` entry needs a path', block);
     return null;
@@ -175,10 +175,10 @@ function place(
 }
 
 function placeFill(ctx: Ctx, range: FormulaRange, fills: CompiledFill[]): void {
-  const text = String(filledText(ctx, range.at, range).value);
-  const read = parseA1Range(text);
+  const spelled = text(ctx, range.at, range);
+  const read = parseA1Range(spelled);
   if (read === null) {
-    reject(ctx, CODE.badRange, `\`${text}\` is not a range`, range);
+    reject(ctx, CODE.badRange, `\`${spelled}\` is not a range`, range);
     return;
   }
 
@@ -186,16 +186,16 @@ function placeFill(ctx: Ctx, range: FormulaRange, fills: CompiledFill[]): void {
   fills.push({
     rect,
     anchor: addrAt({ col: rect.left, row: rect.top }),
-    formula: String(filled(ctx, range.formula, range).value),
+    formula: text(ctx, range.formula, range),
     node: range.id,
   });
 }
 
 function columnBand(ctx: Ctx, band: ColumnBand): CompiledBand | null {
-  const text = String(filledText(ctx, band.at, band).value);
-  const read = parseColumnSpan(text);
+  const spelled = text(ctx, band.at, band);
+  const read = parseColumnSpan(spelled);
   if (read === null) {
-    reject(ctx, CODE.badColumn, `\`${text}\` is not a column or a range of columns`, band);
+    reject(ctx, CODE.badColumn, `\`${spelled}\` is not a column or a range of columns`, band);
     return null;
   }
 
@@ -212,10 +212,10 @@ function columnBand(ctx: Ctx, band: ColumnBand): CompiledBand | null {
 }
 
 function rowBand(ctx: Ctx, band: RowBand): CompiledBand | null {
-  const text = String(filledText(ctx, band.at, band).value);
-  const read = parseRowSpan(text);
+  const spelled = text(ctx, band.at, band);
+  const read = parseRowSpan(spelled);
   if (read === null) {
-    reject(ctx, CODE.badRow, `\`${text}\` is not a row or a range of rows`, band);
+    reject(ctx, CODE.badRow, `\`${spelled}\` is not a row or a range of rows`, band);
     return null;
   }
 
@@ -232,10 +232,10 @@ function rowBand(ctx: Ctx, band: RowBand): CompiledBand | null {
 }
 
 function mergedRegion(ctx: Ctx, merge: Sheet['merges'][number]): CompiledMerge | null {
-  const text = String(filledText(ctx, merge.at, merge).value);
-  const read = parseA1Range(text);
+  const spelled = text(ctx, merge.at, merge);
+  const read = parseA1Range(spelled);
   if (read === null) {
-    reject(ctx, CODE.badRange, `\`${text}\` is not a range`, merge);
+    reject(ctx, CODE.badRange, `\`${spelled}\` is not a range`, merge);
     return null;
   }
   return { rect: rectOf(read), node: merge.id };

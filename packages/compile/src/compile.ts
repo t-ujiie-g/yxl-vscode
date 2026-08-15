@@ -8,7 +8,7 @@ import {
 } from '@yxl-vscode/units';
 import { compileFacets } from './cell';
 import { CODE } from './codes';
-import { type Ctx, context, type DataReader, filled, reject } from './ctx';
+import { type Ctx, context, type DataReader, reject, text } from './ctx';
 import type { CompiledCell, CompiledGrid, CompiledSheet } from './grid';
 import { compileSheet, type Drafted } from './sheet';
 import type { StyleLayer } from './style';
@@ -116,10 +116,10 @@ function applyOverride(ctx: Ctx, override: Override, drafts: readonly Drafted[])
 function overrideAddr(ctx: Ctx, override: Override): QualifiedAddr | null {
   if (!('kind' in override.at)) return override.at;
 
-  const text = String(filled(ctx, override.at.text, override).value);
-  const read = parseQualifiedAddr(text);
+  const spelled = text(ctx, override.at.text, override);
+  const read = parseQualifiedAddr(spelled);
   if (read === null)
-    reject(ctx, CODE.badAddress, `\`${text}\` is not a sheet and a cell`, override);
+    reject(ctx, CODE.badAddress, `\`${spelled}\` is not a sheet and a cell`, override);
   return read;
 }
 

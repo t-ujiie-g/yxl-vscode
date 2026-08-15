@@ -1,16 +1,16 @@
 import type { CellFacets, RichRun, ScalarValue, SpecNode, Templated } from '@yxl-vscode/spec';
 import { type A1Addr, parseA1Addr } from '@yxl-vscode/units';
 import { CODE } from './codes';
-import { type Ctx, filled, filledText, reject } from './ctx';
+import { type Ctx, filled, reject, text } from './ctx';
 import type { CompiledCell } from './grid';
 import type { FacetOrigin } from './provenance';
 import { layersOf, type StyleSource } from './style';
 
 /** An address after its parameters are substituted, or `null` with the reason reported. */
 export function address(ctx: Ctx, at: Templated<A1Addr>, node: SpecNode): A1Addr | null {
-  const text = String(filledText(ctx, at, node).value);
-  const read = parseA1Addr(text);
-  if (read === null) reject(ctx, CODE.badAddress, `\`${text}\` is not a cell reference`, node);
+  const spelled = text(ctx, at, node);
+  const read = parseA1Addr(spelled);
+  if (read === null) reject(ctx, CODE.badAddress, `\`${spelled}\` is not a cell reference`, node);
   return read;
 }
 
@@ -31,7 +31,7 @@ export function compileFacets(
   through: StyleSource,
 ): CompiledCell {
   const { value, origin } = compileValue(ctx, node, own);
-  const format = node.format === null ? null : String(filled(ctx, node.format, node).value);
+  const format = node.format === null ? null : text(ctx, node.format, node);
 
   return {
     at,
@@ -56,7 +56,7 @@ function compileValue(
   }
 
   if (node.value.kind === 'ref') {
-    const name = String(filledText(ctx, node.value.name, node).value);
+    const name = text(ctx, node.value.name, node);
     const def = ctx.values.get(name);
     if (def === undefined) {
       reject(ctx, CODE.unknownValue, `no value is declared as \`${name}\``, node);
@@ -86,7 +86,7 @@ function compileFormula(ctx: Ctx, node: SpecNode & CellFacets): string | null {
   if (node.formula === null) return null;
 
   if (node.formula.kind === 'ref') {
-    const name = String(filledText(ctx, node.formula.name, node).value);
+    const name = text(ctx, node.formula.name, node);
     const def = ctx.formulas.get(name);
     if (def !== undefined) return def.body;
 
@@ -94,10 +94,10 @@ function compileFormula(ctx: Ctx, node: SpecNode & CellFacets): string | null {
     return null;
   }
 
-  return String(filled(ctx, node.formula.body, node).value);
+  return text(ctx, node.formula.body, node);
 }
 
 function compileRich(ctx: Ctx, node: SpecNode & CellFacets): readonly RichRun[] | null {
   if (node.rich === null) return null;
-  return node.rich.map((run) => ({ ...run, text: String(filled(ctx, run.text, node).value) }));
+  return node.rich.map((run) => ({ ...run, text: text(ctx, run.text, node) }));
 }

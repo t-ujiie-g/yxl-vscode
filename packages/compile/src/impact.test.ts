@@ -1,16 +1,7 @@
-import { parse } from '@yxl-vscode/cst';
-import { load } from '@yxl-vscode/loader';
 import { nodeId } from '@yxl-vscode/units';
 import { describe, expect, it } from 'vitest';
-import { compile } from './compile';
-import type { CompiledGrid } from './grid';
+import { grid } from './harness';
 import { reaches } from './impact';
-
-function grid(source: string): CompiledGrid {
-  const { doc } = load(parse(source, { file: 'spec.yxl.yaml' }));
-  if (doc === null) throw new Error('did not load');
-  return compile(doc);
-}
 
 function reached(source: string, node: string): string[] {
   return reaches(grid(source), nodeId(node)).map((one) => `${one.sheet}!${one.at}`);

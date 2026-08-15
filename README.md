@@ -5,11 +5,13 @@ A VS Code custom editor that renders a `*.yxl.yaml` spec as a spreadsheet grid,
 and translates grid gestures back into edits on the spec — not into a workbook.
 
 > ⚠️ **Status: early.** There is no editor yet — the first release is Phase 4,
-> the read-only preview. What exists today is the layer underneath it: YAML
+> the read-only preview. What exists today is everything underneath it: YAML
 > parses into a span-carrying tree, edits apply as minimal byte patches that
-> leave every untouched byte alone, and a whole spec — `$include` and all —
-> reads into a model of itself, checked on every commit against the compiler
-> that will build it. `ROADMAP.md` holds the design and the phase plan.
+> leave every untouched byte alone, a whole spec — `$include`, `csv:`, and all
+> — reads into a model of itself, and that model projects to a grid where every
+> value and every property of every look says which line of which file it came
+> from. It is checked on every commit against the compiler that will build it.
+> `ROADMAP.md` holds the design and the phase plan.
 
 `yxl` made a workbook into version-controllable text. This makes that text
 direct-manipulable without giving up what made it text:

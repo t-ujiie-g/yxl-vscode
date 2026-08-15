@@ -1,34 +1,10 @@
-import { parse } from '@yxl-vscode/cst';
-import { load } from '@yxl-vscode/loader';
-import type { A1Addr } from '@yxl-vscode/units';
 import { describe, expect, it } from 'vitest';
 import { CODE } from './codes';
-import { compile, styleAt } from './compile';
-import type { CompiledSheet } from './grid';
-import { resolve, type StyleLayer } from './style';
-
-function grid(source: string) {
-  const { doc, diagnostics } = load(parse(source, { file: 'spec.yxl.yaml' }));
-  if (doc === null) throw new Error(`did not load: ${diagnostics.map((one) => one.code)}`);
-  return compile(doc);
-}
-
-function sheet(source: string): CompiledSheet {
-  const first = grid(source).sheets[0];
-  if (first === undefined) throw new Error('compiled no sheet');
-  return first;
-}
-
-function layers(source: string, at: string): readonly StyleLayer[] {
-  return styleAt(sheet(source), at as A1Addr);
-}
+import { codes, layers, sheet } from './harness';
+import { resolve } from './style';
 
 function looks(source: string, at: string) {
   return resolve(layers(source, at));
-}
-
-function codes(source: string): string[] {
-  return grid(source).diagnostics.map((one) => one.code);
 }
 
 const SHEET = 'sheets:\n  - name: Sales\n';
