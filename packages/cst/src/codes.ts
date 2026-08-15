@@ -14,8 +14,13 @@ export const CODE = {
   noSuchPath: 'cst.no-such-path',
   notAKey: 'cst.not-a-key',
   notASequence: 'cst.not-a-sequence',
+  notAMapping: 'cst.not-a-mapping',
+  keyExists: 'cst.key-exists',
+  emptyMapping: 'cst.empty-mapping',
+  noSuchKey: 'cst.no-such-key',
   cannotRemoveRoot: 'cst.cannot-remove-root',
   flowNotSupported: 'cst.flow-not-supported',
+  blockScalarNotSupported: 'cst.block-scalar-not-supported',
   emptySequence: 'cst.empty-sequence',
   overlappingEdits: 'cst.overlapping-edits',
 } as const;

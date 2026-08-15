@@ -45,9 +45,17 @@ type Refuse = (code: Code, message: string, at: Span) => void;
 function editFor(source: string, op: Op, site: Site, refuse: Refuse): Edit | undefined {
   switch (op.op) {
     case 'set': {
+      if (block(site.node)) {
+        refuse(CODE.blockScalarNotSupported, blockScalar(op.path), site.node.span);
+        return undefined;
+      }
+
       const written = renderScalar(op.value, styleOf(site.node));
       return { span: site.node.span, text: `${separatingSpace(source, site.node)}${written}` };
     }
+
+    case 'write':
+      return { span: site.node.span, text: `${separatingSpace(source, site.node)}${op.source}` };
 
     case 'renameKey': {
       if (site.in !== 'map') {
@@ -57,12 +65,82 @@ function editFor(source: string, op: Op, site: Site, refuse: Refuse): Edit | und
       return { span: site.entry.key.span, text: renderScalar(op.to, site.entry.key.style) };
     }
 
+    case 'clear': {
+      if (block(site.node)) {
+        refuse(CODE.blockScalarNotSupported, blockScalar(op.path), site.node.span);
+        return undefined;
+      }
+
+      const from = site.node.span.start;
+      const back = source[from - 1] === ' ' ? from - 1 : from;
+      return { span: span(back, site.node.span.end), text: '' };
+    }
+
     case 'remove':
       return removal(source, op.path, site, refuse);
 
     case 'insert':
       return insertion(source, op, site, refuse);
+
+    case 'add':
+      return addition(source, op, site, refuse);
   }
+}
+
+/**
+ * A new entry in a mapping, on a line of its own.
+ *
+ * `before` names the entry it goes above, which is how a removed entry finds
+ * its way back to where it was; without one it goes last. The layout comes from
+ * an entry that is already there, for the same reason a sequence's does — a
+ * mapping with none has nothing to copy and nothing to guess from.
+ */
+function addition(
+  source: string,
+  op: Extract<Op, { op: 'add' }>,
+  site: Site,
+  refuse: Refuse,
+): Edit | undefined {
+  const target = site.node;
+  if (target.kind !== 'map') {
+    refuse(CODE.notAMapping, `\`${formatPath(op.path)}\` is not a mapping`, target.span);
+    return undefined;
+  }
+  if (target.flow) {
+    refuse(CODE.flowNotSupported, insideFlow(op.path), target.span);
+    return undefined;
+  }
+  if (target.entries.some((entry) => entry.key.value === op.key)) {
+    refuse(CODE.keyExists, `\`${op.key}\` is already there`, target.span);
+    return undefined;
+  }
+
+  const first = target.entries[0];
+  if (!first) {
+    refuse(
+      CODE.emptyMapping,
+      `\`${formatPath(op.path)}\` has no entry to take its layout from`,
+      target.span,
+    );
+    return undefined;
+  }
+
+  const above =
+    op.before === null ? undefined : target.entries.find((entry) => entry.key.value === op.before);
+  if (op.before !== null && above === undefined) {
+    refuse(CODE.noSuchKey, `nothing is keyed \`${op.before}\` here`, target.span);
+    return undefined;
+  }
+
+  const prefix = source.slice(lineStart(source, first.span.start), first.span.start);
+  const written = `${prefix}${renderScalar(op.key)}: ${renderScalar(op.value)}${lineBreak(source)}`;
+
+  const last = target.entries[target.entries.length - 1];
+  const at =
+    above === undefined
+      ? lineEnd(source, (last ?? first).span.end)
+      : lineStart(source, above.span.start);
+  return { span: span(at, at), text: written };
 }
 
 function styleOf(node: Node) {
@@ -134,6 +212,22 @@ function insertion(
     ? lineEnd(source, neighbour.span.end)
     : aboveComments(source, lineStart(source, neighbour.span.start));
   return { span: span(at, at), text: line };
+}
+
+/**
+ * A `|` or `>` scalar, whose span is its indented body rather than a value on
+ * the line.
+ *
+ * Writing a plain scalar over that body would take the following lines with it,
+ * so the whole style is refused until there is a phase that rewrites one
+ * properly — with its own indicator, indentation, and chomping kept.
+ */
+function block(node: Node): boolean {
+  return node.kind === 'scalar' && (node.style === 'literal' || node.style === 'folded');
+}
+
+function blockScalar(path: Path): string {
+  return `\`${formatPath(path)}\` is a block scalar, which this editor does not rewrite yet`;
 }
 
 function insideFlow(path: Path): string {

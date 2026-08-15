@@ -667,7 +667,13 @@ value, and it carries none of the write-back risk.
 ### Phase 6 — `direct` write-back
 The first phase where the file changes. Scope is deliberately the subset where
 the inverse is unique, so no dialog is needed yet.
-- [ ] `patch` + inverse ops; AST-level undo/redo
+- [x] `patch` + inverse ops; AST-level undo/redo
+      **Shipped**, with the rule that fell out of building it (**ADR-026**): a
+      patch whose inverse cannot be expressed is *not applied*. The inverse is
+      read against the file as it stands before the edit — the only moment the
+      old text is still there — and it puts back **text**, not a value, which is
+      what makes an undo byte-exact. Two ops were missing from the algebra
+      (`add` an entry, `clear` a value) and one was new (`write` the bytes back).
 - [ ] `verify` loop wired in front of every apply (ADR-009)
 - [ ] `setValue` / `setFormula` on `literal` and `inline` origins
 - [ ] `overrides:` as an explicit escape hatch, with the "manually edited" badge
@@ -679,6 +685,14 @@ the inverse is unique, so no dialog is needed yet.
       write an edit through `patch`, and assert every opaque region came back
       byte for byte. Owed from Phase 2, which could mark the constructs but had
       no writer to test them against.
+- [ ] Rewrite a block scalar. `set` over a `|` or `>` value is refused today:
+      its span is the indented body, so writing a plain scalar over it would
+      take the lines under it too. Doing it properly means keeping the
+      indicator, the indentation, and the chomping — and `summary.yaml` writes a
+      formula that way, so this is a real spec's real edit.
+- [ ] Put back an entry that holds more than a scalar. `remove` of
+      `A1: { value: 1, style: header }` has no inverse in this algebra, so it is
+      refused (ADR-026); a structural edit needs one that can carry a subtree.
 - [ ] Tier 4 end-to-end green
 
 ### Phase 7 — `mediated` write-back
@@ -1226,6 +1240,25 @@ doubt is tracked **by sheet** rather than by cell: without the graph there is no
 way to say which totals a `#NAME?` reached, and a sheet is the unit a reader
 looks at anyway.
 
+### ADR-026 — An edit that cannot be undone is not made
+**Accepted.** `applyPatch` works out the inverse *first*, against the file as it
+stands, and applies nothing if it cannot express one.
+
+*Why:* the alternative is a history with holes in it — an editor where undo
+sometimes works, and the reader has to remember which edits were the kind that
+stick. A refusal is a sentence the UI can say and a bug report someone can file;
+a missing undo is neither.
+
+*What it costs:* edits this algebra cannot yet reverse are unavailable, and each
+one is now a roadmap item rather than a surprise — removing a cell written in
+its expanded form, and rewriting a block scalar.
+
+*What it makes true:* the inverse puts back **text**, not a value. `1.50` and
+`1.5` are one value and two files; a tab written raw inside quotes and one
+written `\t` are the same string and not the same file. An undo that reformatted
+either would be an edit nobody asked for, so the CST now carries the bytes a
+scalar was written as, and the `write` op puts exactly those back.
+
 ## 8. Open questions
 
 - **Q1 — `cells:` A1 keys and row insertion.** Inserting a row rewrites every
@@ -1621,6 +1654,32 @@ this at a phase boundary rather than at the end.
   two serials either side of it, so the next reader knows it is deliberate.
 - A cell's own format — written, or the one its type takes — now wins over a
   band's. Both are requests about *that* cell; a band is something reaching it.
+
+### 2026-08-15 — Phase 6: edits that can be taken back
+
+The first phase where the file changes starts with the part that makes changing
+it safe.
+
+- **`patch`**: a patch is ops, an inverse is worked out against the file as it
+  stands, and **a patch whose inverse cannot be expressed is not applied**
+  (ADR-026). The history holds no copy of the file — an undo is ops re-addressed
+  against whatever the text is *now*, which is what lets a hand edit and a grid
+  edit interleave without one of them silently winning (ADR-010).
+- **Two ops were missing from the algebra and one was wrong.** `add` (an entry
+  into a mapping, above a named key so a removal lands back where it was) and
+  `clear` (a key with its value taken off) close the pairs; `write` puts the
+  *bytes* of a scalar back where `set` writes a value and lets the renderer
+  choose.
+- **The corpus found two defects the moment undo was asked for.** `set` over a
+  `|` block scalar was writing a plain value across the indented body and taking
+  the following lines with it — refused now, and an item of its own. And the
+  CST's `source` was holding the parser's *reading* of a scalar rather than its
+  bytes, so undoing an edit to `"a\tb"` wrote back `"a\\tb"`: the same string,
+  a different file. Both were there before this change and neither could show
+  until something tried to put a file back exactly as it was.
+- The round trip is asserted over the whole Tier 2 corpus — every yxl example
+  and every awkward-YAML fixture — as *byte for byte*, which is the promise
+  ADR-010 makes and the one that would rot quietly. 59 new tests, 826 in total.
 
 ### 2026-08-15 — Sweep of Phase 5 (AGENTS.md §8)
 

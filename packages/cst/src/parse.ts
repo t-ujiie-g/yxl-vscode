@@ -18,7 +18,7 @@ const STYLES: Record<string, ScalarStyle> = {
  * the user is mid-keystroke.
  */
 export function parse(source: string, options: { file: string }): Parsed {
-  const reader = new Reader(options.file);
+  const reader = new Reader(options.file, source);
   const documents = [...new Parser().parse(source)].filter((t) => t.type === 'document');
 
   const [first, ...rest] = documents;
@@ -40,7 +40,10 @@ export function parse(source: string, options: { file: string }): Parsed {
 class Reader {
   readonly diagnostics: Diagnostic[] = [];
 
-  constructor(private readonly file: string) {}
+  constructor(
+    private readonly file: string,
+    private readonly text: string,
+  ) {}
 
   reject(code: Code, message: string, at: Span): void {
     this.diagnostics.push(error(code, message, { file: this.file, span: at }));
@@ -85,7 +88,10 @@ class Reader {
     return {
       kind: 'scalar',
       value: style === 'plain' ? resolvePlain(resolved.value) : resolved.value,
-      source: resolved.value,
+      // The bytes, not the reading of them: `"a\tb"` written with a real tab
+      // and written with an escape are one value and two files, and putting one
+      // back where the other was is an edit nobody asked for.
+      source: this.text.slice(at.start, at.end),
       style: style ?? 'plain',
       span: at,
     };

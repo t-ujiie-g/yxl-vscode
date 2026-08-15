@@ -1,4 +1,5 @@
 import { apply, type Node, type Path, parse, resolvePlain } from '@yxl-vscode/cst';
+import { applyPatch } from '@yxl-vscode/patch';
 import { describe, expect, it } from 'vitest';
 import { CST, Parser } from 'yaml';
 import { awkward, type Sample, yxlExamples } from './corpus';
@@ -91,5 +92,30 @@ describe.each(corpus)('$name', (sample) => {
     const moved = before.flatMap((line, index) => (line === after[index] ? [] : [index]));
     expect(moved, `expected one changed line, changed ${moved.length}`).toHaveLength(1);
     expect(after[moved[0] as number]).toContain('SENTINEL');
+  });
+
+  it('comes back byte for byte when the edit is undone', () => {
+    // The other half of what makes an edit safe to make: the same file, not a
+    // file that parses to the same thing (ADR-010). Over a corpus written to be
+    // hostile to a serializer, an undo that reformatted anything would show.
+    const { root } = read(sample);
+    if (!root) return;
+
+    const target = scalars(root).find(
+      ({ node, path }) =>
+        node.kind === 'scalar' &&
+        node.source !== '' &&
+        node.style !== 'literal' &&
+        node.style !== 'folded' &&
+        path.length > 0,
+    );
+    if (!target) return;
+
+    const ops = [{ op: 'set', path: target.path, value: 'SENTINEL' } as const];
+    const done = applyPatch(sample.source, { ops }, { file: sample.name });
+    expect(done.diagnostics).toEqual([]);
+    if (done.back === null) throw new Error('no way back');
+
+    expect(applyPatch(done.text, done.back, { file: sample.name }).text).toBe(sample.source);
   });
 });

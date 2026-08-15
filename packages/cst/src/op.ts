@@ -10,12 +10,31 @@ export type Path = readonly (string | number)[];
  * These are deliberately fewer than the spec-level operations `patch` will
  * take — that algebra addresses spec constructs; this one addresses YAML nodes
  * and is all the syntax layer needs to be asked for.
+ *
+ * They come in pairs, because an edit that cannot be undone is one this editor
+ * will not make (ADR-010): `set` against `write` or `clear`, `insert` and `add`
+ * against `remove`, `renameKey` against itself. `add` names the key it goes
+ * *before* rather than an index, so an entry put back lands where it was.
+ *
+ * `write` puts back the *text* a scalar was written as, where `set` writes a
+ * value and lets the renderer choose how. That difference is what makes an undo
+ * byte-exact: a tab written raw inside quotes, or a number written `1.50`, is
+ * the same value and not the same file.
  */
 export type Op =
   | { readonly op: 'set'; readonly path: Path; readonly value: Value }
+  | { readonly op: 'write'; readonly path: Path; readonly source: string }
+  | { readonly op: 'clear'; readonly path: Path }
   | { readonly op: 'renameKey'; readonly path: Path; readonly to: string }
   | { readonly op: 'remove'; readonly path: Path }
-  | { readonly op: 'insert'; readonly path: Path; readonly index: number; readonly value: Value };
+  | { readonly op: 'insert'; readonly path: Path; readonly index: number; readonly value: Value }
+  | {
+      readonly op: 'add';
+      readonly path: Path;
+      readonly key: string;
+      readonly value: Value;
+      readonly before: string | null;
+    };
 
 /** One replacement of a range of the source. The unit minimal patching is made of. */
 export interface Edit {
