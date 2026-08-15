@@ -1270,6 +1270,17 @@ this at a phase boundary rather than at the end.
   the only section of the reference with no worked example behind it, which
   means its compile path is not exercised there either.
 
+### 2026-08-15 — pnpm 11
+- The bump the sweep left for its own change: **pnpm 10.27.0 → 11.21.0**, which
+  is two lines. The lockfile did not move — still `lockfileVersion: 9.0`, so
+  `--frozen-lockfile` keeps working and there is no dependency graph to re-review.
+- `engines.node` tightens to **>=22.13**, which is pnpm 11's own floor rather
+  than a preference of ours. CI's `node-version: 22` already resolves above it.
+- pnpm 11 checks that `node_modules` matches the lockfile before running a
+  script, and re-installs by shelling out to `pnpm`. Harmless where pnpm is on
+  the path, which is everywhere it is meant to run — worth knowing if a shim
+  invokes it some other way.
+
 ### 2026-08-15 — Refactoring pass at the Phase 2 boundary (`AGENTS.md` §8)
 Walked the lenses in order over everything Phase 2 landed. 60 lines net
 removed, and one gap in the tests closed.
