@@ -1,0 +1,24 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Run the preview",
+      "type": "extensionHost",
+      "request": "launch",
+      "args": ["--extensionDevelopmentPath=${workspaceFolder}/packages/extension"],
+      "outFiles": ["${workspaceFolder}/packages/extension/dist/**/*.cjs"],
+      "preLaunchTask": "build the extension"
+    },
+    {
+      "name": "Run the preview on yxl's own examples",
+      "type": "extensionHost",
+      "request": "launch",
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder}/packages/extension",
+        "${workspaceFolder}/../yxl/examples"
+      ],
+      "outFiles": ["${workspaceFolder}/packages/extension/dist/**/*.cjs"],
+      "preLaunchTask": "build the extension"
+    }
+  ]
+}

@@ -137,9 +137,16 @@ pnpm build            # the extension actually bundles
 | Layer check alone | `node scripts/check-layers.mjs` |
 | Build | `pnpm build` |
 | Get the conformance oracle | install the **pinned** `yxl` release, or point `YXL_BIN` at it (`ROADMAP.md` ADR-018) |
+| Run the extension | **F5** in VS Code — *Run the preview*, which builds first |
+| Run it on yxl's cookbook | **F5** with *Run the preview on yxl's own examples* |
 
-Running and packaging the extension arrive with the extension itself
-(`ROADMAP.md` §6 Phase 4); there is nothing to run before then.
+F5 builds both bundles and opens an Extension Development Host; in that window,
+open a `*.yxl.yaml` and run **yxl: Open Preview to the Side**. Without VS Code's
+debugger — from a terminal, say — the same thing is
+`code --extensionDevelopmentPath=packages/extension <a folder of specs>`.
+
+Packaging is still open (`ROADMAP.md` §8 Q6): the manifest is `private`, so
+nothing can publish it by accident.
 
 ## 6. Testing conventions
 
