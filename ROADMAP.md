@@ -595,8 +595,16 @@ value, and it carries none of the write-back risk.
       tests, and the rest of the project keeps running without a DOM. jsdom
       over happy-dom because these tests assert what CSS the drawing produced,
       and a faithful CSSOM is the whole point of asking.
-- [ ] Measure the preview against a deliberately large spec (§9 R5), and answer
-      §8 Q5 with the number rather than the guess.
+- [x] Measure the preview against a deliberately large spec (§9 R5), and answer
+      §8 Q5 with the number rather than the guess
+      **Measured**: 100 000 written cells — 738KB of YAML — parse in 353ms, load
+      in 5ms, compile in 27ms, and flatten in 52ms. The projection is not the
+      cost; **parsing is**, and the DOM would have been. So the preview draws a
+      page of a sheet (200 rows × 50 columns) and says what it left out, and §8
+      Q5 is answered: no grid library.
+- [ ] Draw more of a large sheet than the first page — a window that follows the
+      scroll, rather than a cap. The cap is honest and cheap and makes the first
+      release usable; this is what makes it good.
 - [ ] **The session identity map** (ADR-015), moved here from Phase 2. A
       `NodeId` is positional, so inserting an item into a sequence gives every
       item after it a new one — and gives the old id to the item next door. That
@@ -1116,13 +1124,22 @@ serial. That is `compile`'s to do and is now an item of its own.
   file for existing nodes, but an addition has no file yet. Working assumption:
   the file backing the sheet being edited, shown in the resolution dialog so it
   is never a surprise. Confirm in Phase 6.
-- **Q5 — Grid UI.** *Answered for the read-only release: a plain table, and the
-  measurement first.* Phase 4 draws the grid as an ordinary HTML table with the
-  styles resolved by `compile`. A read-only preview needs no cell editor and no
-  spreadsheet model of its own, so the only questions a library would answer are
-  size and speed — and R5 says to measure those against a real spec before
-  choosing. The original framing follows, and still governs the day editing
-  arrives.
+- **Q5 — Grid UI.** ✅ **Answered, with the measurement: no library.** Phase 4
+  draws the grid as an ordinary HTML table with the styles resolved by
+  `compile`, and the numbers say that is enough. Over a spec of **100 000
+  written cells** (738KB of YAML): parse 353ms, load 5ms, compile 27ms, flatten
+  every address in the box 52ms. The projection is not the cost — **parsing
+  is** — and the one cost that would not have survived that size is the DOM,
+  which is answered by drawing a page at a time rather than by a library.
+
+  A library would bring a spreadsheet model of its own, which fights ADR-001's
+  "the grid holds no state", to solve a problem measurement says we do not have.
+  Revisit when editing arrives (Phase 6) and the requirements change, not
+  before. `tests/scale.test.ts` keeps the numbers honest: its ceilings are ten
+  times the measurement, so the day something turns linear work quadratic, it
+  fails.
+
+  The original framing follows, and still governs the day editing arrives.
 
   Requirements are unusual: per-cell editability control,
   provenance affordances (badges, origin tinting), and large-sheet performance.
@@ -1457,6 +1474,25 @@ this at a phase boundary rather than at the end.
   for upstream as [yxl#68](https://github.com/t-ujiie-g/yxl/issues/68) — §23 is
   the only section of the reference with no worked example behind it, which
   means its compile path is not exercised there either.
+
+### 2026-08-15 — Phase 4: the number, and what it decided
+- §9 R5 asked for a measurement before a grid library was chosen. Here it is,
+  over a built spec of **100 000 written cells** (738KB of YAML): parse 353ms,
+  load 5ms, compile 27ms, flatten every address in the box 52ms, ten thousand
+  cell lookups 1ms. 6 new tests, 667 in total.
+- **§8 Q5 is answered: no library.** The projection is not the cost; parsing is,
+  and the one cost that would not have survived that size is the DOM — a hundred
+  thousand `<td>`s. A library would bring a spreadsheet model of its own, which
+  fights ADR-001, to solve a problem the numbers say we do not have.
+- **The preview draws a page of a sheet** — 200 rows by 50 columns — and says
+  what it left out: *4801 more rows and 10 more columns are not drawn*. A cap
+  that says so is honest; a corner of a sheet shown silently is a preview that
+  lies about how much there is. Following the scroll is the better answer and is
+  now its own item.
+- The measurement stays as a test with ceilings ten times what was measured, so
+  it fails the day linear work turns quadratic rather than the day a machine is
+  busy. The large spec is *built*, not stored: a megabyte of generated YAML in
+  the repository would be a fixture for a number that changes with the code.
 
 ### 2026-08-15 — Phase 4: the view, tested
 - The drawing had grown to a grid, merges, styles, an inspector, parameter

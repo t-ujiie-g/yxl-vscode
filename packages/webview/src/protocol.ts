@@ -33,14 +33,19 @@ export interface DrawnParam {
 /**
  * One sheet, sized to what it holds.
  *
- * `rows` and `columns` are how far the sheet is drawn: the box its written
- * cells, merges, and filled ranges reach. A spec with three cells draws three
- * cells' worth of grid rather than a million empty ones.
+ * `rows` and `columns` are how far the sheet is *drawn*; `of` is how far it
+ * reaches. They differ when a sheet is larger than a preview can put on a page
+ * at once, and the view says so rather than quietly showing a corner.
+ *
+ * A spec with three cells draws three cells' worth of grid rather than a
+ * million empty ones: the box is what its written cells, merges, and filled
+ * ranges reach.
  */
 export interface DrawnSheet {
   readonly name: string;
   readonly rows: number;
   readonly columns: number;
+  readonly of: { readonly rows: number; readonly columns: number };
   readonly widths: readonly Sized[];
   readonly heights: readonly Sized[];
   readonly cells: readonly DrawnCell[];
