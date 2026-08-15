@@ -105,6 +105,18 @@ export function refusal(refused: Refused, asks: Asks): HTMLElement {
   return said;
 }
 
+/** That this cell cannot be typed into, in the terms of what stands in the way. */
+export function locked(editable: 'mediated' | 'external'): HTMLElement {
+  const said = document.createElement('p');
+  said.className = 'locked';
+  said.textContent =
+    editable === 'external'
+      ? 'This cell cannot be typed into: its value comes from a file beside the spec. Type into it anyway to be offered an override.'
+      : 'This cell cannot be typed into: more than one thing could change to make that edit. Type into it anyway to be offered an override.';
+
+  return said;
+}
+
 /** What the cursor is reaching, said above the grid so the highlight is explained. */
 export function reaching(reached: Reached): HTMLElement {
   const said = document.createElement('p');
@@ -133,6 +145,11 @@ export function inspector(showing: Showing, asks: Asks): HTMLElement {
   const heading = document.createElement('h2');
   heading.textContent = at === null ? 'Nothing selected' : `${columnLabel(at.col)}${at.row}`;
   panel.append(heading);
+
+  // Said before the reader tries, and beside where the value came from — which
+  // is the half that makes it useful: *why* not is the line under it.
+  const editable = showing.editable;
+  if (editable !== null && editable !== 'direct') panel.append(locked(editable));
 
   if (showing.sources?.length === 0) {
     panel.append(note('Nothing writes this cell.'));

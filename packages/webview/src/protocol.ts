@@ -86,6 +86,16 @@ export interface MarkedCell {
   readonly message: string;
 }
 
+/**
+ * Whether a cell can be typed into, in the terms of what stands in the way.
+ *
+ * `direct` — one node of the spec says it, and typing changes that node.
+ * `mediated` — more than one thing could change to make the edit, so it is a
+ * question rather than an edit until the phase that asks it.
+ * `external` — the value lives in a file beside the spec.
+ */
+export type Editable = 'direct' | 'mediated' | 'external';
+
 /** One run of a `rich:` cell: a piece of its text, and the look that piece wears. */
 export interface DrawnRun {
   readonly text: string;
@@ -133,6 +143,9 @@ export interface Sized {
  *
  * `overridden` is a cell an `overrides:` entry writes: an exception somebody
  * made on purpose, and worth seeing without asking.
+ *
+ * `editable` is whether this cell can be typed into at all, and why not where
+ * it cannot — a fact the reader is owed *before* they try, not after.
  */
 export interface DrawnCell {
   readonly row: number;
@@ -144,6 +157,7 @@ export interface DrawnCell {
   readonly rich: readonly DrawnRun[] | null;
   readonly computed: Computed | null;
   readonly overridden: boolean;
+  readonly editable: Editable;
   readonly style: StyleValues;
 }
 

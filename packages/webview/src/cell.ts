@@ -32,10 +32,15 @@ export function drawCell(
   else drawn.append(...cell.rich.map(run));
 
   if (cell.formula !== null) drawn.title = told(cell);
-  if (cell.overridden) {
-    drawn.classList.add('overridden');
-    drawn.title = `${drawn.title === '' ? '' : `${drawn.title} — `}written as an override`;
-  }
+  if (cell.overridden) drawn.classList.add('overridden');
+  if (cell.editable !== 'direct') drawn.classList.add('locked');
+
+  const about = [
+    cell.overridden ? 'written as an override' : '',
+    cell.editable === 'direct' ? '' : `cannot be typed into: ${standing(cell.editable)}`,
+  ].filter((one) => one !== '');
+  if (about.length > 0)
+    drawn.title = [drawn.title, ...about].filter((one) => one !== '').join(' — ');
   if (cell.computed?.kind === 'error') drawn.classList.add('problem');
   else if (cell.computed === null && cell.filledFrom !== null) drawn.classList.add('filled');
   apply(drawn, cell.style);
@@ -102,6 +107,13 @@ function written(cell: DrawnCell | undefined): string {
   if (cell.formula !== null) return `=${cell.formula}`;
 
   return cell.value === null ? '' : String(cell.value);
+}
+
+/** What stands between this cell and being typed into. */
+function standing(editable: Exclude<DrawnCell['editable'], 'direct'>): string {
+  return editable === 'external'
+    ? 'its value comes from a file beside the spec'
+    : 'more than one thing could change to make that edit';
 }
 
 /**

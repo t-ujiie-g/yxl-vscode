@@ -16,6 +16,7 @@ function cell(of: Partial<DrawnCell> = {}): DrawnCell {
     rich: null,
     computed: null,
     overridden: false,
+    editable: 'direct',
     style: {},
     ...of,
   };
@@ -163,6 +164,32 @@ describe('what a cell looks like', () => {
     // jsdom's CSSOM drops the `currentColor` keyword when it serializes the
     // shorthand back; a browser keeps it, and either way no colour was chosen.
     expect(drawn.style.borderLeft).toBe('0.5px solid');
+  });
+});
+
+describe('a cell the reader cannot type into', () => {
+  it('is marked, so the reader knows before they try rather than after', () => {
+    const drawn = drawCell(cell({ value: 1, editable: 'external' }), undefined);
+
+    expect(drawn.classList.contains('locked')).toBe(true);
+    expect(drawn.title).toContain('a file beside the spec');
+  });
+
+  it('says which of the two things stands in the way', () => {
+    const drawn = drawCell(cell({ value: 1, editable: 'mediated' }), undefined);
+    expect(drawn.title).toContain('more than one thing could change');
+  });
+
+  it('is not marked when one node of the spec says it', () => {
+    expect(drawCell(cell({ value: 1 }), undefined).classList.contains('locked')).toBe(false);
+  });
+
+  it('keeps the two marks apart: an exception made, and one the spec makes', () => {
+    const drawn = drawCell(cell({ value: 1, overridden: true }), undefined);
+
+    expect(drawn.classList.contains('overridden')).toBe(true);
+    expect(drawn.classList.contains('locked')).toBe(false);
+    expect(drawn.title).toContain('written as an override');
   });
 });
 

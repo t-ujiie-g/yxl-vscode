@@ -1,6 +1,6 @@
 import { sheetAgain } from './again';
 import { type Asks, cellKey, draw, type Reached, restate, type Showing } from './draw';
-import type { Drawing, FromView, Refused, Source, ToView } from './protocol';
+import type { Drawing, Editable, FromView, Refused, Source, ToView } from './protocol';
 
 export { type Kept, sheetAgain } from './again';
 export { type Asks, draw, type Reached, restate, type Showing } from './draw';
@@ -11,6 +11,7 @@ export type {
   DrawnMerge,
   DrawnRun,
   DrawnSheet,
+  Editable,
   FromView,
   Highlighted,
   Inspected,
@@ -57,18 +58,35 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
 
   const redraw = (): void => {
     if (drawing !== null) {
-      draw(into, { drawing, sheet, selected, sources, reached, refused, said }, asks);
+      draw(
+        into,
+        { drawing, sheet, selected, sources, reached, refused, said, editable: editable() },
+        asks,
+      );
     }
   };
 
   /** The same, for what the view holds of its own: the grid stays as it is. */
   const restated = (): void => {
     if (drawing !== null) {
-      restate(into, { drawing, sheet, selected, sources, reached, refused, said }, asks);
+      restate(
+        into,
+        { drawing, sheet, selected, sources, reached, refused, said, editable: editable() },
+        asks,
+      );
     }
   };
 
   const named = (): string => drawing?.sheets[sheet]?.name ?? '';
+
+  /** Whether the cell the reader has selected is one they can type into. */
+  const editable = (): Editable | null => {
+    if (selected === null) return null;
+
+    const cells = drawing?.sheets[sheet]?.cells ?? [];
+    const at = cells.find((one) => one.row === selected?.row && one.col === selected?.col);
+    return at?.editable ?? null;
+  };
 
   const asks: Asks = {
     showSheet: (index) => {
