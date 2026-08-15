@@ -529,9 +529,18 @@ grid must understand to be drawn at all.
 The design note's judgement was that this alone solves most of the problem, and
 that judgement holds: seeing the workbook while editing the text is most of the
 value, and it carries none of the write-back risk.
-- [ ] VS Code custom editor for `*.yxl.yaml`, opening beside the text editor
-- [ ] Grid rendering: values, formulas as text, styles, merges, column widths,
+- [x] A VS Code **preview beside the text editor** for `*.yxl.yaml`
+      **Shipped**, and not as a custom editor — **ADR-020**. The text stays in
+      its own editor and the projection sits next to it, which is what §1 says
+      the relationship is. A custom editor arrives when the grid can be edited
+      (Phase 6), and it will reuse everything here.
+- [x] Grid rendering: values, formulas as text, styles, merges, column widths,
       row heights, multiple sheets (grid library choice — §8 Q5)
+      **Shipped on a plain table**, which is the answer §8 Q5 asked for: measure
+      first, then choose. A read-only preview needs no cell editor and no
+      spreadsheet model, so the library question is only about size and speed,
+      and neither has been measured yet. A number format is *not* applied yet —
+      the value shows as the spec wrote it — which is its own item below.
 - [ ] Provenance inspector: select a cell, see where each facet came from,
       property by property
 - [ ] **Bidirectional jump**: grid cell → the YAML node that produced it, and
@@ -541,8 +550,20 @@ value, and it carries none of the write-back risk.
       problems
 - [ ] `yxl build` / `--check` invoked as commands, output surfaced, binary
       discovery and a clear message when it is missing
-- [ ] Live re-projection on text edit, debounced
+- [x] Live re-projection on text edit, debounced
+      **Shipped**: 150ms after the last keystroke, and on any *other* file being
+      saved, since an `$include` or a `csv:` this spec reads may be what
+      changed.
 - [ ] `params` switcher, so one spec previews as several workbooks
+- [ ] Apply number formats when drawing a value: a spec writes `0.085` with
+      `format: "0.0%"` and Excel shows `8.5%`. Until this lands the preview
+      shows the stored value, which is honest but not what the workbook looks
+      like.
+- [ ] A DOM environment for the view's own tests (jsdom or happy-dom, with the
+      licence check §9 requires). `draw` is thin and untested today; everything
+      it draws from is tested, and the drawing itself is Tier 5's to catch.
+- [ ] Measure the preview against a deliberately large spec (§9 R5), and answer
+      §8 Q5 with the number rather than the guess.
 - [ ] **The session identity map** (ADR-015), moved here from Phase 2. A
       `NodeId` is positional, so inserting an item into a sequence gives every
       item after it a new one — and gives the old id to the item next door. That
@@ -979,6 +1000,39 @@ A written cell wins over a range it sits inside, which is exactly what makes an
 `overrides:` entry able to take one row out of a filled column (`docs/spec.md`
 §23, ADR-007) without the range losing its shape.
 
+### ADR-020 — The preview is a panel beside the text, not a custom editor
+**Accepted.** `yxl: Open Preview to the Side` opens a webview panel next to the
+document. The file stays a YAML file in an ordinary YAML editor.
+
+*Why:* §1's premise is that the text is the truth and the grid is a projection
+of it. A `CustomTextEditor` *replaces* the text editor for that file, which
+states the opposite relationship — and states it at the moment the editor can do
+least, since nothing is editable yet. The preview also wants both open at once
+to be worth anything: the feature that makes this release (§6 Phase 4) is seeing
+the workbook while editing the spec.
+
+*What it costs:* when the grid becomes editable (Phase 6), a custom editor is
+the right shape and this becomes a second entry point rather than the only one.
+That is a `contributes` block and a class that owns a `TextDocument`; everything
+below — projecting, drawing, the message shape — is reused as it stands.
+
+### ADR-021 — The extension bundles with esbuild
+**Accepted.** `packages/extension/build.mjs` produces two bundles: the extension
+host's, as CommonJS with `vscode` external, and the view's, as an IIFE for the
+browser. `@types/vscode` and `esbuild` are the only new development
+dependencies (both MIT, checked at the registry rather than recalled).
+
+*Why esbuild:* a VS Code extension ships as one file, so something must bundle;
+esbuild is what the VS Code samples and most extensions use, it is one
+dependency with no plugin graph, and it builds this tree in under a second.
+Rollup and webpack would both do the job and cost more configuration.
+
+*One thing it made explicit:* pnpm 11 refuses to run a dependency's install
+script unless it is named, and esbuild has one — it unpacks a platform binary.
+`pnpm-workspace.yaml` names it, which is the right default holding: a build
+script is arbitrary code from a dependency, and the file now says which one this
+project has agreed to run.
+
 ## 8. Open questions
 
 - **Q1 — `cells:` A1 keys and row insertion.** Inserting a row rewrites every
@@ -1004,7 +1058,15 @@ A written cell wins over a range it sits inside, which is exactly what makes an
   file for existing nodes, but an addition has no file yet. Working assumption:
   the file backing the sheet being edited, shown in the resolution dialog so it
   is never a surprise. Confirm in Phase 6.
-- **Q5 — Grid UI.** Requirements are unusual: per-cell editability control,
+- **Q5 — Grid UI.** *Answered for the read-only release: a plain table, and the
+  measurement first.* Phase 4 draws the grid as an ordinary HTML table with the
+  styles resolved by `compile`. A read-only preview needs no cell editor and no
+  spreadsheet model of its own, so the only questions a library would answer are
+  size and speed — and R5 says to measure those against a real spec before
+  choosing. The original framing follows, and still governs the day editing
+  arrives.
+
+  Requirements are unusual: per-cell editability control,
   provenance affordances (badges, origin tinting), and large-sheet performance.
   Candidates: `@univerjs/*` (Apache-2.0, brings a full spreadsheet model of its
   own — which fights ADR-001's "the grid holds no state"),
@@ -1334,6 +1396,33 @@ this at a phase boundary rather than at the end.
   for upstream as [yxl#68](https://github.com/t-ujiie-g/yxl/issues/68) — §23 is
   the only section of the reference with no worked example behind it, which
   means its compile path is not exercised there either.
+
+### 2026-08-15 — Phase 4: the preview exists
+- Open a `*.yxl.yaml` and press *yxl: Open Preview to the Side*: the spec is
+  parsed, loaded, compiled, and drawn as a grid beside the text, redrawn 150ms
+  after you stop typing. 10 new tests, 608 in total.
+- **ADR-020: a panel, not a custom editor.** A `CustomTextEditor` replaces the
+  text editor for a file, which states the opposite of §1's premise — and states
+  it at the moment the editor can do least, since nothing is editable yet. Both
+  open at once is also the whole point: seeing the workbook *while* editing the
+  spec is what makes this release worth shipping.
+- **ADR-021: esbuild**, two bundles — CommonJS for the host with `vscode`
+  external, an IIFE for the view. It also surfaced that pnpm 11 refuses a
+  dependency's install script unless it is named, and esbuild has one; the
+  workspace file now names it, which is a better default than the old silent
+  yes.
+- **§8 Q5 is answered for this release: a plain table.** A read-only preview
+  needs no cell editor and no spreadsheet model, so a grid library would only
+  answer size and speed — and R5 says to measure those first. The measurement is
+  now its own item, ahead of any choice.
+- The one seam worth naming: `project(text, file, read)` is the whole pipeline
+  as a function over text, with nothing of VS Code in it. The host decides *when*
+  to call it and where to put what comes back; that is why ten tests cover the
+  drawing without a single mock.
+- Three things the preview does not do yet, each now an item rather than a
+  surprise: it shows a stored value rather than the number format Excel would
+  apply, it lists diagnostics under the grid rather than marking the cell, and
+  the view's own drawing is untested until there is a DOM to test it in.
 
 ### 2026-08-15 — Refactoring pass at the Phase 3 boundary (`AGENTS.md` §8)
 Walked the lenses in order over everything Phase 3 landed.

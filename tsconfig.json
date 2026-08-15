@@ -5,5 +5,5 @@
     "types": []
   },
   "include": ["packages/*/src/**/*.ts", "vitest.config.ts"],
-  "exclude": ["packages/webview/**"]
+  "exclude": ["packages/webview/**", "packages/extension/**"]
 }
