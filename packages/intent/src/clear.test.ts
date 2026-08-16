@@ -56,6 +56,13 @@ describe('a cell emptied', () => {
     );
   });
 
+  it('keeps the look of a cell written in the flow form, which is how the docs write it', () => {
+    const spec = `${SALES}    cells:\n      B4: { value: 0.085, format: "0.0%" }\n      B5: 1\n`;
+    expect(after(spec, 'B4')).toBe(
+      `${SALES}    cells:\n      B4: { format: "0.0%" }\n      B5: 1\n`,
+    );
+  });
+
   it('takes the whole entry where nothing but content is in it', () => {
     const spec = `${SALES}    cells:\n      A1:\n        formula: "B1*2"\n        value: 2\n      B1: 1\n`;
     expect(after(spec, 'A1')).toBe(`${SALES}    cells:\n      B1: 1\n`);

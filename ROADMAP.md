@@ -1790,6 +1790,18 @@ applies, and only an edit with several is a question.*
   value, which is what a spreadsheet leaves behind. A field of a `data:` block
   is the format's own exception: `null` in a row is a blank cell (§9), so there
   the ordinary write says it.
+- **A flow collection can have an entry taken out of it now.** `{ value: 0.085,
+  format: "0.0%" }` is how the spec's own documentation writes an expanded cell,
+  so refusing to touch it refused the common case. There are no lines to remove
+  inside one, so what goes is the entry and one separator — the comma after it,
+  or the comma before where it is the last — and the rest of the collection is
+  the file's own bytes on either side of the cut. The undo writes the
+  collection back as it was, which is byte-exact by construction.
+- **A flow collection's span had stopped at its last member**, leaving the
+  bracket that closes it outside the node it closes. Correct for a block
+  collection, where the span deliberately stops short of the comments that
+  follow; wrong here, and it is what made the first attempt at the cut leave a
+  stray `}` behind.
 
 - **An address nothing reaches can be written now.** Typing into a blank cell
   offers it as a new `cells:` entry — the `empty` row's first answer — with the

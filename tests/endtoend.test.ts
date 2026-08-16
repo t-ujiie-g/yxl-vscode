@@ -161,6 +161,20 @@ describe('the loop, closed', () => {
     expect(cell(built(dir, root), 'Sales', 'A7')?.value).toBe('Footnote');
   });
 
+  it('empties a cell written in the flow form, keeping the format it wears', async () => {
+    if (!QUICKSTART) return;
+    const { dir, root, port, spec, refusals } = opened(QUICKSTART);
+
+    // `B4: { value: 0.085, format: "0.0%" }` — the expanded form as the spec's
+    // own documentation writes it, on one line and inside brackets.
+    await write(spec(), typed({ row: 4, col: 2, text: '' }), port);
+    expect(refusals).toEqual([]);
+
+    const grid = built(dir, root);
+    expect(cell(grid, 'Sales', 'B4')?.value).toBeNull();
+    expect(cell(grid, 'Sales', 'B4')?.format).toBe('0.0%');
+  });
+
   it('takes a cell back out of the workbook when it is emptied', async () => {
     if (!QUICKSTART) return;
     const { dir, root, port, spec, refusals } = opened(QUICKSTART);

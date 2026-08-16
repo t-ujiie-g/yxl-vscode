@@ -56,13 +56,32 @@ describe('entries of a collection', () => {
       expect(diagnostics[0]?.code).toBe(CODE.cannotRemoveRoot);
     });
 
-    it('refuses inside a flow collection rather than corrupting it', () => {
-      const { diagnostics, text } = edit(SPEC, {
-        op: 'remove',
-        path: ['defs', 'styles', 'header', 'bold'],
-      });
-      expect(diagnostics[0]?.code).toBe(CODE.flowNotSupported);
-      expect(text).toBe(SPEC);
+    it('cuts an entry out of a flow collection, separator and all', () => {
+      const source = 'cells:\n  B4: { value: 0.085, format: "0.0%" }\n';
+      expect(text(source, { op: 'remove', path: ['cells', 'B4', 'value'] })).toBe(
+        'cells:\n  B4: { format: "0.0%" }\n',
+      );
+    });
+
+    it('takes the comma before it where it is the last one in the flow', () => {
+      const source = 'cells:\n  B4: { value: 0.085, format: "0.0%" }\n';
+      expect(text(source, { op: 'remove', path: ['cells', 'B4', 'format'] })).toBe(
+        'cells:\n  B4: { value: 0.085 }\n',
+      );
+    });
+
+    it('leaves the brackets where it was the only one in them', () => {
+      const source = 'cells:\n  B4: { value: 0.085 }\n';
+      expect(text(source, { op: 'remove', path: ['cells', 'B4', 'value'] })).toBe(
+        'cells:\n  B4: {}\n',
+      );
+    });
+
+    it('cuts an item out of a flow sequence the same way', () => {
+      const source = 'sheets:\n  - name: Sales\n    merges: [A1:B1, C1:D1]\n';
+      expect(text(source, { op: 'remove', path: ['sheets', 0, 'merges', 0] })).toBe(
+        'sheets:\n  - name: Sales\n    merges: [C1:D1]\n',
+      );
     });
 
     it('refuses the entry that carries the dash, which would take the item apart', () => {
@@ -443,6 +462,7 @@ describe('entries of a collection', () => {
       const source = 'cells:\n  A1: 1\n  # the total\n  B1: 2\n  C1: 3\n';
 
       expect(removing(source, ['cells', 'B1'])).toEqual({
+        of: 'entry',
         span: { start: 15, end: 37 },
         key: 'B1',
         before: 'C1',
@@ -458,7 +478,15 @@ describe('entries of a collection', () => {
 
     it('gives the reason when the lines could not go back where they were', () => {
       const source = 'cells:\n  A1: 1\n\n  B1: 2\n';
-      expect(removing(source, ['cells', 'B1'])?.inexact).toContain('lines above it');
+      const found = removing(source, ['cells', 'B1']);
+      expect(found?.of === 'entry' && found.inexact).toContain('lines above it');
+    });
+
+    it('keeps a flow collection whole, since there are no lines to put back', () => {
+      const source = 'cells:\n  B4: { value: 0.085, format: "0.0%" }\n';
+      const found = removing(source, ['cells', 'B4', 'value']);
+
+      expect(found?.of === 'flow' && found.source).toBe('{ value: 0.085, format: "0.0%" }');
     });
 
     it('has nothing to say about the document root', () => {

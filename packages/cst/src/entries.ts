@@ -174,10 +174,7 @@ export function removal(source: string, path: Path, site: Site, refuse: Refuse):
     refuse(CODE.cannotRemoveRoot, 'the document root cannot be removed', site.node.span);
     return undefined;
   }
-  if (site.parent.flow) {
-    refuse(CODE.flowNotSupported, insideFlow(path), site.node.span);
-    return undefined;
-  }
+  if (site.parent.flow) return { span: site.parent.span, text: withoutEntry(source, site) };
   if (site.in === 'map' && opensAnItem(source, site.entry.span.start)) {
     refuse(CODE.itemMarker, carriesTheDash(path), site.node.span);
     return undefined;
@@ -198,6 +195,39 @@ function opensAnItem(source: string, start: number): boolean {
 }
 
 type Held = Extract<Site, { in: 'map' } | { in: 'seq' }>;
+
+/**
+ * A flow collection with one of its entries cut out, as text.
+ *
+ * `{ value: 0.085, format: "0.0%" }` is one line, so there are no lines to take
+ * — what goes is the entry and one separator, and the rest of the collection is
+ * the file's own bytes on either side of the cut. Which separator depends on
+ * where the entry sits: the comma after it, or, for the last one, the comma
+ * before.
+ */
+function withoutEntry(source: string, site: Held): string {
+  const whole = site.parent.span;
+  const own = site.in === 'map' ? site.entry.span : site.node.span;
+
+  const after = /^\s*,\s*/.exec(source.slice(own.end, whole.end - 1));
+  if (after !== null) {
+    return (
+      source.slice(whole.start, own.start) + source.slice(own.end + after[0].length, whole.end)
+    );
+  }
+
+  const before = /,\s*$/.exec(source.slice(whole.start + 1, own.start));
+  if (before !== null) {
+    return (
+      source.slice(whole.start, own.start - before[0].length) + source.slice(own.end, whole.end)
+    );
+  }
+
+  // The only one in it: what is left is the collection's own brackets, and
+  // whether an empty one means anything is the compiler's question, not this
+  // layer's.
+  return source[whole.start] === '[' ? '[]' : '{}';
+}
 
 /**
  * The text a removal covers.
@@ -237,22 +267,32 @@ function blankLines(source: string, from: number, limit: number): number {
 }
 
 /**
- * What a removal takes out, and what putting it back needs to know: the text it
- * covers, the key or index it goes back at, and the entry it goes back above —
- * `null` where it goes back last.
+ * What a removal takes out, and what putting it back needs to know.
  *
- * `inexact` is the reason it could *not* be put back byte for byte, and `null`
- * where it can. Both reasons are about lines that stay behind: a blank line no
- * anchor can be expressed across, and an entry with no sibling left to be put
- * back beside. A caller that will not make an edit it cannot undo refuses on it
- * (ADR-026).
+ * An entry with lines of its own goes back above the entry that followed it, or
+ * last where none did, and `inexact` is the reason it could *not* go back byte
+ * for byte — `null` where it can. Both reasons are about lines that stay
+ * behind: a blank line no anchor can be expressed across, and an entry with no
+ * sibling left to be put back beside. A caller that will not make an edit it
+ * cannot undo refuses on it (ADR-026).
+ *
+ * Inside a flow collection there are no lines to put back, so what is kept is
+ * the collection's own text, to be written over it again.
  */
-export interface Removal {
-  readonly span: Span;
-  readonly key: string | number;
-  readonly before: string | null;
-  readonly inexact: string | null;
-}
+export type Removal =
+  | {
+      readonly of: 'entry';
+      readonly span: Span;
+      readonly key: string | number;
+      readonly before: string | null;
+      readonly inexact: string | null;
+    }
+  | {
+      readonly of: 'flow';
+      readonly span: Span;
+      readonly path: Path;
+      readonly source: string;
+    };
 
 /**
  * What a `remove` at this path would take out, read before the removal — the
@@ -261,6 +301,17 @@ export interface Removal {
 export function removalOf(source: string, root: Node, path: Path): Removal | null {
   const site = locate(root, path);
   if (site === undefined || site.in === 'root') return null;
+
+  // Nothing in a flow collection has lines of its own, so what puts it back is
+  // the collection's own text, written over whatever the removal leaves.
+  if (site.parent.flow) {
+    return {
+      of: 'flow',
+      span: site.parent.span,
+      path: path.slice(0, -1),
+      source: source.slice(site.parent.span.start, site.parent.span.end),
+    };
+  }
 
   const siblings = siblingsOf(site);
   const next = siblings[site.index + 1];
@@ -287,6 +338,7 @@ export function removalOf(source: string, root: Node, path: Path): Removal | nul
   const followed = site.in === 'map' ? site.parent.entries[site.index + 1] : undefined;
 
   return {
+    of: 'entry',
     span: at,
     key: site.in === 'map' ? String(site.entry.key.value) : site.index,
     before: followed === undefined ? null : String(followed.key.value),

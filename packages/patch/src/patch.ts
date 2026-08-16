@@ -100,8 +100,15 @@ function inverseOf(
   };
 
   switch (op.op) {
+    case 'write': {
+      if (found === null) return refuse('nothing is there to write over');
+
+      // Whatever it covers: the bytes that were there are what puts them back,
+      // and a collection written over as text is put back the same way.
+      return { op: 'write', path: op.path, source: slice(source, found) };
+    }
+
     case 'set':
-    case 'write':
     case 'clear': {
       if (found === null || found.kind !== 'scalar') {
         return refuse('only a scalar can be written over and put back');
@@ -138,6 +145,12 @@ function inverseOf(
 
       const taken = removalOf(source, root, op.path);
       if (taken === null) return refuse('nothing is there to put back');
+
+      // A flow collection is one line with no room to put a line back into, so
+      // what goes back is the collection as it was written.
+      if (taken.of === 'flow') {
+        return { op: 'write', path: taken.path, source: taken.source };
+      }
       if (taken.inexact !== null) return refuse(taken.inexact);
 
       return {
@@ -152,6 +165,11 @@ function inverseOf(
     case 'restore':
       return { op: 'remove', path: [...op.path, op.key] };
   }
+}
+
+/** The bytes a node is written as, which is what puts it back unchanged. */
+function slice(source: string, node: Node): string {
+  return source.slice(node.span.start, node.span.end);
 }
 
 /** The key an entry is written as, which is the last step of its own path. */
