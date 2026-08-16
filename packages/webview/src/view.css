@@ -33,7 +33,10 @@ body {
   color: var(--vscode-descriptionForeground);
 }
 
-.boxes input {
+/* Outside the grid the panel's palette applies; inside it the sheet's does. */
+.boxes input,
+.looking .for,
+.reason {
   padding: 1px 4px;
   border: 1px solid var(--vscode-input-border, var(--vscode-panel-border));
   background: var(--vscode-input-background);
@@ -232,10 +235,10 @@ body {
 .corner .address {
   width: 100%;
   box-sizing: border-box;
-  border: 1px solid var(--vscode-input-border, #9a9a9a);
+  border: 1px solid #c6c6c6;
   border-radius: 2px;
-  background: var(--vscode-input-background);
-  color: var(--vscode-input-foreground);
+  background: #ffffff;
+  color: #000000;
   font: inherit;
   text-align: center;
 }
@@ -265,11 +268,6 @@ body {
 }
 
 .reason {
-  padding: 1px 4px;
-  border: 1px solid var(--vscode-input-border, var(--vscode-panel-border));
-  background: var(--vscode-input-background);
-  color: var(--vscode-input-foreground);
-  font: inherit;
   min-width: 18rem;
 }
 

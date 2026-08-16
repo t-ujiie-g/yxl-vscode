@@ -2292,6 +2292,16 @@ spreadsheet keeps one. **Phase 8 is complete.**
 - **The keys work from inside the find box**, where the reader actually is.
   `Cmd`+`G` reaches the cell's own handler only while a cell has the keyboard,
   and after a search nothing does.
+- **Only a window this view asked for finishes a going.** The first try put the
+  keyboard back in the find box on *every* drawing, which meant editing the YAML
+  with the bar open had the focus taken away on each keystroke. A drawing is
+  usually the file changing under a reader who is typing somewhere else; the one
+  that answers a window we asked for is the only one that is ours.
+- **Which palette a box wears is decided by which side of the grid it is on**,
+  and it is one rule now rather than three copies: outside, VS Code's input
+  tokens; inside, the sheet's own white-on-white. The address box had the first
+  while living in the second, which in a dark theme is a black hole in the
+  corner of a white spreadsheet.
 - **The address box takes what a reader would type**: `b2` as readily as `B2`,
   and anything that is not an address is said rather than swallowed.
 - 17 new tests, 1318 in total; comment shape held at 38 over the limit.

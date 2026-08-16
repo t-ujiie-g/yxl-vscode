@@ -73,6 +73,8 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
   let copied: Copied | null = null;
   /** What the reader is looking for, and where they are in what the host found. */
   let looking: Looking | null = null;
+  /** Where a window was asked for, so the drawing that answers it can finish the going. */
+  let going: { row: number; col: number } | null = null;
   /** What our own copy last put on the system clipboard, which says whose paste this is. */
   let ours: string | null = null;
 
@@ -123,6 +125,7 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       at.col < of.at.col + of.columns;
 
     if (!inside) {
+      going = at;
       host.postMessage({ kind: 'window', sheet: named(), row: at.row, col: at.col });
       return;
     }
@@ -329,10 +332,14 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       refused = null;
       redraw();
 
-      // A redraw takes the box out from under a reader who is still typing in
-      // it, and puts the keyboard on a cell they did not ask for.
+      // Only for a window this view asked for: every other drawing is the file
+      // changing under a reader who is typing somewhere else.
+      const went = going;
+      going = null;
+      if (went === null) return;
+
+      seen(went);
       if (looking !== null) into.querySelector<HTMLInputElement>('.looking .for')?.focus();
-      if (selected !== null) seen(selected);
       return;
     }
 

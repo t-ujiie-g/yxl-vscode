@@ -562,6 +562,21 @@ describe('looking for something in the sheet', () => {
     ]);
   });
 
+  it('leaves the keyboard alone for a drawing it did not ask for', () => {
+    // The reader is editing the YAML with the find bar open: every keystroke
+    // redraws the preview, and none of them is theirs to be taken away from.
+    const { into, told } = view();
+
+    press(into, 1, 1, 'f');
+    const typing = box(into);
+    if (typing === null) throw new Error('no box to type in');
+
+    typing.blur();
+    told(drawing);
+
+    expect(document.activeElement).not.toBe(into.querySelector('.looking .for'));
+  });
+
   it('takes an answer for a search the reader has already moved on from', () => {
     const { into, told } = view();
 
