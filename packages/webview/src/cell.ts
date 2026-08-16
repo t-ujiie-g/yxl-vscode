@@ -3,10 +3,10 @@ import { format as excel } from 'numfmt';
 import type { DrawnCell, DrawnMerge, DrawnRun } from './protocol';
 
 const EDGES = [
-  ['left', 'borderLeft'],
-  ['right', 'borderRight'],
-  ['top', 'borderTop'],
-  ['bottom', 'borderBottom'],
+  ['left', 'border-left'],
+  ['right', 'border-right'],
+  ['top', 'border-top'],
+  ['bottom', 'border-bottom'],
 ] as const;
 
 /** One cell as a `<td>`: what it says, and the look it was sent wearing. */
@@ -138,25 +138,38 @@ function told(cell: DrawnCell): string {
   return `${formula} — filled from ${cell.filledFrom}; Excel shifts the references per cell${why}`;
 }
 
-/** The look a cell wears, as the inline CSS another spreadsheet reads off the clipboard (ADR-028). */
+/** The look as the inline CSS another spreadsheet reads off the clipboard (ADR-028). */
 export function styleText(style: StyleValues): string {
-  const drawn = document.createElement('td');
-  apply(drawn, style);
-  return drawn.style.cssText;
+  return declarations(style)
+    .map(([name, value]) => `${name}: ${opaque(value)}`)
+    .join('; ');
 }
 
-function apply(drawn: HTMLElement, style: StyleValues): void {
-  if (style['font.bold'] === true) drawn.style.fontWeight = 'bold';
-  if (style['font.italic'] === true) drawn.style.fontStyle = 'italic';
-  if (style['font.underline'] === true) drawn.style.textDecoration = 'underline';
-  if (style['font.strike'] === true) drawn.style.textDecoration = 'line-through';
-  if (style['font.size'] !== undefined) drawn.style.fontSize = `${style['font.size']}pt`;
-  if (style['font.name'] !== undefined) drawn.style.fontFamily = style['font.name'];
-  if (style['font.color'] !== undefined) drawn.style.color = colour(style['font.color']);
-  if (style.fill !== undefined) drawn.style.backgroundColor = colour(style.fill);
-  if (style['align.horizontal'] !== undefined) drawn.style.textAlign = horizontal(style);
-  if (style['align.vertical'] !== undefined) drawn.style.verticalAlign = vertical(style);
-  if (style['align.wrap'] === true) drawn.style.whiteSpace = 'pre-wrap';
+/** A cell's fill as an importer that reads no CSS takes one, or `null` where it has none (ADR-028). */
+export function fillOf(style: StyleValues): string | null {
+  return style.fill === undefined ? null : opaque(colour(style.fill));
+}
+
+/** The look a cell wears, as the CSS declarations that draw it. */
+function declarations(style: StyleValues): [string, string][] {
+  const css: [string, string][] = [];
+  const put = (name: string, value: string): void => {
+    css.push([name, value]);
+  };
+
+  if (style['font.bold'] === true) put('font-weight', 'bold');
+  if (style['font.italic'] === true) put('font-style', 'italic');
+  if (style['font.underline'] === true) put('text-decoration', 'underline');
+  if (style['font.strike'] === true) put('text-decoration', 'line-through');
+  if (style['font.size'] !== undefined) put('font-size', `${style['font.size']}pt`);
+  if (style['font.name'] !== undefined) put('font-family', style['font.name']);
+  if (style['font.color'] !== undefined) put('color', colour(style['font.color']));
+  // `background`, not `background-color`: Excel's clipboard reader takes the
+  // shorthand and passes over the long form, which is what ate the fill.
+  if (style.fill !== undefined) put('background', colour(style.fill));
+  if (style['align.horizontal'] !== undefined) put('text-align', horizontal(style));
+  if (style['align.vertical'] !== undefined) put('vertical-align', vertical(style));
+  if (style['align.wrap'] === true) put('white-space', 'pre-wrap');
 
   for (const [side, property] of EDGES) {
     const line = style[`border.${side}.style`];
@@ -164,8 +177,19 @@ function apply(drawn: HTMLElement, style: StyleValues): void {
 
     const edge = style[`border.${side}.color`];
     const drawnWith = edge === undefined ? 'currentColor' : colour(edge);
-    drawn.style[property] = `${thickness(line)} solid ${drawnWith}`;
+    put(property, `${thickness(line)} solid ${drawnWith}`);
   }
+
+  return css;
+}
+
+function apply(drawn: HTMLElement, style: StyleValues): void {
+  for (const [name, value] of declarations(style)) drawn.style.setProperty(name, value);
+}
+
+/** A colour as another spreadsheet reads one: six digits, since a cell's fill has no alpha there. */
+function opaque(value: string): string {
+  return value.replace(/#([0-9a-fA-F]{6})[0-9a-fA-F]{2}\b/g, '#$1');
 }
 
 /** A spec's colour is `RRGGBB` or `AARRGGBB`, and CSS wants the alpha last. */

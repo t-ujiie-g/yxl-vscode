@@ -86,8 +86,19 @@ describe('what a copied rectangle puts on the clipboard', () => {
       }),
     ]);
 
+    expect(flavours(styled, { top: 1, left: 1, bottom: 1, right: 1 })?.html).toBe(
+      '<table><tr><td bgcolor="#FFFF00" style="font-weight: bold; background: #FFFF00">' +
+        'Region</td></tr></table>',
+    );
+  });
+
+  it('writes a colour as hex, which is the form the other spreadsheets read', () => {
+    // The CSSOM turns `#FFFF00` into `rgb(255, 255, 0)`, which Excel passes
+    // over — so the declarations are built rather than read back off an element.
+    const styled = sheet([cell({ row: 1, col: 1, style: { fill: '80FF0000' as Color } })]);
+
     expect(flavours(styled, { top: 1, left: 1, bottom: 1, right: 1 })?.html).toContain(
-      'font-weight: bold; background-color: rgb(255, 255, 0);',
+      'bgcolor="#FF0000" style="background: #FF0000"',
     );
   });
 

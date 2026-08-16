@@ -1,5 +1,5 @@
 import type { Rect } from '@yxl-vscode/units';
-import { shown, styleText } from './cell';
+import { fillOf, shown, styleText } from './cell';
 import type { DrawnCell, DrawnSheet } from './protocol';
 
 /** What a copied rectangle puts on the clipboard: the values as text, the look as a table (ADR-028). */
@@ -78,12 +78,18 @@ function plain(cell: DrawnCell | undefined): string {
   return cell.formula === null || cell.filledFrom !== null ? '' : `=${cell.formula}`;
 }
 
-/** One cell as the other spreadsheets read one: what it showed, wearing what it wore. */
+/** One cell as the other spreadsheets read one; the fill goes on twice, because Excel reads `bgcolor` and Sheets the CSS. */
 function td(cell: DrawnCell | undefined): string {
   if (cell === undefined) return '<td></td>';
 
   const css = styleText(cell.style);
-  const open = css === '' ? '<td>' : `<td style="${escaped(css)}">`;
+  const fill = fillOf(cell.style);
+  const open = [
+    '<td',
+    fill === null ? '' : ` bgcolor="${fill}"`,
+    css === '' ? '' : ` style="${escaped(css)}"`,
+    '>',
+  ].join('');
 
   return `${open}${escaped(shown(cell))}</td>`;
 }

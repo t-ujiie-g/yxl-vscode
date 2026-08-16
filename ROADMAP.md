@@ -2165,7 +2165,16 @@ what the reader was looking at (ADR-028).
   with the numbers already turned into strings.
 - **The look is not built twice.** The `<td>` the clipboard gets wears the CSS
   the grid's own cell wears, out of the same function; a style the preview
-  learns to draw is a style Excel receives, with nothing to keep in step.
+  learns to draw is a style Excel receives, with nothing to keep in step. That
+  function now hands back *declarations* rather than writing them onto an
+  element, because reading them back off one is where the colours were lost:
+  the CSSOM answers `rgb(31, 56, 100)` where Excel wants `#1F3864`.
+- **The fill goes on twice, and neither is decoration.** Excel took the bold,
+  the white text and the number format from the first attempt and passed over
+  the fill, which left a white heading on white. `background-color` is the long
+  form its clipboard reader does not take; the shorthand `background` is what
+  Excel's own exported HTML writes, and `bgcolor` on the `<td>` is what its
+  importer has always read. Sheets reads the CSS. Both go out.
 - **It is written inside the gesture that asked for it**, which is why
   `execCommand` is still here: it is the only *synchronous* way a page can put
   more than one flavour on the clipboard, and the asynchronous API is
