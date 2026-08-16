@@ -8,7 +8,16 @@ import {
   type Rect,
   type SheetName,
 } from '@yxl-vscode/units';
-import { beside, type Intent, located, type Reading, setValue, standing } from './direct';
+import {
+  beside,
+  type Held,
+  type Intent,
+  located,
+  type Reading,
+  setValue,
+  standing,
+  stood,
+} from './direct';
 
 /**
  * Emptying a cell. A cell with nothing in it is not something the format can
@@ -74,16 +83,17 @@ export function clearRange(
 
   const ops = new Map<FilePath, Op[]>();
   const cells = new Set<string>();
-  const held: string[] = [];
+  const held: Held[] = [];
 
   for (let row = where.rect.top; row <= where.rect.bottom; row += 1) {
     for (let col = where.rect.left; col <= where.rect.right; col += 1) {
       const at = addrAt({ col, row });
-      if (cellAt(sheet, at) === null) continue;
+      const cell = cellAt(sheet, at);
+      if (cell === null) continue;
 
       const one = clearCell(grid, { sheet: where.sheet, at }, read);
       if (one.kind === 'refused') {
-        held.push(one.why);
+        held.push({ at, why: one.why, by: stood(cell.provenance.value) });
         continue;
       }
       if (one.kind !== 'edit') continue;

@@ -1,6 +1,7 @@
 import {
   type Applied,
   apply,
+  type Edit,
   type Node,
   nodeAt,
   type Op,
@@ -40,6 +41,28 @@ export function applyPatch(source: string, patch: Patch, options: Options): Chan
   if (applied.diagnostics.length > 0) return { ...applied, text: source, edits: [], back: null };
 
   return { ...applied, back: inverse.patch };
+}
+
+/**
+ * How many lines of the file a patch rewrites — what a reader is agreeing to
+ * before a big edit lands, rather than after (`ROADMAP.md` §6 Phase 8).
+ */
+export function rewrites(source: string, edits: readonly Edit[]): number {
+  return edits.reduce(
+    (sum, edit) => sum + Math.max(lines(text(source, edit)), lines(edit.text)),
+    0,
+  );
+}
+
+function text(source: string, edit: Edit): string {
+  return source.slice(edit.span.start, edit.span.end);
+}
+
+/** How many lines a piece of a file is; nothing at all is no lines. */
+function lines(text: string): number {
+  if (text === '') return 0;
+
+  return text.split('\n').filter((one) => one !== '').length;
 }
 
 /** A patch, or the reasons there is none. */

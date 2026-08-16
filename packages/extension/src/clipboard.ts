@@ -1,13 +1,16 @@
 import {
+  beside,
   couldBlock,
   type Pasting,
   pasteRange,
   pasteText,
+  type Reading,
   reading,
   type Shape,
   tabular,
 } from '@yxl-vscode/intent';
-import { type A1Addr, addrAt, type SheetName, sheetName } from '@yxl-vscode/units';
+import { applyPatch, rewrites } from '@yxl-vscode/patch';
+import { type A1Addr, addrAt, type FilePath, type SheetName, sheetName } from '@yxl-vscode/units';
 import type { Choice, Pasted, PastedAt, PastedText } from '@yxl-vscode/webview/protocol';
 import { applied, ONLY, PASTED, type Port, type Spec, theseOnly } from './write';
 
@@ -122,9 +125,15 @@ export async function pasteFrom(
     return;
   }
 
-  const shapes = ways(spec, where, rows);
+  const read = reading(port.text);
+  const shapes = ways(spec, where, rows, read, port);
+  const many = counting(rows) > MANY;
   const taken =
-    choice === undefined ? (shapes.length === 1 ? shapes[0] : undefined) : shaped(shapes, choice);
+    choice === undefined
+      ? shapes.length === 1 && !many
+        ? shapes[0]
+        : undefined
+      : shaped(shapes, choice);
 
   if (taken === undefined) {
     if (choice !== undefined) {
@@ -132,7 +141,7 @@ export async function pasteFrom(
       return;
     }
 
-    port.refuse(counted(rows), {
+    port.refuse(counted(rows, spec.root), {
       about: { is: 'text', text: asked },
       canOverride: false,
       choices: shapes,
@@ -178,34 +187,53 @@ function shaped(shapes: readonly Choice[], choice: string): Choice | undefined {
   return shapes.find((one) => one.id === choice);
 }
 
-/** How many cells the clipboard holds, asked before the shape is picked. */
-function counted(rows: readonly (readonly string[])[]): string {
-  const cells = rows.reduce((sum, row) => sum + row.length, 0);
-  return `${cells} cells from the clipboard: how should they be written?`;
+/** More cells than a reader takes in at a glance, past which a paste says its size before it lands. */
+const MANY = 40;
+
+function counting(rows: readonly (readonly string[])[]): number {
+  return rows.reduce((sum, row) => sum + row.length, 0);
 }
 
-/** The shapes a rectangle from outside could land in, with the lines each would add. */
+/** What the clipboard holds and where it is going, said before any of it is written. */
+function counted(rows: readonly (readonly string[])[], root: FilePath): string {
+  return `${counting(rows)} cells from the clipboard, into ${beside(root)}.`;
+}
+
+/** The shapes a rectangle from outside could land in, each with the lines it would rewrite. */
 function ways(
   spec: Spec,
   where: { sheet: SheetName; at: A1Addr },
   rows: readonly (readonly string[])[],
+  read: Reading,
+  port: Port,
 ): Choice[] {
-  const cells = rows.reduce((sum, row) => sum + row.length, 0);
-  const entries: Choice = {
-    id: 'cells',
-    what: `As \`cells:\` entries — ${cells} line${cells === 1 ? '' : 's'}`,
-    moves: cells,
-    sample: [],
+  const shaping = (id: Shape, what: string): Choice => {
+    const lines = rewriting(spec, where, rows, read, id, port);
+    const size = lines === null ? '' : ` — ${lines} line${lines === 1 ? '' : 's'}`;
+
+    return { id, what: `${what}${size}`, moves: counting(rows), sample: [] };
   };
+
+  const entries = shaping('cells', 'As `cells:` entries');
   if (!couldBlock(spec.grid, where, rows)) return [entries];
 
-  return [
-    {
-      id: 'data',
-      what: `As one \`data:\` block — ${rows.length + 2} lines`,
-      moves: cells,
-      sample: [],
-    },
-    entries,
-  ];
+  return [shaping('data', 'As one `data:` block'), entries];
+}
+
+/** How many lines of the file a shape would rewrite, measured rather than guessed. */
+function rewriting(
+  spec: Spec,
+  where: { sheet: SheetName; at: A1Addr },
+  rows: readonly (readonly string[])[],
+  read: Reading,
+  shape: Shape,
+  port: Port,
+): number | null {
+  const intent = pasteText(spec.grid, where, rows, read, shape);
+  if (intent.kind !== 'edit') return null;
+
+  const source = port.text(intent.file);
+  if (source === null) return null;
+
+  return rewrites(source, applyPatch(source, intent.patch, { file: intent.file }).edits);
 }

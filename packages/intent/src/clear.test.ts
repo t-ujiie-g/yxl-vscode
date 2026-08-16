@@ -185,7 +185,7 @@ describe('a rectangle emptied as one edit', () => {
     const intent = rectangle(spec, { top: 1, left: 1, bottom: 2, right: 2 });
 
     expect(intent.kind === 'refused' && intent.why).toBe(
-      "2 of the 4 cells here cannot be emptied, so none were: `B1` is where this range's one formula is written, and changing it changes every cell the range fills (and 1 other here)",
+      '2 of the 4 cells here cannot be emptied, so none were: 2 are filled by a range',
     );
   });
 

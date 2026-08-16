@@ -1,7 +1,7 @@
 import type { Op } from '@yxl-vscode/cst';
 import { describe, expect, it } from 'vitest';
 import { CODE } from './codes';
-import { applyPatch, invert, type Patch } from './patch';
+import { applyPatch, invert, type Patch, rewrites } from './patch';
 
 const FILE = 'spec.yxl.yaml';
 
@@ -263,5 +263,40 @@ describe('undoing a patch that removes more than one entry', () => {
     if (done.back === null) throw new Error('no way back');
 
     expect(applyPatch(done.text, done.back, { file: FILE }).text).toBe(CELLS);
+  });
+});
+
+describe('how much of a file a patch rewrites', () => {
+  const SPEC = 'params:\n  region: APAC\n  quarter: Q3\n';
+
+  it('counts a line rewritten in place as one', () => {
+    const done = applyPatch(
+      SPEC,
+      { ops: [{ op: 'set', path: ['params', 'region'], value: 'EMEA' }] },
+      { file: FILE },
+    );
+    expect(rewrites(SPEC, done.edits)).toBe(1);
+  });
+
+  it('counts each line a patch adds', () => {
+    const done = applyPatch(
+      SPEC,
+      { ops: [{ op: 'add', path: ['params'], key: 'month', value: '07', before: null }] },
+      { file: FILE },
+    );
+    expect(rewrites(SPEC, done.edits)).toBe(1);
+  });
+
+  it('counts the lines a block puts in, not the one place it puts them', () => {
+    const done = applyPatch(
+      SPEC,
+      { ops: [{ op: 'addSource', path: ['params'], key: 'sizes', source: 'a: 1\nb: 2\nc: 3' }] },
+      { file: FILE },
+    );
+    expect(rewrites(SPEC, done.edits)).toBe(4);
+  });
+
+  it('counts nothing for a patch that does nothing', () => {
+    expect(rewrites(SPEC, [])).toBe(0);
   });
 });

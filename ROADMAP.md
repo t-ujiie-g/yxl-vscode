@@ -198,7 +198,7 @@ a higher one. The rows below are in dependency order, and that order is
 | `loader` | L1 | CST tree → `SpecDoc`, with the validation projection requires and `$include` expanded through an injected reader. Preserves unmodeled-but-valid constructs verbatim, marked `opaque`. (ADR-011) |
 | `compile` | L2/L3 | `SpecDoc` → `CompiledGrid` + per-facet provenance and style layers. Pure and deterministic; the workhorse. Reaches a `csv:` / `json:` file only through an injected reader. (ADR-005, ADR-019) |
 | `normalize` | L4 | The style normalizer: an applied style becomes a reference, an `extends:`, or a new definition — in that order of preference. (ADR-008) |
-| `patch` | L0/L1 | `Patch` → `cst` ops, and the inverse patch that makes undo AST-level. (ADR-010) |
+| `patch` | L0/L1 | `Patch` → `cst` ops, the inverse patch that makes undo AST-level (ADR-010), and how many lines a patch rewrites. |
 | `verify` | L4 | The double-compile diff gate every patch passes. (ADR-009) |
 | `evaluate` | — | Formula evaluation behind a seam; display only, never written back. (ADR-013) |
 | `intent` | L4 | `EditIntent` → `Resolution[]` → `Patch`. Holds the resolution table (§4.4) and the impact estimator. Sits highest of the core packages, because resolving needs all of them. |
@@ -951,8 +951,15 @@ work.
       one `data:` block, or `cells:` entries, and only the second where the
       spec already writes those cells. A field means what it would mean typed
       into the cell, so `1,234` is text and `1234` is a number.
-- [ ] A paste too big to ask about cell by cell: one summary, one answer, and
+- [x] A paste too big to ask about cell by cell: one summary, one answer, and
       the size of the diff it would make said before it is made
+      **In**, and the size is *measured* rather than estimated: each shape is
+      worked out, applied against the file in memory, and the lines it would
+      rewrite counted (`patch.rewrites`). Five hundred cells that cannot be
+      written now group by what stood in the way — 2 filled by a range, 1
+      reading a definition — rather than naming the first and counting the rest,
+      which is §8 Q14's *origins grouped, a count against each*. The other half
+      of Q14, answers that apply per group, is still open.
 - [ ] Find in the sheet, and go to what it found
 
 ### Phase 9 — Look you can apply
@@ -1927,11 +1934,14 @@ two pastes this is, is worked out where the clipboard actually is.
   unless the sketch turns out to want axes. No runtime dependency without an ADR
   (ADR-013); decide when Phase 11 starts, with a spike over `charts.yxl.yaml`
   and `sparklines.yxl.yaml`, which are already in the corpus.
-- **Q14 — What does one question about a rectangle look like?** Five hundred
-  cells whose values come from three different constructs have to become *one*
-  dialog: the origins grouped, a count against each, and answers that apply per
-  group. The single-cell dialog (Phase 7) does not scale to it by itself, and
-  the shape of the grouped one is undecided.
+- **Q14 — What does one question about a rectangle look like?** Half answered,
+  2026-08-17. *The origins grouped, a count against each* is in: a rectangle
+  that cannot be written says `2 are filled by a range, 1 reads a definition`,
+  and a single cell still says its own reason, which no count improves on. The
+  size of the diff is measured and said before the edit lands. **Still open:
+  answers that apply per group** — *take the range ones out of the paste* beside
+  *take them all out* — which needs the answer machinery to carry a subset of
+  the rectangle rather than the whole of it.
 
 ## 9. Risks
 
@@ -2248,6 +2258,31 @@ this at a phase boundary rather than at the end.
   two serials either side of it, so the next reader knows it is deliberate.
 - A cell's own format — written, or the one its type takes — now wins over a
   band's. Both are requests about *that* cell; a band is something reaching it.
+
+### 2026-08-17 — One question about a rectangle, and the size of what it would do
+A paste or a `Delete` that five hundred cells cannot take used to name the first
+cell's reason and count the rest — *(and 2 others here)* — which tells a reader
+nothing about the other 499. It now groups them.
+
+- **The origins are grouped and counted**: `3 of the 500 cells here cannot be
+  pasted, so none were: 2 are filled by a range, 1 reads a definition`. That is
+  half of §8 **Q14**; the other half, answers that apply *per group*, is still
+  open and now has a sharper shape.
+- **One cell still says its own reason.** `B2 holds a formula that A1 would move
+  off the sheet` is worth more than any count, and a group of one is not a
+  group. The rule is: one, its reason; more, what stood in the way.
+- **What stood in the way is the cell's origin**, not a string match. A refused
+  cell now carries the construct that refused it — the same table §4.4 is
+  written from — so the counting is over what the spec actually says rather than
+  over sentences that happen to read alike.
+- **The size of the diff is measured before it lands**, not estimated:
+  `patch.rewrites` counts the lines a patch would rewrite, each shape is applied
+  against the file in memory, and the answer carries the number — *As one
+  `data:` block — 4 lines* against *As `cells:` entries — 50 lines*.
+- **A paste too big to see is asked about even where it has only one shape.**
+  Under forty cells it lands as it always did; over that it says what it is and
+  waits, which is the whole of the item's *one summary, one answer*.
+- 9 new tests, 1301 in total; comment shape held at 38 over the limit.
 
 ### 2026-08-16 — Refactoring pass after the clipboard (`AGENTS.md` §8)
 Three findings, taken in the order the lenses come in. Nothing about what the
