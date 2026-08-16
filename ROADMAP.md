@@ -396,14 +396,15 @@ not a date.
 | `Enter` commits and moves down; `Esc` abandons | ✅ |
 | Arrows, `Tab`, `PageUp` / `PageDown` | ✅ |
 | `Delete` empties a cell | ✅ |
-| Copy, cut and paste inside the grid | ✅ — values and formulas, whose references move; looks are Phase 9 (ADR-032) |
 | Undo and redo | ✅ — from the grid without leaving it, and VS Code's own where the file has moved since (ADR-030) |
 | The answers a refused edit has, with what each would change | ✅ for a range's formula and a blank cell; the rest is Phase 7 |
-| `Cmd`+arrow to the edge of a block, `Cmd`+`A`, a box to type an address into | **Phase 8** |
-| Select a range — drag, `Shift`+click, `Shift`+arrows | **Phase 8** |
-| Delete, copy or cut a range | **Phase 8** |
+| Select a range — drag, `Shift`+click, `Shift`+arrows, `Cmd`+`A` | ✅ |
+| `Cmd`+arrow to the edge of a block, `Home` / `End` | ✅ |
+| Delete, copy or cut a range | ✅ |
+| Copy, cut and paste inside the grid | ✅ — values and formulas, whose references move; looks are Phase 9 (ADR-032) |
+| Copy out into Excel or Sheets | ✅ — the values as text and the look as a table (ADR-028) |
 | Paste from Excel or Sheets, values and looks | **Phase 8** |
-| Copy out into Excel or Sheets | **Phase 8** |
+| A box to type an address into | **Phase 8** |
 | Find something in the sheet | **Phase 8** |
 | Bold, fill, borders, alignment, number format | **Phase 9** |
 | Drag a column wider, a row taller | **Phase 9** |
@@ -930,8 +931,14 @@ work.
       spreadsheet does and what makes the `empty` row of §4.4 reachable at all.
       Growing it further as the reader scrolls is not in: the room is a fixed
       amount past the last cell.
-- [ ] **Copy out**: TSV *and* HTML on the clipboard, so Excel and Sheets receive
+- [x] **Copy out**: TSV *and* HTML on the clipboard, so Excel and Sheets receive
       the values and the look they were shown (**ADR-028**)
+      **In**, and the split is ADR-028's own: the text carries the *value*
+      (`1234.5`), the table carries how it *looked* (`1,234.50`, bold, filled).
+      Written inside the gesture that asked for it, because that is the only
+      way a page can put two flavours on the clipboard without a permission.
+      A rectangle reaching past the drawn window is said rather than half
+      copied, and a merge is copied as its values rather than as a merge.
 - [ ] **Paste in** from Excel or Sheets: values from the TSV, look from the
       HTML, landing as *one* resolution — a `data:` rectangle where the shape
       says so, `cells:` where it does not (§4.4, §8 Q1, Q11)
@@ -2146,6 +2153,29 @@ this at a phase boundary rather than at the end.
   two serials either side of it, so the next reader knows it is deliberate.
 - A cell's own format — written, or the one its type takes — now wins over a
   band's. Both are requests about *that* cell; a band is something reaching it.
+
+### 2026-08-16 — Copy out, in both the flavours the other spreadsheets speak
+A rectangle copied in the grid now lands on the **system** clipboard as well,
+as `text/plain` **and** `text/html` — so `Cmd`+`V` in Excel or Sheets receives
+what the reader was looking at (ADR-028).
+
+- **The split is ADR-028's own**: the text carries the *value* (`1234.5`), the
+  table carries how it *looked* (`1,234.50`, bold, filled). Either alone loses
+  half the point — TSV arrives with every format and colour gone, HTML arrives
+  with the numbers already turned into strings.
+- **The look is not built twice.** The `<td>` the clipboard gets wears the CSS
+  the grid's own cell wears, out of the same function; a style the preview
+  learns to draw is a style Excel receives, with nothing to keep in step.
+- **It is written inside the gesture that asked for it**, which is why
+  `execCommand` is still here: it is the only *synchronous* way a page can put
+  more than one flavour on the clipboard, and the asynchronous API is
+  permission-gated. Where it cannot reach the clipboard at all, the grid says
+  so rather than leaving the reader to find out in Excel.
+- **What it will not do quietly**: a rectangle reaching past the drawn window
+  is refused with a sentence rather than copied half blank, a cell a
+  `formulas:` range fills carries nothing (its formula means something else
+  wherever it lands), and a merge copies as its values rather than as a merge.
+- 14 new tests, 1262 in total. Comment shape came *down* to 38 over the limit.
 
 ### 2026-08-16 — Room to work in
 The grid drew a sheet exactly as far as its last written cell, which makes it a

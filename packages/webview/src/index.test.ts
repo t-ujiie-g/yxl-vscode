@@ -427,3 +427,30 @@ describe('a rectangle copied in the grid', () => {
     expect(sent.filter((one) => one.kind === 'paste')).toEqual([]);
   });
 });
+
+describe('a rectangle copied out of the grid', () => {
+  it('puts what the reader was shown on the system clipboard, in both flavours', () => {
+    const wrote: Record<string, string> = {};
+    document.execCommand = () => {
+      const event = new Event('copy');
+      Object.defineProperty(event, 'clipboardData', {
+        value: {
+          setData: (kind: string, text: string) => {
+            wrote[kind] = text;
+          },
+        },
+      });
+      document.dispatchEvent(event);
+      return true;
+    };
+
+    const { into } = view();
+    at(into, 1, 1)?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    at(into, 1, 1)?.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'c', metaKey: true, bubbles: true }),
+    );
+
+    expect(wrote['text/plain']).toBe('APAC');
+    expect(wrote['text/html']).toBe('<table><tr><td>APAC</td></tr></table>');
+  });
+});

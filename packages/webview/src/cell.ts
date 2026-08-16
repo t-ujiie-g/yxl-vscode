@@ -113,7 +113,7 @@ function run(of: DrawnRun): HTMLElement {
  * itself — never a number that is not the workbook's (ADR-014). A number wears
  * its format; a filled cell that was not computed says where it is filled from.
  */
-function shown(cell: DrawnCell): string {
+export function shown(cell: DrawnCell): string {
   const computed = cell.computed;
   if (computed?.kind === 'error') return computed.error;
   if (computed?.kind === 'value') return formatted(computed.value, cell.format);
@@ -136,6 +136,13 @@ function told(cell: DrawnCell): string {
   if (cell.filledFrom === null) return `${formula}${why}`;
 
   return `${formula} — filled from ${cell.filledFrom}; Excel shifts the references per cell${why}`;
+}
+
+/** The look a cell wears, as the inline CSS another spreadsheet reads off the clipboard (ADR-028). */
+export function styleText(style: StyleValues): string {
+  const drawn = document.createElement('td');
+  apply(drawn, style);
+  return drawn.style.cssText;
 }
 
 function apply(drawn: HTMLElement, style: StyleValues): void {

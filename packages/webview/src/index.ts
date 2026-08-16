@@ -1,5 +1,6 @@
 import type { Rect } from '@yxl-vscode/units';
 import { sheetAgain } from './again';
+import { flavours, onto } from './clipboard';
 import {
   type Asks,
   type Copied,
@@ -11,7 +12,16 @@ import {
   type Showing,
 } from './draw';
 import { between } from './keys';
-import type { Drawing, Editable, FromView, Pasted, Refused, Source, ToView } from './protocol';
+import type {
+  Drawing,
+  DrawnSheet,
+  Editable,
+  FromView,
+  Pasted,
+  Refused,
+  Source,
+  ToView,
+} from './protocol';
 
 export { type Kept, sheetAgain } from './again';
 export { type Asks, type Copied, draw, type Reached, restate, type Showing } from './draw';
@@ -166,8 +176,9 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
     },
     copy: (row, col, cut) => {
       refused = null;
-      said = null;
-      copied = { sheet: named(), rect: spanned() ?? between({ row, col }, { row, col }), cut };
+      const rect = spanned() ?? between({ row, col }, { row, col });
+      copied = { sheet: named(), rect, cut };
+      said = out(drawing?.sheets[sheet], rect);
       restated();
     },
     paste: (row, col) => {
@@ -264,6 +275,17 @@ function start(): void {
 }
 
 if (typeof document !== 'undefined') start();
+
+/** The rectangle onto the system clipboard (ADR-028), or what stopped it, said rather than nothing. */
+function out(sheet: DrawnSheet | undefined, rect: Rect): string | null {
+  if (sheet === undefined) return null;
+
+  const what = flavours(sheet, rect);
+  if (what === null)
+    return 'this reaches past what the preview has drawn, so only the grid has it.';
+
+  return onto(what) ? null : 'this preview could not reach the clipboard, so only the grid has it.';
+}
 
 /** What a paste names: the rectangle it came from, and the cell it is going down on. */
 function putting(copied: Copied, row: number, col: number): Pasted {
