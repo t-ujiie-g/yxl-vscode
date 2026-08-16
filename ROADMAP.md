@@ -829,6 +829,10 @@ Where it starts to feel like a spreadsheet.
       rectangle next to it) is the half that decides whether a spec grows a
       hundred `cells:` entries or a table, and it lands with the rectangle work
       Phase 10 needs anyway.
+      **`external` ①** is in for CSV, which is the row that reaches out of the
+      spec altogether: what it carries is the companion file as it should be,
+      checked by compiling the spec with that file overlaid and diffing, exactly
+      as a patch is (**the checker grew a second door, not a second lock**).
       **`param` ①** is in: a cell that is exactly one placeholder offers the
       parameter's default, with every cell that follows it. Not offered where
       the cell is a *sentence* (`"${quarter} ${region}"` typed over would have
@@ -850,7 +854,13 @@ Where it starts to feel like a spreadsheet.
       have been edited by hand since it was offered.
 - [ ] `normalize`: the style normalizer, ahead of every style write (ADR-008)
 - [ ] Range edits with mixed origins
-- [ ] `external` origins: edit the companion CSV/JSON, or divert to `overrides:`
+- [x] `external` origins: edit the companion CSV/JSON, or divert to `overrides:`
+      **CSV is in**: a cell whose value is a field of a CSV beside the spec
+      offers to write *that field*, and nothing else in the file moves. JSON is
+      not: putting a value back into a JSON document without reformatting the
+      rest needs the span-keeping treatment the CST gives YAML, and reformatting
+      somebody's data file to change one number is not a trade this project
+      makes. The override is offered beside it, as always.
 - [ ] Surprise-diff confirmation UI for the `ok: 'confirm'` verdict
 
 ### Phase 8 — The grid as a spreadsheet
@@ -1974,6 +1984,33 @@ this at a phase boundary rather than at the end.
   two serials either side of it, so the next reader knows it is deliberate.
 - A cell's own format — written, or the one its type takes — now wins over a
   band's. Both are requests about *that* cell; a band is something reaching it.
+
+### 2026-08-16 — Phase 7: the row that reaches out of the spec
+
+- **A cell whose value is a field of a CSV can be edited**, and what changes is
+  that field: the file comes back with the field's own bytes replaced and every
+  other byte where it was — the promise the CST keeps for a spec, kept one file
+  over by arithmetic rather than by a serializer.
+- **The quoting is the type.** A CSV carries none of its own, so what the reader
+  typed decides it: a number goes in bare, text that looks like a number goes in
+  quoted, and a value holding a comma or a quote is quoted the way RFC 4180 says
+  (`docs/spec.md` §9). The writer round-trips through the reader beside it, in a
+  test that pins exactly that.
+- **The checker grew a second door, not a second lock.** A companion file has no
+  patch algebra, so what the intent carries is the file as it should be —
+  `checkedText` compiles the spec with it overlaid and diffs, which is what
+  `checked` was already doing after the patch step. One `Intent` kind (`wrote`)
+  and one branch in the write path; the gate is unchanged (ADR-009).
+- **The undo is the shell's**, and says so: `Checked.back` is `null` for a file
+  this algebra does not address. VS Code's own undo takes a `WorkspaceEdit`
+  back, which is the whole of what a CSV needs.
+- **JSON is refused, with the reason.** Putting a value back into a JSON
+  document without reformatting the rest needs the span-keeping treatment the
+  CST gives YAML; reformatting somebody's data file to change one number is not
+  a trade this project makes.
+- Tier 4 follows it into the workbook: `Masters!B2` typed, `stores.csv` changed
+  in one field, and the built `.xlsx` holding the new store name. 15 new tests,
+  1124 in total.
 
 ### 2026-08-16 — Phase 7: the parameter row, and what a parameter reaches
 

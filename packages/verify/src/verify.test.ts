@@ -3,7 +3,7 @@ import type { Op } from '@yxl-vscode/cst';
 import type { IncludeReader } from '@yxl-vscode/loader';
 import { type A1Addr, type FilePath, filePath, qualified, type SheetName } from '@yxl-vscode/units';
 import { describe, expect, it } from 'vitest';
-import { type Ctx, checked, type Expects, nothingChanges } from './verify';
+import { type Ctx, checked, checkedText, type Expects, nothingChanges } from './verify';
 
 const read: IncludeReader & DataReader = () => null;
 const SPEC_FILE = filePath('spec.yxl.yaml') ?? ('' as FilePath);
@@ -50,7 +50,7 @@ describe('an edit that does what it said', () => {
     if (done.ok !== true) return;
 
     expect(done.text).toContain('B1: 9');
-    expect(done.back.ops).toEqual([
+    expect(done.back?.ops).toEqual([
       { op: 'write', path: ['sheets', 0, 'cells', 'B1'], source: '2400000' },
     ]);
   });
@@ -172,5 +172,45 @@ describe('an edit that cannot be made at all', () => {
     expect(edit('sheets: [\n', about('Sales!A1'), { op: 'set', path: ['a'], value: 1 }).ok).toBe(
       false,
     );
+  });
+});
+
+describe('a file the spec reads rather than one it is written in', () => {
+  const READS = `sheets:
+  - name: Sales
+    data:
+      - at: A5
+        csv: rows.csv
+`;
+
+  /** The spec, plus a CSV it reads, both answered by the same reader. */
+  const beside = (csv: string): Ctx => ({
+    root: SPEC_FILE,
+    file: filePath('rows.csv') ?? ('' as FilePath),
+    read: (_from, path) => ({ file: path, source: String(path) === 'rows.csv' ? csv : READS }),
+  });
+
+  it('is checked by compiling the spec with the file overlaid', () => {
+    const done = checkedText('APAC,1\n', 'EMEA,1\n', about('Sales!A5'), beside('APAC,1\n'));
+
+    expect(done.ok).toBe(true);
+    if (done.ok !== true) return;
+    expect(done.text).toBe('EMEA,1\n');
+  });
+
+  it('has no patch to take it back, because it is not a spec', () => {
+    const done = checkedText('APAC,1\n', 'EMEA,1\n', about('Sales!A5'), beside('APAC,1\n'));
+    expect(done.ok === true && done.back).toBeNull();
+  });
+
+  it('is refused when it moves a cell the edit did not name', () => {
+    const done = checkedText(
+      'APAC,1\n',
+      'EMEA,2\n',
+      { cells: new Set([qualified('Sales' as SheetName, 'A5' as A1Addr)]), beyond: 'refuse' },
+      beside('APAC,1\n'),
+    );
+
+    expect(done.ok).toBe(false);
   });
 });

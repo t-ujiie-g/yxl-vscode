@@ -24,7 +24,8 @@ function files(sources: Record<string, string>) {
 }
 
 function edited(sources: Record<string, string>, intent: Intent): string {
-  if (intent.kind !== 'edit') throw new Error(`refused: ${intent.why}`);
+  if (intent.kind === 'refused') throw new Error(`refused: ${intent.why}`);
+  if (intent.kind !== 'edit') throw new Error('a file was written, not a spec');
 
   const { read } = files(sources);
   const ctx: Ctx = { root: ROOT, file: intent.file, read };

@@ -14,3 +14,4 @@ export type {
 export { type FullAddr, reaches } from './impact';
 export type { CellProvenance, FacetOrigin } from './provenance';
 export { resolve, type StyleLayer, type StyleSource } from './style';
+export { asCsvField, fieldAt } from './table';
