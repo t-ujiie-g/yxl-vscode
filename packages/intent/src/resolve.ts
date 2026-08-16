@@ -5,11 +5,12 @@ import {
   type FacetOrigin,
   type FullAddr,
   reaches,
+  sheetOf,
 } from '@yxl-vscode/compile';
 import { type Op, type Path, renderScalar } from '@yxl-vscode/cst';
 import { type A1Addr, addrAt, cellOf, qualified, type SheetName } from '@yxl-vscode/units';
 import { type Intent, located, type Text } from './direct';
-import { meant } from './meant';
+import { meaning } from './typed';
 
 /**
  * One of the answers an edit has, where it has more than one.
@@ -47,8 +48,8 @@ export function candidates(
   typed: string,
   text: Text,
 ): readonly Candidate[] {
-  const sheet = grid.sheets.find((one) => one.name === where.sheet);
-  if (sheet === undefined) return [];
+  const sheet = sheetOf(grid, where.sheet);
+  if (sheet === null) return [];
 
   const cell = cellAt(sheet, where.at);
   if (cell === null) {
@@ -94,17 +95,20 @@ function beside(sheet: CompiledSheet, at: A1Addr): boolean {
  * all, the key goes in with the entry under it.
  */
 function entryOp(path: Path, holds: boolean, at: A1Addr, typed: string): Op {
-  const formula = typed.startsWith('=') ? renderScalar(typed.slice(1), 'double') : null;
+  const meant = meaning(typed);
+  const formula = meant.is === 'formula' ? `formula: ${renderScalar(meant.body, 'double')}` : null;
 
   if (!holds) {
     const source =
-      formula === null ? `${at}: ${renderScalar(meant(typed))}` : `${at}:\n  formula: ${formula}`;
+      formula === null
+        ? `${at}: ${renderScalar(meant.is === 'value' ? meant.value : null)}`
+        : `${at}:\n  ${formula}`;
     return { op: 'addSource', path, key: 'cells', source };
   }
 
   return formula === null
-    ? { op: 'add', path, key: at, value: meant(typed), before: null }
-    : { op: 'addSource', path, key: at, source: `formula: ${formula}` };
+    ? { op: 'add', path, key: at, value: meant.is === 'value' ? meant.value : null, before: null }
+    : { op: 'addSource', path, key: at, source: formula };
 }
 
 /**
@@ -163,7 +167,7 @@ function rangeFormula(
   typed: string,
   text: Text,
 ): Candidate | null {
-  if (!typed.startsWith('=')) return null;
+  if (meaning(typed).is !== 'formula') return null;
   if (origin.offset[0] !== 0 || origin.offset[1] !== 0) return null;
 
   const found = located(origin.node, text);

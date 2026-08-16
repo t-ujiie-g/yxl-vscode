@@ -1,4 +1,4 @@
-import { type CompiledGrid, cellAt } from '@yxl-vscode/compile';
+import { type CompiledGrid, cellAt, sheetOf } from '@yxl-vscode/compile';
 import type { Node, Op, Path } from '@yxl-vscode/cst';
 import { type A1Addr, qualified, type SheetName } from '@yxl-vscode/units';
 import { type Intent, located, setValue, type Text } from './direct';
@@ -23,8 +23,8 @@ export function clearCell(
   where: { sheet: SheetName; at: A1Addr },
   text: Text,
 ): Intent {
-  const sheet = grid.sheets.find((one) => one.name === where.sheet);
-  if (sheet === undefined) return setValue(grid, where, null, text);
+  const sheet = sheetOf(grid, where.sheet);
+  if (sheet === null) return setValue(grid, where, null, text);
 
   const cell = cellAt(sheet, where.at);
   const origin = cell?.provenance.value;
