@@ -102,12 +102,7 @@ describe.each(corpus)('$name', (sample) => {
     if (!root) return;
 
     const target = scalars(root).find(
-      ({ node, path }) =>
-        node.kind === 'scalar' &&
-        node.source !== '' &&
-        node.style !== 'literal' &&
-        node.style !== 'folded' &&
-        path.length > 0,
+      ({ node, path }) => node.kind === 'scalar' && node.source !== '' && path.length > 0,
     );
     if (!target) return;
 

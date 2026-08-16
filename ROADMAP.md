@@ -711,11 +711,15 @@ the inverse is unique, so no dialog is needed yet.
       checks that a key the loader stops reading cannot fall through unmarked,
       and that seven specs actually have both halves, so it cannot pass by
       skipping.
-- [ ] Rewrite a block scalar. `set` over a `|` or `>` value is refused today:
+- [x] Rewrite a block scalar. `set` over a `|` or `>` value is refused today:
       its span is the indented body, so writing a plain scalar over it would
       take the lines under it too. Doing it properly means keeping the
       indicator, the indentation, and the chomping — and `summary.yaml` writes a
       formula that way, so this is a real spec's real edit.
+      **Shipped**: the header line and the chomping are outside what is
+      rewritten, and the new text is indented to where the body already sits.
+      The Tier 2 round trip covers block scalars again, which is where the
+      byte-for-byte undo is proved.
 - [ ] Put back an entry that holds more than a scalar. `remove` of
       `A1: { value: 1, style: header }` has no inverse in this algebra, so it is
       refused (ADR-026); a structural edit needs one that can carry a subtree.
@@ -1680,6 +1684,22 @@ this at a phase boundary rather than at the end.
   two serials either side of it, so the next reader knows it is deliberate.
 - A cell's own format — written, or the one its type takes — now wins over a
   band's. Both are requests about *that* cell; a band is something reaching it.
+
+### 2026-08-16 — Phase 6: writing into a folded formula
+
+- **A `|` or `>` value can be written into now.** What is replaced is the body
+  alone: the indicator, the block's chomping, and the key's line sit outside it
+  and are never touched, and the new text is indented to where the body already
+  sits — a line that came back shallower would close the block early and take
+  the rest of the mapping with it.
+- **The value is written as text, not rendered.** Quoting a scalar inside a
+  block scalar would put the quotes *in* the string, which is the one thing the
+  style exists to avoid: `a: b #not a key` goes in as those characters.
+- **Emptying one is still refused**, and that is a decision rather than an
+  omission: `key: >-` with nothing under it and `key:` with no value are two
+  different files, and nothing has needed the answer yet.
+- The Tier 2 round trip no longer skips block scalars, which is where the
+  byte-for-byte undo of one is proved. 6 new tests, 974 in total.
 
 ### 2026-08-16 — Phase 6: what it does not model, it does not touch
 
