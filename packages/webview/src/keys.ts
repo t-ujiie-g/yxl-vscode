@@ -120,6 +120,15 @@ export function pasting(event: KeyboardEvent): boolean {
   return (event.key === 'v' || event.key === 'V') && (event.metaKey || event.ctrlKey);
 }
 
+/** Whether this is the key that opens the search, or the one that goes on through it. */
+export function looking(event: KeyboardEvent): 'open' | 'on' | 'back' | null {
+  if (!(event.metaKey || event.ctrlKey) || event.altKey) return null;
+  if (event.key === 'f' || event.key === 'F') return 'open';
+  if (event.key !== 'g' && event.key !== 'G') return null;
+
+  return event.shiftKey ? 'back' : 'on';
+}
+
 /** Whether this is the key that takes the whole sheet. */
 export function takingAll(event: KeyboardEvent): boolean {
   return event.key === 'a' && (event.metaKey || event.ctrlKey) && !event.altKey;

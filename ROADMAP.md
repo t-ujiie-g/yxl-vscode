@@ -404,8 +404,8 @@ not a date.
 | Copy, cut and paste inside the grid | ✅ — values and formulas, whose references move; looks are Phase 9 (ADR-032) |
 | Copy out into Excel or Sheets | ✅ — the whole look into Sheets; Excel takes everything but the fill (ADR-033) |
 | Paste from Excel or Sheets | ✅ for the values; the looks wait on Phase 9's normalizer (ADR-034) |
-| A box to type an address into | **Phase 8** |
-| Find something in the sheet | **Phase 8** |
+| A box to type an address into | ✅ — in the corner, where every spreadsheet keeps it |
+| Find something in the sheet | ✅ — `Cmd`+`F`, `Cmd`+`G` through what it found |
 | Bold, fill, borders, alignment, number format | **Phase 9** |
 | Drag a column wider, a row taller | **Phase 9** |
 | Freeze the heading rows | **Phase 9** |
@@ -960,7 +960,13 @@ work.
       reading a definition — rather than naming the first and counting the rest,
       which is §8 Q14's *origins grouped, a count against each*. The other half
       of Q14, answers that apply per group, is still open.
-- [ ] Find in the sheet, and go to what it found
+- [x] Find in the sheet, and go to what it found
+      **In**, with the address box the last slice left behind. The search runs
+      on the **host**, over the compiled sheet, because the view can only see
+      the window it was drawn — a reader looking for something in row 800 finds
+      it. What is searched is what a cell *holds*, value and formula, and a
+      `formulas:` range answers at the anchor it is written at, which is the one
+      place a reader can act on it.
 
 ### Phase 9 — Look you can apply
 The other half of what a person does with a sheet, and the half that decides
@@ -2258,6 +2264,47 @@ this at a phase boundary rather than at the end.
   two serials either side of it, so the next reader knows it is deliberate.
 - A cell's own format — written, or the one its type takes — now wins over a
   band's. Both are requests about *that* cell; a band is something reaching it.
+
+### 2026-08-17 — Find in the sheet, and the box that says where you are
+`Cmd`+`F` looks through the sheet and `Cmd`+`G` goes on through what it found;
+the corner above the row numbers is an address box, which is where every
+spreadsheet keeps one. **Phase 8 is complete.**
+
+- **The search runs on the host**, over the compiled sheet, because the view can
+  only see the window it was drawn. Something in row 800 of a sheet showing rows
+  1–200 is found, and going to it moves the window — the same message a scroll
+  sends, so nothing new had to learn how.
+- **What is searched is what a cell holds** — its value and its formula, matched
+  without case — rather than the text it is shown as. `2400000` finds the cell
+  that `2,400,000` is drawn from, which is the one a reader would then edit. A
+  `formulas:` range answers **at its anchor**, the one address where changing it
+  means anything.
+- **The two boxes outside the grid are updated rather than rebuilt.** A redraw
+  while the reader is typing would take the box out from under them, so the
+  address and the count are written into the elements that are already there,
+  and the address box is left alone while it has the keyboard. Where a redraw
+  *does* have to happen — the window moving — the box is given the keyboard
+  back afterwards.
+- **Going somewhere brings it into view.** Selecting a cell is not scrolling to
+  it, which the first try left out: the keys had been scrolling all along
+  because *they* did it themselves, and the search and the address box went
+  through a different door. Both scroll now, and a test holds it.
+- **The keys work from inside the find box**, where the reader actually is.
+  `Cmd`+`G` reaches the cell's own handler only while a cell has the keyboard,
+  and after a search nothing does.
+- **Only a window this view asked for finishes a going.** The first try put the
+  keyboard back in the find box on *every* drawing, which meant editing the YAML
+  with the bar open had the focus taken away on each keystroke. A drawing is
+  usually the file changing under a reader who is typing somewhere else; the one
+  that answers a window we asked for is the only one that is ours.
+- **Which palette a box wears is decided by which side of the grid it is on**,
+  and it is one rule now rather than three copies: outside, VS Code's input
+  tokens; inside, the sheet's own white-on-white. The address box had the first
+  while living in the second, which in a dark theme is a black hole in the
+  corner of a white spreadsheet.
+- **The address box takes what a reader would type**: `b2` as readily as `B2`,
+  and anything that is not an address is said rather than swallowed.
+- 17 new tests, 1318 in total; comment shape held at 38 over the limit.
 
 ### 2026-08-17 — One question about a rectangle, and the size of what it would do
 A paste or a `Delete` that five hundred cells cannot take used to name the first

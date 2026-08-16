@@ -1,4 +1,4 @@
-import type { Rect } from '@yxl-vscode/units';
+import { cellOf, parseA1Addr, type Rect } from '@yxl-vscode/units';
 import { sheetAgain } from './again';
 import { flavours, onto } from './clipboard';
 import {
@@ -7,6 +7,7 @@ import {
   cellKey,
   draw,
   focusCell,
+  type Looking,
   type Reached,
   restate,
   type Showing,
@@ -15,7 +16,15 @@ import { between } from './keys';
 import type { Drawing, DrawnSheet, Editable, FromView, Refused, Source, ToView } from './protocol';
 
 export { type Kept, sheetAgain } from './again';
-export { type Asks, type Copied, draw, type Reached, restate, type Showing } from './draw';
+export {
+  type Asks,
+  type Copied,
+  draw,
+  type Looking,
+  type Reached,
+  restate,
+  type Showing,
+} from './draw';
 export type {
   Drawing,
   DrawnCell,
@@ -62,6 +71,10 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
   let said: string | null = null;
   /** The rectangle the reader has copied, which is a place rather than the cells in it (ADR-032). */
   let copied: Copied | null = null;
+  /** What the reader is looking for, and where they are in what the host found. */
+  let looking: Looking | null = null;
+  /** Where a window was asked for, so the drawing that answers it can finish the going. */
+  let going: { row: number; col: number } | null = null;
   /** What our own copy last put on the system clipboard, which says whose paste this is. */
   let ours: string | null = null;
 
@@ -79,6 +92,7 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
     refused,
     said,
     copied,
+    looking,
     editable: editable(),
   });
 
@@ -92,6 +106,39 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
   };
 
   const named = (): string => drawing?.sheets[sheet]?.name ?? '';
+
+  /** The selection put on a cell, and the window moved where the cell is outside the one drawn. */
+  const goToCell = (at: { row: number; col: number } | undefined): void => {
+    if (at === undefined) return;
+
+    selected = at;
+    anchor = at;
+    sources = null;
+    host.postMessage({ kind: 'inspect', sheet: named(), row: at.row, col: at.col });
+
+    const of = drawing?.sheets[sheet];
+    const inside =
+      of !== undefined &&
+      at.row >= of.at.row &&
+      at.col >= of.at.col &&
+      at.row < of.at.row + of.rows &&
+      at.col < of.at.col + of.columns;
+
+    if (!inside) {
+      going = at;
+      host.postMessage({ kind: 'window', sheet: named(), row: at.row, col: at.col });
+      return;
+    }
+
+    restated();
+    seen(at);
+  };
+
+  /** The cell brought into view, which selecting it does not do on its own. */
+  const seen = (at: { row: number; col: number }): void => {
+    const cell = into.querySelector<HTMLElement>(`td[data-at="${cellKey(at.col, at.row)}"]`);
+    cell?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+  };
 
   /** The rectangle selected, read live: the grid restates rather than redraws on a selection. */
   const spanned = (): Rect | null => {
@@ -207,6 +254,38 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       said = null;
       host.postMessage({ ...text, choice, kind: 'pastedText' });
     },
+    look: (text) => {
+      const first = looking === null;
+      looking = { text, cells: [], at: -1 };
+      host.postMessage({ kind: 'find', sheet: named(), text });
+      if (!first) return;
+
+      // Only the first time: redrawing while the reader is typing would take
+      // the box out from under them.
+      redraw();
+      into.querySelector<HTMLInputElement>('.looking .for')?.focus();
+    },
+    goOn: (by) => {
+      if (looking === null || looking.cells.length === 0) return;
+
+      const at = (looking.at + by + looking.cells.length * 2) % looking.cells.length;
+      looking = { ...looking, at };
+      goToCell(looking.cells[at]);
+    },
+    goTo: (address) => {
+      const at = parseA1Addr(address.trim().toUpperCase());
+      if (at === null) {
+        said = `\`${address}\` is not an address to go to.`;
+        restated();
+        return;
+      }
+
+      goToCell(cellOf(at));
+    },
+    stopLooking: () => {
+      looking = null;
+      redraw();
+    },
     overrideWith: (typed, reason) => {
       // `kind` last, or a spread message carrying its own `kind` is that message.
       host.postMessage({ ...typed, reason, kind: 'override' });
@@ -252,6 +331,26 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       reached = null;
       refused = null;
       redraw();
+
+      // Only for a window this view asked for: every other drawing is the file
+      // changing under a reader who is typing somewhere else.
+      const went = going;
+      going = null;
+      if (went === null) return;
+
+      seen(went);
+      if (looking !== null) into.querySelector<HTMLInputElement>('.looking .for')?.focus();
+      return;
+    }
+
+    if (sent.kind === 'found') {
+      // Only for the search still being typed: an older answer would jump the
+      // reader back to what they had already moved past.
+      if (looking !== null && looking.text === sent.text && sent.sheet === named()) {
+        looking = { ...looking, cells: sent.cells, at: -1 };
+        if (sent.cells.length > 0) asks.goOn(1);
+        else restated();
+      }
       return;
     }
 

@@ -1,6 +1,15 @@
-import { columnLabel, type Rect } from '@yxl-vscode/units';
+import { addrAt, columnLabel, type Rect } from '@yxl-vscode/units';
 import { drawCell, typeInto } from './cell';
-import { type At, copying, going, pasting, takingAll, undoing, within } from './keys';
+import {
+  type At,
+  copying,
+  going,
+  looking as lookingFor,
+  pasting,
+  takingAll,
+  undoing,
+  within,
+} from './keys';
 import {
   inspector,
   note,
@@ -38,9 +47,20 @@ export interface Showing {
   readonly refused: Refused | null;
   readonly said: string | null;
   readonly copied: Copied | null;
+  readonly looking: Looking | null;
 
   /** Whether the selected cell can be typed into, where one is selected. */
   readonly editable: Editable | null;
+}
+
+/**
+ * What the reader is looking for, and where they are in what was found. `at` is
+ * `-1` before they have gone to any of it.
+ */
+export interface Looking {
+  readonly text: string;
+  readonly cells: readonly At[];
+  readonly at: number;
 }
 
 /** A rectangle the reader has copied, and whether putting it down takes it from where it is. */
@@ -78,6 +98,10 @@ export interface Asks {
   readonly emptiedWith: (ranged: Ranged, choice: string) => void;
   readonly pastedWith: (pasted: Pasted, choice: string) => void;
   readonly pastedTextWith: (text: PastedText, choice: string) => void;
+  readonly look: (text: string) => void;
+  readonly goOn: (by: number) => void;
+  readonly goTo: (address: string) => void;
+  readonly stopLooking: () => void;
   readonly overrideWith: (typed: Typed, reason: string) => void;
 }
 
@@ -104,6 +128,7 @@ export function draw(into: HTMLElement, showing: Showing, asks: Asks): void {
     return;
   }
 
+  if (showing.looking !== null) into.append(lookingBar(showing.looking, asks));
   if (drawing.params.length > 0) into.append(parameters(drawing, asks));
   if (drawing.sheets.length > 1) into.append(tabs(drawing, showing.sheet, asks.showSheet));
 
@@ -144,6 +169,7 @@ export function restate(into: HTMLElement, showing: Showing, asks: Asks): void {
   for (const cell of grid.querySelectorAll('td.selected')) cell.classList.remove('selected');
   for (const cell of grid.querySelectorAll('td.ranged')) cell.classList.remove('ranged');
   for (const cell of grid.querySelectorAll('td.copied')) cell.classList.remove('copied');
+  for (const cell of grid.querySelectorAll('td.found')) cell.classList.remove('found');
   for (const cell of grid.querySelectorAll('td.reached')) cell.classList.remove('reached');
 
   const at = showing.selected;
@@ -156,6 +182,7 @@ export function restate(into: HTMLElement, showing: Showing, asks: Asks): void {
     const row = Number(key[1]);
     if (ranged(showing, { row, col })) cell.classList.add('ranged');
     if (copiedFrom(showing, { row, col })) cell.classList.add('copied');
+    if (lookedUp(showing, { row, col })) cell.classList.add('found');
   }
 
   for (const key of showing.reached?.cells ?? []) {
@@ -163,6 +190,18 @@ export function restate(into: HTMLElement, showing: Showing, asks: Asks): void {
   }
 
   say(under, showing, asks);
+  told(into, showing);
+}
+
+/** The two boxes outside the grid, said again: the address the reader is on, and how far through a search. */
+function told(into: HTMLElement, showing: Showing): void {
+  const address = into.querySelector<HTMLInputElement>('.corner .address');
+  if (address !== null && document.activeElement !== address) {
+    address.value = showing.selected === null ? '' : addrAt(showing.selected);
+  }
+
+  const count = into.querySelector('.looking .count');
+  if (count !== null && showing.looking !== null) count.textContent = counted(showing.looking);
 }
 
 /** Everything said under the grid, which is rebuilt on its own. */
@@ -209,7 +248,7 @@ function grid(sheet: DrawnSheet, showing: Showing, asks: Asks): HTMLElement {
   table.className = 'grid';
   // `table-layout: fixed` is inert without an explicit width.
   table.style.width = `${GUTTER + across(sheet, sheet.of.columns + 1)}px`;
-  table.append(headings(sheet));
+  table.append(headings(sheet, showing, asks));
 
   const body = document.createElement('tbody');
   const held = new Map(sheet.cells.map((cell) => [cellKey(cell.col, cell.row), cell]));
@@ -266,6 +305,11 @@ function ranged(showing: Showing, at: At): boolean {
   return within(at, selected, anchor);
 }
 
+/** Whether this cell is one of those the search turned up. */
+function lookedUp(showing: Showing, at: At): boolean {
+  return showing.looking?.cells.some((one) => one.row === at.row && one.col === at.col) === true;
+}
+
 /** Whether this cell is one of those the reader has copied, on the sheet they copied from. */
 function copiedFrom(showing: Showing, at: At): boolean {
   const { copied } = showing;
@@ -318,10 +362,10 @@ interface Merged {
   readonly covered: ReadonlySet<string>;
 }
 
-function headings(sheet: DrawnSheet): HTMLElement {
+function headings(sheet: DrawnSheet, showing: Showing, asks: Asks): HTMLElement {
   const head = document.createElement('thead');
   const line = document.createElement('tr');
-  line.append(corner());
+  line.append(corner(showing, asks));
 
   const before = across(sheet, sheet.at.col);
   if (before > 0) line.append(pad(before));
@@ -392,6 +436,7 @@ function line(
     }
     if (ranged(showing, { row, col })) drawn.classList.add('ranged');
     if (copiedFrom(showing, { row, col })) drawn.classList.add('copied');
+    if (lookedUp(showing, { row, col })) drawn.classList.add('found');
     if (showing.reached?.cells.has(cellKey(col, row)) === true) drawn.classList.add('reached');
 
     const said = problems.get(cellKey(col, row));
@@ -425,6 +470,14 @@ function line(
       if (undoing(event)) {
         event.preventDefault();
         asks.undo(event.shiftKey);
+        return;
+      }
+
+      const through = lookingFor(event);
+      if (through !== null) {
+        event.preventDefault();
+        if (through === 'open') asks.look(showing.looking?.text ?? '');
+        else asks.goOn(through === 'on' ? 1 : -1);
         return;
       }
 
@@ -479,11 +532,80 @@ function line(
   return line;
 }
 
-function corner(): HTMLElement {
+/** The corner above the row numbers, which is where every spreadsheet keeps the address box. */
+function corner(showing: Showing, asks: Asks): HTMLElement {
   const cell = document.createElement('th');
   cell.className = 'corner';
   cell.style.width = `${GUTTER}px`;
+
+  const box = document.createElement('input');
+  box.type = 'text';
+  box.className = 'address';
+  box.value = showing.selected === null ? '' : addrAt(showing.selected);
+  box.title = 'Go to an address';
+  box.setAttribute('aria-label', 'Go to an address');
+  box.addEventListener('keydown', (event) => {
+    event.stopPropagation();
+    if (event.key === 'Enter') asks.goTo(box.value);
+    if (event.key === 'Escape') box.blur();
+  });
+
+  cell.append(box);
   return cell;
+}
+
+/** The bar `Cmd`+`F` opens: what is being looked for, how much of it there is, and the way through it. */
+function lookingBar(what: Looking, asks: Asks): HTMLElement {
+  const bar = document.createElement('div');
+  bar.className = 'looking';
+
+  const mark = document.createElement('span');
+  mark.className = 'mark';
+  mark.textContent = 'Find';
+
+  const box = document.createElement('input');
+  box.type = 'text';
+  box.className = 'for';
+  box.value = what.text;
+  box.placeholder = 'Find in this sheet';
+  box.addEventListener('input', () => asks.look(box.value));
+  box.addEventListener('keydown', (event) => {
+    event.stopPropagation();
+
+    // The reader is in the box, so the cell's own handler never sees these.
+    const through = lookingFor(event);
+    if (through === 'on' || through === 'back') {
+      event.preventDefault();
+      asks.goOn(through === 'on' ? 1 : -1);
+      return;
+    }
+
+    if (event.key === 'Enter') asks.goOn(event.shiftKey ? -1 : 1);
+    if (event.key === 'Escape') asks.stopLooking();
+  });
+
+  const count = document.createElement('span');
+  count.className = 'count';
+  count.textContent = counted(what);
+
+  bar.append(mark, box, count, step('‹', -1, asks), step('›', 1, asks));
+  return bar;
+}
+
+/** How far through what was found, or that there was none of it. */
+function counted(what: Looking): string {
+  if (what.cells.length > 0) return `${Math.max(what.at, 0) + 1} of ${what.cells.length}`;
+
+  return what.text === '' ? '' : 'nothing here holds that';
+}
+
+function step(mark: string, by: number, asks: Asks): HTMLElement {
+  const go = document.createElement('button');
+  go.type = 'button';
+  go.className = 'step';
+  go.textContent = mark;
+  go.addEventListener('click', () => asks.goOn(by));
+  return go;
 }
 
 /** How wide the column of row numbers is, which is not a column of the sheet. */

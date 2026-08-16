@@ -51,9 +51,10 @@ everyday gesture, with a ✅ or the phase it lands in. Typing, the arrows, `Tab`
 `Delete`, range selection, undo, and copy/cut/paste inside the grid are in, and
 so is copying out — Google Sheets receives the whole look, Excel everything but
 the cell fill (`ROADMAP.md` ADR-033) — and pasting *in*, which carries the
-values and not yet the looks (ADR-034). A formatting toolbar, inserting rows,
-and seeing the charts a spec declares are not, and are the next three phases in
-that order.
+values and not yet the looks (ADR-034). Finding something in the
+sheet and going to it are in, and that is the whole of Phase 8. A formatting
+toolbar, inserting rows, and seeing the charts a spec declares are not, and are
+the next three phases in that order.
 
 ## Where it is going
 
