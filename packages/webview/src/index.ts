@@ -145,8 +145,12 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       refused = sent;
       said = null;
       // Enter moves down, and an edit that did not happen should not move the
-      // reader away from the cell it was about.
-      if (typedAt !== null) selected = typedAt;
+      // reader away from the cell it was about — nor leave the selection
+      // stretched between where they typed and where Enter took them.
+      if (typedAt !== null) {
+        selected = typedAt;
+        anchor = typedAt;
+      }
       restated();
       return;
     }

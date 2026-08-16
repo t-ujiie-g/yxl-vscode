@@ -408,7 +408,9 @@ function line(
 
       typeInto(drawn, held.get(cellKey(col, row)), seed, (text) => {
         asks.edit(row, col, text);
-        asks.select(row + 1, col);
+        // Down a cell *and* onto it: the box is gone, and a cell that does not
+        // hold the focus is a grid whose arrow keys do nothing.
+        goTo(drawn, sheet, { row: row + 1, col }, asks);
       });
     };
 

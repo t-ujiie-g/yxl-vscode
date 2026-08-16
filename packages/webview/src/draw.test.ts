@@ -461,6 +461,26 @@ describe('moving about the grid with the keys', () => {
     expect(on.showWindow).toHaveBeenCalledWith(3, 1);
   });
 
+  it('lands the reader on the cell below, with the keys still theirs', () => {
+    // The box is gone by then, and a cell that does not hold the focus is a
+    // grid whose arrow keys do nothing.
+    const on = asks();
+    const into = shown({ drawing: room() }, on);
+    document.body.append(into);
+
+    at(into, 2, 2)?.dispatchEvent(new MouseEvent('dblclick'));
+    const box = into.querySelector('.typing');
+    if (!(box instanceof HTMLInputElement)) throw new Error('nothing to type into');
+
+    box.value = 'EMEA';
+    box.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+
+    expect(on.edit).toHaveBeenCalledWith(2, 2, 'EMEA');
+    expect(on.select).toHaveBeenCalledWith(3, 2);
+    expect(document.activeElement).toBe(at(into, 3, 2));
+    into.remove();
+  });
+
   it('reaches to a cell shift-clicked, keeping where it started', () => {
     const on = asks();
     const into = shown({ drawing: room() }, on);

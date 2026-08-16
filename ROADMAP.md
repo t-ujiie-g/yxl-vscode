@@ -2033,6 +2033,15 @@ this at a phase boundary rather than at the end.
   answerable — and answered — without a DOM.
 - Nothing here writes anything yet. Deleting, copying and pasting a rectangle
   are the next three, and each is one intent for the whole of it.
+- **Two things a reader found the moment they had hands on it.** Committing an
+  edit moved the selection down and left the *focus* behind with the box that
+  had just been removed, so the arrow keys did nothing until something was
+  clicked — true since Enter first moved down, and only findable by typing and
+  then reaching for an arrow. And a refusal put the reader back at the cell they
+  typed into without taking the anchor with it, so the selection was stretched
+  between there and where Enter had gone. Both are one line; the second is the
+  cost of a second corner, and the first is what happens when a thing is moved
+  without being taken along.
 
 ### 2026-08-16 — The JSON Schema exists upstream (§8 Q7 answered)
 
