@@ -67,7 +67,7 @@ export interface Spec {
  * taken back (ADR-026). Each refusal is a sentence, because an edit that
  * quietly does nothing is worse than one that says why not.
  */
-export async function write(spec: Spec, typed: Typed, port: Port): Promise<void> {
+export async function write(spec: Spec, typed: Typed, port: Port, anyway = false): Promise<void> {
   const sheet = sheetName(typed.sheet);
   if (sheet === null) {
     port.refuse(`\`${typed.sheet}\` is not a name a sheet can have`, null);
@@ -94,7 +94,7 @@ export async function write(spec: Spec, typed: Typed, port: Port): Promise<void>
     // with a spreadsheet — typing into a blank cell.
     const sole = answers.length === 1 ? answers[0] : undefined;
     if (sole?.alone === true) {
-      await applied(spec, sole.intent, port);
+      await applied(spec, sole.intent, port, { anyway, from: sole.id, typed });
       return;
     }
 
@@ -110,7 +110,7 @@ export async function write(spec: Spec, typed: Typed, port: Port): Promise<void>
     return;
   }
 
-  await applied(spec, intent, port);
+  await applied(spec, intent, port, { anyway, from: null, typed });
 }
 
 /**
@@ -121,11 +121,26 @@ export async function write(spec: Spec, typed: Typed, port: Port): Promise<void>
  * computed against a file that has moved on is an answer to a question nobody
  * asked.
  */
-export async function resolve(spec: Spec, typed: Typed, choice: string, port: Port): Promise<void> {
+export async function resolve(
+  spec: Spec,
+  typed: Typed,
+  choice: string,
+  port: Port,
+  anyway = false,
+): Promise<void> {
   const sheet = sheetName(typed.sheet);
   if (sheet === null) {
     port.refuse(`\`${typed.sheet}\` is not a name a sheet can have`, null);
     return;
+  }
+
+  // *Apply it anyway* is the same gesture again, with the surprises accepted:
+  // the edit is worked out from the file as it stands rather than remembered,
+  // so what is confirmed is what the reader was shown a moment ago.
+  const again = ANYWAY.exec(choice);
+  if (again !== null) {
+    const id = again[1] ?? '';
+    return id === '' ? write(spec, typed, port, true) : resolve(spec, typed, id, port, true);
   }
 
   const at = addrAt({ col: typed.col, row: typed.row });
@@ -137,9 +152,12 @@ export async function resolve(spec: Spec, typed: Typed, choice: string, port: Po
     return;
   }
 
-  const done = await applied(spec, taken.intent, port);
+  const done = await applied(spec, taken.intent, port, { anyway, from: taken.id, typed });
   if (done) port.said(`${taken.what.replace(/^C/, 'c')}: ${taken.moves.length} cells changed.`);
 }
+
+/** *Apply it anyway*, for the gesture itself or for one of its answers. */
+const ANYWAY = /^anyway:?(.*)$/;
 
 /** What an override says a cell holds, where the reader did not type a formula. */
 function value(meant: Meaning): string | number | boolean | null {
@@ -190,12 +208,23 @@ export async function writeOverride(
     spec,
     override(spec.doc, spec.grid, { sheet, at }, says, port.text),
     port,
+    { anyway: false, from: null, typed },
   );
   if (done) port.said(`${sheet}!${at} is now written as an override.`);
 }
 
+/**
+ * What the write path needs to ask *this* edit again, where the checker finds
+ * that it moves more than it named.
+ */
+interface Asked {
+  readonly anyway: boolean;
+  readonly from: string | null;
+  readonly typed: Typed;
+}
+
 /** The half of a write that is the same whichever intent produced it. */
-async function applied(spec: Spec, intent: Intent, port: Port): Promise<boolean> {
+async function applied(spec: Spec, intent: Intent, port: Port, asked: Asked): Promise<boolean> {
   if (intent.kind === 'refused') {
     port.refuse(intent.why, null);
     return false;
@@ -225,8 +254,16 @@ async function applied(spec: Spec, intent: Intent, port: Port): Promise<boolean>
     port.refuse(done.diagnostics[0]?.message ?? surprising(done.surprises), null);
     return false;
   }
-  if (done.ok === 'ask') {
-    port.refuse(surprising(done.surprises), null);
+  if (done.ok === 'ask' && !asked.anyway) {
+    // The edit is not refused: it is *asked about*, with what else it would
+    // move, and the answer is the reader's (ADR-009). What confirms it is the
+    // same gesture again, so what lands is worked out from the file as it
+    // stands rather than from a copy held while the question was open.
+    port.refuse(surprising(done.surprises), {
+      typed: asked.typed,
+      canOverride: false,
+      choices: [anyhow(done.surprises, asked.from)],
+    });
     return false;
   }
 
@@ -246,7 +283,19 @@ function excepts(spec: Spec, where: { sheet: SheetName; at: A1Addr }): boolean {
   return sheet !== null && cellAt(sheet, where.at) !== null;
 }
 
+/** The offer that says yes to the surprises, naming the cells it would move. */
+function anyhow(surprises: readonly Change[], from: string | null): Choice {
+  const cells = surprises.filter((one) => one.kind === 'cell');
+
+  return {
+    id: from === null ? 'anyway' : `anyway:${from}`,
+    what: 'Apply it anyway',
+    moves: cells.length,
+    sample: cells.slice(0, 3).map((one) => (one.kind === 'cell' ? `${one.sheet}!${one.at}` : '')),
+  };
+}
+
 function surprising(surprises: readonly Change[]): string {
   const cells = surprises.filter((one) => one.kind === 'cell').length;
-  return `this would also change ${cells} cell${cells === 1 ? '' : 's'} it did not name, which needs the resolution dialog`;
+  return `this would also change ${cells} cell${cells === 1 ? '' : 's'} it did not name`;
 }

@@ -861,7 +861,13 @@ Where it starts to feel like a spreadsheet.
       rest needs the span-keeping treatment the CST gives YAML, and reformatting
       somebody's data file to change one number is not a trade this project
       makes. The override is offered beside it, as always.
-- [ ] Surprise-diff confirmation UI for the `ok: 'confirm'` verdict
+- [x] Surprise-diff confirmation UI for the `ok: 'ask'` verdict
+      **Shipped**, and it needed no new message: an edit that moves more than it
+      named is offered *Apply it anyway*, with the count and the first of the
+      cells it would move — the same list the answers are shown in, because
+      that is what it is. Saying yes runs the same gesture again with the
+      surprises accepted, so what lands is worked out from the file as it stands
+      rather than from a copy held while the question was open.
 
 ### Phase 8 — The grid as a spreadsheet
 Selection, the keys, and the clipboard: the gestures a reader has in their hands
@@ -1984,6 +1990,24 @@ this at a phase boundary rather than at the end.
   two serials either side of it, so the next reader knows it is deliberate.
 - A cell's own format — written, or the one its type takes — now wins over a
   band's. Both are requests about *that* cell; a band is something reaching it.
+
+### 2026-08-16 — Phase 7: the third verdict stopped being a refusal
+
+- **An edit that moves more than it named is now asked about**, not refused.
+  `this would also change 1 cell it did not name` comes with *Apply it anyway*,
+  the count, and the cells — and the reader decides. The checker has answered
+  three ways since it landed (ADR-009); the write path had been treating the
+  middle one as the last.
+- **It needed no new message.** A confirmation is an *answer to a question about
+  an edit*, which is what the choices list already is, so it arrives as one more
+  choice. What it carries is the gesture, not the text: saying yes runs the same
+  gesture again with the surprises accepted, so what lands is worked out from
+  the file as it stands rather than from a copy held while the question was
+  open — the rule the candidates already followed.
+- **No override beside it**, because that is not the question being asked.
+- The case in the tests is the one a real spec has: a parameter that decides how
+  far a `formulas:` range reaches, so changing it writes a cell the parameter
+  itself never touched.
 
 ### 2026-08-16 — Phase 7: the row that reaches out of the spec
 
