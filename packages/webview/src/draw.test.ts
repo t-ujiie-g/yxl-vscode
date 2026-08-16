@@ -12,6 +12,7 @@ function asks(): Asks {
     setParam: vi.fn(),
     showWindow: vi.fn(),
     edit: vi.fn(),
+    empty: vi.fn(),
     reachTo: vi.fn(),
     resolveWith: vi.fn(),
     overrideWith: vi.fn(),
@@ -554,6 +555,18 @@ describe('moving about the grid with the keys', () => {
 
     press(into, 2, 2, 'Delete');
     expect(on.edit).toHaveBeenCalledWith(2, 2, '');
+  });
+
+  it('empties the whole rectangle on delete where the selection is one', () => {
+    const on = asks();
+    const into = shown(
+      { drawing: room(), selected: { row: 3, col: 3 }, anchor: { row: 2, col: 2 } },
+      on,
+    );
+
+    press(into, 3, 3, 'Delete');
+    expect(on.empty).toHaveBeenCalledWith({ top: 2, left: 2, bottom: 3, right: 3 });
+    expect(on.edit).not.toHaveBeenCalled();
   });
 
   it('leaves the keys a cell is typed into alone', () => {

@@ -4,7 +4,7 @@ import { type IncludeReader, load } from '@yxl-vscode/loader';
 import { type FilePath, filePath } from '@yxl-vscode/units';
 import type { Choice, Typed } from '@yxl-vscode/webview/protocol';
 import { describe, expect, it } from 'vitest';
-import { type Port, resolve, type Spec, write, writeOverride } from './write';
+import { empty, type Port, resolve, type Spec, write, writeOverride } from './write';
 
 const ROOT = filePath('/specs/report.yxl.yaml') ?? ('' as FilePath);
 
@@ -351,5 +351,43 @@ sheets:
 
     await resolve(spec, at, 'parameter', port);
     expect(offers[0]).toBeNull();
+  });
+});
+
+describe('a rectangle emptied', () => {
+  const GRID = `${SALES}    cells:\n      A1: 1\n      B1: 2\n      A2: 3\n      B2: 4\n      C1: keep\n`;
+  const rect = { sheet: 'Sales', top: 1, left: 1, bottom: 2, right: 2 };
+
+  it('takes every cell of it out in one write, and says how many', async () => {
+    const { spec, port, files, told } = editor({ [ROOT]: GRID });
+
+    await empty(spec, rect, port);
+    expect(files[ROOT]).toBe(`${SALES}    cells:\n      C1: keep\n`);
+    expect(told).toEqual(['4 cells emptied.']);
+  });
+
+  it('refuses the whole where a cell in it cannot be emptied, and writes nothing', async () => {
+    const spec = `${SALES}    cells:\n      A1: 1\n    formulas:\n      - at: B1:B2\n        formula: "A1"\n`;
+    const { spec: read, port, files, refusals } = editor({ [ROOT]: spec });
+
+    await empty(read, rect, port);
+    expect(files[ROOT]).toBe(spec);
+    expect(refusals[0]).toContain('cannot be emptied, so none were');
+  });
+
+  it('offers nothing to choose from: a rectangle is made or refused', async () => {
+    const { spec, port, answers } = editor({
+      [ROOT]: `${SALES}    cells:\n      A1: 1\n    formulas:\n      - at: B1:B2\n        formula: "A1"\n`,
+    });
+
+    await empty(spec, rect, port);
+    expect(answers[0]).toEqual([]);
+  });
+
+  it('refuses a sheet name no sheet can have', async () => {
+    const { spec, port, refusals } = editor({ [ROOT]: GRID });
+
+    await empty(spec, { ...rect, sheet: '' }, port);
+    expect(refusals[0]).toContain('is not a name a sheet can have');
   });
 });

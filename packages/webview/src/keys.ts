@@ -1,3 +1,4 @@
+import type { Rect } from '@yxl-vscode/units';
 import type { DrawnCell, DrawnSheet } from './protocol';
 
 /** A cell of the grid, as the view points at one. */
@@ -107,10 +108,7 @@ export function takingAll(event: KeyboardEvent): boolean {
 }
 
 /** The rectangle two corners make, in the order a reader would read it. */
-export function between(
-  one: At,
-  two: At,
-): { top: number; left: number; bottom: number; right: number } {
+export function between(one: At, two: At): Rect {
   return {
     top: Math.min(one.row, two.row),
     left: Math.min(one.col, two.col),

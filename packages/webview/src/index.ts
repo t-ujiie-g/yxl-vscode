@@ -121,6 +121,12 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       typedAt = { row, col };
       host.postMessage({ kind: 'edit', sheet: named(), row, col, text });
     },
+    empty: (rect) => {
+      refused = null;
+      said = null;
+      typedAt = { row: rect.top, col: rect.left };
+      host.postMessage({ kind: 'empty', sheet: named(), ...rect });
+    },
     resolveWith: (typed, choice) => {
       host.postMessage({ ...typed, choice, kind: 'resolve' });
     },

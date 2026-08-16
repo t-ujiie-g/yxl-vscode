@@ -887,8 +887,11 @@ work.
       far end, or across a gap to the next thing there is, which is what
       `Cmd`+arrow means to anyone who has held it down. The address box is not,
       and is the first thing in the next slice with `find`.
-- [ ] **Delete over a range** — one intent for the rectangle, and the same rule
+- [x] **Delete over a range** — one intent for the rectangle, and the same rule
       about what a cell may hold (`docs/spec.md` §3) applied to each of them
+- [ ] **Empty the ones that can be**, offered where a rectangle holds cells that
+      cannot: one summary and one answer, which is the same machinery the
+      oversized paste below needs
 - [ ] Copy, cut and paste **inside** the grid, as intents rather than as a
       buffer of cells
 - [ ] **Copy out**: TSV *and* HTML on the clipboard, so Excel and Sheets receive
@@ -2012,6 +2015,34 @@ this at a phase boundary rather than at the end.
   two serials either side of it, so the next reader knows it is deliberate.
 - A cell's own format — written, or the one its type takes — now wins over a
   band's. Both are requests about *that* cell; a band is something reaching it.
+
+### 2026-08-16 — Delete over a range
+`Delete` over a selection of more than one cell now empties every cell in the
+rectangle, as **one** edit: one patch, one entry in the undo stack, one
+recompute. A single cell is untouched — it still goes through the typed path,
+which has answers to offer where the direct edit is refused.
+
+- **The rule per cell is the one a single delete already had.** `clearRange`
+  asks `clearCell` about every address in the rectangle that holds anything, so
+  a cell whose entry is `{ value: 1, style: header }` keeps its style, and a
+  `data:` field becomes `null` (`docs/spec.md` §3, §9). Addresses that hold
+  nothing are skipped rather than refused.
+- **All or nothing.** A rectangle holding one cell that cannot be emptied — a
+  formula range fills it, a CSV supplies it — refuses the whole and writes
+  nothing, saying how many stood in the way of how many and giving the first
+  cell's own reason: *2 of the 4 cells here cannot be emptied, so none were:
+  `B1` is where this range's one formula is written… (and 1 other here)*.
+  Emptying what can be emptied is a real answer, but it is an answer to
+  *choose*, and the machinery for choosing over a rectangle is the oversized
+  paste's — so it is the next box, not a guess made here (ADR-001).
+- **A latent defect in the inverse, found by the first multi-cell undo.**
+  `invert` reads every op against the document as it stands *before* the patch,
+  so the inverse of `remove A1` anchored on `B1` — which the same patch was also
+  removing. Undo then refused with *nothing is keyed `B1` here* and left the
+  file emptied. The inverse now anchors each restore on the next sibling the
+  patch is **not** taking out, and restores that share an anchor go back in the
+  order they were written. This was reachable by any patch removing two
+  adjacent entries, not only by this gesture (ADR-026).
 
 ### 2026-08-16 — Refactoring pass over the whole tree, comments first (`AGENTS.md` §8)
 A reader said the comments had grown, and had begun to turn up in odd places.

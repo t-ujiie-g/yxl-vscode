@@ -6,7 +6,7 @@ import * as vscode from 'vscode';
 import { asOpen, put, reveal, textOf } from './documents';
 import { inspect, type Nodes, nodeUnder } from './inspect';
 import { type Projected, project, redraw, type Window } from './project';
-import { type Offer, type Port, resolve, type Spec, write, writeOverride } from './write';
+import { empty, type Offer, type Port, resolve, type Spec, write, writeOverride } from './write';
 
 /** Long enough that typing does not redraw on every keystroke, short enough to feel live. */
 const SETTLE = 150;
@@ -202,6 +202,11 @@ export class Preview {
       return;
     }
 
+    if (asked.kind === 'empty') {
+      this.tried(this.emptyRange(asked));
+      return;
+    }
+
     if (asked.kind === 'resolve') {
       this.tried(this.resolveWith(asked));
       return;
@@ -246,6 +251,18 @@ export class Preview {
     }
 
     await write(spec, typed, this.port());
+  }
+
+  /** Every cell of a rectangle emptied, as one edit. */
+  private async emptyRange(asked: Extract<FromView, { kind: 'empty' }>): Promise<void> {
+    const spec = this.spec();
+    if (spec === null) {
+      this.refuse('this spec has not finished loading', null);
+      return;
+    }
+
+    const { kind, ...ranged } = asked;
+    await empty(spec, ranged, this.port());
   }
 
   /** The edit again, made the way the reader chose from the answers it had. */

@@ -58,14 +58,41 @@ export function invert(source: string, patch: Patch, options: Options): Inverted
 
   const diagnostics: Diagnostic[] = [];
   const ops: Op[] = [];
+  const going = new Set(
+    patch.ops.filter((one) => one.op === 'remove').map((one) => mark(one.path)),
+  );
 
   for (const op of [...patch.ops].reverse()) {
-    const back = inverseOf(source, root, op, options, diagnostics);
+    const back = inverseOf(source, root, op, options, diagnostics, going);
     if (back === null) return { patch: null, diagnostics };
     ops.push(back);
   }
 
   return { patch: { ops }, diagnostics };
+}
+
+/** A path as one comparable string, so a patch can be asked what else it removes. */
+function mark(path: Path): string {
+  return JSON.stringify(path);
+}
+
+/** The entry a restore goes above: the next sibling this patch is not also removing (ADR-026). */
+function anchor(
+  root: Node,
+  path: Path,
+  before: string | null,
+  going: ReadonlySet<string>,
+): string | null {
+  const holder = nodeAt(root, path.slice(0, -1));
+  if (before === null || holder === null || holder.kind !== 'map') return before;
+
+  const keys = holder.entries.map((entry) => String(entry.key.value));
+  for (let index = keys.indexOf(before); index >= 0 && index < keys.length; index += 1) {
+    const key = keys[index] as string;
+    if (!going.has(mark([...path.slice(0, -1), key]))) return key;
+  }
+
+  return null;
 }
 
 function inverseOf(
@@ -74,6 +101,7 @@ function inverseOf(
   op: Op,
   options: Options,
   into: Diagnostic[],
+  going: ReadonlySet<string>,
 ): Op | null {
   const found = nodeAt(root, op.path);
   const refuse = (message: string): null => {
@@ -134,7 +162,7 @@ function inverseOf(
         op: 'restore',
         path: op.path.slice(0, -1),
         key: taken.key,
-        before: taken.before,
+        before: anchor(root, op.path, taken.before, going),
         source: source.slice(taken.span.start, taken.span.end),
       };
     }

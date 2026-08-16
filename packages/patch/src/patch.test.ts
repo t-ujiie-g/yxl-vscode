@@ -235,3 +235,33 @@ describe('the inverse itself', () => {
     ]);
   });
 });
+
+describe('undoing a patch that removes more than one entry', () => {
+  const CELLS = 'cells:\n  A1: 1\n  B1: 2\n  A2: 3\n  C1: keep\n';
+  const removing = (...keys: string[]) => ({
+    ops: keys.map((key) => ({ op: 'remove', path: ['cells', key] }) as const),
+  });
+
+  it('puts every one of them back, in the order they were written', () => {
+    const done = applyPatch(CELLS, removing('A1', 'B1', 'A2'), { file: FILE });
+    expect(done.text).toBe('cells:\n  C1: keep\n');
+    if (done.back === null) throw new Error('no way back');
+
+    expect(applyPatch(done.text, done.back, { file: FILE }).text).toBe(CELLS);
+  });
+
+  it('anchors each one on a sibling the patch is not also taking out', () => {
+    const { patch } = invert(CELLS, removing('A1', 'B1'), { file: FILE });
+    const anchors = patch?.ops.map((one) => (one.op === 'restore' ? one.before : one.op));
+
+    // `A1` went back above `A2`, not above the `B1` that goes with it.
+    expect(anchors).toEqual(['A2', 'A2']);
+  });
+
+  it('appends where nothing after them survives', () => {
+    const done = applyPatch(CELLS, removing('B1', 'A2', 'C1'), { file: FILE });
+    if (done.back === null) throw new Error('no way back');
+
+    expect(applyPatch(done.text, done.back, { file: FILE }).text).toBe(CELLS);
+  });
+});
