@@ -308,3 +308,48 @@ describe('a cell emptied', () => {
     expect(files[ROOT]).toBe(`${SALES}    cells:\n      B1: 1\n`);
   });
 });
+
+describe('an edit that would move more than it named', () => {
+  // `rows` decides how far the range reaches, so changing it writes a cell the
+  // parameter itself never touched.
+  const REACHES = `params:
+  rows: 2
+sheets:
+  - name: Sales
+    cells:
+      A1: 1
+      A2: 2
+      A3: 3
+      C1: "\${rows}"
+    formulas:
+      - at: "B1:B\${rows}"
+        formula: "A1"
+`;
+  const at = typed({ row: 1, col: 3, text: '3' });
+
+  it('is asked about, with what else it would move', async () => {
+    const { spec, port, refusals, answers, files } = editor({ [ROOT]: REACHES });
+
+    await resolve(spec, at, 'parameter', port);
+    expect(refusals[0]).toContain('would also change');
+    expect(answers[0]).toEqual([
+      { id: 'anyway:parameter', what: 'Apply it anyway', moves: 1, sample: ['Sales!B3'] },
+    ]);
+    expect(files[ROOT]).toBe(REACHES);
+  });
+
+  it('is made when the reader says yes, from the file as it stands', async () => {
+    const { spec, port, files, refusals } = editor({ [ROOT]: REACHES });
+
+    await resolve(spec, at, 'anyway:parameter', port);
+    expect(refusals).toEqual([]);
+    expect(files[ROOT]).toContain('rows: 3');
+  });
+
+  it('offers no override beside the question, which is not what it is asking', async () => {
+    const { spec, port, offers } = editor({ [ROOT]: REACHES });
+
+    await resolve(spec, at, 'parameter', port);
+    expect(offers[0]).toBeNull();
+  });
+});

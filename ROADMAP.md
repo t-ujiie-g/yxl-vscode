@@ -861,7 +861,13 @@ Where it starts to feel like a spreadsheet.
       rest needs the span-keeping treatment the CST gives YAML, and reformatting
       somebody's data file to change one number is not a trade this project
       makes. The override is offered beside it, as always.
-- [ ] Surprise-diff confirmation UI for the `ok: 'confirm'` verdict
+- [x] Surprise-diff confirmation UI for the `ok: 'ask'` verdict
+      **Shipped**, and it needed no new message: an edit that moves more than it
+      named is offered *Apply it anyway*, with the count and the first of the
+      cells it would move — the same list the answers are shown in, because
+      that is what it is. Saying yes runs the same gesture again with the
+      surprises accepted, so what lands is worked out from the file as it stands
+      rather than from a copy held while the question was open.
 
 ### Phase 8 — The grid as a spreadsheet
 Selection, the keys, and the clipboard: the gestures a reader has in their hands
@@ -1622,11 +1628,25 @@ computed.
   its input. A missing compiler is a message with the install link, which is the
   whole of what bundling would have bought. If that proves wrong, an optional
   download is a smaller change than a bundle would have been to undo.
-- **Q7 — The JSON Schema.** yxl's Phase 11 has an unchecked item: publish a JSON
-  Schema generated from `docs/spec.md`. That artifact would serve this editor's
-  loader directly. Worth building **upstream in yxl** rather than here, and worth
-  offering to do — it is one artifact serving both, and generating it there keeps
-  it honest against the reference.
+- **Q7 — The JSON Schema.** ✅ **Answered: it exists**, upstream, at
+  `docs/yxl.schema.json` — *generated* from `docs/spec.md` by
+  `tools/spec-schema/generate.py`, which is the part that keeps it honest: the
+  reference is edited and the schema follows.
+  *What it is for:* hand-editing. Point an editor's YAML support at it
+  (`yaml.schemas`, mapping the URL to `*.yxl.yaml`) and a spec gets completion
+  and structural validation in the text beside the preview. No code here reads
+  it.
+  *What it is not:* a validator of record. ADR-011 stands — a schema can say
+  `cells:` takes a mapping; it cannot say that the style a cell names is
+  declared, that an override lands on a cell something writes, or that a table's
+  range matches its rows. `yxl build --check` remains the answer to *is this
+  spec valid*, and our loader still validates only what projection requires.
+  *Not shared from this repo* (decided 2026-08-16): the mapping is one line in
+  somebody's own `settings.json`, and committing it would put a URL in every
+  contributor's editor plus a soft dependency on whichever extension provides
+  YAML support — in a project that has no other. Whether the *extension* should
+  contribute the mapping itself, so a reader gets it without configuring
+  anything, is a question for the release phase and is asked there.
 - **Q8 — Tauri.** Phase 14. Nothing in the architecture blocks it (ADR-004); the
   question is whether the demand exists.
 - **Q9 — `overrides:` must exist upstream.** ✅ **Answered: it does.** Filed as
@@ -1984,6 +2004,43 @@ this at a phase boundary rather than at the end.
   two serials either side of it, so the next reader knows it is deliberate.
 - A cell's own format — written, or the one its type takes — now wins over a
   band's. Both are requests about *that* cell; a band is something reaching it.
+
+### 2026-08-16 — The JSON Schema exists upstream (§8 Q7 answered)
+
+- yxl now publishes `docs/yxl.schema.json`, **generated** from `docs/spec.md`
+  rather than written beside it. Pointing an editor's YAML support at it gives a
+  spec completion and structural validation while it is being typed.
+- **It changes nothing here.** ADR-011 is unmoved: a schema knows shapes, not
+  meanings — it cannot say the style a cell names is declared or that an
+  override lands on a cell something writes — so `yxl build --check` is still
+  the validator of record and this editor's loader still validates only what
+  projection requires.
+- The mapping is **not committed**: it belongs in a personal `settings.json`,
+  not in everyone's. Whether the extension should contribute it so a reader gets
+  it without configuring anything is asked in §8 Q7 for the release phase.
+- Housekeeping from the same day: a personal `.vscode/settings.json` had been
+  swept into a commit by a `git add -A`, and CI failed on it — Biome checks
+  every file in the tree, and that one was somebody's own. Untracked, ignored,
+  and **Biome now reads `.gitignore`**, so the repo's idea of what is private is
+  the linter's too.
+
+### 2026-08-16 — Phase 7: the third verdict stopped being a refusal
+
+- **An edit that moves more than it named is now asked about**, not refused.
+  `this would also change 1 cell it did not name` comes with *Apply it anyway*,
+  the count, and the cells — and the reader decides. The checker has answered
+  three ways since it landed (ADR-009); the write path had been treating the
+  middle one as the last.
+- **It needed no new message.** A confirmation is an *answer to a question about
+  an edit*, which is what the choices list already is, so it arrives as one more
+  choice. What it carries is the gesture, not the text: saying yes runs the same
+  gesture again with the surprises accepted, so what lands is worked out from
+  the file as it stands rather than from a copy held while the question was
+  open — the rule the candidates already followed.
+- **No override beside it**, because that is not the question being asked.
+- The case in the tests is the one a real spec has: a parameter that decides how
+  far a `formulas:` range reaches, so changing it writes a cell the parameter
+  itself never touched.
 
 ### 2026-08-16 — Phase 7: the row that reaches out of the spec
 
