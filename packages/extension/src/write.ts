@@ -13,6 +13,7 @@ import {
   type Meaning,
   meaning,
   override,
+  type Resolving,
   type Says,
   setFormula,
   setValue,
@@ -85,7 +86,7 @@ export async function write(spec: Spec, typed: Typed, port: Port): Promise<void>
         : setValue(spec.grid, where, meant.value, port.text);
 
   if (intent.kind === 'refused') {
-    const answers = candidates(spec.grid, where, typed.text, port.text);
+    const answers = candidates(resolving(spec, port), where, typed.text);
 
     // One answer, and nothing being chosen between: an edit with one meaning
     // applies, and only an edit with several is a question (ADR-001). Asking
@@ -128,7 +129,7 @@ export async function resolve(spec: Spec, typed: Typed, choice: string, port: Po
   }
 
   const at = addrAt({ col: typed.col, row: typed.row });
-  const answers = candidates(spec.grid, { sheet, at }, typed.text, port.text);
+  const answers = candidates(resolving(spec, port), { sheet, at }, typed.text);
   const taken = answers.find((one) => one.id === choice);
 
   if (taken === undefined) {
@@ -143,6 +144,11 @@ export async function resolve(spec: Spec, typed: Typed, choice: string, port: Po
 /** What an override says a cell holds, where the reader did not type a formula. */
 function value(meant: Meaning): string | number | boolean | null {
   return meant.is === 'value' ? meant.value : null;
+}
+
+/** The spec as the resolver needs it: what it draws, its text, and its settings. */
+function resolving(spec: Spec, port: Port): Resolving {
+  return { grid: spec.grid, text: port.text, params: spec.params };
 }
 
 /** A candidate as the view shows one: what it does, and what it would move. */

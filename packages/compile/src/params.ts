@@ -141,3 +141,39 @@ export function resolveParams(
   const unknown = [...set.keys()].filter((name) => !declared.some((one) => one.name === name));
   return { values, cycles, unknown };
 }
+
+/**
+ * Every parameter each parameter's default depends on, transitively.
+ *
+ * A default may be built from other parameters (`title: "${quarter} ${region}"`
+ * — `docs/spec.md` §7), so a cell reading `title` follows `quarter` too. That
+ * is what makes "which cells does this parameter reach" a question about the
+ * whole chain rather than about one name.
+ *
+ * A cycle stops rather than loops; `resolveParams` is what reports it.
+ */
+export function behind(declared: readonly Param[]): ReadonlyMap<string, ReadonlySet<string>> {
+  const named = new Map(declared.map((one) => [String(one.name), one]));
+  const found = new Map<string, ReadonlySet<string>>();
+
+  const walk = (name: string, chain: readonly string[]): ReadonlySet<string> => {
+    const known = found.get(name);
+    if (known !== undefined) return known;
+    if (chain.includes(name)) return new Set();
+
+    const param = named.get(name);
+    const reads =
+      param === undefined || typeof param.value !== 'string'
+        ? []
+        : fill(param.value, () => undefined).missing.filter((one) => named.has(one));
+
+    const all = new Set<string>(reads);
+    for (const one of reads) for (const deeper of walk(one, [...chain, name])) all.add(deeper);
+
+    found.set(name, all);
+    return all;
+  };
+
+  for (const param of declared) walk(String(param.name), []);
+  return found;
+}

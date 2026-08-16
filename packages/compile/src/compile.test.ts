@@ -1,9 +1,10 @@
-import { filePath, type SheetName } from '@yxl-vscode/units';
+import { filePath, nodeId, type SheetName } from '@yxl-vscode/units';
 import { describe, expect, it } from 'vitest';
 import { CODE } from './codes';
 import { sheetOf } from './compile';
 import type { DataReader } from './ctx';
 import { cell as at, codes, grid, sheet } from './harness';
+import { reaches } from './impact';
 
 const SALES = 'sheets:\n  - name: Sales\n';
 
@@ -80,7 +81,29 @@ describe('a parameter', () => {
       node: '["spec.yxl.yaml","sheets",0,"cells","A1"]',
       template: '${region} sales',
       params: ['region'],
+      declared: ['["spec.yxl.yaml","params","region"]'],
     });
+  });
+
+  it('reaches through a default built from other parameters', () => {
+    // `title` is `"${quarter} ${region}"`, so a cell reading `title` follows
+    // `quarter` too — which is what makes the ripple count honest.
+    const spec = `params:\n  quarter: Q3\n  region: APAC\n  title: "\${quarter} \${region}"\n${SALES}    cells:\n      A1: "\${title}"\n`;
+    const declared = nodeId('["spec.yxl.yaml","params","quarter"]');
+
+    expect(reaches(grid(spec), declared)).toEqual([{ sheet: 'Sales', at: 'A1' }]);
+  });
+
+  it('reaches every cell that reads it, the way anything else does', () => {
+    // The declaration is a node like any other, so the count a resolution
+    // shows and the cells the inspector lights up come from one answer.
+    const spec = `params:\n  region: APAC\n${SALES}    cells:\n      A1: "\${region}"\n      A2: "\${region} sales"\n      A3: fixed\n`;
+    const declared = nodeId('["spec.yxl.yaml","params","region"]');
+
+    expect(reaches(grid(spec), declared)).toEqual([
+      { sheet: 'Sales', at: 'A1' },
+      { sheet: 'Sales', at: 'A2' },
+    ]);
   });
 
   it('keeps its type when the whole value is one placeholder', () => {

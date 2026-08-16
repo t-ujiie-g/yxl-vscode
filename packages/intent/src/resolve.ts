@@ -50,26 +50,91 @@ export interface Candidate {
  * possible — the override is offered beside this list, not in it.
  */
 export function candidates(
-  grid: CompiledGrid,
+  spec: Resolving,
   where: { sheet: SheetName; at: A1Addr },
   typed: string,
-  text: Text,
 ): readonly Candidate[] {
-  const sheet = sheetOf(grid, where.sheet);
+  const sheet = sheetOf(spec.grid, where.sheet);
   if (sheet === null) return [];
 
   const cell = cellAt(sheet, where.at);
   if (cell === null) {
-    const written = newCell(sheet, where, typed, text);
+    const written = newCell(sheet, where, typed, spec.text);
     return written === null ? [] : [written];
   }
 
   const origin = cell.provenance.value;
-  if (origin.kind === 'defRef') return definition(grid, origin, where, typed, text);
+  if (origin.kind === 'defRef') return definition(spec.grid, origin, where, typed, spec.text);
+  if (origin.kind === 'param') return parameter(spec, origin, typed);
   if (origin.kind !== 'formulaRange') return [];
 
-  const written = rangeFormula(grid, origin, typed, text);
+  const written = rangeFormula(spec.grid, origin, typed, spec.text);
   return written === null ? [] : [written];
+}
+
+/**
+ * What resolving an edit needs of the spec: what it draws, what it is written
+ * as, and what the reader is *looking* at it as.
+ *
+ * The last one matters because a parameter set in the preview changes what the
+ * grid shows without changing a byte (ADR-001), and an answer that would be
+ * invisible under that setting is not an answer.
+ */
+export interface Resolving {
+  readonly grid: CompiledGrid;
+  readonly text: Text;
+  readonly params: ReadonlyMap<string, string>;
+}
+
+/**
+ * A cell whose value comes from a parameter's default (`docs/spec.md` §7).
+ *
+ * One answer: change the default, which every cell reading that parameter
+ * follows. `overrides:` is the other, and is offered beside this list rather
+ * than in it (§4.4).
+ *
+ * Offered only where the cell is **exactly one placeholder**. `"${quarter}
+ * ${region}"` typed over with `Q4 EMEA` would have to be split back across two
+ * parameters, and which half went where is precisely what this editor does not
+ * guess (ADR-001).
+ */
+function parameter(
+  spec: Resolving,
+  origin: Extract<FacetOrigin, { kind: 'param' }>,
+  typed: string,
+): readonly Candidate[] {
+  const meant = meaning(typed);
+  const name = origin.params[0];
+  const declared = origin.declared[0];
+  if (meant.is !== 'value' || name === undefined || declared === undefined) return [];
+  if (origin.template.trim() !== `\${${name}}` || origin.params.length !== 1) return [];
+
+  // Set in the preview, so the default is not what the reader is looking at:
+  // changing it would leave the grid exactly as it is (§4.4's `param` row).
+  if (spec.params.has(name)) return [];
+
+  const found = located(declared, spec.text);
+  if (found.kind === 'refused' || found.node.kind !== 'scalar') return [];
+
+  const moves = reaches(spec.grid, declared);
+
+  return [
+    {
+      id: 'parameter',
+      what: `Change the parameter \`${name}\`, which every cell reading it follows`,
+      moves,
+      alone: false,
+      intent: {
+        kind: 'edit',
+        file: found.file,
+        patch: { ops: [{ op: 'set', path: found.path, value: meant.value }] },
+        expects: {
+          cells: new Set(moves.map((one) => qualified(one.sheet as SheetName, one.at))),
+          beyond: 'ask',
+        },
+      },
+    },
+  ];
 }
 
 /**

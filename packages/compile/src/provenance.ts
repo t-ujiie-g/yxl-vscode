@@ -9,6 +9,10 @@ import type { A1Addr, FilePath, NodeId, ParamName } from '@yxl-vscode/units';
  * `node` is always what a patch would address. A position on an `inline` or an
  * `external` origin counts from that block's own corner, from zero.
  *
+ * A `param` origin names the parameters its template reads *and* where each of
+ * them is declared, so that "what does this parameter reach" is the same
+ * question as it is for anything else.
+ *
  * `empty` is a value nothing said — its `node` is the cell it was not said at,
  * where the spec wrote that cell for some other reason (a number format of its
  * own, say), and `null` where there is no cell at all. The distinction is the
@@ -37,6 +41,7 @@ export type FacetOrigin =
       readonly node: NodeId;
       readonly template: string;
       readonly params: readonly ParamName[];
+      readonly declared: readonly NodeId[];
     }
   | { readonly kind: 'override'; readonly node: NodeId }
   | { readonly kind: 'empty'; readonly node: NodeId | null };

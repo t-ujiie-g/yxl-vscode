@@ -8,9 +8,9 @@ import type {
   Template,
   ValueDef,
 } from '@yxl-vscode/spec';
-import type { FilePath } from '@yxl-vscode/units';
+import type { FilePath, NodeId } from '@yxl-vscode/units';
 import { CODE, type Code } from './codes';
-import { asIs, type Filled, fill, resolveParams } from './params';
+import { asIs, behind, type Filled, fill, resolveParams } from './params';
 
 /**
  * A file a `data:` block names, opened.
@@ -41,9 +41,31 @@ export interface Ctx {
   readonly read: DataReader | null;
   readonly from1904: boolean;
   readonly params: ReadonlyMap<string, ScalarValue>;
+  readonly declared: ReadonlyMap<string, readonly NodeId[]>;
   readonly values: ReadonlyMap<string, ValueDef>;
   readonly formulas: ReadonlyMap<string, FormulaDef>;
   readonly styles: ReadonlyMap<string, StyleDef>;
+}
+
+/**
+ * Where each parameter is declared, together with every parameter its default
+ * depends on: a cell reading `title` is changed by an edit to the `quarter`
+ * that `title` is built from.
+ */
+function declarations(doc: SpecDoc): ReadonlyMap<string, readonly NodeId[]> {
+  const at = new Map(doc.params.map((param) => [String(param.name), param.id]));
+  const chains = behind(doc.params);
+
+  return new Map(
+    doc.params.map((param) => {
+      const name = String(param.name);
+      const nodes = [...(chains.get(name) ?? [])].flatMap((one) => {
+        const found = at.get(one);
+        return found === undefined ? [] : [found];
+      });
+      return [name, [param.id, ...nodes]];
+    }),
+  );
 }
 
 export function context(doc: SpecDoc, read: DataReader | null, set: Setting): Ctx {
@@ -54,6 +76,7 @@ export function context(doc: SpecDoc, read: DataReader | null, set: Setting): Ct
     read,
     from1904: doc.date1904,
     params: values,
+    declared: declarations(doc),
     values: new Map(doc.defs.values.map((def) => [def.name, def])),
     formulas: new Map(doc.defs.formulas.map((def) => [def.name, def])),
     styles: new Map(doc.defs.styles.map((def) => [def.name, def])),

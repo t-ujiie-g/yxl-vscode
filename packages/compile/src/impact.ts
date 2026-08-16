@@ -75,6 +75,9 @@ function touches(sheet: CompiledSheet, cell: CompiledCell, node: NodeId): boolea
 
 /** Whether an origin names the node, as the node it sits at or as what it points to. */
 function names(origin: FacetOrigin, node: NodeId): boolean {
-  if (origin.kind === 'empty') return false;
-  return origin.node === node || (origin.kind === 'defRef' && origin.def === node);
+  if (origin.kind === 'empty') return origin.node === node;
+  if (origin.kind === 'defRef' && origin.def === node) return true;
+  if (origin.kind === 'param' && origin.declared.includes(node)) return true;
+
+  return origin.node === node;
 }
