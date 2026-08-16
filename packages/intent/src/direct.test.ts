@@ -151,6 +151,19 @@ describe('typing a formula into a cell', () => {
     expect(intent.kind === 'refused' && intent.why).toContain('holds a formula');
   });
 
+  it('writes into a formula the spec folded across lines, keeping the fold', () => {
+    // `summary.yaml` writes its formulas this way, so this is a real spec's
+    // spelling: the `>-` and its chomping sit outside the body and stay put.
+    const folded = `${SALES}    cells:\n      B1:\n        formula: >-\n          IF(A1="", "",\n          SUM(A1:A2))\n`;
+    const sources = { [ROOT]: folded };
+    const { grid, text } = files(sources);
+    const after = edited(sources, setFormula(grid, at('B1'), 'SUM(A1:A2)*2', text));
+
+    expect(after).toBe(
+      `${SALES}    cells:\n      B1:\n        formula: >-\n          SUM(A1:A2)*2\n`,
+    );
+  });
+
   it('refuses a cell that holds a value rather than a formula', () => {
     const sources = { [ROOT]: `${SALES}    cells:\n      A1: 1\n` };
     const { grid, text } = files(sources);

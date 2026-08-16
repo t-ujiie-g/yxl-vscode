@@ -215,15 +215,31 @@ describe('apply', () => {
   describe('block scalars', () => {
     const SOURCE = 'notes:\n  body: |\n    line one\n    line two\n';
 
-    it('refuses to write over one, rather than swallowing the lines under it', () => {
-      const { diagnostics, text: after } = edit(SOURCE, {
+    it('writes the body and keeps the block, rather than swallowing the lines under it', () => {
+      expect(text(SOURCE, { op: 'set', path: ['notes', 'body'], value: 'one line' })).toBe(
+        'notes:\n  body: |\n    one line\n',
+      );
+    });
+
+    it('indents a value of several lines to where the body already sits', () => {
+      const after = text(SOURCE, { op: 'set', path: ['notes', 'body'], value: 'one\ntwo' });
+      expect(after).toBe('notes:\n  body: |\n    one\n    two\n');
+    });
+
+    it('keeps the indicator and the chomping, which sit outside the body', () => {
+      const folded = 'sheets:\n  - formula: >-\n      IF(A4="", "",\n      SUM(B4:B13))\n';
+      const after = text(folded, {
         op: 'set',
-        path: ['notes', 'body'],
-        value: 'x',
+        path: ['sheets', 0, 'formula'],
+        value: 'SUM(B4:B13)*2',
       });
 
-      expect(diagnostics[0]?.code).toBe(CODE.blockScalarNotSupported);
-      expect(after).toBe(SOURCE);
+      expect(after).toBe('sheets:\n  - formula: >-\n      SUM(B4:B13)*2\n');
+    });
+
+    it('writes the text, not a rendering of it: quotes here would be in the string', () => {
+      const after = text(SOURCE, { op: 'set', path: ['notes', 'body'], value: 'a: b #not a key' });
+      expect(after).toBe('notes:\n  body: |\n    a: b #not a key\n');
     });
 
     it('refuses to empty one for the same reason', () => {

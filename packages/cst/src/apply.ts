@@ -5,7 +5,7 @@ import { formatPath, locate, type Site } from './locate';
 import type { Node } from './node';
 import type { Applied, Edit, Op, Path } from './op';
 import { parse } from './parse';
-import { renderScalar } from './write';
+import { renderScalar, type Value } from './write';
 
 /**
  * Apply ops to YAML source, changing only the bytes the ops reach.
@@ -45,10 +45,7 @@ type Refuse = (code: Code, message: string, at: Span) => void;
 function editFor(source: string, op: Op, site: Site, refuse: Refuse): Edit | undefined {
   switch (op.op) {
     case 'set': {
-      if (block(site.node)) {
-        refuse(CODE.blockScalarNotSupported, blockScalar(op.path), site.node.span);
-        return undefined;
-      }
+      if (block(site.node)) return intoBlock(source, op.value, site.node, refuse);
 
       const written = renderScalar(op.value, styleOf(site.node));
       return { span: site.node.span, text: `${separatingSpace(source, site.node)}${written}` };
@@ -67,6 +64,9 @@ function editFor(source: string, op: Op, site: Site, refuse: Refuse): Edit | und
 
     case 'clear': {
       if (block(site.node)) {
+        // Emptying one means deciding what is left — `key: >-` with nothing
+        // under it, or the key with no value at all — and nothing has needed
+        // the answer yet.
         refuse(CODE.blockScalarNotSupported, blockScalar(op.path), site.node.span);
         return undefined;
       }
@@ -330,17 +330,46 @@ function insertion(
 /**
  * A `|` or `>` scalar, whose span is its indented body rather than a value on
  * the line.
- *
- * Writing a plain scalar over that body would take the following lines with it,
- * so the whole style is refused until there is a phase that rewrites one
- * properly — with its own indicator, indentation, and chomping kept.
  */
 function block(node: Node): boolean {
   return node.kind === 'scalar' && (node.style === 'literal' || node.style === 'folded');
 }
 
+/**
+ * A new value into a block scalar, keeping the block.
+ *
+ * The span is the body alone: the `|` or `>-` that opens it, and the chomping
+ * that ends it, sit outside it and are never touched. What is rewritten is the
+ * text under the header, indented to where the body already sits — a line that
+ * came back shallower would close the block early and take the rest of the
+ * mapping with it.
+ *
+ * The value is written as text rather than rendered: quoting a scalar inside a
+ * block would put the quotes *in* the string, which is the one thing a block
+ * scalar exists to avoid.
+ */
+function intoBlock(source: string, value: Value, node: Node, refuse: Refuse): Edit | undefined {
+  const body = lineEnd(source, node.span.start);
+  const indent = /^[ \t]*/.exec(source.slice(body, lineEnd(source, body)))?.[0] ?? '';
+
+  if (body >= node.span.end || indent === '') {
+    refuse(
+      CODE.emptyBlockScalar,
+      'this block scalar has no body to take its layout from',
+      node.span,
+    );
+    return undefined;
+  }
+
+  const written = value === null ? '' : String(value);
+  const line = lineBreak(source);
+  const lines = written.split('\n').map((one) => `${indent}${one}`);
+
+  return { span: span(body, node.span.end), text: `${lines.join(line)}${line}` };
+}
+
 function blockScalar(path: Path): string {
-  return `\`${formatPath(path)}\` is a block scalar, which this editor does not rewrite yet`;
+  return `\`${formatPath(path)}\` is a block scalar, which this editor does not empty`;
 }
 
 function insideFlow(path: Path): string {

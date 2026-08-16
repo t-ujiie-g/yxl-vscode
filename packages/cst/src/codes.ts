@@ -17,6 +17,7 @@ export const CODE = {
   notAMapping: 'cst.not-a-mapping',
   keyExists: 'cst.key-exists',
   emptyMapping: 'cst.empty-mapping',
+  emptyBlockScalar: 'cst.empty-block-scalar',
   noSuchKey: 'cst.no-such-key',
   cannotRemoveRoot: 'cst.cannot-remove-root',
   flowNotSupported: 'cst.flow-not-supported',
