@@ -12,6 +12,8 @@
     "@yxl-vscode/patch": "workspace:*",
     "@yxl-vscode/spec": "workspace:*",
     "@yxl-vscode/units": "workspace:*",
-    "yaml": "^2.9.0"
+    "@yxl-vscode/webview": "workspace:*",
+    "yaml": "^2.9.0",
+    "yxl-vscode": "workspace:*"
   }
 }

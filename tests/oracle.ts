@@ -57,6 +57,34 @@ export function check(spec: string): Verdict {
   }
 }
 
+/** Compile a spec into a workbook, which is the thing an edit is finally about. */
+export function build(spec: string, into: string): void {
+  run(['build', spec, '-o', into]);
+}
+
+/**
+ * The workbook read back as a spec (`docs/spec.md` §22).
+ *
+ * How Tier 4 looks inside an `.xlsx` without a reader of its own: the compiler
+ * already has one, and what it writes back is a spec this editor can load. It
+ * is a migration aid rather than a mirror — it recovers what the format can
+ * express — which is enough to ask whether a cell holds what an edit claimed.
+ */
+export function extract(book: string, into: string): void {
+  run(['extract', book, '-o', into, '--flat']);
+}
+
+function run(args: readonly string[]): void {
+  try {
+    execFileSync(BIN, [...args], { encoding: 'utf8' });
+  } catch (failure) {
+    const { status, stdout } = failure as { status?: number; stdout?: Buffer };
+    throw new Error(
+      `\`${BIN} ${args.join(' ')}\` exited ${status}: ${String(stdout ?? '').trim()}`,
+    );
+  }
+}
+
 function version(manifest: string): string {
   const read: unknown = JSON.parse(readFileSync(manifest, 'utf8'));
   const pinned = (read as { yxl?: { targetVersion?: unknown } }).yxl?.targetVersion;
