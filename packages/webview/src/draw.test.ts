@@ -22,6 +22,10 @@ function asks(): Asks {
     paste: vi.fn(),
     pastedWith: vi.fn(),
     pastedTextWith: vi.fn(),
+    look: vi.fn(),
+    goOn: vi.fn(),
+    goTo: vi.fn(),
+    stopLooking: vi.fn(),
   };
 }
 
@@ -84,6 +88,7 @@ function shown(of: Partial<Showing> = {}, on: Asks = asks()): HTMLElement {
       refused: null,
       said: null,
       copied: null,
+      looking: null,
       editable: null,
       ...of,
     },
@@ -208,6 +213,7 @@ describe('a sheet larger than the window drawn of it', () => {
       refused: null,
       said: null,
       copied: null,
+      looking: null,
       editable: null,
     });
 
@@ -232,6 +238,7 @@ describe('a sheet larger than the window drawn of it', () => {
       refused: null,
       said: null,
       copied: null,
+      looking: null,
       editable: null,
     });
 
@@ -599,6 +606,7 @@ describe('what changes without redrawing the grid', () => {
       refused: null,
       said: null,
       copied: null,
+      looking: null,
       editable: null,
       ...of,
     };

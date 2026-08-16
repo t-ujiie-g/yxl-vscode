@@ -204,13 +204,21 @@ export interface Said {
   readonly text: string;
 }
 
+/** Every cell of one sheet holding what was searched for, in the order a reader goes through them. */
+export interface Found {
+  readonly kind: 'found';
+  readonly sheet: string;
+  readonly text: string;
+  readonly cells: readonly { readonly row: number; readonly col: number }[];
+}
+
 /** The keyboard back in the grid, after the host had to put it somewhere else. */
 export interface Focus {
   readonly kind: 'focus';
 }
 
 /** Everything the host sends the view. */
-export type ToView = Drawing | Inspected | Highlighted | Refused | Said | Focus;
+export type ToView = Drawing | Inspected | Highlighted | Refused | Said | Focus | Found;
 
 /**
  * Everything the view sends back. `edit`, `resolve` and `override` carry what
@@ -226,6 +234,7 @@ export type FromView =
       readonly end: number;
     }
   | { readonly kind: 'setParam'; readonly name: string; readonly value: string }
+  | { readonly kind: 'find'; readonly sheet: string; readonly text: string }
   | ({ readonly kind: 'edit' } & Typed)
   | ({ readonly kind: 'empty' } & Ranged)
   | ({ readonly kind: 'emptied'; readonly choice: string } & Ranged)

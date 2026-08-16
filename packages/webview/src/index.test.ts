@@ -429,3 +429,129 @@ describe('a paste the grid asks the host to make', () => {
     expect(sent.filter((one) => one.kind === 'pasteAt')[0]).toMatchObject({ cut: true });
   });
 });
+
+describe('looking for something in the sheet', () => {
+  const press = (into: HTMLElement, row: number, col: number, key: string, shift = false) => {
+    at(into, row, col)?.dispatchEvent(
+      new KeyboardEvent('keydown', { key, metaKey: true, shiftKey: shift, bubbles: true }),
+    );
+  };
+
+  const box = (into: HTMLElement) => into.querySelector<HTMLInputElement>('.looking .for');
+
+  it('opens a box on the key every spreadsheet opens one on', () => {
+    const { into } = view();
+
+    press(into, 1, 1, 'f');
+    expect(box(into)).not.toBeNull();
+  });
+
+  it('asks the host, which is the only one that can see past the drawn window', () => {
+    const { into, sent } = view();
+
+    press(into, 1, 1, 'f');
+    const typing = box(into);
+    if (typing === null) throw new Error('no box to type in');
+
+    typing.value = 'APAC';
+    typing.dispatchEvent(new Event('input'));
+
+    expect(sent.filter((one) => one.kind === 'find')).toEqual([
+      { kind: 'find', sheet: 'Sales', text: '' },
+      { kind: 'find', sheet: 'Sales', text: 'APAC' },
+    ]);
+  });
+
+  it('marks what came back and goes to the first of it', () => {
+    const { into, told } = view();
+
+    press(into, 1, 1, 'f');
+    told({ kind: 'found', sheet: 'Sales', text: '', cells: [{ row: 2, col: 2 }] });
+
+    expect(into.querySelectorAll('td.found')).toHaveLength(1);
+    expect(into.querySelector('.looking .count')?.textContent).toBe('1 of 1');
+    expect(into.querySelector('td.selected')?.getAttribute('data-at')).toBe('2:2');
+  });
+
+  it('goes round what it found, forwards and back', () => {
+    const { into, told } = view();
+
+    press(into, 1, 1, 'f');
+    told({
+      kind: 'found',
+      sheet: 'Sales',
+      text: '',
+      cells: [
+        { row: 1, col: 1 },
+        { row: 2, col: 2 },
+      ],
+    });
+
+    press(into, 1, 1, 'g');
+    expect(into.querySelector('.looking .count')?.textContent).toBe('2 of 2');
+
+    press(into, 2, 2, 'g');
+    expect(into.querySelector('.looking .count')?.textContent).toBe('1 of 2');
+
+    press(into, 1, 1, 'g', true);
+    expect(into.querySelector('.looking .count')?.textContent).toBe('2 of 2');
+  });
+
+  it('says so where the sheet holds none of it', () => {
+    const { into, told } = view();
+
+    press(into, 1, 1, 'f');
+    const typing = box(into);
+    if (typing === null) throw new Error('no box to type in');
+
+    typing.value = 'LATAM';
+    typing.dispatchEvent(new Event('input'));
+    told({ kind: 'found', sheet: 'Sales', text: 'LATAM', cells: [] });
+
+    expect(into.querySelector('.looking .count')?.textContent).toBe('nothing here holds that');
+  });
+
+  it('takes an answer for a search the reader has already moved on from', () => {
+    const { into, told } = view();
+
+    press(into, 1, 1, 'f');
+    told({ kind: 'found', sheet: 'Sales', text: 'stale', cells: [{ row: 2, col: 2 }] });
+
+    expect(into.querySelectorAll('td.found')).toHaveLength(0);
+  });
+});
+
+describe('the address box in the corner', () => {
+  const address = (into: HTMLElement) => into.querySelector<HTMLInputElement>('.corner .address');
+
+  it('shows the address of the cell the reader is on', () => {
+    const { into } = view();
+
+    at(into, 2, 2)?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    expect(address(into)?.value).toBe('B2');
+  });
+
+  it('goes to the address that is typed into it', () => {
+    const { into } = view();
+
+    const box = address(into);
+    if (box === null) throw new Error('no address box');
+
+    box.value = 'b2';
+    box.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+
+    expect(into.querySelector('td.selected')?.getAttribute('data-at')).toBe('2:2');
+  });
+
+  it('says so for something that is not an address', () => {
+    const { into } = view();
+
+    const box = address(into);
+    if (box === null) throw new Error('no address box');
+
+    box.value = 'nowhere';
+    box.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+
+    expect(into.querySelector('.under')?.textContent).toContain('is not an address');
+  });
+});

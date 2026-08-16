@@ -1,4 +1,4 @@
-import { reaches } from '@yxl-vscode/compile';
+import { finds, reaches } from '@yxl-vscode/compile';
 import { type Engine, univerEngine } from '@yxl-vscode/evaluate';
 import { did, type History, nothing } from '@yxl-vscode/patch';
 import { addrAt, cellOf, filePath } from '@yxl-vscode/units';
@@ -189,6 +189,14 @@ export class Preview {
     this.reaching();
   }
 
+  /** Every cell of a sheet holding what the reader is looking for, whether it is drawn or not. */
+  private searched(name: string, text: string): void {
+    const sheet = this.drawn?.grid?.sheets.find((one) => one.name === name);
+    const cells = sheet === undefined ? [] : finds(sheet, text).map((at) => cellOf(at));
+
+    void this.panel.webview.postMessage({ kind: 'found', sheet: name, text, cells });
+  }
+
   /** What the view asked for. */
   private answer(asked: FromView): void {
     if (asked.kind === 'reveal') {
@@ -259,6 +267,11 @@ export class Preview {
 
     if (asked.kind === 'override') {
       this.tried(this.overrideWith(asked));
+      return;
+    }
+
+    if (asked.kind === 'find') {
+      this.searched(asked.sheet, asked.text);
       return;
     }
 

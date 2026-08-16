@@ -2,6 +2,7 @@ export { CODE, type Code } from './codes';
 export { cellAt, compile, type Options, sheetOf, styleAt } from './compile';
 export type { DataFile, DataReader, Setting } from './ctx';
 export { type Editability, editabilityOf, editabilityOfLayer } from './editability';
+export { finds } from './find';
 export type {
   CompiledBand,
   CompiledCell,
