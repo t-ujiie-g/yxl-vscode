@@ -109,6 +109,7 @@ describe('what the view sends', () => {
       kind: 'refused',
       why: 'filled by a range',
       typed: offer,
+      ranged: null,
       canOverride: true,
       choices: [],
     };
@@ -125,7 +126,14 @@ describe('what the view sends', () => {
     const { into, sent, told } = view();
     const choices = [{ id: 'rangeFormula', what: 'Change the range', moves: 2, sample: ['C2'] }];
 
-    told({ kind: 'refused', why: 'filled by a range', typed, canOverride: true, choices });
+    told({
+      kind: 'refused',
+      why: 'filled by a range',
+      typed,
+      ranged: null,
+      canOverride: true,
+      choices,
+    });
     into.querySelector<HTMLElement>('.refused .choice')?.click();
 
     expect(sent.filter((one) => one.kind === 'resolve')).toEqual([
@@ -135,7 +143,14 @@ describe('what the view sends', () => {
 
   it('sends the reason typed beside the offer', () => {
     const { into, sent, told } = view();
-    told({ kind: 'refused', why: 'filled by a range', typed, canOverride: true, choices: [] });
+    told({
+      kind: 'refused',
+      why: 'filled by a range',
+      typed,
+      ranged: null,
+      canOverride: true,
+      choices: [],
+    });
 
     const why = into.querySelector('.refused .reason');
     if (!(why instanceof HTMLInputElement)) throw new Error('nowhere to say why');
@@ -169,6 +184,7 @@ describe('what the view does with what it is told', () => {
       kind: 'refused',
       why: 'filled by a range',
       typed: null,
+      ranged: null,
       canOverride: false,
       choices: [],
     });
@@ -189,6 +205,7 @@ describe('what the view does with what it is told', () => {
       kind: 'refused',
       why: 'filled by a range',
       typed: null,
+      ranged: null,
       canOverride: false,
       choices: [],
     });
@@ -210,6 +227,7 @@ describe('what the view does with what it is told', () => {
       kind: 'refused',
       why: 'filled by a range',
       typed: null,
+      ranged: null,
       canOverride: false,
       choices: [],
     });
@@ -291,5 +309,34 @@ describe('taking an edit back from the grid', () => {
     told({ kind: 'focus' });
 
     expect(document.activeElement?.getAttribute('data-at')).toBe('1:1');
+  });
+});
+
+describe('an answer offered about a rectangle', () => {
+  const held: Refused = {
+    kind: 'refused',
+    why: '2 of the 4 cells here cannot be emptied, so none were',
+    typed: null,
+    ranged: { sheet: 'Sales', top: 1, left: 1, bottom: 2, right: 2 },
+    canOverride: false,
+    choices: [{ id: 'only', what: 'Empty the ones that can be', moves: 2, sample: ['Sales!A1'] }],
+  };
+
+  it('goes back naming the rectangle it was about', () => {
+    const { into, sent, told } = view();
+    told(held);
+
+    into.querySelector<HTMLElement>('.refused .choice')?.click();
+
+    expect(sent.filter((one) => one.kind === 'emptied')).toEqual([
+      { kind: 'emptied', sheet: 'Sales', top: 1, left: 1, bottom: 2, right: 2, choice: 'only' },
+    ]);
+  });
+
+  it('offers no override: a rectangle is not one cell to except', () => {
+    const { into, told } = view();
+    told(held);
+
+    expect(into.querySelector('.refused .go')).toBeNull();
   });
 });

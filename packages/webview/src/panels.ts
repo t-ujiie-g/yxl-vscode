@@ -57,18 +57,22 @@ export function refusal(refused: Refused, asks: Asks): HTMLElement {
   said.append(refused.why);
 
   const typed = refused.typed;
-  if (typed === null) return said;
+  const ranged = refused.ranged;
+  if (typed === null && ranged === null) return said;
 
   for (const choice of refused.choices) {
     const pick = document.createElement('button');
     pick.type = 'button';
     pick.className = 'choice';
     pick.textContent = `${choice.what} — ${moved(choice)}`;
-    pick.addEventListener('click', () => asks.resolveWith(typed, choice.id));
+    pick.addEventListener('click', () => {
+      if (typed !== null) asks.resolveWith(typed, choice.id);
+      else if (ranged !== null) asks.emptiedWith(ranged, choice.id);
+    });
     said.append(' ', pick);
   }
 
-  if (!refused.canOverride) return said;
+  if (typed === null || !refused.canOverride) return said;
 
   const why = document.createElement('input');
   why.type = 'text';

@@ -891,9 +891,18 @@ work.
       about what a cell may hold (`docs/spec.md` §3) applied to each of them
 - [x] `Cmd`/`Ctrl`+`Z` and `Cmd`+`Shift`+`Z` **from the grid**, which run the
       editor's own undo over the file — the stack a `WorkspaceEdit` lands on
-- [ ] **Empty the ones that can be**, offered where a rectangle holds cells that
+- [x] **Empty the ones that can be**, offered where a rectangle holds cells that
       cannot: one summary and one answer, which is the same machinery the
       oversized paste below needs
+- [ ] `Cmd`+`Z` **without the focus round trip** — today the host shows the text,
+      runs the editor's undo and gives the keyboard back, which flickers. The
+      alternative is `patch`'s own `History` applied as a `WorkspaceEdit`, which
+      needs the guard that makes two stacks safe: the file must be exactly as
+      this editor left it, or the editor's own undo is the only honest one
+      (ADR-010)
+- [ ] **One parse per rectangle**, not per cell — `clearCell` reads the file
+      through `located` for every address, so a large selection parses it as
+      many times
 - [ ] Copy, cut and paste **inside** the grid, as intents rather than as a
       buffer of cells
 - [ ] **Copy out**: TSV *and* HTML on the clipboard, so Excel and Sheets receive
@@ -2017,6 +2026,25 @@ this at a phase boundary rather than at the end.
   two serials either side of it, so the next reader knows it is deliberate.
 - A cell's own format — written, or the one its type takes — now wins over a
   band's. Both are requests about *that* cell; a band is something reaching it.
+
+### 2026-08-16 — Empty the ones that can be
+A rectangle holding cells that cannot be emptied refused the whole and left the
+reader nothing to do about it. It now refuses and **offers**: *Empty the ones
+that can be — 6 cells (Sales!A1, Sales!B1, Sales!A2, …)*. Taking it empties
+those and leaves the rest where they are.
+
+- **The refusal's subject is now a cell or a rectangle.** `Refused` carries
+  `ranged` beside `typed`, and a choice taken over a rectangle goes back as one
+  (`emptied`), resolved against the file as it stands rather than against
+  anything remembered. This is the machinery the oversized paste needs, built
+  where it was cheapest to build. A rectangle offers no `overrides:` — an
+  exception is written for a cell (`docs/spec.md` §23), not for a selection.
+- **A mapping emptied of every entry is taken out whole.** `cells:` holding
+  nothing is not a mapping and the spec would not load — the checker caught it,
+  which is the loop working, but the honest edit is to remove the key. This also
+  fixes the single-cell case that was refused before: deleting the only cell a
+  sheet had could not be undone, because nothing would have been left to put it
+  back beside (ADR-026). Removing `cells:` is invertible, so it is now made.
 
 ### 2026-08-16 — The selection a gesture acts on is the live one; undo from the grid
 Two things the first real use of `Delete` over a range turned up.

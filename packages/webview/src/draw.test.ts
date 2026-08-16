@@ -16,6 +16,7 @@ function asks(): Asks {
     undo: vi.fn(),
     reachTo: vi.fn(),
     resolveWith: vi.fn(),
+    emptiedWith: vi.fn(),
     overrideWith: vi.fn(),
   };
 }
@@ -702,6 +703,7 @@ describe('what the view says about a spec', () => {
       kind: 'refused',
       why: 'B5 holds a formula',
       typed: null,
+      ranged: null,
       canOverride: false,
       choices: [],
     } as const;
@@ -713,6 +715,7 @@ describe('what the view says about a spec', () => {
     const refused = {
       kind: 'refused',
       why: 'B5 is filled by a range',
+      ranged: null,
       typed,
       canOverride: true,
       choices: [
@@ -739,6 +742,7 @@ describe('what the view says about a spec', () => {
     const refused = {
       kind: 'refused',
       why: 'B5 is filled by a range',
+      ranged: null,
       typed,
       canOverride: true,
       choices: [],
@@ -755,6 +759,7 @@ describe('what the view says about a spec', () => {
     const refused = {
       kind: 'refused',
       why: 'B5 is filled by a range',
+      ranged: null,
       typed,
       canOverride: true,
       choices: [],
@@ -776,6 +781,7 @@ describe('what the view says about a spec', () => {
     const refused = {
       kind: 'refused',
       why: 'B5 is filled by a range',
+      ranged: null,
       typed,
       canOverride: true,
       choices: [],
@@ -797,6 +803,7 @@ describe('what the view says about a spec', () => {
       kind: 'refused',
       why: 'nothing is written there',
       typed: null,
+      ranged: null,
       canOverride: false,
       choices: [],
     } as const;
