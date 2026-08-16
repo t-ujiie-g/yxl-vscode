@@ -4,31 +4,31 @@ import { type IncludeReader, load } from '@yxl-vscode/loader';
 import { type A1Addr, type FilePath, filePath, type SheetName } from '@yxl-vscode/units';
 import { type Ctx, checked } from '@yxl-vscode/verify';
 import { describe, expect, it } from 'vitest';
-import { type Intent, setFormula, setValue, type Text } from './direct';
+import { type Intent, reading, setFormula, setValue, type Text } from './direct';
 
 const ROOT = filePath('spec.yxl.yaml') ?? ('' as FilePath);
 
 /** A spec of one or more files, read the way the extension reads one. */
 function files(sources: Record<string, string>) {
   const text: Text = (file) => sources[file] ?? null;
-  const read: IncludeReader = (_from, path) => {
+  const includes: IncludeReader = (_from, path) => {
     const file = filePath(path);
     return file === null || sources[path] === undefined ? null : { file, source: sources[path] };
   };
 
   const source = sources[ROOT] ?? '';
-  const { doc } = load(parse(source, { file: ROOT }), read);
+  const { doc } = load(parse(source, { file: ROOT }), includes);
   if (doc === null) throw new Error('did not load');
 
-  return { grid: compile(doc, { read }), text, read, source };
+  return { grid: compile(doc, { read: includes }), read: reading(text), includes, source };
 }
 
 function edited(sources: Record<string, string>, intent: Intent): string {
   if (intent.kind === 'refused') throw new Error(`refused: ${intent.why}`);
   if (intent.kind !== 'edit') throw new Error('a file was written, not a spec');
 
-  const { read } = files(sources);
-  const ctx: Ctx = { root: ROOT, file: intent.file, read };
+  const { includes } = files(sources);
+  const ctx: Ctx = { root: ROOT, file: intent.file, read: includes };
   const done = checked(sources[intent.file] ?? '', intent.patch, intent.expects, ctx);
   if (done.ok === false) throw new Error('the checker refused it');
 
@@ -44,16 +44,16 @@ const SALES = 'sheets:\n  - name: Sales\n';
 describe('typing a value into a cell', () => {
   it('writes it where the spec wrote the cell', () => {
     const sources = { [ROOT]: `${SALES}    cells:\n      A1: Region\n      B1: 2400000\n` };
-    const { grid, text } = files(sources);
+    const { grid, read } = files(sources);
 
-    expect(edited(sources, setValue(grid, at('B1'), 2500000, text))).toContain('B1: 2500000');
+    expect(edited(sources, setValue(grid, at('B1'), 2500000, read))).toContain('B1: 2500000');
   });
 
   it('writes under the `value:` key when the cell was written the long way', () => {
     const cell = 'A1: { value: 0.085, format: "0.0%" }';
     const sources = { [ROOT]: `${SALES}    cells:\n      ${cell}\n` };
-    const { grid, text } = files(sources);
-    const after = edited(sources, setValue(grid, at('A1'), 0.09, text));
+    const { grid, read } = files(sources);
+    const after = edited(sources, setValue(grid, at('A1'), 0.09, read));
 
     expect(after).toContain('A1: { value: 0.09, format: "0.0%" }');
   });
@@ -63,8 +63,8 @@ describe('typing a value into a cell', () => {
       [ROOT]: 'sheets:\n  - $include: sales.yaml\n',
       'sales.yaml': 'name: Sales\ncells:\n  A1: Region\n',
     };
-    const { grid, text } = files(sources);
-    const intent = setValue(grid, at('A1'), 'Area', text);
+    const { grid, read } = files(sources);
+    const intent = setValue(grid, at('A1'), 'Area', read);
 
     expect(intent.kind === 'edit' && intent.file).toBe('sales.yaml');
     expect(edited(sources, intent)).toBe('name: Sales\ncells:\n  A1: Area\n');
@@ -73,23 +73,23 @@ describe('typing a value into a cell', () => {
   it('writes one field of an inline `data:` block', () => {
     const block = `${SALES}    data:\n      - at: A1\n        values:\n          - [Region, Revenue]\n          - [APAC, 2400000]\n`;
     const sources = { [ROOT]: block };
-    const { grid, text } = files(sources);
+    const { grid, read } = files(sources);
 
-    expect(edited(sources, setValue(grid, at('B2'), 2500000, text))).toContain('[APAC, 2500000]');
+    expect(edited(sources, setValue(grid, at('B2'), 2500000, read))).toContain('[APAC, 2500000]');
   });
 
   it('keeps the quoting the spec chose', () => {
     const sources = { [ROOT]: `${SALES}    cells:\n      A1: "007"\n` };
-    const { grid, text } = files(sources);
+    const { grid, read } = files(sources);
 
-    expect(edited(sources, setValue(grid, at('A1'), '008', text))).toContain('A1: "008"');
+    expect(edited(sources, setValue(grid, at('A1'), '008', read))).toContain('A1: "008"');
   });
 });
 
 describe('what typing into a cell will not do', () => {
   function why(sources: Record<string, string>, address: string): string {
-    const { grid, text } = files(sources);
-    const intent = setValue(grid, at(address), 'x', text);
+    const { grid, read } = files(sources);
+    const intent = setValue(grid, at(address), 'x', read);
     return intent.kind === 'refused' ? intent.why : '';
   }
 
@@ -101,8 +101,8 @@ describe('what typing into a cell will not do', () => {
   it('refuses a value that came from a file beside the spec', () => {
     const spec = `${SALES}    data:\n      - at: A1\n        csv: sales.csv\n`;
     const sources = { [ROOT]: spec, 'sales.csv': 'APAC,1\n' };
-    const { grid, text } = files(sources);
-    const intent = setValue(grid, at('A1'), 'x', text);
+    const { grid, read } = files(sources);
+    const intent = setValue(grid, at('A1'), 'x', read);
 
     expect(intent.kind === 'refused' && intent.why).toContain('sales.csv');
   });
@@ -130,9 +130,9 @@ describe('what typing into a cell will not do', () => {
     // still a cell, and there is one place a value goes in it.
     const spec = `${SALES}    cells:\n      B4: { format: "0.0%" }\n`;
     const sources = { [ROOT]: spec };
-    const { grid, text } = files(sources);
+    const { grid, read } = files(sources);
 
-    expect(edited(sources, setValue(grid, at('B4'), 0.01, text))).toBe(
+    expect(edited(sources, setValue(grid, at('B4'), 0.01, read))).toBe(
       `${SALES}    cells:\n      B4: { value: 0.01, format: "0.0%" }\n`,
     );
   });
@@ -140,9 +140,9 @@ describe('what typing into a cell will not do', () => {
   it('writes a value into a cell that was written for its style alone', () => {
     const spec = `${SALES}    cells:\n      B4:\n        style: header\n`;
     const sources = { [ROOT]: spec };
-    const { grid, text } = files(sources);
+    const { grid, read } = files(sources);
 
-    expect(edited(sources, setValue(grid, at('B4'), 'Total', text))).toBe(
+    expect(edited(sources, setValue(grid, at('B4'), 'Total', read))).toBe(
       `${SALES}    cells:\n      B4:\n        value: Total\n        style: header\n`,
     );
   });
@@ -155,17 +155,17 @@ describe('what typing into a cell will not do', () => {
 describe('typing a formula into a cell', () => {
   it('writes it where the formula is written', () => {
     const sources = { [ROOT]: `${SALES}    cells:\n      B1: { formula: "SUM(A1:A2)" }\n` };
-    const { grid, text } = files(sources);
+    const { grid, read } = files(sources);
 
-    expect(edited(sources, setFormula(grid, at('B1'), 'SUM(A1:A3)', text))).toContain(
+    expect(edited(sources, setFormula(grid, at('B1'), 'SUM(A1:A3)', read))).toContain(
       'formula: "SUM(A1:A3)"',
     );
   });
 
   it('refuses to type a value over a cell written as a formula, and says what to do', () => {
     const sources = { [ROOT]: `${SALES}    cells:\n      B1: { formula: "SUM(A1:A2)" }\n` };
-    const { grid, text } = files(sources);
-    const intent = setValue(grid, at('B1'), 5, text);
+    const { grid, read } = files(sources);
+    const intent = setValue(grid, at('B1'), 5, read);
 
     expect(intent.kind === 'refused' && intent.why).toContain('holds a formula');
   });
@@ -176,8 +176,8 @@ describe('typing a formula into a cell', () => {
     // workbook showing something else until Excel recomputes.
     const cell = 'B1: { formula: "SUM(A1:A2)", value: 4150000 }';
     const sources = { [ROOT]: `${SALES}    cells:\n      ${cell}\n` };
-    const { grid, text } = files(sources);
-    const intent = setValue(grid, at('B1'), 5, text);
+    const { grid, read } = files(sources);
+    const intent = setValue(grid, at('B1'), 5, read);
 
     expect(intent.kind === 'refused' && intent.why).toContain('holds a formula');
   });
@@ -187,8 +187,8 @@ describe('typing a formula into a cell', () => {
     // spelling: the `>-` and its chomping sit outside the body and stay put.
     const folded = `${SALES}    cells:\n      B1:\n        formula: >-\n          IF(A1="", "",\n          SUM(A1:A2))\n`;
     const sources = { [ROOT]: folded };
-    const { grid, text } = files(sources);
-    const after = edited(sources, setFormula(grid, at('B1'), 'SUM(A1:A2)*2', text));
+    const { grid, read } = files(sources);
+    const after = edited(sources, setFormula(grid, at('B1'), 'SUM(A1:A2)*2', read));
 
     expect(after).toBe(
       `${SALES}    cells:\n      B1:\n        formula: >-\n          SUM(A1:A2)*2\n`,
@@ -197,9 +197,41 @@ describe('typing a formula into a cell', () => {
 
   it('refuses a cell that holds a value rather than a formula', () => {
     const sources = { [ROOT]: `${SALES}    cells:\n      A1: 1\n` };
-    const { grid, text } = files(sources);
-    const intent = setFormula(grid, at('A1'), 'SUM(B1:B2)', text);
+    const { grid, read } = files(sources);
+    const intent = setFormula(grid, at('A1'), 'SUM(B1:B2)', read);
 
     expect(intent.kind === 'refused' && intent.why).toContain('holds no formula');
+  });
+});
+
+describe('the files an edit reads', () => {
+  const SPEC = `${SALES}    cells:\n      A1: APAC\n`;
+
+  it('parses a file once, however many times its tree is asked for', () => {
+    let reads = 0;
+    const read = reading((file) => {
+      reads += 1;
+      return file === ROOT ? SPEC : null;
+    });
+
+    expect(read.parsed(ROOT)).toBe(read.parsed(ROOT));
+    expect(reads).toBe(1);
+  });
+
+  it('remembers a file it could not read, rather than asking for it again', () => {
+    let reads = 0;
+    const read = reading(() => {
+      reads += 1;
+      return null;
+    });
+
+    expect(read.parsed(ROOT)).toBeNull();
+    expect(read.parsed(ROOT)).toBeNull();
+    expect(reads).toBe(1);
+  });
+
+  it('hands the text through as it stands, for the files it does not parse', () => {
+    const read = reading((file) => (file === ROOT ? 'APAC,1\n' : null));
+    expect(read.text(ROOT)).toBe('APAC,1\n');
   });
 });

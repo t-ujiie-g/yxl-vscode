@@ -4,7 +4,7 @@ import { type IncludeReader, load } from '@yxl-vscode/loader';
 import { type A1Addr, type FilePath, filePath, type SheetName } from '@yxl-vscode/units';
 import { type Ctx, checked } from '@yxl-vscode/verify';
 import { describe, expect, it } from 'vitest';
-import type { Text } from './direct';
+import { reading, type Text } from './direct';
 import { type Candidate, candidates } from './resolve';
 
 const ROOT = filePath('spec.yxl.yaml') ?? ('' as FilePath);
@@ -22,13 +22,13 @@ const SPEC = `sheets:
 
 function files(sources: Record<string, string>) {
   const text: Text = (file) => sources[file] ?? null;
-  const read: IncludeReader = (_from, path) =>
+  const includes: IncludeReader = (_from, path) =>
     sources[path] === undefined ? null : { file: filePath(path) ?? ROOT, source: sources[path] };
 
-  const { doc } = load(parse(sources[ROOT] ?? '', { file: ROOT }), read);
+  const { doc } = load(parse(sources[ROOT] ?? '', { file: ROOT }), includes);
   if (doc === null) throw new Error('did not load');
 
-  return { doc, grid: compile(doc, { read }), text, read };
+  return { doc, grid: compile(doc, { read: includes }), read: reading(text), includes };
 }
 
 function offered(
@@ -37,9 +37,9 @@ function offered(
   typed: string,
   params: Map<string, string> = new Map(),
 ): readonly Candidate[] {
-  const { grid, text } = files({ [ROOT]: source });
+  const { grid, read } = files({ [ROOT]: source });
   return candidates(
-    { grid, text, params },
+    { grid, read, params },
     { sheet: 'Sales' as SheetName, at: at as A1Addr },
     typed,
   );
@@ -51,8 +51,8 @@ function taken(source: string, candidate: Candidate): string {
   if (intent.kind === 'refused') throw new Error(`refused: ${intent.why}`);
   if (intent.kind !== 'edit') throw new Error('a file was written, not a spec');
 
-  const { read } = files({ [ROOT]: source });
-  const ctx: Ctx = { root: ROOT, file: intent.file, read };
+  const { includes } = files({ [ROOT]: source });
+  const ctx: Ctx = { root: ROOT, file: intent.file, read: includes };
   const done = checked(source, intent.patch, intent.expects, ctx);
   if (done.ok === false) throw new Error(`the checker refused it: ${done.diagnostics[0]?.message}`);
   if (done.ok === 'ask') throw new Error('the checker was surprised by it');
@@ -264,9 +264,9 @@ describe('a cell whose value is a field of a CSV', () => {
   /** The candidate for a cell of the block, against a spec that reads the file. */
   const into = (at: string, typed: string) => {
     const sources = { [ROOT]: READS, 'rows.csv': CSV };
-    const { grid, text } = files(sources);
+    const { grid, read } = files(sources);
     return candidates(
-      { grid, text, params: new Map() },
+      { grid, read, params: new Map() },
       { sheet: 'Sales' as SheetName, at: at as A1Addr },
       typed,
     );
@@ -312,11 +312,11 @@ describe('a cell whose value is a field of a CSV', () => {
       [ROOT]: READS.replace('csv: rows.csv', 'json: rows.json'),
       'rows.json': '[["APAC", 1]]',
     };
-    const { grid, text } = files(sources);
+    const { grid, read } = files(sources);
 
     expect(
       candidates(
-        { grid, text, params: new Map() },
+        { grid, read, params: new Map() },
         { sheet: 'Sales' as SheetName, at: 'A1' as A1Addr },
         'LATAM',
       ),
@@ -340,8 +340,8 @@ describe('what it will not offer', () => {
   });
 
   it('says nothing about a sheet that is not there', () => {
-    const { grid, text } = files({ [ROOT]: SPEC });
-    const spec = { grid, text, params: new Map<string, string>() };
+    const { grid, read } = files({ [ROOT]: SPEC });
+    const spec = { grid, read, params: new Map<string, string>() };
 
     expect(candidates(spec, { sheet: 'Nowhere' as SheetName, at: 'C1' as A1Addr }, '=1')).toEqual(
       [],

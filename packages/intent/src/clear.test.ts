@@ -6,25 +6,25 @@ import { type A1Addr, type FilePath, filePath, type SheetName } from '@yxl-vscod
 import { type Ctx, checked } from '@yxl-vscode/verify';
 import { describe, expect, it } from 'vitest';
 import { clearCell, clearRange } from './clear';
-import type { Intent, Text } from './direct';
+import { type Intent, reading, type Text } from './direct';
 
 const ROOT = filePath('spec.yxl.yaml') ?? ('' as FilePath);
 const SALES = 'sheets:\n  - name: Sales\n';
 
 function files(sources: Record<string, string>) {
   const text: Text = (file) => sources[file] ?? null;
-  const read: IncludeReader = (_from, path) =>
+  const includes: IncludeReader = (_from, path) =>
     sources[path] === undefined ? null : { file: filePath(path) ?? ROOT, source: sources[path] };
 
-  const { doc } = load(parse(sources[ROOT] ?? '', { file: ROOT }), read);
+  const { doc } = load(parse(sources[ROOT] ?? '', { file: ROOT }), includes);
   if (doc === null) throw new Error('did not load');
 
-  return { grid: compile(doc, { read }), text, read };
+  return { grid: compile(doc, { read: includes }), text, read: reading(text), includes };
 }
 
 function emptied(source: string, at: string): Intent {
-  const { grid, text } = files({ [ROOT]: source });
-  return clearCell(grid, { sheet: 'Sales' as SheetName, at: at as A1Addr }, text);
+  const { grid, read } = files({ [ROOT]: source });
+  return clearCell(grid, { sheet: 'Sales' as SheetName, at: at as A1Addr }, read);
 }
 
 /** The gesture taken all the way through the checker, which is the only way in. */
@@ -33,8 +33,8 @@ function after(source: string, at: string): string {
   if (intent.kind === 'refused') throw new Error(`refused: ${intent.why}`);
   if (intent.kind !== 'edit') throw new Error('a file was written, not a spec');
 
-  const { read } = files({ [ROOT]: source });
-  const ctx: Ctx = { root: ROOT, file: intent.file, read };
+  const { includes } = files({ [ROOT]: source });
+  const ctx: Ctx = { root: ROOT, file: intent.file, read: includes };
   const done = checked(source, intent.patch, intent.expects, ctx);
   if (done.ok === false) throw new Error(`the checker refused it: ${done.diagnostics[0]?.message}`);
   if (done.ok === 'ask') throw new Error('the checker was surprised by it');
@@ -110,8 +110,12 @@ describe('what emptying will not do', () => {
     const intent = emptied(spec, 'A1');
     if (intent.kind !== 'edit') throw new Error('refused');
 
-    const { read } = files({ [ROOT]: spec });
-    const done = checked(spec, intent.patch, intent.expects, { root: ROOT, file: ROOT, read });
+    const { includes } = files({ [ROOT]: spec });
+    const done = checked(spec, intent.patch, intent.expects, {
+      root: ROOT,
+      file: ROOT,
+      read: includes,
+    });
     if (done.ok !== true) throw new Error('the checker did not apply it');
 
     expect(done.text).toBe(SALES);
@@ -125,8 +129,8 @@ describe('a rectangle emptied as one edit', () => {
     source: string,
     rect: { top: number; left: number; bottom: number; right: number },
   ) => {
-    const { grid, text } = files({ [ROOT]: source });
-    return clearRange(grid, { sheet: 'Sales' as SheetName, rect }, text);
+    const { grid, read } = files({ [ROOT]: source });
+    return clearRange(grid, { sheet: 'Sales' as SheetName, rect }, read);
   };
 
   const applied = (
@@ -137,11 +141,11 @@ describe('a rectangle emptied as one edit', () => {
     if (intent.kind !== 'edit')
       throw new Error(intent.kind === 'refused' ? intent.why : 'not a spec edit');
 
-    const { read } = files({ [ROOT]: source });
+    const { includes } = files({ [ROOT]: source });
     const done = checked(source, intent.patch, intent.expects, {
       root: ROOT,
       file: intent.file,
-      read,
+      read: includes,
     });
     if (done.ok !== true) throw new Error('the checker did not apply it');
     return done.text;
@@ -187,11 +191,11 @@ describe('a rectangle emptied as one edit', () => {
 
   it('takes the mapping out whole where every cell it held is going', () => {
     const spec = `${SALES}    cells:\n      A1: 1\n      B1: 2\n`;
-    const { grid, text } = files({ [ROOT]: spec });
+    const { grid, read } = files({ [ROOT]: spec });
     const intent = clearRange(
       grid,
       { sheet: 'Sales' as SheetName, rect: { top: 1, left: 1, bottom: 1, right: 2 } },
-      text,
+      read,
     );
     if (intent.kind !== 'edit') throw new Error('refused');
 
@@ -200,11 +204,11 @@ describe('a rectangle emptied as one edit', () => {
 
   it('comes back byte for byte when a whole mapping went', () => {
     const spec = `${SALES}    cells:\n      A1: 1\n      B1: 2\n`;
-    const { grid, text } = files({ [ROOT]: spec });
+    const { grid, read } = files({ [ROOT]: spec });
     const intent = clearRange(
       grid,
       { sheet: 'Sales' as SheetName, rect: { top: 1, left: 1, bottom: 1, right: 2 } },
-      text,
+      read,
     );
     if (intent.kind !== 'edit') throw new Error('refused');
 
@@ -216,5 +220,23 @@ describe('a rectangle emptied as one edit', () => {
   it('refuses a rectangle with nothing in it, rather than writing nothing', () => {
     const intent = rectangle(GRID, { top: 8, left: 8, bottom: 9, right: 9 });
     expect(intent.kind === 'refused' && intent.why).toContain('nothing in this range');
+  });
+
+  it('reads the file once, however many cells the rectangle holds', () => {
+    const { grid, text } = files({ [ROOT]: GRID });
+    let reads = 0;
+    const counted: Text = (file) => {
+      reads += 1;
+      return text(file);
+    };
+
+    const intent = clearRange(
+      grid,
+      { sheet: 'Sales' as SheetName, rect: { top: 1, left: 1, bottom: 2, right: 2 } },
+      reading(counted),
+    );
+
+    expect(intent.kind).toBe('edit');
+    expect(reads).toBe(1);
   });
 });

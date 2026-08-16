@@ -14,7 +14,9 @@ import {
   type Meaning,
   meaning,
   override,
+  type Reading,
   type Resolving,
+  reading,
   type Says,
   setFormula,
   setValue,
@@ -82,16 +84,17 @@ export async function write(spec: Spec, typed: Typed, port: Port, anyway = false
   const at = addrAt({ col: typed.col, row: typed.row });
   const where = { sheet, at };
 
+  const read = reading(port.text);
   const meant = meaning(typed.text);
   const intent =
     meant.is === 'formula'
-      ? setFormula(spec.grid, where, meant.body, port.text)
+      ? setFormula(spec.grid, where, meant.body, read)
       : meant.is === 'empty'
-        ? clearCell(spec.grid, where, port.text)
-        : setValue(spec.grid, where, meant.value, port.text);
+        ? clearCell(spec.grid, where, read)
+        : setValue(spec.grid, where, meant.value, read);
 
   if (intent.kind === 'refused') {
-    const answers = candidates(resolving(spec, port), where, typed.text);
+    const answers = candidates(resolving(spec, read), where, typed.text);
 
     // An edit with one meaning applies; only one with several is a question (ADR-001).
     const sole = answers.length === 1 ? answers[0] : undefined;
@@ -126,12 +129,13 @@ export async function empty(spec: Spec, ranged: Ranged, port: Port, only = false
     return;
   }
 
+  const read = reading(port.text);
   const { top, left, bottom, right } = ranged;
   const where = { sheet, rect: { top, left, bottom, right } };
-  const intent = clearRange(spec.grid, where, port.text, only);
+  const intent = clearRange(spec.grid, where, read, only);
 
   if (intent.kind === 'refused' && !only) {
-    const some = clearRange(spec.grid, where, port.text, true);
+    const some = clearRange(spec.grid, where, read, true);
     port.refuse(intent.why, some.kind === 'edit' ? theseOnly(ranged, some.expects.cells) : null);
     return;
   }
@@ -205,7 +209,7 @@ export async function resolve(
   }
 
   const at = addrAt({ col: typed.col, row: typed.row });
-  const answers = candidates(resolving(spec, port), { sheet, at }, typed.text);
+  const answers = candidates(resolving(spec, reading(port.text)), { sheet, at }, typed.text);
   const taken = answers.find((one) => one.id === choice);
 
   if (taken === undefined) {
@@ -225,9 +229,9 @@ function value(meant: Meaning): string | number | boolean | null {
   return meant.is === 'value' ? meant.value : null;
 }
 
-/** The spec as the resolver needs it: what it draws, its text, and its settings. */
-function resolving(spec: Spec, port: Port): Resolving {
-  return { grid: spec.grid, text: port.text, params: spec.params };
+/** The spec as the resolver needs it: what it draws, the files it is written in, and its settings. */
+function resolving(spec: Spec, read: Reading): Resolving {
+  return { grid: spec.grid, read, params: spec.params };
 }
 
 /** A candidate as the view shows one: what it does, and what it would move. */
@@ -260,7 +264,7 @@ export async function writeOverride(
 
   const done = await applied(
     spec,
-    override(spec.doc, spec.grid, { sheet, at }, says, port.text),
+    override(spec.doc, spec.grid, { sheet, at }, says, reading(port.text)),
     port,
     { anyway: false, from: null, typed },
   );

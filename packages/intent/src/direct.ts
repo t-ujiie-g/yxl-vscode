@@ -5,7 +5,15 @@ import {
   type FacetOrigin,
   sheetOf,
 } from '@yxl-vscode/compile';
-import { type Node, nodeAt, type Op, type Path, parse, type Value } from '@yxl-vscode/cst';
+import {
+  type Node,
+  nodeAt,
+  type Op,
+  type Parsed,
+  type Path,
+  parse,
+  type Value,
+} from '@yxl-vscode/cst';
 import { pathOf } from '@yxl-vscode/loader';
 import type { Patch } from '@yxl-vscode/patch';
 import {
@@ -41,6 +49,33 @@ export type Intent =
 export type Text = (file: FilePath) => string | null;
 
 /**
+ * The files an edit reads: their text, and the tree parsed from it — which is
+ * worked out once per file however many cells of a rectangle ask for it.
+ */
+export interface Reading {
+  readonly text: Text;
+  readonly parsed: (file: FilePath) => Parsed | null;
+}
+
+/** A reading of the files as they stand, which parses one the first time something asks for its tree. */
+export function reading(text: Text): Reading {
+  const trees = new Map<FilePath, Parsed | null>();
+
+  return {
+    text,
+    parsed: (file) => {
+      const already = trees.get(file);
+      if (already !== undefined) return already;
+
+      const source = text(file);
+      const tree = source === null ? null : parse(source, { file });
+      trees.set(file, tree);
+      return tree;
+    },
+  };
+}
+
+/**
  * Typing a value into a cell one node of the spec answers for. Everything else
  * has more than one answer or none, and is a refusal with a reason (ADR-006).
  */
@@ -48,7 +83,7 @@ export function setValue(
   grid: CompiledGrid,
   where: { sheet: SheetName; at: A1Addr },
   value: string | number | boolean | null,
-  text: Text,
+  read: Reading,
 ): Intent {
   const sheet = sheetOf(grid, where.sheet);
   if (sheet === null) return refused(`there is no sheet named \`${where.sheet}\``);
@@ -56,7 +91,7 @@ export function setValue(
   const cell = cellAt(sheet, where.at);
   if (cell === null) return refused(`nothing writes \`${where.at}\` yet`);
 
-  const found = valuePath(cell.provenance.value, sheet, where.at, text);
+  const found = valuePath(cell.provenance.value, sheet, where.at, read);
   if (found.kind === 'refused') return found;
 
   return {
@@ -87,7 +122,7 @@ export function setFormula(
   grid: CompiledGrid,
   where: { sheet: SheetName; at: A1Addr },
   formula: string,
-  text: Text,
+  read: Reading,
 ): Intent {
   const sheet = sheetOf(grid, where.sheet);
   if (sheet === null) return refused(`there is no sheet named \`${where.sheet}\``);
@@ -96,7 +131,7 @@ export function setFormula(
   if (cell === null) return refused(`nothing writes \`${where.at}\` yet`);
   if (cell.formula === null) return refused(`\`${where.at}\` holds no formula to change`);
 
-  const written = literalPath(cell.provenance.value, sheet, where.at, text);
+  const written = literalPath(cell.provenance.value, sheet, where.at, read);
   if (written.kind === 'refused') return written;
 
   const at = written.node;
@@ -121,9 +156,9 @@ export type Found =
   | { kind: 'refused'; why: string };
 
 /** Where a value is written, for the origins one node can be edited through. */
-function valuePath(origin: FacetOrigin, sheet: CompiledSheet, at: A1Addr, text: Text): Found {
+function valuePath(origin: FacetOrigin, sheet: CompiledSheet, at: A1Addr, read: Reading): Found {
   if (origin.kind === 'inline') {
-    const block = located(origin.node, text);
+    const block = located(origin.node, read);
     if (block.kind === 'refused') return block;
 
     return {
@@ -132,7 +167,7 @@ function valuePath(origin: FacetOrigin, sheet: CompiledSheet, at: A1Addr, text: 
     };
   }
 
-  const written = literalPath(origin, sheet, at, text);
+  const written = literalPath(origin, sheet, at, read);
   if (written.kind === 'refused') return written;
 
   if (written.node.kind !== 'map') return written;
@@ -151,11 +186,11 @@ function valuePath(origin: FacetOrigin, sheet: CompiledSheet, at: A1Addr, text: 
 }
 
 /** The node that wrote a cell, where one node did. */
-function literalPath(origin: FacetOrigin, sheet: CompiledSheet, at: A1Addr, text: Text): Found {
+function literalPath(origin: FacetOrigin, sheet: CompiledSheet, at: A1Addr, read: Reading): Found {
   switch (origin.kind) {
     case 'literal':
     case 'override':
-      return located(origin.node, text);
+      return located(origin.node, read);
 
     case 'defRef':
       return refused(
@@ -176,12 +211,12 @@ function literalPath(origin: FacetOrigin, sheet: CompiledSheet, at: A1Addr, text
       );
 
     case 'inline':
-      return located(origin.node, text);
+      return located(origin.node, read);
 
     case 'empty':
       return origin.node === null
         ? refused(`nothing writes \`${at}\` yet`)
-        : located(origin.node, text);
+        : located(origin.node, read);
 
     default:
       return refused(`\`${at}\` on \`${sheet.name}\` holds nothing to change yet`);
@@ -189,15 +224,14 @@ function literalPath(origin: FacetOrigin, sheet: CompiledSheet, at: A1Addr, text
 }
 
 /** The node an id names, read out of the file it lives in. */
-export function located(id: NodeId, text: Text): Found {
+export function located(id: NodeId, read: Reading): Found {
   const where = pathOf(id);
   if (where === null) return refused('this cell has no place in the file to edit');
 
-  const source = text(where.file);
-  if (source === null) return refused(`\`${where.file}\` could not be read`);
+  const tree = read.parsed(where.file);
+  if (tree === null) return refused(`\`${where.file}\` could not be read`);
 
-  const { root } = parse(source, { file: where.file });
-  const node = root === null ? null : nodeAt(root, where.path);
+  const node = tree.root === null ? null : nodeAt(tree.root, where.path);
   if (node === null)
     return refused(`nothing is at \`${where.path.join('.')}\` in \`${where.file}\``);
 
