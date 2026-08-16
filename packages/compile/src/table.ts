@@ -55,7 +55,11 @@ export function asCsvField(value: ScalarValue): string {
   if (value === null) return '';
   if (typeof value !== 'string') return String(value);
 
-  const quoted = /[",\r\n]/.test(value) || NUMBER.test(value) || BOOLEAN.test(value);
+  // A space inside a field needs nothing (RFC 4180), but one at either end is
+  // what half the readers in the world trim, so it is written quoted.
+  const quoted =
+    /[",\r\n]/.test(value) || /^\s|\s$/.test(value) || NUMBER.test(value) || BOOLEAN.test(value);
+
   return quoted ? `"${value.replace(/"/g, '""')}"` : value;
 }
 

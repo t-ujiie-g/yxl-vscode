@@ -2011,6 +2011,14 @@ this at a phase boundary rather than at the end.
 - Tier 4 follows it into the workbook: `Masters!B2` typed, `stores.csv` changed
   in one field, and the built `.xlsx` holding the new store name. 15 new tests,
   1124 in total.
+- **The preview watches what it read, not what it can name.** A CSV is a file
+  the spec is *made of* and has no node in it, so the rule that asked "does any
+  node of the drawing live in this file?" said no and the grid kept the old
+  value. The redraw now records every file the reader answered for while
+  drawing — the spec, its `$include`s, and its data files — and watches that.
+  `knows` was the old rule and is gone with it.
+- A space *inside* a field needs no quotes and does not get them; one at either
+  end does, because that is what half the readers in the world trim.
 
 ### 2026-08-16 — Phase 7: the parameter row, and what a parameter reaches
 

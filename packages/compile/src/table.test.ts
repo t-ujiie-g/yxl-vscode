@@ -143,8 +143,20 @@ describe('a field of a CSV, as a writer needs it', () => {
     ]);
   });
 
+  it('leaves a space inside a field alone and quotes one at either end', () => {
+    // RFC 4180 asks for neither, but a leading or trailing space is what half
+    // the readers in the world trim — so it is written where it cannot be lost.
+    expect([asCsvField('Shinjuku West'), asCsvField(' West'), asCsvField('West ')]).toEqual([
+      'Shinjuku West',
+      '" West"',
+      '"West "',
+    ]);
+  });
+
   it('round-trips what it writes through the reader that reads it', () => {
-    const written = ['007', 'north, south', 'say "hi"', 42, true].map(asCsvField).join(',');
-    expect(rows(readCsv(`${written}\n`))).toEqual([['007', 'north, south', 'say "hi"', 42, true]]);
+    const values = ['007', 'north, south', 'say "hi"', ' padded ', 'Shinjuku West', 42, true];
+    const written = values.map(asCsvField).join(',');
+
+    expect(rows(readCsv(`${written}\n`))).toEqual([values]);
   });
 });

@@ -136,18 +136,6 @@ export function nodeUnder(nodes: Nodes, file: string, offset: number): NodeId | 
   return found;
 }
 
-/**
- * Whether the spec was read from this file at all.
- *
- * A modular workbook writes almost everything in `$include`d files, so a
- * preview that followed only the file it was opened on would follow nothing
- * worth following.
- */
-export function knows(nodes: Nodes, file: string): boolean {
-  for (const node of nodes.values()) if (node.file === file) return true;
-  return false;
-}
-
 interface Described {
   readonly file: string;
   readonly span: { readonly start: number; readonly end: number };
