@@ -1,10 +1,18 @@
 import { type CompiledGrid, cellAt, type DataReader, type Setting } from '@yxl-vscode/compile';
-import { type Intent, override, type Says, setFormula, setValue } from '@yxl-vscode/intent';
+import {
+  type Candidate,
+  candidates,
+  type Intent,
+  override,
+  type Says,
+  setFormula,
+  setValue,
+} from '@yxl-vscode/intent';
 import type { IncludeReader } from '@yxl-vscode/loader';
 import type { SpecDoc } from '@yxl-vscode/spec';
 import { type A1Addr, addrAt, type FilePath, type SheetName, sheetName } from '@yxl-vscode/units';
 import { type Change, checked } from '@yxl-vscode/verify';
-import type { Typed } from '@yxl-vscode/webview/protocol';
+import type { Choice, Typed } from '@yxl-vscode/webview/protocol';
 
 /**
  * What the write needs of the world outside it.
@@ -17,7 +25,7 @@ import type { Typed } from '@yxl-vscode/webview/protocol';
 export interface Port {
   readonly text: (file: FilePath) => string | null;
   readonly put: (file: FilePath, text: string) => void | Promise<void>;
-  readonly refuse: (why: string, override: Typed | null) => void;
+  readonly refuse: (why: string, override: Typed | null, choices: readonly Choice[]) => void;
   readonly said: (what: string) => void;
 }
 
@@ -41,7 +49,7 @@ export interface Spec {
 export async function write(spec: Spec, typed: Typed, port: Port): Promise<void> {
   const sheet = sheetName(typed.sheet);
   if (sheet === null) {
-    port.refuse(`\`${typed.sheet}\` is not a name a sheet can have`, null);
+    port.refuse(`\`${typed.sheet}\` is not a name a sheet can have`, null, []);
     return;
   }
 
@@ -55,11 +63,50 @@ export async function write(spec: Spec, typed: Typed, port: Port): Promise<void>
     : setValue(spec.grid, where, meant(typed.text), port.text);
 
   if (intent.kind === 'refused') {
-    port.refuse(intent.why, exception(spec, where, typed));
+    const answers = candidates(spec.grid, where, typed.text, port.text);
+    port.refuse(intent.why, exception(spec, where, typed), answers.map(shown));
     return;
   }
 
   await applied(spec, intent, port);
+}
+
+/**
+ * One of the answers to a refused edit, taken.
+ *
+ * The candidates are worked out again rather than remembered from the refusal:
+ * the spec may have been edited by hand since it was shown, and an answer
+ * computed against a file that has moved on is an answer to a question nobody
+ * asked.
+ */
+export async function resolve(spec: Spec, typed: Typed, choice: string, port: Port): Promise<void> {
+  const sheet = sheetName(typed.sheet);
+  if (sheet === null) {
+    port.refuse(`\`${typed.sheet}\` is not a name a sheet can have`, null, []);
+    return;
+  }
+
+  const at = addrAt({ col: typed.col, row: typed.row });
+  const answers = candidates(spec.grid, { sheet, at }, typed.text, port.text);
+  const taken = answers.find((one) => one.id === choice);
+
+  if (taken === undefined) {
+    port.refuse('that answer is no longer one of the ways this edit could be made', null, []);
+    return;
+  }
+
+  const done = await applied(spec, taken.intent, port);
+  if (done) port.said(`${taken.what.replace(/^C/, 'c')}: ${taken.moves.length} cells changed.`);
+}
+
+/** A candidate as the view shows one: what it does, and what it would move. */
+function shown(candidate: Candidate): Choice {
+  return {
+    id: candidate.id,
+    what: candidate.what,
+    moves: candidate.moves.length,
+    sample: candidate.moves.slice(0, 3).map((one) => one.at),
+  };
 }
 
 /**
@@ -78,7 +125,7 @@ export async function writeOverride(
 ): Promise<void> {
   const sheet = sheetName(typed.sheet);
   if (sheet === null) {
-    port.refuse(`\`${typed.sheet}\` is not a name a sheet can have`, null);
+    port.refuse(`\`${typed.sheet}\` is not a name a sheet can have`, null, []);
     return;
   }
 
@@ -98,13 +145,13 @@ export async function writeOverride(
 /** The half of a write that is the same whichever intent produced it. */
 async function applied(spec: Spec, intent: Intent, port: Port): Promise<boolean> {
   if (intent.kind === 'refused') {
-    port.refuse(intent.why, null);
+    port.refuse(intent.why, null, []);
     return false;
   }
 
   const source = port.text(intent.file);
   if (source === null) {
-    port.refuse(`${intent.file} could not be read`, null);
+    port.refuse(`${intent.file} could not be read`, null, []);
     return false;
   }
 
@@ -116,11 +163,11 @@ async function applied(spec: Spec, intent: Intent, port: Port): Promise<boolean>
   });
 
   if (done.ok === false) {
-    port.refuse(done.diagnostics[0]?.message ?? surprising(done.surprises), null);
+    port.refuse(done.diagnostics[0]?.message ?? surprising(done.surprises), null, []);
     return false;
   }
   if (done.ok === 'ask') {
-    port.refuse(surprising(done.surprises), null);
+    port.refuse(surprising(done.surprises), null, []);
     return false;
   }
 

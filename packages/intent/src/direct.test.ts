@@ -106,9 +106,17 @@ describe('what typing into a cell will not do', () => {
     expect(intent.kind === 'refused' && intent.why).toContain('sales.csv');
   });
 
-  it('refuses a cell a `formulas:` range fills, and names the range it belongs to', () => {
+  it('refuses a cell a `formulas:` range fills, and says where to change them all', () => {
     const spec = `${SALES}    cells:\n      A1: 1\n    formulas:\n      - at: B1:B2\n        formula: "A1"\n`;
-    expect(why({ [ROOT]: spec }, 'B2')).toContain('filled by the range anchored at `B1`');
+    const said = why({ [ROOT]: spec }, 'B2');
+
+    expect(said).toContain('filled by the range anchored at `B1`');
+    expect(said).toContain('change it at `B1`');
+  });
+
+  it('says what the anchor is, at the anchor, rather than sending the reader to it', () => {
+    const spec = `${SALES}    cells:\n      A1: 1\n    formulas:\n      - at: B1:B2\n        formula: "A1"\n`;
+    expect(why({ [ROOT]: spec }, 'B1')).toContain('changing it changes every cell');
   });
 
   it('refuses a cell that holds a parameter', () => {

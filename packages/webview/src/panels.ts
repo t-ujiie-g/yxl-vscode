@@ -1,6 +1,6 @@
 import { columnLabel } from '@yxl-vscode/units';
 import type { Asks, Reached, Showing } from './draw';
-import type { Drawing, Refused, Uncomputed } from './protocol';
+import type { Choice, Drawing, Refused, Uncomputed } from './protocol';
 
 /**
  * Everything the preview says around the grid: the parameters to turn, the tabs
@@ -69,12 +69,14 @@ export function uncomputed(said: Uncomputed): string {
 }
 
 /**
- * Why an edit did not happen, said where the edit was attempted — and, where
- * there is one, the way it could still be made.
+ * Why an edit did not happen, said where the edit was attempted — and the ways
+ * it could still be made.
  *
- * The way is `overrides:`, which is the exception said out loud
- * (`docs/spec.md` §23). It is offered rather than taken: an escape hatch that
- * opens on its own is not an escape hatch (ADR-007).
+ * The ways are the answers the edit has, each saying what it would move, and
+ * then `overrides:` — the exception said out loud (`docs/spec.md` §23). All of
+ * them are offered rather than taken: the editor enumerates and the reader
+ * picks (ADR-001), and an escape hatch that opens on its own is not an escape
+ * hatch (ADR-007).
  */
 export function refusal(refused: Refused, asks: Asks): HTMLElement {
   const said = document.createElement('p');
@@ -83,6 +85,15 @@ export function refusal(refused: Refused, asks: Asks): HTMLElement {
 
   const typed = refused.override;
   if (typed === null) return said;
+
+  for (const choice of refused.choices) {
+    const pick = document.createElement('button');
+    pick.type = 'button';
+    pick.className = 'choice';
+    pick.textContent = `${choice.what} — ${moved(choice)}`;
+    pick.addEventListener('click', () => asks.resolveWith(typed, choice.id));
+    said.append(' ', pick);
+  }
 
   // The reason is asked for here rather than in a box of the editor's, because
   // the reader is looking at this sentence and because an override with no
@@ -103,6 +114,15 @@ export function refusal(refused: Refused, asks: Asks): HTMLElement {
 
   said.append(' ', why, ' ', go);
   return said;
+}
+
+/** What a choice would move, as a count a reader can act on and a few names. */
+function moved(choice: Choice): string {
+  const cells = `${choice.moves} cell${choice.moves === 1 ? '' : 's'}`;
+  if (choice.sample.length === 0) return cells;
+
+  const rest = choice.moves > choice.sample.length ? ', …' : '';
+  return `${cells} (${choice.sample.join(', ')}${rest})`;
 }
 
 /** That this cell cannot be typed into, in the terms of what stands in the way. */

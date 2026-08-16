@@ -1,13 +1,13 @@
 import { copyFileSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { type CompiledGrid, compile } from '@yxl-vscode/compile';
+import { type CompiledGrid, cellAt, compile } from '@yxl-vscode/compile';
 import { parse } from '@yxl-vscode/cst';
 import { load } from '@yxl-vscode/loader';
 import { type A1Addr, type FilePath, filePath, type SheetName } from '@yxl-vscode/units';
 import type { Typed } from '@yxl-vscode/webview/protocol';
 import { describe, expect, it } from 'vitest';
-import { type Port, type Spec, write, writeOverride } from 'yxl-vscode/write';
+import { type Port, resolve, type Spec, write, writeOverride } from 'yxl-vscode/write';
 import { includeReader, yxlExamples } from './corpus';
 import { build, extract, oracleVersion, PINNED } from './oracle';
 
@@ -73,7 +73,8 @@ function built(dir: string, root: FilePath): CompiledGrid {
 }
 
 function cell(grid: CompiledGrid, sheet: string, at: string) {
-  return grid.sheets.find((one) => one.name === (sheet as SheetName))?.cells.get(at as A1Addr);
+  const found = grid.sheets.find((one) => one.name === (sheet as SheetName));
+  return found === undefined ? null : cellAt(found, at as A1Addr);
 }
 
 const typed = (of: Partial<Typed>): Typed => ({ sheet: 'Sales', row: 1, col: 1, text: '', ...of });
@@ -126,5 +127,25 @@ describe('the loop, closed', () => {
     const grid = built(dir, root);
     expect(cell(grid, 'Sales', 'C3')?.value).toBe(99);
     expect(cell(grid, 'Sales', 'C2')?.formula).toBe('B2*0.05');
+  });
+
+  it('carries a resolved range formula into every cell the range fills', async () => {
+    if (!QUICKSTART) return;
+    const { dir, root, port, spec, refusals } = opened(QUICKSTART);
+    const at = typed({ row: 2, col: 3, text: '=B2*0.1' });
+
+    // C2:C3 is one formula for two cells, so the edit has an answer rather than
+    // a single meaning: change the range, and both cells follow it.
+    await write(spec(), at, port);
+    expect(refusals).toHaveLength(1);
+
+    await resolve(spec(), at, 'rangeFormula', port);
+    expect(refusals).toHaveLength(1);
+
+    const grid = built(dir, root);
+    expect([cell(grid, 'Sales', 'C2')?.formula, cell(grid, 'Sales', 'C3')?.formula]).toEqual([
+      'B2*0.1',
+      'B2*0.1',
+    ]);
   });
 });

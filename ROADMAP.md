@@ -758,8 +758,18 @@ the inverse is unique, so no dialog is needed yet.
 ### Phase 7 — `mediated` write-back
 Where it starts to feel like a spreadsheet.
 - [ ] The §4.4 resolution table, row by row
-- [ ] Resolution dialog: candidates, each with a pre-computed impact summary and
+      **`formulaRange` ①** is in: a formula typed into the cell a `formulas:`
+      range is anchored at is offered as *the range's* formula, and taking it
+      changes every cell the range fills. ② (split the range) and ① away from
+      the anchor wait on §8 Q2, and the refusal points the reader at the anchor
+      meanwhile. The other rows are next.
+- [x] Resolution dialog: candidates, each with a pre-computed impact summary and
       a sample of affected cells
+      **Shipped**, as answers under the grid rather than a modal over it: each
+      one says what it does and what it would move — `4 cells (B2, B3, B4, …)` —
+      and the reader picks. Nothing is picked for them (ADR-001), and the
+      candidates are worked out again when one is chosen, because the file may
+      have been edited by hand since it was offered.
 - [ ] `normalize`: the style normalizer, ahead of every style write (ADR-008)
 - [ ] Range edits with mixed origins
 - [ ] `external` origins: edit the companion CSV/JSON, or divert to `overrides:`
@@ -1361,9 +1371,13 @@ line begins.
   scattered case? Decide before Phase 8.
 - **Q2 — How much formula translation do we do?** Splitting or extending a
   `formulas:` range requires translating relative references. Needs a formula
-  parser (the Phase 5 evaluation engine has one). Prototype during Phase 5, when
-  the parser is already in the build, and decide before Phase 7 commits to the
-  `formulaRange` resolutions.
+  parser (the Phase 5 evaluation engine has one). **Now the blocker for the rest
+  of the `formulaRange` row**: changing the range's formula is offered *at its
+  anchor*, where what the reader typed is what the range says, and nowhere else
+  — `=B3*0.1` typed one row down means `B2*0.1` to the range, and shifting it
+  back is this question. Splitting the range is the same question again. Decide
+  before the row is finished; the shift itself belongs in `units`, beside the
+  addresses it rewrites, rather than in the evaluation engine (ADR-014).
 - **Q3 — External change detection.** ✅ *Answered 2026-08-15 (ADR-023).* Discard
   the AST and re-derive — and there is no selection state to lose, because what
   the UI keeps is names and addresses rather than nodes. The one thing that
@@ -1745,6 +1759,29 @@ this at a phase boundary rather than at the end.
   two serials either side of it, so the next reader knows it is deliberate.
 - A cell's own format — written, or the one its type takes — now wins over a
   band's. Both are requests about *that* cell; a band is something reaching it.
+
+### 2026-08-16 — Phase 7: the first row of the resolution table, and the way to choose
+
+- **A cell filled by a `formulas:` range can be edited now** — by changing the
+  range's own formula. The refusal that used to be the end of it now carries the
+  answers the edit has, each saying what it would move: *Change the formula of
+  the range at C2 — 2 cells (C2, C3)*. Pick one and it is written; pick none and
+  nothing happens. The editor enumerates, the reader chooses (ADR-001).
+- **Offered at the range's anchor only**, which is a decision rather than a
+  gap. What a reader types is written *for the cell they typed it into*, and
+  `=B3*0.1` one row down means `B2*0.1` to the range; shifting it back is
+  reference translation (§8 Q2), and offering it without would be the editor
+  guessing at an answer off by a row. Everywhere else in the range the refusal
+  now points at the anchor, and the override is still there.
+- **The candidates are worked out again when one is taken**, not remembered from
+  when they were shown: the spec may have been edited by hand in between, and an
+  answer computed against a file that has moved on is an answer to a question
+  nobody asked.
+- The claim a range edit makes is *every cell the range fills*, computed with
+  the same `reaches` the inspector highlights with — so the checker's verdict
+  and the number the reader was shown come from one place.
+- Tier 4 follows it to the workbook: refused, resolved, built, and both cells of
+  the range hold the new formula. 12 new tests, 1044 in total.
 
 ### 2026-08-16 — Refactoring pass at the Phase 6 boundary (`AGENTS.md` §8)
 Walked the lenses in order over everything Phase 6 landed. No defects this time

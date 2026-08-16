@@ -2,9 +2,9 @@ import { compile } from '@yxl-vscode/compile';
 import { parse } from '@yxl-vscode/cst';
 import { type IncludeReader, load } from '@yxl-vscode/loader';
 import { type FilePath, filePath } from '@yxl-vscode/units';
-import type { Typed } from '@yxl-vscode/webview/protocol';
+import type { Choice, Typed } from '@yxl-vscode/webview/protocol';
 import { describe, expect, it } from 'vitest';
-import { type Port, type Spec, write, writeOverride } from './write';
+import { type Port, resolve, type Spec, write, writeOverride } from './write';
 
 const ROOT = filePath('/specs/report.yxl.yaml') ?? ('' as FilePath);
 
@@ -23,22 +23,24 @@ function editor(sources: Record<string, string>) {
 
   const spec: Spec = { root: ROOT, doc, grid: compile(doc, { read }), read, params: new Map() };
   const offers: (Typed | null)[] = [];
+  const answers: Choice[][] = [];
   const told: string[] = [];
   const port: Port = {
     text: (file) => files[file] ?? null,
     put: (file, text) => {
       files[file] = text;
     },
-    refuse: (why, override) => {
+    refuse: (why, override, choices) => {
       refusals.push(why);
       offers.push(override);
+      answers.push([...choices]);
     },
     said: (what) => {
       told.push(what);
     },
   };
 
-  return { spec, port, files, refusals, offers, told };
+  return { spec, port, files, refusals, offers, answers, told };
 }
 
 const typed = (of: Partial<Typed> = {}): Typed => ({
@@ -210,5 +212,47 @@ describe('what a reader typed, and did not get', () => {
     await write(read, typed({ sheet: 'Nowhere' }), port);
     expect(refusals[0]).toContain('no sheet named');
     expect(files[ROOT]).toBe(spec[ROOT]);
+  });
+});
+
+describe('the answers an edit has, when it has more than one', () => {
+  const RANGE = `${SALES}    cells:\n      A1: 1\n      A2: 2\n    formulas:\n      - at: B1:B2\n        formula: "A1*2"\n`;
+  const at = typed({ row: 1, col: 2, text: '=A1*3' });
+
+  it('offers the range its own formula, with every cell it would move', async () => {
+    const { spec, port, answers } = editor({ [ROOT]: RANGE });
+
+    await write(spec, at, port);
+    expect(answers[0]).toEqual([
+      {
+        id: 'rangeFormula',
+        what: 'Change the formula of the range at `B1`',
+        moves: 2,
+        sample: ['B1', 'B2'],
+      },
+    ]);
+  });
+
+  it('writes the one the reader chose, and says what it moved', async () => {
+    const { spec, port, files, told } = editor({ [ROOT]: RANGE });
+
+    await resolve(spec, at, 'rangeFormula', port);
+    expect(files[ROOT]).toContain('formula: "A1*3"');
+    expect(told[0]).toContain('2 cells');
+  });
+
+  it('refuses an answer that is not one of the ones offered', async () => {
+    const { spec, port, refusals, files } = editor({ [ROOT]: RANGE });
+
+    await resolve(spec, at, 'somethingElse', port);
+    expect(refusals[0]).toContain('no longer one of the ways');
+    expect(files[ROOT]).toBe(RANGE);
+  });
+
+  it('offers nothing where the edit had one answer all along', async () => {
+    const { spec, port, answers } = editor({ [ROOT]: `${SALES}    cells:\n      A1: APAC\n` });
+
+    await write(spec, typed({ text: '=A2' }), port);
+    expect(answers[0]).toEqual([]);
   });
 });

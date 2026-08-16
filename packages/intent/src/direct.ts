@@ -7,7 +7,13 @@ import {
 import { type Node, nodeAt, type Path, parse } from '@yxl-vscode/cst';
 import { pathOf } from '@yxl-vscode/loader';
 import type { Patch } from '@yxl-vscode/patch';
-import { type A1Addr, type FilePath, qualified, type SheetName } from '@yxl-vscode/units';
+import {
+  type A1Addr,
+  type FilePath,
+  type NodeId,
+  qualified,
+  type SheetName,
+} from '@yxl-vscode/units';
 import type { Expects } from '@yxl-vscode/verify';
 
 /**
@@ -99,7 +105,7 @@ export function setFormula(
   };
 }
 
-type Found =
+export type Found =
   | { kind: 'found'; file: FilePath; path: Path; node: Node }
   | { kind: 'refused'; why: string };
 
@@ -158,7 +164,9 @@ function literalPath(origin: FacetOrigin, sheet: CompiledSheet, at: A1Addr, text
 
     case 'formulaRange':
       return refused(
-        `\`${at}\` is filled by the range anchored at \`${origin.anchor}\`, which writes one formula for every cell it covers`,
+        origin.anchor === at
+          ? `\`${at}\` is where this range's one formula is written, and changing it changes every cell the range fills`
+          : `\`${at}\` is filled by the range anchored at \`${origin.anchor}\`, which writes one formula for every cell it covers — change it at \`${origin.anchor}\` to change them all`,
       );
 
     case 'inline':
@@ -170,8 +178,8 @@ function literalPath(origin: FacetOrigin, sheet: CompiledSheet, at: A1Addr, text
 }
 
 /** The node an id names, read out of the file it lives in. */
-function located(id: string, text: Text): Found {
-  const where = pathOf(id as never);
+export function located(id: NodeId, text: Text): Found {
+  const where = pathOf(id);
   if (where === null) return refused('this cell has no place in the file to edit');
 
   const source = text(where.file);

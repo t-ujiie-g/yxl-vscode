@@ -1,12 +1,12 @@
 import { reaches } from '@yxl-vscode/compile';
 import { type Engine, univerEngine } from '@yxl-vscode/evaluate';
 import { addrAt, cellOf, type FilePath, filePath } from '@yxl-vscode/units';
-import type { FromView, Typed } from '@yxl-vscode/webview/protocol';
+import type { Choice, FromView, Typed } from '@yxl-vscode/webview/protocol';
 import * as vscode from 'vscode';
 import { readBeside } from './files';
 import { inspect, knows, type Nodes, nodeUnder } from './inspect';
 import { type Projected, project, redraw, type Window } from './project';
-import { type Port, type Spec, write, writeOverride } from './write';
+import { type Port, resolve, type Spec, write, writeOverride } from './write';
 
 /** Long enough that typing does not redraw on every keystroke, short enough to feel live. */
 const SETTLE = 150;
@@ -216,6 +216,11 @@ export class Preview {
       return;
     }
 
+    if (asked.kind === 'resolve') {
+      this.tried(this.resolveWith(asked));
+      return;
+    }
+
     if (asked.kind === 'override') {
       this.tried(this.overrideWith(asked));
       return;
@@ -251,11 +256,23 @@ export class Preview {
   private async write(typed: Typed): Promise<void> {
     const spec = this.spec();
     if (spec === null) {
-      this.refuse('this spec has not finished loading', null);
+      this.refuse('this spec has not finished loading', null, []);
       return;
     }
 
     await write(spec, typed, this.port());
+  }
+
+  /** The edit again, made the way the reader chose from the answers it had. */
+  private async resolveWith(asked: Extract<FromView, { kind: 'resolve' }>): Promise<void> {
+    const spec = this.spec();
+    if (spec === null) {
+      this.refuse('this spec has not finished loading', null, []);
+      return;
+    }
+
+    const { kind, choice, ...typed } = asked;
+    await resolve(spec, typed, choice, this.port());
   }
 
   /**
@@ -268,7 +285,7 @@ export class Preview {
   private async overrideWith(asked: Extract<FromView, { kind: 'override' }>): Promise<void> {
     const spec = this.spec();
     if (spec === null) {
-      this.refuse('this spec has not finished loading', null);
+      this.refuse('this spec has not finished loading', null, []);
       return;
     }
 
@@ -285,7 +302,7 @@ export class Preview {
    */
   private tried(work: Promise<void>): void {
     void work.catch((failed: unknown) => {
-      this.refuse(failed instanceof Error ? failed.message : String(failed), null);
+      this.refuse(failed instanceof Error ? failed.message : String(failed), null, []);
     });
   }
 
@@ -302,7 +319,7 @@ export class Preview {
     return {
       text: (file) => this.textOf(file),
       put: (file, text) => this.put(file, text),
-      refuse: (why, override) => this.refuse(why, override),
+      refuse: (why, override, choices) => this.refuse(why, override, choices),
       said: (what) => {
         void this.panel.webview.postMessage({ kind: 'said', text: what });
       },
@@ -316,11 +333,12 @@ export class Preview {
    * edit is something they are in the middle of, and their eyes are on the cell
    * they typed into.
    */
-  private refuse(why: string, override: Typed | null): void {
+  private refuse(why: string, override: Typed | null, choices: readonly Choice[]): void {
     void this.panel.webview.postMessage({
       kind: 'refused',
       why: why.replace(/`/g, ''),
       override,
+      choices: choices.map((one) => ({ ...one, what: one.what.replace(/`/g, '') })),
     });
   }
 
