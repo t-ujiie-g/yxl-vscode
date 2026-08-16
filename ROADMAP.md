@@ -266,17 +266,34 @@ diff-stability work, surfaced at the moment it matters).
 ### 4.5 Patch
 
 ```ts
-type Patch = { ops: Op[]; intent: EditIntent; expectedDiff: ExpectedDiff };
+type Patch = { ops: Op[] };
 ```
 
-Ops address the AST by path (`set`, `delete`, `insertItem`, `removeItem`,
-`renameKey`, `rekeyMap` for bulk A1 shifts) or address a companion file
-(`csvSet`, `csvInsertRow`). Every op has an inverse, so undo/redo is AST-level
-and stays coherent when GUI edits and hand edits to the same file interleave.
-(ADR-010)
+Ops address the YAML tree by path, and come in pairs because every one of them
+has an inverse (ADR-010, ADR-026, ADR-027):
 
-`expectedDiff` is what §4.6 checks against — it is the patch's own claim about
-what it is allowed to change.
+| | |
+|---|---|
+| writes a value | `set` ↔ `write` / `clear` |
+| writes a key | `renameKey` ↔ itself |
+| adds an entry | `insert`, `add`, `insertSource`, `addSource` ↔ `remove` |
+| takes one out | `remove` ↔ `restore` |
+
+`set` and `add` write a *value* and let the renderer choose how; `write`,
+`restore`, `insertSource` and `addSource` write *text*, which is what makes an
+undo byte-exact. Still to come, with the phases that need them: `rekeyMap` for
+the bulk A1 shift a row insertion is, and ops that address a companion CSV or
+JSON file.
+
+What a patch is *allowed* to change is not part of the patch: it is an `Expects`
+passed beside it to §4.6's checker, so the same ops can be applied under a
+stricter or looser claim.
+
+Undo is expressed at this level and **run at the shell's**: the extension
+applies an edit as a VS Code `WorkspaceEdit`, so the editor's own undo takes it
+back and a hand edit and a grid edit share one stack. `patch`'s `History` is the
+same algebra for a shell that has no such stack of its own — Phase 11 — and is
+not wired to anything today.
 
 ### 4.6 The verification loop
 
@@ -1728,6 +1745,38 @@ this at a phase boundary rather than at the end.
   two serials either side of it, so the next reader knows it is deliberate.
 - A cell's own format — written, or the one its type takes — now wins over a
   band's. Both are requests about *that* cell; a band is something reaching it.
+
+### 2026-08-16 — Refactoring pass at the Phase 6 boundary (`AGENTS.md` §8)
+Walked the lenses in order over everything Phase 6 landed. No defects this time
+— the corpus round trip found those while they were being written — so this was
+tidying, and the largest piece of it was a file that had quietly become two.
+
+- **`cst/apply.ts` was 573 lines and two subjects**: writing a scalar in place,
+  and adding, removing and putting back the **entries** of a collection. Split
+  at that line — `apply.ts` is 178 lines and keeps the dispatch, the splice, and
+  the value ops; `entries.ts` holds the eight ops that change what a collection
+  contains. The test file was split along the same seam.
+- **Three unrelated functions were called `nodeAt`.** One is the node at a path
+  (`cst`), one mints a node's identity (`loader`, now `identify`), one finds the
+  node under a cursor (`extension`, now `nodeUnder`). A name that means three
+  things costs a reader a lookup every time.
+- **`removalOf` had no direct test** — only what `patch` exercised through it.
+  Four now, including the reason it hands back when the lines could not go home.
+- **§4.5 described an op algebra that never existed** (`delete`, `insertItem`,
+  `csvSet`) and a `Patch` carrying its own claim, which moved to `Expects`
+  beside it. Rewritten as the ops are, paired with their inverses.
+- **Where undo actually happens is now written down.** The extension applies an
+  edit as a `WorkspaceEdit`, so VS Code's own undo takes it back and a hand edit
+  and a grid edit share one stack; `patch`'s `History` is the same algebra for a
+  shell without one (Phase 11) and is wired to nothing today. It was true and
+  unsaid, which is the state a reader trips over.
+- Comment hygiene: a `§11` pointing at this changelog, a `(§1)`, and two `§n`s
+  that named no document; a phase code narrating what Phase 2 could not do; a
+  sentence in `editabilityOf`'s doc that had lost its full stop.
+- Considered and left alone: `rowAt` / `columnAt` are exported and used only by
+  `wanted` and their own tests, which §8.2 calls a smell — but a scroll position
+  under row 21 clamps to the first window, so testing them through `wanted`
+  would assert nothing. The direct test is the better one.
 
 ### 2026-08-16 — Phase 6 complete: the loop closes on a real workbook
 

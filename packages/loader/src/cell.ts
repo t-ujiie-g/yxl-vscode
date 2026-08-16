@@ -13,7 +13,7 @@ import {
   type Templated,
 } from '@yxl-vscode/spec';
 import { CODE } from './codes';
-import { type Ctx, keyOf, nodeAt, reject } from './ctx';
+import { type Ctx, identify, keyOf, reject } from './ctx';
 import {
   expectSpelling,
   expectText,
@@ -44,7 +44,7 @@ function readCell(ctx: Ctx, entry: Entry, path: Path): Cell | null {
   if (at === null) return null;
 
   const what = `cell \`${key}\``;
-  const site = nodeAt(ctx, [...path, key], entry.span);
+  const site = identify(ctx, [...path, key], entry.span);
 
   if (entry.value.kind !== 'map') {
     const value = expectValue(ctx, entry.value, what);

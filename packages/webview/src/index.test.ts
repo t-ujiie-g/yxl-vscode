@@ -90,7 +90,7 @@ describe('what the view sends', () => {
   it('sends an override as an override, whatever the offer arrived carrying', () => {
     // The offer comes back from the host, and a message carries its own `kind`.
     // Spread into the next one it overwrote it, and the override went out as
-    // the edit it was the exception to — refused by the rule it excepted (§11).
+    // the edit it was the exception to — refused by the rule it excepted.
     const { into, sent, told } = view();
     const offer = { ...typed, kind: 'edit' } as unknown as Typed;
     const refused: Refused = { kind: 'refused', why: 'filled by a range', override: offer };

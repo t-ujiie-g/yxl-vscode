@@ -42,7 +42,7 @@ export interface Host {
  *
  * Takes the page and the host rather than reaching for them, so that what it
  * *sends* can be tested: a message going out under the wrong `kind` is a bug
- * neither the type checker nor a drawing test can see (§11).
+ * neither the type checker nor a drawing test can see.
  */
 export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
   let drawing: Drawing | null = null;

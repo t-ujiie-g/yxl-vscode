@@ -16,7 +16,7 @@ import { filePath } from '@yxl-vscode/units';
  *
  * The two constructs resolve differently, and that is `docs/spec.md`'s rule:
  * an `$include` against the file that wrote it, a `data:` path against the spec
- * that was opened (§8, §9). Both arrive here as `from`, so one function serves
+ * that was opened (`docs/spec.md` §8, §9). Both arrive here as `from`, so one function serves
  * both — the caller decides which `from` it means.
  */
 export const readBeside: IncludeReader & DataReader = (from, path) => {

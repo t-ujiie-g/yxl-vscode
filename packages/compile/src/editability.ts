@@ -43,9 +43,9 @@ export function editabilityOf(origin: FacetOrigin): Editability {
  * How editable one property of a look is, from the layer that supplies it.
  *
  * A definition is `mediated` however it was reached: forty cells may wear it,
- * so the answer is a choice between changing them all and forking this one
- * A band is `mediated` for the same reason at column scale. What the
- * cell itself said, or an override did, is one node and applies directly.
+ * so the answer is a choice between changing them all and forking this one, and
+ * a band is `mediated` for the same reason at column scale. What the cell itself
+ * said, or an override did, is one node and applies directly.
  */
 export function editabilityOfLayer(layer: StyleLayer): Editability {
   if (layer.name !== null) return 'mediated';

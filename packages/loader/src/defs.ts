@@ -11,7 +11,7 @@ import {
 import { formulaName, paramName, styleName, valueName } from '@yxl-vscode/units';
 import { withoutLeadingEquals } from './cell';
 import { CODE } from './codes';
-import { type Ctx, keyOf, nodeAt, reject } from './ctx';
+import { type Ctx, identify, keyOf, reject } from './ctx';
 import { expectText, expectValue, openEntries, rejectUnknownKey } from './read';
 import { readStyle } from './style';
 
@@ -70,7 +70,7 @@ function readStyleDefs(ctx: Ctx, node: Node, path: Path): StyleDef[] {
 
     const style = readStyle(here, entry.value, `style \`${key}\``);
     if (style !== null)
-      defs.push({ ...nodeAt(here, [...opened.path, key], entry.span), name, style });
+      defs.push({ ...identify(here, [...opened.path, key], entry.span), name, style });
   }
   return defs;
 }
@@ -91,7 +91,7 @@ function readValueDefs(ctx: Ctx, node: Node, path: Path): ValueDef[] {
 
     const value = expectValue(here, entry.value, `value \`${key}\``);
     if (value !== null)
-      defs.push({ ...nodeAt(here, [...opened.path, key], entry.span), name, value });
+      defs.push({ ...identify(here, [...opened.path, key], entry.span), name, value });
   }
   return defs;
 }
@@ -112,7 +112,7 @@ function readFormulaDefs(ctx: Ctx, node: Node, path: Path): FormulaDef[] {
 
     const body = expectText(here, entry.value, `formula \`${key}\``);
     if (body !== null) {
-      const site = nodeAt(here, [...opened.path, key], entry.span);
+      const site = identify(here, [...opened.path, key], entry.span);
       defs.push({ ...site, name, body: withoutLeadingEquals(body) });
     }
   }
@@ -136,7 +136,7 @@ export function readParams(ctx: Ctx, node: Node, path: Path): Param[] {
 
     const value = expectValue(here, entry.value, `parameter \`${key}\``);
     if (value !== null)
-      params.push({ ...nodeAt(here, [...opened.path, key], entry.span), name, value });
+      params.push({ ...identify(here, [...opened.path, key], entry.span), name, value });
   }
   return params;
 }

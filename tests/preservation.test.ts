@@ -10,9 +10,8 @@ import { includeReader, type Sample, yxlExamples } from './corpus';
  *
  * The rule is easy to state and easy to break quietly: a construct this editor
  * does not model is carried through untouched — never dropped, never
- * reformatted. Phase 2 could mark them and had no writer to test them against;
- * this is that test, and the constructs are real ones — charts, pivots,
- * validations, sparklines, print setup, protection.
+ * reformatted. The constructs here are real ones — charts, pivots, validations,
+ * sparklines, print setup, protection.
  */
 const specs = yxlExamples().filter((sample) => sample.name.endsWith('.yxl.yaml'));
 

@@ -118,7 +118,7 @@ function sited(where: Described | undefined): { file: string; start: number; end
  * A cell sits inside a sheet which sits inside the document, and all three
  * spans hold the cursor; the smallest is the one the reader is looking at.
  */
-export function nodeAt(nodes: Nodes, file: string, offset: number): NodeId | null {
+export function nodeUnder(nodes: Nodes, file: string, offset: number): NodeId | null {
   let found: NodeId | null = null;
   let narrowest = Number.POSITIVE_INFINITY;
 

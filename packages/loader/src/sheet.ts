@@ -13,7 +13,7 @@ import {
 import { readColumnBands, readRowBands } from './band';
 import { readCells, withoutLeadingEquals } from './cell';
 import { CODE } from './codes';
-import { type Ctx, keyOf, nodeAt, reject, type Site } from './ctx';
+import { type Ctx, identify, keyOf, reject, type Site } from './ctx';
 import { readDataBlocks } from './data';
 import { expectText, findEntry, openEntries, readEach, rejectUnknownKey, scalarText } from './read';
 import { RANGE, readAs, SHEET_NAME } from './template';
@@ -72,12 +72,12 @@ function readSheet(site: Site): Sheet | null {
         merges = readMerges(here, entry.value, at, what);
         break;
       default:
-        opaque.push({ ...nodeAt(here, at, entry.span), key });
+        opaque.push({ ...identify(here, at, entry.span), key });
     }
   }
 
   return {
-    ...nodeAt(here, opened.path, opened.node.span),
+    ...identify(here, opened.path, opened.node.span),
     name,
     cells,
     formulas,
@@ -93,7 +93,7 @@ function readSheet(site: Site): Sheet | null {
 function readMerges(ctx: Ctx, node: Node, path: Path, what: string): Merge[] {
   return readEach(ctx, node, path, `${what} \`merges\``, (site) => {
     const at = readAs(site.ctx, site.node, 'a `merges` entry', RANGE);
-    return at === null ? null : { ...nodeAt(site.ctx, site.path, site.node.span), at };
+    return at === null ? null : { ...identify(site.ctx, site.path, site.node.span), at };
   });
 }
 
@@ -126,6 +126,6 @@ function readFormulaRange(site: Site): FormulaRange | null {
   const formula = expectText(here, written.value, `${what} \`formula\``);
   if (at === null || formula === null) return null;
 
-  const range = nodeAt(here, opened.path, opened.node.span);
+  const range = identify(here, opened.path, opened.node.span);
   return { ...range, at, formula: withoutLeadingEquals(formula) };
 }

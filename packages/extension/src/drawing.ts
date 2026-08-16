@@ -25,7 +25,7 @@ import type {
   Sized,
   Uncomputed,
 } from '@yxl-vscode/webview/protocol';
-import { type Nodes, nodeAt } from './inspect';
+import { type Nodes, nodeUnder } from './inspect';
 
 /**
  * A compiled grid as the view is handed it.
@@ -105,7 +105,7 @@ function marks(
   const marked = new Map<string, MarkedCell[]>();
 
   for (const problem of diagnostics) {
-    const node = nodeAt(nodes, problem.file, problem.span.start);
+    const node = nodeUnder(nodes, problem.file, problem.span.start);
     if (node === null) continue;
 
     for (const cell of reaches(grid, node)) {
