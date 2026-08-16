@@ -1,8 +1,8 @@
 import { type CompiledGrid, sheetOf } from '@yxl-vscode/compile';
-import { nodeAt, parse, renderScalar, type Value } from '@yxl-vscode/cst';
+import { nodeAt, renderScalar, type Value } from '@yxl-vscode/cst';
 import type { SpecDoc, Templated } from '@yxl-vscode/spec';
 import { type A1Addr, type QualifiedAddr, qualified, type SheetName } from '@yxl-vscode/units';
-import type { Intent, Text } from './direct';
+import type { Intent, Reading } from './direct';
 
 /** The key this all writes into (`docs/spec.md` §23). */
 const OVERRIDES = 'overrides';
@@ -24,7 +24,7 @@ export function override(
   grid: CompiledGrid,
   where: { sheet: SheetName; at: A1Addr },
   says: Says,
-  text: Text,
+  read: Reading,
 ): Intent {
   const sheet = sheetOf(grid, where.sheet);
   if (sheet === null) {
@@ -32,10 +32,10 @@ export function override(
   }
 
   const file = doc.file;
-  const source = text(file);
-  if (source === null) return { kind: 'refused', why: `\`${file}\` could not be read` };
+  const tree = read.parsed(file);
+  if (tree === null) return { kind: 'refused', why: `\`${file}\` could not be read` };
 
-  const { root } = parse(source, { file });
+  const root = tree.root;
   if (root === null || root.kind !== 'map') {
     return { kind: 'refused', why: 'this spec has no document to write an override into' };
   }

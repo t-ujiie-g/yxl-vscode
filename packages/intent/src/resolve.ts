@@ -18,7 +18,7 @@ import {
   qualified,
   type SheetName,
 } from '@yxl-vscode/units';
-import { beside, type Found, type Intent, located, type Text } from './direct';
+import { beside, type Found, type Intent, located, type Reading, type Text } from './direct';
 import { meaning } from './typed';
 
 /**
@@ -46,17 +46,17 @@ export function candidates(
 
   const cell = cellAt(sheet, where.at);
   if (cell === null) {
-    const written = newCell(sheet, where, typed, spec.text);
+    const written = newCell(sheet, where, typed, spec.read);
     return written === null ? [] : [written];
   }
 
   const origin = cell.provenance.value;
-  if (origin.kind === 'defRef') return definition(spec.grid, origin, where, typed, spec.text);
+  if (origin.kind === 'defRef') return definition(spec.grid, origin, where, typed, spec.read);
   if (origin.kind === 'param') return parameter(spec, origin, typed);
-  if (origin.kind === 'external') return external(origin, where, typed, spec.text);
+  if (origin.kind === 'external') return external(origin, where, typed, spec.read.text);
   if (origin.kind !== 'formulaRange') return [];
 
-  const written = rangeFormula(spec.grid, origin, typed, spec.text);
+  const written = rangeFormula(spec.grid, origin, typed, spec.read);
   return written === null ? [] : [written];
 }
 
@@ -66,7 +66,7 @@ export function candidates(
  */
 export interface Resolving {
   readonly grid: CompiledGrid;
-  readonly text: Text;
+  readonly read: Reading;
   readonly params: ReadonlyMap<string, string>;
 }
 
@@ -89,7 +89,7 @@ function parameter(
   // Set in the preview: changing the default would leave the grid as it is.
   if (spec.params.has(name)) return [];
 
-  const found = located(declared, spec.text);
+  const found = located(declared, spec.read);
   if (found.kind === 'refused' || found.node.kind !== 'scalar') return [];
 
   const moves = reaches(spec.grid, declared);
@@ -119,13 +119,13 @@ function definition(
   origin: Extract<FacetOrigin, { kind: 'defRef' }>,
   where: { sheet: SheetName; at: A1Addr },
   typed: string,
-  text: Text,
+  read: Reading,
 ): readonly Candidate[] {
   const meant = meaning(typed);
   if (meant.is !== 'value') return [];
 
   const offered: Candidate[] = [];
-  const def = located(origin.def, text);
+  const def = located(origin.def, read);
 
   if (def.kind === 'found' && def.node.kind === 'scalar') {
     const moves = reaches(grid, origin.def);
@@ -146,7 +146,7 @@ function definition(
     });
   }
 
-  const holder = reference(located(origin.node, text));
+  const holder = reference(located(origin.node, read));
   if (holder !== null) {
     offered.push({
       id: 'detach',
@@ -227,11 +227,11 @@ function newCell(
   sheet: CompiledSheet,
   where: { sheet: SheetName; at: A1Addr },
   typed: string,
-  text: Text,
+  read: Reading,
 ): Candidate | null {
   if (typed === '') return null;
 
-  const found = located(sheet.node, text);
+  const found = located(sheet.node, read);
   if (found.kind === 'refused' || found.node.kind !== 'map') return null;
 
   const holds = found.node.entries.some((entry) => entry.key.value === 'cells');
@@ -299,12 +299,12 @@ function rangeFormula(
   grid: CompiledGrid,
   origin: Extract<FacetOrigin, { kind: 'formulaRange' }>,
   typed: string,
-  text: Text,
+  read: Reading,
 ): Candidate | null {
   if (meaning(typed).is !== 'formula') return null;
   if (origin.offset[0] !== 0 || origin.offset[1] !== 0) return null;
 
-  const found = located(origin.node, text);
+  const found = located(origin.node, read);
   if (found.kind === 'refused') return null;
   if (found.node.kind !== 'map') return null;
   if (!found.node.entries.some((entry) => entry.key.value === 'formula')) return null;

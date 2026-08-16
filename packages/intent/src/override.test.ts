@@ -4,30 +4,30 @@ import { type IncludeReader, load } from '@yxl-vscode/loader';
 import { type A1Addr, type FilePath, filePath, type SheetName } from '@yxl-vscode/units';
 import { type Ctx, checked } from '@yxl-vscode/verify';
 import { describe, expect, it } from 'vitest';
-import type { Intent, Text } from './direct';
+import { type Intent, reading, type Text } from './direct';
 import { override, type Says } from './override';
 
 const ROOT = filePath('spec.yxl.yaml') ?? ('' as FilePath);
 
 function files(sources: Record<string, string>) {
   const text: Text = (file) => sources[file] ?? null;
-  const read: IncludeReader = (_from, path) => {
+  const includes: IncludeReader = (_from, path) => {
     const file = filePath(path);
     return file === null || sources[path] === undefined ? null : { file, source: sources[path] };
   };
 
-  const { doc } = load(parse(sources[ROOT] ?? '', { file: ROOT }), read);
+  const { doc } = load(parse(sources[ROOT] ?? '', { file: ROOT }), includes);
   if (doc === null) throw new Error('did not load');
 
-  return { doc, grid: compile(doc, { read }), text, read };
+  return { doc, grid: compile(doc, { read: includes }), read: reading(text), includes };
 }
 
 function written(sources: Record<string, string>, intent: Intent): string {
   if (intent.kind === 'refused') throw new Error(`refused: ${intent.why}`);
   if (intent.kind !== 'edit') throw new Error('a file was written, not a spec');
 
-  const { read } = files(sources);
-  const ctx: Ctx = { root: ROOT, file: intent.file, read };
+  const { includes } = files(sources);
+  const ctx: Ctx = { root: ROOT, file: intent.file, read: includes };
   const done = checked(sources[intent.file] ?? '', intent.patch, intent.expects, ctx);
   if (done.ok === false) throw new Error(`the checker refused it: ${done.diagnostics[0]?.message}`);
 
@@ -39,8 +39,8 @@ function at(address: string) {
 }
 
 function overriding(sources: Record<string, string>, address: string, says: Says) {
-  const { doc, grid, text } = files(sources);
-  return override(doc, grid, at(address), says, text);
+  const { doc, grid, read } = files(sources);
+  return override(doc, grid, at(address), says, read);
 }
 
 const SALES = 'sheets:\n  - name: Sales\n';
@@ -111,13 +111,13 @@ describe('what an override will not do', () => {
 
   it('refuses a sheet that is not there', () => {
     const sources = { [ROOT]: `${SALES}    cells:\n      A1: APAC\n` };
-    const { doc, grid, text } = files(sources);
+    const { doc, grid, read } = files(sources);
     const intent = override(
       doc,
       grid,
       { sheet: 'Nowhere' as SheetName, at: 'A1' as A1Addr },
       { value: 1 },
-      text,
+      read,
     );
 
     expect(intent.kind === 'refused' && intent.why).toContain('no sheet named');

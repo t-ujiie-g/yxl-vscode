@@ -1,5 +1,5 @@
 import { type CompiledGrid, cellAt, sheetOf } from '@yxl-vscode/compile';
-import { type Node, nodeAt, type Op, type Path, parse } from '@yxl-vscode/cst';
+import { type Node, nodeAt, type Op, type Path } from '@yxl-vscode/cst';
 import {
   type A1Addr,
   addrAt,
@@ -8,7 +8,7 @@ import {
   type Rect,
   type SheetName,
 } from '@yxl-vscode/units';
-import { beside, type Intent, located, setValue, type Text } from './direct';
+import { beside, type Intent, located, type Reading, setValue } from './direct';
 
 /**
  * Emptying a cell. A cell with nothing in it is not something the format can
@@ -19,24 +19,24 @@ import { beside, type Intent, located, setValue, type Text } from './direct';
 export function clearCell(
   grid: CompiledGrid,
   where: { sheet: SheetName; at: A1Addr },
-  text: Text,
+  read: Reading,
 ): Intent {
   const sheet = sheetOf(grid, where.sheet);
-  if (sheet === null) return setValue(grid, where, null, text);
+  if (sheet === null) return setValue(grid, where, null, read);
 
   const cell = cellAt(sheet, where.at);
   const origin = cell?.provenance.value;
   if (origin?.kind !== 'literal' && origin?.kind !== 'override') {
-    return setValue(grid, where, null, text);
+    return setValue(grid, where, null, read);
   }
 
-  const found = located(origin.node, text);
+  const found = located(origin.node, read);
   if (found.kind === 'refused') return found;
 
   return {
     kind: 'edit',
     file: found.file,
-    patch: { ops: whole(emptying(found.node, found.path), found.file, text) },
+    patch: { ops: whole(emptying(found.node, found.path), found.file, read) },
     expects: { cells: new Set([qualified(where.sheet, where.at)]), beyond: 'ask' },
   };
 }
@@ -65,7 +65,7 @@ function emptying(node: Node, path: Path): Op[] {
 export function clearRange(
   grid: CompiledGrid,
   where: { sheet: SheetName; rect: Rect },
-  text: Text,
+  read: Reading,
   only = false,
 ): Intent {
   const sheet = sheetOf(grid, where.sheet);
@@ -80,7 +80,7 @@ export function clearRange(
       const at = addrAt({ col, row });
       if (cellAt(sheet, at) === null) continue;
 
-      const one = clearCell(grid, { sheet: where.sheet, at }, text);
+      const one = clearCell(grid, { sheet: where.sheet, at }, read);
       if (one.kind === 'refused') {
         held.push(one.why);
         continue;
@@ -109,7 +109,7 @@ export function clearRange(
   return {
     kind: 'edit',
     file,
-    patch: { ops: whole(ops.get(file) ?? [], file, text) },
+    patch: { ops: whole(ops.get(file) ?? [], file, read) },
     expects: { cells, beyond: 'ask' },
   };
 }
@@ -124,9 +124,8 @@ function standing(cleared: number, held: readonly string[]): string {
 }
 
 /** The same removals, with a mapping whose every entry is going taken out whole: an empty `cells:` will not load. */
-function whole(ops: readonly Op[], file: FilePath, text: Text): Op[] {
-  const source = text(file);
-  const { root } = source === null ? { root: null } : parse(source, { file });
+function whole(ops: readonly Op[], file: FilePath, read: Reading): Op[] {
+  const root = read.parsed(file)?.root ?? null;
   if (root === null) return [...ops];
 
   const going = new Set(ops.filter((one) => one.op === 'remove').map((one) => mark(one.path)));

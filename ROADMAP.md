@@ -906,9 +906,14 @@ work.
       holds those undos as edits, so reaching for it would put the edit on
       again. The grid says there is nothing left to take back instead, and the
       text editor's own `Cmd`+`Z` is where the rest of the file's history is.
-- [ ] **One parse per rectangle**, not per cell — `clearCell` reads the file
+- [x] **One parse per rectangle**, not per cell — `clearCell` reads the file
       through `located` for every address, so a large selection parses it as
       many times
+      **Done** by giving `intent` a `Reading` where it took a `Text`: the same
+      text, plus the tree parsed from it once per file. Built once per gesture
+      in `write.ts`, so a rectangle, a candidate list and an override each parse
+      what they read once. 800 cells over an 11.7 KB spec went from 6.6s to
+      124ms.
 - [ ] Copy, cut and paste **inside** the grid, as intents rather than as a
       buffer of cells
 - [ ] **Copy out**: TSV *and* HTML on the clipboard, so Excel and Sheets receive
@@ -2058,6 +2063,32 @@ this at a phase boundary rather than at the end.
   two serials either side of it, so the next reader knows it is deliberate.
 - A cell's own format — written, or the one its type takes — now wins over a
   band's. Both are requests about *that* cell; a band is something reaching it.
+
+### 2026-08-16 — One parse per gesture, not one per cell
+Selecting 800 cells and pressing `Delete` took **6.6 seconds**, and every one of
+them was spent parsing the same 11.7 KB file eight hundred times. It now takes
+**124ms**.
+
+- **The cause was in the shape of the parameter, not in a loop.** `intent` took
+  a `Text` — a function from a file to its bytes — and every function that
+  needed a *tree* parsed those bytes itself. `clearRange` asks `clearCell` about
+  each address, `clearCell` reaches the file through `located`, and `located`
+  parsed. One gesture, N+1 parses of one file, and nothing in the code said so.
+- **`Reading` says it instead**: the text as it stands, and the tree parsed from
+  it, worked out once per file however many cells ask. `reading(text)` makes one
+  and it is built once per gesture in `write.ts` — so the rectangle, the
+  candidate list a refusal offers (which called `located` several times over),
+  and an override each parse what they read once.
+- **It carries the text as well as the tree** because not every file an edit
+  reads is YAML: the `external` row writes a field of a CSV, and running the
+  YAML parser over somebody's data file to hand back its bytes would be a
+  strange way to save time.
+- **What holds it there** is a test that counts the reads: a 2×2 rectangle over
+  a spec reads the file **once**. Before this it read it five times, and a
+  40×20 selection read it 801.
+- Nothing about what is written changed — same patches, same refusals, same
+  expectations, and the whole suite passed unmoved. 4 new tests, 1187 in total;
+  comment shape held at 39 over the limit.
 
 ### 2026-08-16 — Undo in place, and the guard that lets two stacks share a file
 `Cmd`+`Z` in the grid no longer shows the text, runs the editor's undo and hands
