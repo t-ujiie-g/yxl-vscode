@@ -12,14 +12,13 @@ import { includeReader, yxlExamples } from './corpus';
 import { build, extract, oracleVersion, PINNED } from './oracle';
 
 /**
- * Tier 4 (`ROADMAP.md` §5): a real spec, the write path the UI calls, and the
+ * The end-to-end tier: a real spec, the write path the UI calls, and the
  * compiler that ships.
  *
- * The tiers below this one all stop at the spec: they prove the file changed
- * the way the edit said it would. This one asks the only question a reader
- * cares about — whether the **workbook** ends up holding what they typed — and
- * it is the only tier where the compiler runs for real rather than as a
- * validator.
+ * Every other tier stops at the spec — they prove the file changed the way the
+ * edit said it would. This one asks whether the **workbook** ends up holding
+ * what the reader typed, and it is the only one where the compiler runs for
+ * real rather than as a validator.
  */
 const QUICKSTART = yxlExamples().find((one) => one.name === 'quickstart.yxl.yaml');
 

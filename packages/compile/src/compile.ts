@@ -44,7 +44,7 @@ export function compile(doc: SpecDoc, options: Options = {}): CompiledGrid {
  * it.
  *
  * A written cell wins: an override lands on one cell of a filled range and
- * takes it out of the range, which is the case §23 exists for.
+ * takes it out of the range, which is the case `docs/spec.md` §23 exists for.
  */
 export function cellAt(sheet: CompiledSheet, at: A1Addr): CompiledCell | null {
   const written = sheet.cells.get(at);

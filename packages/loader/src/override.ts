@@ -2,7 +2,7 @@ import type { Node, Path } from '@yxl-vscode/cst';
 import { MODELED_KEYS, type Override } from '@yxl-vscode/spec';
 import { holdsSomething, readFacets } from './cell';
 import { CODE } from './codes';
-import { type Ctx, keyOf, nodeAt, reject, type Site } from './ctx';
+import { type Ctx, identify, keyOf, reject, type Site } from './ctx';
 import { expectText, findEntry, openEntries, readEach, rejectUnknownKey } from './read';
 import { QUALIFIED, readAs } from './template';
 
@@ -49,7 +49,7 @@ function readOverride(site: Site): Override | null {
   const facets = readFacets(here, entries, what);
   if (!holdsSomething(here, facets, opened.node, what)) return null;
 
-  return { ...nodeAt(here, opened.path, opened.node.span), at, reason, ...facets };
+  return { ...identify(here, opened.path, opened.node.span), at, reason, ...facets };
 }
 
 /** How the override reads back in a diagnostic, before any parameter fills it in. */

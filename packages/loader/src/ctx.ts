@@ -62,7 +62,7 @@ export function reject(ctx: Ctx, code: Code, message: string, at: Span): void {
 }
 
 /** The identity, file, and span every node of the AST carries. */
-export function nodeAt(ctx: Ctx, path: Path, at: Span): SpecNode {
+export function identify(ctx: Ctx, path: Path, at: Span): SpecNode {
   return { id: nodeIdAt(ctx.file, path), file: ctx.file, span: at };
 }
 

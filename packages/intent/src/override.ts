@@ -4,6 +4,9 @@ import type { SpecDoc, Templated } from '@yxl-vscode/spec';
 import { type A1Addr, type QualifiedAddr, qualified, type SheetName } from '@yxl-vscode/units';
 import type { Intent, Text } from './direct';
 
+/** The key this all writes into (`docs/spec.md` §23). */
+const OVERRIDES = 'overrides';
+
 /** What an override says about one cell, beside where it says it. */
 export interface Says {
   readonly value?: Value;
@@ -50,7 +53,7 @@ export function override(
   const already = doc.overrides.findIndex((one) => spelled(one.at) === wanted);
 
   const written = lines(where, says);
-  const held = nodeAt(root, ['overrides']);
+  const held = nodeAt(root, [OVERRIDES]);
 
   const patch =
     held === null
@@ -59,7 +62,7 @@ export function override(
             {
               op: 'addSource' as const,
               path: [],
-              key: 'overrides',
+              key: OVERRIDES,
               source: `- ${indented(written)}`,
             },
           ],
@@ -68,7 +71,7 @@ export function override(
           ops: [
             {
               op: 'insertSource' as const,
-              path: ['overrides'],
+              path: [OVERRIDES],
               index: doc.overrides.length,
               source: written,
             },

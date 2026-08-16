@@ -7,7 +7,7 @@ import {
   type Templated,
 } from '@yxl-vscode/spec';
 import { CODE } from './codes';
-import { type Ctx, keyOf, nodeAt, reject } from './ctx';
+import { type Ctx, identify, keyOf, reject } from './ctx';
 import {
   expectBool,
   expectNumber,
@@ -34,7 +34,7 @@ export function readColumnBands(ctx: Ctx, node: Node, path: Path): ColumnBand[] 
     if (at === null) return null;
 
     const body = readBandBody(band, what, 'width', MODELED_KEYS.columnBand);
-    return { ...nodeAt(band.ctx, band.path, band.node.span), at, width: body.size, ...body.rest };
+    return { ...identify(band.ctx, band.path, band.node.span), at, width: body.size, ...body.rest };
   });
 }
 
@@ -50,7 +50,12 @@ export function readRowBands(ctx: Ctx, node: Node, path: Path): RowBand[] {
     if (at === null) return null;
 
     const body = readBandBody(band, what, 'height', MODELED_KEYS.rowBand);
-    return { ...nodeAt(band.ctx, band.path, band.node.span), at, height: body.size, ...body.rest };
+    return {
+      ...identify(band.ctx, band.path, band.node.span),
+      at,
+      height: body.size,
+      ...body.rest,
+    };
   });
 }
 

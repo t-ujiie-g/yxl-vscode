@@ -5,7 +5,7 @@ import type { SpecDoc } from '@yxl-vscode/spec';
 import { type A1Addr, filePath } from '@yxl-vscode/units';
 import type { Source } from '@yxl-vscode/webview/protocol';
 import { describe, expect, it } from 'vitest';
-import { inspect, knows, nodeAt, nodesOf } from './inspect';
+import { inspect, knows, nodesOf, nodeUnder } from './inspect';
 
 const FILE = 'spec.yxl.yaml';
 
@@ -123,14 +123,14 @@ describe('the node under a cursor', () => {
   it('is the innermost one whose span holds the offset', () => {
     const { doc } = read(spec);
     const nodes = nodesOf(doc);
-    const found = nodeAt(nodes, FILE, spec.indexOf('A1: Region') + 2);
+    const found = nodeUnder(nodes, FILE, spec.indexOf('A1: Region') + 2);
 
     expect(nodes.get(found ?? '')?.what).toBe('`A1`');
   });
 
   it('is nothing where no node reaches', () => {
     const { doc } = read(spec);
-    expect(nodeAt(nodesOf(doc), 'another.yaml', 0)).toBeNull();
+    expect(nodeUnder(nodesOf(doc), 'another.yaml', 0)).toBeNull();
   });
 
   it('knows which files the spec was read from, includes and all', () => {

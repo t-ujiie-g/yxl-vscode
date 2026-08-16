@@ -3,7 +3,7 @@ import { type Diagnostic, error, span } from '@yxl-vscode/diag';
 import type { Defs, Opaque, Override, Param, Sheet, SpecDoc } from '@yxl-vscode/spec';
 import { filePath } from '@yxl-vscode/units';
 import { CODE } from './codes';
-import { type Ctx, type IncludeReader, keyOf, nodeAt } from './ctx';
+import { type Ctx, type IncludeReader, identify, keyOf } from './ctx';
 import { NO_DEFS, readDefs, readParams } from './defs';
 import { readOverrides } from './override';
 import { expectBool, openEntries } from './read';
@@ -80,10 +80,10 @@ function readDocument(ctx: Ctx, parsed: Parsed): SpecDoc | null {
         date1904 = expectBool(here, entry.value, '`date1904`') ?? false;
         break;
       default:
-        opaque.push({ ...nodeAt(here, at, entry.span), key });
+        opaque.push({ ...identify(here, at, entry.span), key });
     }
   }
 
-  const site = nodeAt(here, opened.path, opened.node.span);
+  const site = identify(here, opened.path, opened.node.span);
   return { ...site, sheets, params, defs, overrides, date1904, opaque };
 }

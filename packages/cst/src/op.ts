@@ -1,4 +1,5 @@
 import type { Diagnostic, Span } from '@yxl-vscode/diag';
+import type { Code } from './codes';
 import type { Value } from './write';
 
 /** Steps from the document root: a key in a mapping, an index in a sequence. */
@@ -78,3 +79,9 @@ export interface Applied {
   readonly edits: readonly Edit[];
   readonly diagnostics: readonly Diagnostic[];
 }
+
+/**
+ * How an op says it cannot be applied: a code, a sentence, and where in the
+ * file the reader should be looking.
+ */
+export type Refuse = (code: Code, message: string, at: Span) => void;

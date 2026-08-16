@@ -115,9 +115,7 @@ describe.each(corpus)('$name', (sample) => {
 
   it('puts back every entry a removal takes out, or does not take it out', () => {
     // Every entry and item in the file, one at a time: a removal either comes
-    // back byte for byte or never happens (ADR-026). The corpus is where the
-    // layouts a removal has to survive actually live — comments above an entry,
-    // blank lines between them, a subtree under a key.
+    // back byte for byte or never happens (ADR-026).
     const { root } = read(sample);
     if (!root) return;
 

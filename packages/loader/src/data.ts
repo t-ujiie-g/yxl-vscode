@@ -7,7 +7,7 @@ import {
   type ScalarValue,
 } from '@yxl-vscode/spec';
 import { CODE } from './codes';
-import { type Ctx, keyOf, nodeAt, reject, type Site } from './ctx';
+import { type Ctx, identify, keyOf, reject, type Site } from './ctx';
 import { expectText, findEntry, openEntries, openSeq, readEach, rejectUnknownKey } from './read';
 import { ADDRESS, PATH, readAs } from './template';
 
@@ -35,7 +35,7 @@ function readDataBlock(site: Site): DataBlock | null {
   const source = readSource(here, entries, opened.node, what);
   if (source === null) return null;
 
-  return { ...nodeAt(here, opened.path, opened.node.span), at, source };
+  return { ...identify(here, opened.path, opened.node.span), at, source };
 }
 
 /**

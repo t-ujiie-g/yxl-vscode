@@ -4,7 +4,7 @@ import { addrAt, cellOf, type FilePath, filePath } from '@yxl-vscode/units';
 import type { FromView, Typed } from '@yxl-vscode/webview/protocol';
 import * as vscode from 'vscode';
 import { readBeside } from './files';
-import { inspect, knows, type Nodes, nodeAt } from './inspect';
+import { inspect, knows, type Nodes, nodeUnder } from './inspect';
 import { type Projected, project, redraw, type Window } from './project';
 import { type Port, type Spec, write, writeOverride } from './write';
 
@@ -134,7 +134,7 @@ export class Preview {
     }
 
     const at = editor.document.offsetAt(editor.selection.active);
-    const node = nodeAt(this.nodes, editor.document.uri.fsPath, at);
+    const node = nodeUnder(this.nodes, editor.document.uri.fsPath, at);
     if (node === null) {
       void this.panel.webview.postMessage({ kind: 'highlighted', says: '', cells: [] });
       return;

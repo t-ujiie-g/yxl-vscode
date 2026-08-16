@@ -9,8 +9,7 @@ declare const YXL_TARGET: string;
  * What VS Code calls, and all it calls.
  *
  * The preview is a projection beside the text rather than a replacement for it
- * (ADR-020), so the file stays a YAML file in a YAML editor — which is the
- * premise this project rests on (§1).
+ * (ADR-020), so the file stays a YAML file in a YAML editor.
  */
 export function activate(context: vscode.ExtensionContext): void {
   const compiler = new Compiler(YXL_TARGET);
