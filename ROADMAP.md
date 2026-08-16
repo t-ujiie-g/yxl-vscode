@@ -192,7 +192,7 @@ a higher one. The rows below are in dependency order, and that order is
 | Package | Layer | Purpose |
 |---|---|---|
 | `diag` | — | Diagnostics, severities, source spans (file/line/col). The one place a user-visible message is shaped. |
-| `units` | — | Branded types and the readers that make them: `A1Addr`, `A1Range`, `ColumnSpan` / `RowSpan`, `QualifiedAddr`, `Color`, `SheetName`, the three definition namespaces, `ParamName`, `FilePath`, `NodeId`. Parse at the edge, pass typed inside. |
+| `units` | — | Branded types and the readers that make them: `A1Addr`, `A1Range`, `ColumnSpan` / `RowSpan`, `QualifiedAddr`, `Color`, `SheetName`, the three definition namespaces, `ParamName`, `FilePath`, `NodeId`. Parse at the edge, pass typed inside. Also `moved`, which shifts the references in a formula (ADR-031). |
 | `cst` | L0 | `eemeli/yaml` behind our own seam: source → span-carrying tree; apply an op list as a minimal byte patch. The *only* package that knows YAML syntax exists. (ADR-003) |
 | `spec` | L1 | The `SpecDoc` AST — the TypeScript shape of `docs/spec.md` — and the schema's own vocabulary: `MODELED_KEYS`, which is where the line ADR-011 draws is written down. Types and tables, no logic. |
 | `loader` | L1 | CST tree → `SpecDoc`, with the validation projection requires and `$include` expanded through an injected reader. Preserves unmodeled-but-valid constructs verbatim, marked `opaque`. (ADR-011) |
@@ -1609,6 +1609,41 @@ other, gated by ADR-009's loop against the cells the forward edit moved, which
 is why `patch`'s history now records those cells and applies nothing itself —
 a history that applied its own patches would be the one path around the loop.
 
+### ADR-031 — A formula is moved by scanning it, not by parsing it, and one that cannot be moved with certainty is refused
+**Accepted.** `units.moved(formula, by)` returns the formula as it applies a
+number of columns and rows away. It scans the text into words, quoted strings,
+and bracketed table references; it moves the words that are cell references and
+returns everything else byte for byte. It never builds a syntax tree and never
+learns what a formula *means*.
+
+*Why a scanner:* the only question a move asks is *which of these words are
+references*, and that is decided by the shape of a word and the character after
+it — a `(` makes it a function, a `[` a table, a `!` a sheet. A parser would
+answer a question nobody asked, and would have to be kept correct against
+Excel's whole grammar to answer the one that was.
+
+*Why not the evaluation engine's parser:* ADR-014 puts evaluation behind a seam
+and unreachable from every write path, and a moved formula **is** a write. The
+shift belongs beside the addresses it rewrites, which is `units`.
+
+*What "with certainty" rules out:* a reference that would leave the sheet, and a
+quote or bracket that never closes. Both are refused with the word that stopped
+it, rather than moved to something Excel would read as `#REF!` or worse. This is
+ADR-026's rule — an edit that cannot be expressed is not made — applied one
+level down.
+
+*What has no oracle here, and what stands in its place:* yxl does not translate
+references at all. A `formulas:` range compiles to Excel's own shared formula
+(ECMA-376 §18.3.1.40) and **Excel** shifts it on open, so there is nothing in
+the MoonBit core to compare against (ADR-012 does not reach this). The authority
+is Excel's behaviour, and the substitute for the oracle is the case list: the
+`$` anchors, the padded row that survives, a string that reads like a reference,
+`LOG10(`, a table's nesting, `A:A`, `1:10`, and both edges of the sheet.
+
+*What it does not do:* R1C1, and a reference written in lower case comes back
+upper — which is what Excel stores, and the only byte a move changes that the
+reader did not ask it to.
+
 ## 8. Open questions
 
 - **Q1 — `cells:` A1 keys and row insertion.** Inserting a row rewrites every
@@ -1619,15 +1654,15 @@ a history that applied its own patches would be the one path around the loop.
   is anchor-relative addressing in `cells:` worth proposing upstream for the
   scattered case? Decide before Phase 10, and note that a paste of two hundred
   rows (Phase 8) asks the same question first.
-- **Q2 — How much formula translation do we do?** Splitting or extending a
-  `formulas:` range requires translating relative references. Needs a formula
-  parser (the Phase 5 evaluation engine has one). **Now the blocker for the rest
-  of the `formulaRange` row**: changing the range's formula is offered *at its
-  anchor*, where what the reader typed is what the range says, and nowhere else
-  — `=B3*0.1` typed one row down means `B2*0.1` to the range, and shifting it
-  back is this question. Splitting the range is the same question again. Decide
-  before the row is finished; the shift itself belongs in `units`, beside the
-  addresses it rewrites, rather than in the evaluation engine (ADR-014).
+- **Q2 — How much formula translation do we do?** ✅ *Answered 2026-08-16
+  (ADR-031).* As much as Excel does to a shared formula, and no more: relative
+  references move, `$`-anchored halves stay, and strings, names and table
+  references are returned byte for byte. It is `units.moved`, a scanner rather
+  than a parser — a formula's *meaning* is never needed, only which of its words
+  are references — and a formula it cannot move with certainty is refused with
+  the word that stopped it. This unblocks the rest of the `formulaRange` row (①
+  away from the anchor, and ② splitting the range) and is what a paste of a
+  formula cell uses.
 - **Q3 — External change detection.** ✅ *Answered 2026-08-15 (ADR-023).* Discard
   the AST and re-derive — and there is no selection state to lose, because what
   the UI keeps is names and addresses rather than nodes. The one thing that
@@ -2063,6 +2098,34 @@ this at a phase boundary rather than at the end.
   two serials either side of it, so the next reader knows it is deliberate.
 - A cell's own format — written, or the one its type takes — now wins over a
   band's. Both are requests about *that* cell; a band is something reaching it.
+
+### 2026-08-16 — A formula that knows where it is
+`units.moved(formula, by)` gives a formula as it applies a number of columns and
+rows away — `A2*0.1` copied two right and three down is `C5*0.1`. This is §8
+**Q2 answered** (ADR-031), and it is what the rest of the `formulaRange` row and
+the paste of a formula cell were both waiting on.
+
+- **It scans rather than parses.** The only question a move asks is which words
+  are references, and the shape of a word plus the character after it answers
+  it: a `(` makes it a function, a `[` a table, a `!` a sheet. No syntax tree,
+  no grammar to keep correct against Excel's.
+- **What does not move comes back byte for byte** — including the half of a
+  reference that is anchored. `$A01` moved down is `$A2`; moved *right* it is
+  `$A01`, padding and all, because nothing about it moved. Strings are left
+  alone however much they look like references (`IF(A1="A1", …)`), and so are
+  table references and their nesting.
+- **A formula it cannot move with certainty is refused**, naming the word that
+  stopped it: a reference that would leave the sheet, a quote or bracket that
+  never closes. ADR-026's rule one level down — better a sentence than a
+  formula Excel reads as `#REF!`.
+- **There is no oracle for this one.** yxl never translates references: a
+  `formulas:` range compiles to Excel's shared formula and Excel does the
+  shifting on open, so ADR-012's differential test has nothing to compare. The
+  case list stands in for it — `$` anchors, `LOG10(`, `A:A`, `1:10`, a doubled
+  quote inside a string, a number format full of `$` and `#`, and both edges of
+  the sheet. 24 tests, 1211 in total.
+- No caller yet, deliberately: the reference semantics are worth reading on
+  their own, and the copy/cut/paste that uses them is the next change.
 
 ### 2026-08-16 — One parse per gesture, not one per cell
 Selecting 800 cells and pressing `Delete` took **6.6 seconds**, and every one of
