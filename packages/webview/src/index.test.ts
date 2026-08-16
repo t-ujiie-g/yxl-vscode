@@ -511,6 +511,57 @@ describe('looking for something in the sheet', () => {
     expect(into.querySelector('.looking .count')?.textContent).toBe('nothing here holds that');
   });
 
+  it('goes on through what it found from inside the box the reader is typing in', () => {
+    const { into, told } = view();
+
+    press(into, 1, 1, 'f');
+    told({
+      kind: 'found',
+      sheet: 'Sales',
+      text: '',
+      cells: [
+        { row: 1, col: 1 },
+        { row: 2, col: 2 },
+      ],
+    });
+
+    const typing = box(into);
+    if (typing === null) throw new Error('no box to type in');
+
+    typing.dispatchEvent(new KeyboardEvent('keydown', { key: 'g', metaKey: true, bubbles: true }));
+    expect(into.querySelector('.looking .count')?.textContent).toBe('2 of 2');
+  });
+
+  it('brings what it goes to into view, which selecting it does not do', () => {
+    const seen: { at: string | null; how: unknown }[] = [];
+    // On the prototype, because the cell the search lands on is drawn after
+    // the box that starts it.
+    HTMLTableCellElement.prototype.scrollIntoView = function into_(how?: unknown) {
+      seen.push({ at: this.getAttribute('data-at'), how });
+    };
+
+    const { into, told } = view();
+    press(into, 1, 1, 'f');
+    told({ kind: 'found', sheet: 'Sales', text: '', cells: [{ row: 2, col: 2 }] });
+
+    expect(seen).toEqual([{ at: '2:2', how: { block: 'nearest', inline: 'nearest' } }]);
+  });
+
+  it('asks for the window where what it found is past the one drawn', () => {
+    const { into, sent, told } = view();
+
+    told({
+      ...drawing,
+      sheets: [{ ...sheet(), rows: 2, columns: 2, of: { rows: 400, columns: 4 } }],
+    });
+    press(into, 1, 1, 'f');
+    told({ kind: 'found', sheet: 'Sales', text: '', cells: [{ row: 300, col: 2 }] });
+
+    expect(sent.filter((one) => one.kind === 'window')).toEqual([
+      { kind: 'window', sheet: 'Sales', row: 300, col: 2 },
+    ]);
+  });
+
   it('takes an answer for a search the reader has already moved on from', () => {
     const { into, told } = view();
 

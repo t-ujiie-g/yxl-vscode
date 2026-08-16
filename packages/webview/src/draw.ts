@@ -543,6 +543,7 @@ function corner(showing: Showing, asks: Asks): HTMLElement {
   box.className = 'address';
   box.value = showing.selected === null ? '' : addrAt(showing.selected);
   box.title = 'Go to an address';
+  box.setAttribute('aria-label', 'Go to an address');
   box.addEventListener('keydown', (event) => {
     event.stopPropagation();
     if (event.key === 'Enter') asks.goTo(box.value);
@@ -558,6 +559,10 @@ function lookingBar(what: Looking, asks: Asks): HTMLElement {
   const bar = document.createElement('div');
   bar.className = 'looking';
 
+  const mark = document.createElement('span');
+  mark.className = 'mark';
+  mark.textContent = 'Find';
+
   const box = document.createElement('input');
   box.type = 'text';
   box.className = 'for';
@@ -566,6 +571,15 @@ function lookingBar(what: Looking, asks: Asks): HTMLElement {
   box.addEventListener('input', () => asks.look(box.value));
   box.addEventListener('keydown', (event) => {
     event.stopPropagation();
+
+    // The reader is in the box, so the cell's own handler never sees these.
+    const through = lookingFor(event);
+    if (through === 'on' || through === 'back') {
+      event.preventDefault();
+      asks.goOn(through === 'on' ? 1 : -1);
+      return;
+    }
+
     if (event.key === 'Enter') asks.goOn(event.shiftKey ? -1 : 1);
     if (event.key === 'Escape') asks.stopLooking();
   });
@@ -574,7 +588,7 @@ function lookingBar(what: Looking, asks: Asks): HTMLElement {
   count.className = 'count';
   count.textContent = counted(what);
 
-  bar.append(box, count, step('‹', -1, asks), step('›', 1, asks));
+  bar.append(mark, box, count, step('‹', -1, asks), step('›', 1, asks));
   return bar;
 }
 

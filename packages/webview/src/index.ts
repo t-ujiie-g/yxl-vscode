@@ -122,8 +122,19 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       at.row < of.at.row + of.rows &&
       at.col < of.at.col + of.columns;
 
-    if (inside) restated();
-    else host.postMessage({ kind: 'window', sheet: named(), row: at.row, col: at.col });
+    if (!inside) {
+      host.postMessage({ kind: 'window', sheet: named(), row: at.row, col: at.col });
+      return;
+    }
+
+    restated();
+    seen(at);
+  };
+
+  /** The cell brought into view, which selecting it does not do on its own. */
+  const seen = (at: { row: number; col: number }): void => {
+    const cell = into.querySelector<HTMLElement>(`td[data-at="${cellKey(at.col, at.row)}"]`);
+    cell?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
   };
 
   /** The rectangle selected, read live: the grid restates rather than redraws on a selection. */
@@ -317,6 +328,11 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       reached = null;
       refused = null;
       redraw();
+
+      // A redraw takes the box out from under a reader who is still typing in
+      // it, and puts the keyboard on a cell they did not ask for.
+      if (looking !== null) into.querySelector<HTMLInputElement>('.looking .for')?.focus();
+      if (selected !== null) seen(selected);
       return;
     }
 

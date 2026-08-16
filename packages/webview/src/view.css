@@ -215,6 +215,11 @@ body {
   flex: 0 1 16rem;
 }
 
+.looking .mark {
+  color: var(--vscode-descriptionForeground);
+  font-size: 0.9em;
+}
+
 .looking .count {
   color: var(--vscode-descriptionForeground);
   font-size: 0.9em;
@@ -227,9 +232,10 @@ body {
 .corner .address {
   width: 100%;
   box-sizing: border-box;
-  border: 0;
-  background: transparent;
-  color: inherit;
+  border: 1px solid var(--vscode-input-border, #9a9a9a);
+  border-radius: 2px;
+  background: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
   font: inherit;
   text-align: center;
 }

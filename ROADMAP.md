@@ -2282,7 +2282,16 @@ spreadsheet keeps one. **Phase 8 is complete.**
 - **The two boxes outside the grid are updated rather than rebuilt.** A redraw
   while the reader is typing would take the box out from under them, so the
   address and the count are written into the elements that are already there,
-  and the address box is left alone while it has the keyboard.
+  and the address box is left alone while it has the keyboard. Where a redraw
+  *does* have to happen — the window moving — the box is given the keyboard
+  back afterwards.
+- **Going somewhere brings it into view.** Selecting a cell is not scrolling to
+  it, which the first try left out: the keys had been scrolling all along
+  because *they* did it themselves, and the search and the address box went
+  through a different door. Both scroll now, and a test holds it.
+- **The keys work from inside the find box**, where the reader actually is.
+  `Cmd`+`G` reaches the cell's own handler only while a cell has the keyboard,
+  and after a search nothing does.
 - **The address box takes what a reader would type**: `b2` as readily as `B2`,
   and anything that is not an address is said rather than swallowed.
 - 17 new tests, 1318 in total; comment shape held at 38 over the limit.
