@@ -1,6 +1,6 @@
 import type { Rect } from '@yxl-vscode/units';
 import { sheetAgain } from './again';
-import { caught, flavours, onto } from './clipboard';
+import { flavours, onto } from './clipboard';
 import {
   type Asks,
   type Copied,
@@ -12,16 +12,7 @@ import {
   type Showing,
 } from './draw';
 import { between } from './keys';
-import type {
-  Drawing,
-  DrawnSheet,
-  Editable,
-  FromView,
-  Pasted,
-  Refused,
-  Source,
-  ToView,
-} from './protocol';
+import type { Drawing, DrawnSheet, Editable, FromView, Refused, Source, ToView } from './protocol';
 
 export { type Kept, sheetAgain } from './again';
 export { type Asks, type Copied, draw, type Reached, restate, type Showing } from './draw';
@@ -73,33 +64,6 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
   let copied: Copied | null = null;
   /** What our own copy last put on the system clipboard, which says whose paste this is. */
   let ours: string | null = null;
-  /** Where a paste is going, while the clipboard it lands from is still on its way. */
-  let landing: { row: number; col: number } | null = null;
-
-  /** The paste taken, from whichever of the two clipboards it turns out to hold. */
-  const took = (text: string): void => {
-    const where = landing;
-    landing = null;
-    if (where === null) return;
-
-    if (copied !== null && (text === '' || text === ours)) {
-      host.postMessage({ kind: 'paste', ...putting(copied, where.row, where.col) });
-      return;
-    }
-
-    if (text === '') return;
-
-    host.postMessage({ kind: 'pasteText', text, sheet: named(), row: where.row, col: where.col });
-  };
-
-  // A `paste` the grid is given itself is taken too: whichever of the two
-  // arrives first clears the landing, so the other is a no-op.
-  into.addEventListener('paste', (event) => {
-    if (landing === null) return;
-
-    event.preventDefault();
-    took((event as ClipboardEvent).clipboardData?.getData('text/plain') ?? '');
-  });
 
   /** Where the last edit was typed, so a refusal can put the reader back at it. */
   let typedAt: { row: number; col: number } | null = null;
@@ -215,12 +179,14 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
     paste: (row, col) => {
       refused = null;
       said = null;
-      landing = { row, col };
-      caught(took, () => {
-        // Nothing arrived: the page was given no clipboard at all, and the
-        // rectangle the grid holds is the only paste there is.
-        if (landing !== null) took('');
-        if (drawing !== null) focusCell(into, showing(drawing));
+      host.postMessage({
+        kind: 'pasteAt',
+        sheet: named(),
+        row,
+        col,
+        from: copied === null ? null : { sheet: copied.sheet, ...copied.rect },
+        cut: copied?.cut ?? false,
+        ours,
       });
     },
     resolveWith: (typed, choice) => {
@@ -337,15 +303,4 @@ function out(
         text: null,
         said: 'this preview could not reach the clipboard, so only the grid has it.',
       };
-}
-
-/** What a paste names: the rectangle it came from, and the cell it is going down on. */
-function putting(copied: Copied, row: number, col: number): Pasted {
-  return {
-    from: { sheet: copied.sheet, ...copied.rect },
-    sheet: copied.sheet,
-    row,
-    col,
-    cut: copied.cut,
-  };
 }

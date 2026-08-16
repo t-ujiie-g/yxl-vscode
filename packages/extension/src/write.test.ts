@@ -15,6 +15,7 @@ import {
   pasteFrom,
   resolve,
   type Spec,
+  whose,
   write,
   writeOverride,
 } from './write';
@@ -731,5 +732,42 @@ describe('a rectangle from another spreadsheet', () => {
     await pasteFrom(editing.spec, { ...at(1, 2), text: 'APAC\t1' }, editing.port, 'cells');
     expect(await back(editing)).toBe('here');
     expect(editing.files[ROOT]).toBe(SHEET);
+  });
+});
+
+describe('whose paste `Cmd`+`V` is', () => {
+  const rect = { sheet: 'Sales', top: 1, left: 1, bottom: 2, right: 2 };
+  const asked = { sheet: 'Sales', row: 5, col: 5, from: rect, cut: false, ours: 'APAC\t1' };
+
+  it('is the grid’s own while the clipboard still holds what its copy put there', () => {
+    expect(whose(asked, 'APAC\t1')).toEqual({
+      is: 'grid',
+      pasted: { from: rect, sheet: 'Sales', row: 5, col: 5, cut: false },
+    });
+  });
+
+  it('is the clipboard’s once something else has been copied', () => {
+    expect(whose(asked, 'LATAM\t9')).toEqual({
+      is: 'clipboard',
+      text: { text: 'LATAM\t9', sheet: 'Sales', row: 5, col: 5 },
+    });
+  });
+
+  it('is the grid’s where the clipboard could not be read at all', () => {
+    expect(whose(asked, '').is).toBe('grid');
+  });
+
+  it('is neither where the grid holds nothing and the clipboard is empty', () => {
+    expect(whose({ ...asked, from: null, ours: null }, '')).toEqual({ is: 'neither' });
+  });
+
+  it('is the clipboard’s where the grid has copied nothing', () => {
+    expect(whose({ ...asked, from: null, ours: null }, 'LATAM').is).toBe('clipboard');
+  });
+
+  it('carries the cut through, so one gesture empties what it took', () => {
+    expect(whose({ ...asked, cut: true }, '')).toMatchObject({
+      pasted: { cut: true },
+    });
   });
 });

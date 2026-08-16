@@ -40,7 +40,14 @@ import {
   sheetName,
 } from '@yxl-vscode/units';
 import { type Change, checked, checkedText } from '@yxl-vscode/verify';
-import type { Choice, Pasted, PastedText, Ranged, Typed } from '@yxl-vscode/webview/protocol';
+import type {
+  Choice,
+  Pasted,
+  PastedAt,
+  PastedText,
+  Ranged,
+  Typed,
+} from '@yxl-vscode/webview/protocol';
 
 /**
  * What the write needs of the world outside it, injected so it is testable
@@ -213,6 +220,27 @@ function pasting(pasted: Pasted): Pasting | null {
     to: { sheet: to, at: addrAt({ col: pasted.col, row: pasted.row }) },
     cut: pasted.cut,
   };
+}
+
+/** Whose paste `Cmd`+`V` is: the rectangle the grid holds, what the clipboard holds, or neither. */
+export type Whose =
+  | { readonly is: 'grid'; readonly pasted: Pasted }
+  | { readonly is: 'clipboard'; readonly text: PastedText }
+  | { readonly is: 'neither' };
+
+/**
+ * Which paste this is, given what the clipboard turned out to hold. The grid's
+ * own rectangle wins while the clipboard still holds what its copy put there,
+ * because only that one moves a formula and empties a cut (ADR-032, ADR-035).
+ */
+export function whose(asked: PastedAt, held: string): Whose {
+  const { sheet, row, col, from, cut, ours } = asked;
+  const own = from !== null && (held === '' || held === ours);
+  if (own && from !== null) return { is: 'grid', pasted: { from, sheet, row, col, cut } };
+
+  return held === ''
+    ? { is: 'neither' }
+    : { is: 'clipboard', text: { text: held, sheet, row, col } };
 }
 
 /**

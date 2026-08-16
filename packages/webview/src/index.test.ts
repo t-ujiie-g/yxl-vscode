@@ -71,9 +71,6 @@ function at(into: HTMLElement, row: number, col: number): HTMLTableCellElement |
 
 const typed: Typed = { sheet: 'Sales', row: 1, col: 1, text: '99' };
 
-/** The tick a paste waits for the clipboard on, where the page is never given one. */
-const settled = (): Promise<void> => new Promise((done) => setTimeout(done, 0));
-
 /** Select `from`, then reach to `to` with the shift key, as a reader would. */
 function reachFrom(
   into: HTMLElement,
@@ -372,7 +369,7 @@ describe('a rectangle copied in the grid', () => {
     reachFrom(into, { row: 1, col: 1 }, { row: 2, col: 2 });
     press(into, 2, 2, 'c');
 
-    expect(sent.filter((one) => one.kind === 'paste')).toEqual([]);
+    expect(sent.filter((one) => one.kind === 'pasteAt')).toEqual([]);
   });
 
   it('marks the cells it holds, on the sheet they are on', () => {
@@ -382,63 +379,6 @@ describe('a rectangle copied in the grid', () => {
     press(into, 2, 2, 'c');
 
     expect(into.querySelectorAll('td.copied')).toHaveLength(4);
-  });
-
-  it('names the rectangle and where it is going', async () => {
-    const { into, sent } = view();
-
-    reachFrom(into, { row: 1, col: 1 }, { row: 2, col: 2 });
-    press(into, 2, 2, 'c');
-    press(into, 1, 2, 'v');
-    await settled();
-
-    expect(sent.filter((one) => one.kind === 'paste')).toEqual([
-      {
-        kind: 'paste',
-        from: { sheet: 'Sales', top: 1, left: 1, bottom: 2, right: 2 },
-        sheet: 'Sales',
-        row: 1,
-        col: 2,
-        cut: false,
-      },
-    ]);
-  });
-
-  it('takes one cell as a rectangle of one', async () => {
-    const { into, sent } = view();
-
-    at(into, 1, 1)?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
-    press(into, 1, 1, 'c');
-    press(into, 2, 2, 'v');
-    await settled();
-
-    expect(sent.filter((one) => one.kind === 'paste')[0]).toMatchObject({
-      from: { sheet: 'Sales', top: 1, left: 1, bottom: 1, right: 1 },
-      row: 2,
-      col: 2,
-    });
-  });
-
-  it('says a cut is a cut, and puts nothing down until it is asked to', async () => {
-    const { into, sent } = view();
-
-    reachFrom(into, { row: 1, col: 1 }, { row: 1, col: 2 });
-    press(into, 1, 2, 'x');
-    expect(sent.filter((one) => one.kind === 'paste')).toEqual([]);
-
-    press(into, 2, 1, 'v');
-    await settled();
-    expect(sent.filter((one) => one.kind === 'paste')[0]).toMatchObject({ cut: true });
-  });
-
-  it('puts nothing down where nothing was copied', async () => {
-    const { into, sent } = view();
-
-    at(into, 1, 1)?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
-    press(into, 1, 1, 'v');
-    await settled();
-
-    expect(sent.filter((one) => one.kind === 'paste')).toEqual([]);
   });
 });
 
@@ -469,63 +409,44 @@ describe('a rectangle copied out of the grid', () => {
   });
 });
 
-describe('a rectangle pasted in from another spreadsheet', () => {
-  /** `Cmd`+`V` on a cell, and the clipboard the browser hands the catcher it puts under it. */
-  const pasteInto = (into: HTMLElement, row: number, col: number, text: string) => {
+describe('a paste the grid asks the host to make', () => {
+  const press = (into: HTMLElement, row: number, col: number, key: string) => {
     at(into, row, col)?.dispatchEvent(
-      new KeyboardEvent('keydown', { key: 'v', metaKey: true, bubbles: true }),
+      new KeyboardEvent('keydown', { key, metaKey: true, bubbles: true }),
     );
-
-    const catcher = document.querySelector('textarea.catcher');
-    if (catcher === null) throw new Error('nothing was put under the cursor to catch the paste');
-
-    const event = new Event('paste', { bubbles: true });
-    Object.defineProperty(event, 'clipboardData', { value: { getData: () => text } });
-    catcher.dispatchEvent(event);
   };
 
-  it('sends what the clipboard held, and where it goes, not what it means', async () => {
+  it('names where it is going, with nothing of its own to put there', () => {
     const { into, sent } = view();
 
-    pasteInto(into, 2, 1, 'APAC\t1\nEMEA\t2');
-    await settled();
-
-    expect(sent.filter((one) => one.kind === 'pasteText')).toEqual([
-      { kind: 'pasteText', text: 'APAC\t1\nEMEA\t2', sheet: 'Sales', row: 2, col: 1 },
+    press(into, 2, 1, 'v');
+    expect(sent.filter((one) => one.kind === 'pasteAt')).toEqual([
+      { kind: 'pasteAt', sheet: 'Sales', row: 2, col: 1, from: null, cut: false, ours: null },
     ]);
   });
 
-  it('puts its own rectangle down where the clipboard still holds what it copied', async () => {
+  it('names the rectangle it copied, so the host can tell the two pastes apart', () => {
     const { into, sent } = view();
 
     at(into, 1, 1)?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
-    at(into, 1, 1)?.dispatchEvent(
-      new KeyboardEvent('keydown', { key: 'c', metaKey: true, bubbles: true }),
-    );
-    pasteInto(into, 2, 2, 'APAC');
-    await settled();
+    press(into, 1, 1, 'c');
+    press(into, 2, 2, 'v');
 
-    expect(sent.filter((one) => one.kind === 'pasteText')).toEqual([]);
-    expect(sent.filter((one) => one.kind === 'paste')).toHaveLength(1);
+    expect(sent.filter((one) => one.kind === 'pasteAt')[0]).toMatchObject({
+      from: { sheet: 'Sales', top: 1, left: 1, bottom: 1, right: 1 },
+      cut: false,
+      row: 2,
+      col: 2,
+    });
   });
 
-  it('sends nothing at all for an empty clipboard', async () => {
+  it('says a cut is a cut', () => {
     const { into, sent } = view();
 
-    pasteInto(into, 1, 1, '');
-    await settled();
-
-    expect(sent.filter((one) => one.kind === 'pasteText' || one.kind === 'paste')).toEqual([]);
-  });
-
-  it('takes the catcher away again, and gives the cell the keyboard back', async () => {
-    const { into } = view();
-
     at(into, 1, 1)?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
-    pasteInto(into, 1, 1, 'APAC');
-    await settled();
+    press(into, 1, 1, 'x');
+    press(into, 2, 2, 'v');
 
-    expect(document.querySelector('textarea.catcher')).toBeNull();
-    expect(document.activeElement?.getAttribute('data-at')).toBe('1:1');
+    expect(sent.filter((one) => one.kind === 'pasteAt')[0]).toMatchObject({ cut: true });
   });
 });

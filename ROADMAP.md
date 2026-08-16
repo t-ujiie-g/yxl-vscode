@@ -1752,6 +1752,35 @@ numbers and re-applies the look. That is the same trade the internal paste makes
 worth reading is still open, and is worth deciding when there is a normalizer to
 hand what is read to.
 
+### ADR-035 — The webview writes the clipboard and the host reads it
+**Accepted.** Copying out is done in the view, inside the gesture, because two
+flavours can only go on the clipboard that way (ADR-028). Pasting in is done in
+the **host**, with `vscode.env.clipboard.readText()`, because the view is never
+given a `paste` event to read one from.
+
+*What was measured:* `Cmd`+`C` reaches the webview and `execCommand('copy')`
+works from it — the copy-out lands in Excel and Sheets. `Cmd`+`V` reaches the
+webview's `keydown` and then nothing happens: no `paste` event on the cell, and
+none on a `<textarea>` focused inside the key handler either, which is the
+pattern that works in a browser. Two attempts, both measured in the extension
+host rather than in jsdom, where a synthetic event had made both look fine.
+
+*Why the asymmetry is not a wart:* the two directions genuinely differ. Writing
+needs the gesture and the flavours; reading needs neither — it needs a clipboard
+the host can simply ask for. `vscode.env.clipboard` is the API for exactly that,
+and it is the one place in this design where the extension host knows something
+the page cannot.
+
+*What it costs:* `readText()` is text only, so the `text/html` flavour is
+unreachable from the host. That does not bite yet — ADR-034 has the paste
+carrying values and not looks until the normalizer exists — and §8 Q12 now has a
+second constraint to answer to: whatever reads the HTML has to run somewhere
+that can see it.
+
+*What it buys back:* the view stops holding a decision it had no business
+holding. It says where the paste goes and what it has of its own; which of the
+two pastes this is, is worked out where the clipboard actually is.
+
 ## 8. Open questions
 
 - **Q1 — `cells:` A1 keys and row insertion.** Inserting a row rewrites every
@@ -2224,19 +2253,19 @@ this at a phase boundary rather than at the end.
 A rectangle copied in Excel or Google Sheets now lands in the grid. §8 **Q11 is
 closed** and §4.4's `empty` row is answered for a rectangle from outside.
 
-- **The view sends what the clipboard held, not what it means.** `Cmd`+`V` is no
-  longer taken over by the grid: the clipboard only arrives in the `paste` event
-  the key sets off, and the view decides there whose paste this is — its own
-  rectangle where the clipboard still holds what our copy put on it, the
-  clipboard's where it does not.
-- **A page is only given that event where the paste has somewhere editable to
-  land**, which a focused `<td>` is not — measured in the webview, where the
-  first attempt did nothing at all. So a textarea goes under the cursor for the
-  length of the gesture and is taken away again on the next tick, with the cell
-  given the keyboard back. The grid still takes a `paste` of its own if it is
-  ever handed one; whichever arrives first clears the landing, so the other is a
-  no-op. And where neither arrives, the rectangle the grid holds is what lands,
-  so the internal paste cannot be lost to any of this.
+- **The grid's own rectangle wins while the clipboard still holds what its copy
+  put there**, and the clipboard's wins where it does not — only the first moves
+  a formula and empties a cut, so it is the one to prefer where both could
+  apply. What the view sends is where the paste goes, what it has of its own,
+  and what its copy last wrote out; the host reads the clipboard and decides.
+- **The clipboard is read on the host** (ADR-035), because a webview is never
+  given a `paste` event to read one from. Two attempts said so: the cell itself
+  got no event, and neither did a `<textarea>` focused inside the key handler,
+  which is the pattern that works in a browser. Both were measured in the
+  extension host — in jsdom a synthetic event had made both look fine, which is
+  the lesson worth keeping. `vscode.env.clipboard.readText()` is the API for it,
+  and the view is left saying *where* the paste goes and what it has of its own
+  rather than deciding whose paste it is.
 - **A field means what it would mean typed into that cell.** `1234` is a number,
   `1,234` is text, `TRUE` is a boolean — the same reader a keystroke goes
   through, so a paste cannot mean something a typed cell could not.
@@ -2256,7 +2285,7 @@ closed** and §4.4's `empty` row is answered for a rectangle from outside.
   *this address holds this*, and one function writes them: over the entry that
   is there, or as new `cells:` entries. The refusals, the *ones that can take
   it* answer, and the byte-for-byte undo come with it for nothing.
-- 29 new tests, 1291 in total; comment shape held at 38 over the limit.
+- 31 new tests, 1293 in total; comment shape held at 38 over the limit.
 
 ### 2026-08-16 — What the look on the clipboard actually reaches
 Measured rather than assumed, by pasting a styled rectangle out of the preview.

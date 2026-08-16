@@ -18,6 +18,7 @@ import {
   pasteFrom,
   resolve,
   type Spec,
+  whose,
   write,
   writeOverride,
 } from './write';
@@ -244,7 +245,12 @@ export class Preview {
       return;
     }
 
-    if (asked.kind === 'pasteText' || asked.kind === 'pastedText') {
+    if (asked.kind === 'pasteAt') {
+      this.tried(this.pasteHere(asked));
+      return;
+    }
+
+    if (asked.kind === 'pastedText') {
       this.tried(this.pasteOutside(asked));
       return;
     }
@@ -364,19 +370,29 @@ export class Preview {
     await pastedWith(spec, pasted, choice, this.port());
   }
 
-  /** A rectangle from another spreadsheet, in the shape the reader picked for it. */
-  private async pasteOutside(
-    asked: Extract<FromView, { kind: 'pasteText' | 'pastedText' }>,
-  ): Promise<void> {
+  /** `Cmd`+`V` in the grid; the clipboard is read here because a webview is never given one (ADR-035). */
+  private async pasteHere(asked: Extract<FromView, { kind: 'pasteAt' }>): Promise<void> {
     const spec = this.spec();
     if (spec === null) {
       this.refuse('this spec has not finished loading', null);
       return;
     }
 
-    const { kind, ...text } = asked;
-    const choice = 'choice' in text ? text.choice : undefined;
+    const { kind, ...where } = asked;
+    const taken = whose(where, await vscode.env.clipboard.readText());
+    if (taken.is === 'grid') await paste(spec, taken.pasted, this.port());
+    if (taken.is === 'clipboard') await pasteFrom(spec, taken.text, this.port());
+  }
 
+  /** The same rectangle again, in the shape the reader picked for it. */
+  private async pasteOutside(asked: Extract<FromView, { kind: 'pastedText' }>): Promise<void> {
+    const spec = this.spec();
+    if (spec === null) {
+      this.refuse('this spec has not finished loading', null);
+      return;
+    }
+
+    const { kind, choice, ...text } = asked;
     await pasteFrom(spec, text, this.port(), choice);
   }
 

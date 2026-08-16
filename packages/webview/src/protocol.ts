@@ -143,6 +143,20 @@ export interface Refused {
   readonly choices: readonly Choice[];
 }
 
+/**
+ * `Cmd`+`V` in the grid: where it goes, what the grid holds of its own, and what
+ * its copy put on the clipboard — which is how the host tells the two pastes
+ * apart, since it is the host that reads the clipboard (ADR-035).
+ */
+export interface PastedAt {
+  readonly sheet: string;
+  readonly row: number;
+  readonly col: number;
+  readonly from: Ranged | null;
+  readonly cut: boolean;
+  readonly ours: string | null;
+}
+
 /** A rectangle from another spreadsheet as the clipboard gave it, and the cell it is going down on. */
 export interface PastedText {
   readonly text: string;
@@ -210,7 +224,7 @@ export type FromView =
   | { readonly kind: 'undo'; readonly redo: boolean }
   | ({ readonly kind: 'paste' } & Pasted)
   | ({ readonly kind: 'pasted'; readonly choice: string } & Pasted)
-  | ({ readonly kind: 'pasteText' } & PastedText)
+  | ({ readonly kind: 'pasteAt' } & PastedAt)
   | ({ readonly kind: 'pastedText'; readonly choice: string } & PastedText)
   | ({ readonly kind: 'resolve'; readonly choice: string } & Typed)
   | ({ readonly kind: 'override'; readonly reason: string } & Typed)

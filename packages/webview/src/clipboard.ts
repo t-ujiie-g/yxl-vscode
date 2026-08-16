@@ -64,30 +64,6 @@ export function onto(what: Flavours): boolean {
   }
 }
 
-/**
- * The clipboard, caught. A page is only given a `paste` event where the paste
- * has somewhere editable to land, so one is put under the cursor for the length
- * of the gesture and taken away again; `done` runs whether one arrived or not.
- */
-export function caught(took: (text: string) => void, done: () => void): void {
-  const catcher = document.createElement('textarea');
-  catcher.setAttribute('aria-hidden', 'true');
-  catcher.className = 'catcher';
-
-  catcher.addEventListener('paste', (event) => {
-    event.preventDefault();
-    took(event.clipboardData?.getData('text/plain') ?? '');
-  });
-
-  document.body.append(catcher);
-  catcher.focus({ preventScroll: true });
-
-  setTimeout(() => {
-    catcher.remove();
-    done();
-  }, 0);
-}
-
 /** What the plain text carries: the value itself, unformatted; the HTML carries how it looked (ADR-028). */
 function plain(cell: DrawnCell | undefined): string {
   if (cell === undefined) return '';
