@@ -86,6 +86,51 @@ describe('what a cell filled by a range can be edited into', () => {
   });
 });
 
+describe('a cell nothing has written yet', () => {
+  it('offers to write it as a new entry, and moves only that cell', () => {
+    const [candidate, ...rest] = offered(SPEC, 'A5', 'Total');
+
+    expect(rest).toEqual([]);
+    expect(candidate?.id).toBe('newCell');
+    expect(candidate?.moves).toEqual([{ sheet: 'Sales', at: 'A5' }]);
+  });
+
+  it('writes it at the end of the cells the sheet already has', () => {
+    const [candidate] = offered(SPEC, 'A5', 'Total');
+    if (candidate === undefined) throw new Error('nothing was offered');
+
+    expect(taken(SPEC, candidate)).toBe(
+      SPEC.replace('      B2: 200\n', '      B2: 200\n      A5: Total\n'),
+    );
+  });
+
+  it('reads what was typed the way the spec would read it', () => {
+    const [candidate] = offered(SPEC, 'A5', '42');
+    if (candidate === undefined) throw new Error('nothing was offered');
+
+    expect(taken(SPEC, candidate)).toContain('A5: 42');
+  });
+
+  it('writes a formula as a formula', () => {
+    const [candidate] = offered(SPEC, 'A5', '=B1+B2');
+    if (candidate === undefined) throw new Error('nothing was offered');
+
+    expect(taken(SPEC, candidate)).toContain('      A5:\n        formula: "B1+B2"');
+  });
+
+  it('writes the `cells:` key too, where the sheet has none', () => {
+    const bare = 'sheets:\n  - name: Sales\n    columns:\n      - at: A\n        width: 12\n';
+    const [candidate] = offered(bare, 'A1', 'Region');
+    if (candidate === undefined) throw new Error('nothing was offered');
+
+    expect(taken(bare, candidate)).toBe(`${bare}    cells:\n      A1: Region\n`);
+  });
+
+  it('says nothing about an empty box, which is not a value to write', () => {
+    expect(offered(SPEC, 'A5', '')).toEqual([]);
+  });
+});
+
 describe('what it will not offer', () => {
   it('says nothing away from the anchor, where the formula would be off by a row', () => {
     // `=B2*0.1` typed into C2 means `B1*0.1` to a range anchored at C1, and
@@ -99,10 +144,6 @@ describe('what it will not offer', () => {
 
   it('says nothing about a cell the spec wrote itself', () => {
     expect(offered(SPEC, 'B1', '=A1*2')).toEqual([]);
-  });
-
-  it('says nothing about an address nothing reaches', () => {
-    expect(offered(SPEC, 'Z9', '=1')).toEqual([]);
   });
 
   it('says nothing about a sheet that is not there', () => {

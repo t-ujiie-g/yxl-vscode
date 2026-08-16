@@ -8,6 +8,12 @@ import type { A1Addr, FilePath, NodeId, ParamName } from '@yxl-vscode/units';
  * arriving from a definition, a parameter, or row 12 of a CSV is another. The
  * `node` is always what a patch would address. A position on an `inline` or an
  * `external` origin counts from that block's own corner, from zero.
+ *
+ * `empty` is a value nothing said — its `node` is the cell it was not said at,
+ * where the spec wrote that cell for some other reason (a number format of its
+ * own, say), and `null` where there is no cell at all. The distinction is the
+ * difference between an edit with one place to go and an edit with a question
+ * in front of it.
  */
 export type FacetOrigin =
   | { readonly kind: 'literal'; readonly node: NodeId }
@@ -33,7 +39,7 @@ export type FacetOrigin =
       readonly params: readonly ParamName[];
     }
   | { readonly kind: 'override'; readonly node: NodeId }
-  | { readonly kind: 'empty' };
+  | { readonly kind: 'empty'; readonly node: NodeId | null };
 
 /**
  * Where a cell's facets came from, each answered separately.

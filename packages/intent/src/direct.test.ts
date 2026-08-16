@@ -124,8 +124,30 @@ describe('what typing into a cell will not do', () => {
     expect(why({ [ROOT]: spec }, 'A1')).toContain('parameter');
   });
 
+  it('writes a value into a cell that was written for its format alone', () => {
+    // `docs/spec.md` §3: a cell may be a number format and nothing else. It is
+    // still a cell, and there is one place a value goes in it.
+    const spec = `${SALES}    cells:\n      B4: { format: "0.0%" }\n`;
+    const sources = { [ROOT]: spec };
+    const { grid, text } = files(sources);
+
+    expect(edited(sources, setValue(grid, at('B4'), 0.01, text))).toBe(
+      `${SALES}    cells:\n      B4: { value: 0.01, format: "0.0%" }\n`,
+    );
+  });
+
+  it('writes a value into a cell that was written for its style alone', () => {
+    const spec = `${SALES}    cells:\n      B4:\n        style: header\n`;
+    const sources = { [ROOT]: spec };
+    const { grid, text } = files(sources);
+
+    expect(edited(sources, setValue(grid, at('B4'), 'Total', text))).toBe(
+      `${SALES}    cells:\n      B4:\n        value: Total\n        style: header\n`,
+    );
+  });
+
   it('refuses an address nothing is written at', () => {
-    expect(why({ [ROOT]: `${SALES}    cells:\n      A1: 1\n` }, 'Z9')).toContain('nothing is');
+    expect(why({ [ROOT]: `${SALES}    cells:\n      A1: 1\n` }, 'Z9')).toContain('nothing writes');
   });
 });
 

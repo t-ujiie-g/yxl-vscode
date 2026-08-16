@@ -83,7 +83,14 @@ describe('an origin no spec has produced yet', () => {
     // A new `cells:` entry, or extending the `data:` rectangle beside it. The
     // projection says `null` for such an address rather than carrying a cell,
     // so the row is asserted on the origin itself.
-    expect(editabilityOf({ kind: 'empty' })).toBe('mediated');
+    expect(editabilityOf({ kind: 'empty', node: null })).toBe('mediated');
+  });
+
+  it('writes into a cell the spec wrote for another reason', () => {
+    // `B4: { format: "0.0%" }` holds no value and is still a cell: there is one
+    // place a value would go, and one place needs no question.
+    const node = nodeId('["spec.yxl.yaml","sheets",0,"cells","B4"]');
+    expect(editabilityOf({ kind: 'empty', node })).toBe('direct');
   });
 
   it('sends a value that lives in a file to the file', () => {

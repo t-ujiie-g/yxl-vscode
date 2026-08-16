@@ -97,7 +97,7 @@ function compileValue(
 ): { value: ScalarValue; origin: FacetOrigin } {
   if (node.value === null) {
     const holds = node.formula !== null || node.rich !== null || node.style !== null;
-    return { value: null, origin: holds ? own : { kind: 'empty' } };
+    return { value: null, origin: holds ? own : { kind: 'empty', node: node.id } };
   }
 
   if (node.value.kind === 'ref') {

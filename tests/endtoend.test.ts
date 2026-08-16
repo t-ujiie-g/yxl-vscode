@@ -148,4 +148,59 @@ describe('the loop, closed', () => {
       'B2*0.1',
     ]);
   });
+
+  it('carries a cell nothing had written into the workbook', async () => {
+    if (!QUICKSTART) return;
+    const { dir, root, port, spec, refusals } = opened(QUICKSTART);
+
+    // Typing into a blank cell has one meaning here, so it is written rather
+    // than asked about — and the workbook is where that has to show.
+    await write(spec(), typed({ row: 7, col: 1, text: 'Footnote' }), port);
+    expect(refusals).toEqual([]);
+
+    expect(cell(built(dir, root), 'Sales', 'A7')?.value).toBe('Footnote');
+  });
+
+  it('empties a cell written in the flow form, keeping the format it wears', async () => {
+    if (!QUICKSTART) return;
+    const { dir, root, port, spec, refusals } = opened(QUICKSTART);
+
+    // `B4: { value: 0.085, format: "0.0%" }` — the expanded form as the spec's
+    // own documentation writes it, on one line and inside brackets.
+    await write(spec(), typed({ row: 4, col: 2, text: '' }), port);
+    expect(refusals).toEqual([]);
+
+    const grid = built(dir, root);
+    expect(cell(grid, 'Sales', 'B4')?.value).toBeNull();
+    expect(cell(grid, 'Sales', 'B4')?.format).toBe('0.0%');
+  });
+
+  it('writes a value back into a cell that was left holding only its format', async () => {
+    if (!QUICKSTART) return;
+    const { dir, root, port, spec, refusals } = opened(QUICKSTART);
+    const at = typed({ row: 4, col: 2, text: '' });
+
+    // Emptied and written again: the cell is still a cell while it holds only
+    // its number format, so typing into it is one change in one place.
+    await write(spec(), at, port);
+    await write(spec(), { ...at, text: '0.01' }, port);
+    expect(refusals).toEqual([]);
+
+    const grid = built(dir, root);
+    expect(cell(grid, 'Sales', 'B4')?.value).toBe(0.01);
+    expect(cell(grid, 'Sales', 'B4')?.format).toBe('0.0%');
+  });
+
+  it('takes a cell back out of the workbook when it is emptied', async () => {
+    if (!QUICKSTART) return;
+    const { dir, root, port, spec, refusals } = opened(QUICKSTART);
+
+    await write(spec(), typed({ row: 7, col: 1, text: 'Footnote' }), port);
+    // Emptying it is not writing nothing into it: a cell with nothing in it is
+    // not something the format can say (`docs/spec.md` §3), so the entry goes.
+    await write(spec(), typed({ row: 7, col: 1, text: '' }), port);
+    expect(refusals).toEqual([]);
+
+    expect(cell(built(dir, root), 'Sales', 'A7')).toBeNull();
+  });
 });

@@ -132,9 +132,20 @@ class Reader {
 
   /** `{a: 1}` and `[1, 2]` differ only by their opening token. */
   flow(token: CST.FlowCollection): Node {
-    return token.start.source === '{'
-      ? this.mapping(token.items, token.offset, true)
-      : this.sequence(token.items, token.offset, true);
+    const node =
+      token.start.source === '{'
+        ? this.mapping(token.items, token.offset, true)
+        : this.sequence(token.items, token.offset, true);
+
+    // A collection's span stops at its last member, which here would leave the
+    // bracket that closes it outside the node it closes — and a rewrite of the
+    // collection would then write over the opening one and not the closing.
+    const closed = token.end.find(
+      (one) => one.type === 'flow-map-end' || one.type === 'flow-seq-end',
+    );
+    if (closed === undefined) return node;
+
+    return { ...node, span: span(node.span.start, closed.offset + closed.source.length) };
   }
 }
 

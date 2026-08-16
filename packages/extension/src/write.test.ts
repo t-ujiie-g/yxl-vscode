@@ -30,10 +30,10 @@ function editor(sources: Record<string, string>) {
     put: (file, text) => {
       files[file] = text;
     },
-    refuse: (why, override, choices) => {
+    refuse: (why, offer) => {
       refusals.push(why);
-      offers.push(override);
-      answers.push([...choices]);
+      offers.push(offer?.canOverride === true ? offer.typed : null);
+      answers.push([...(offer?.choices ?? [])]);
     },
     said: (what) => {
       told.push(what);
@@ -53,6 +53,9 @@ const typed = (of: Partial<Typed> = {}): Typed => ({
 
 const SALES = 'sheets:\n  - name: Sales\n';
 
+/** A sheet whose rows come from a `data:` block, with a blank line under it. */
+const BESIDE_DATA = `${SALES}    data:\n      - at: A1\n        values:\n          - [APAC, 1]\n          - [EMEA, 2]\n`;
+
 describe('what a reader typed, all the way to the file', () => {
   it('writes a value where the spec wrote the cell', async () => {
     const spec = { [ROOT]: `${SALES}    cells:\n      A1: APAC\n` };
@@ -69,7 +72,6 @@ describe('what a reader typed, all the way to the file', () => {
       ['42', 'B1: 42'],
       ['true', 'B1: true'],
       ['4.5', 'B1: 4.5'],
-      ['', 'B1:'],
     ] as const) {
       const { spec: read, port, files } = editor(spec);
       await write(read, typed({ col: 2, text }), port);
@@ -121,9 +123,9 @@ describe('the exception, when the ordinary edit is refused', () => {
   });
 
   it('is not offered where there is no cell to make an exception of', async () => {
-    const { spec, port, offers } = editor({ [ROOT]: `${SALES}    cells:\n      A1: 1\n` });
+    const { spec, port, offers } = editor({ [ROOT]: BESIDE_DATA });
 
-    await write(spec, typed({ col: 26, row: 99 }), port);
+    await write(spec, typed({ col: 1, row: 3, text: 'Total' }), port);
     expect(offers[0]).toBeNull();
   });
 
@@ -254,5 +256,55 @@ describe('the answers an edit has, when it has more than one', () => {
 
     await write(spec, typed({ text: '=A2' }), port);
     expect(answers[0]).toEqual([]);
+  });
+});
+
+describe('a cell nothing has written yet', () => {
+  const at = typed({ row: 5, col: 1, text: 'Total' });
+
+  it('is written where the sheet keeps its cells, without being asked about', async () => {
+    // One answer and nothing to weigh it against, so it applies: a click in
+    // front of typing into a blank cell would be a click too many (ADR-001).
+    const { spec, port, files, refusals } = editor({
+      [ROOT]: `${SALES}    cells:\n      A1: APAC\n`,
+    });
+
+    await write(spec, at, port);
+    expect(refusals).toEqual([]);
+    expect(files[ROOT]).toBe(`${SALES}    cells:\n      A1: APAC\n      A5: Total\n`);
+  });
+
+  it('is asked about where a `data:` rectangle could hold it instead', async () => {
+    // Extending the rectangle is the other answer, and where there are two the
+    // reader picks. No override beside them: there is no cell to except yet.
+    const { spec, port, answers, offers, files } = editor({ [ROOT]: BESIDE_DATA });
+
+    await write(spec, typed({ row: 3, col: 1, text: 'Total' }), port);
+    expect(answers[0]).toEqual([
+      { id: 'newCell', what: 'Write `A3` as a new cell', moves: 1, sample: ['A3'] },
+    ]);
+    expect(offers[0]).toBeNull();
+    expect(files[ROOT]).toBe(BESIDE_DATA);
+  });
+
+  it('is written as the answer says when the reader takes it', async () => {
+    const { spec, port, files } = editor({ [ROOT]: BESIDE_DATA });
+
+    await resolve(spec, typed({ row: 3, col: 1, text: 'Total' }), 'newCell', port);
+    expect(files[ROOT]).toContain('A3: Total');
+  });
+});
+
+describe('a cell emptied', () => {
+  it('takes the entry out rather than leaving a cell with nothing in it', async () => {
+    // `A1:` with no value is a spec the compiler refuses (`docs/spec.md` §3),
+    // so Delete has to take the line, not blank it.
+    const { spec, port, files, refusals } = editor({
+      [ROOT]: `${SALES}    cells:\n      A1: APAC\n      B1: 1\n`,
+    });
+
+    await write(spec, typed({ text: '' }), port);
+    expect(refusals).toEqual([]);
+    expect(files[ROOT]).toBe(`${SALES}    cells:\n      B1: 1\n`);
   });
 });

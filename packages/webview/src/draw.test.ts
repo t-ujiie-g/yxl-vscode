@@ -394,6 +394,86 @@ describe('what the view asks for', () => {
   });
 });
 
+describe('moving about the grid with the keys', () => {
+  /** A sheet with room to move in, drawn whole. */
+  const room = () =>
+    drawing({ sheets: [sheet({ rows: 4, columns: 4, of: { rows: 4, columns: 4 } })] });
+
+  const press = (into: HTMLElement, row: number, col: number, key: string, shift = false) => {
+    at(into, row, col)?.dispatchEvent(new KeyboardEvent('keydown', { key, shiftKey: shift }));
+  };
+
+  it('moves the selection one cell at a time, by the arrow keys', () => {
+    const on = asks();
+    const into = shown({ drawing: room() }, on);
+
+    press(into, 2, 2, 'ArrowDown');
+    expect(on.select).toHaveBeenCalledWith(3, 2);
+
+    press(into, 2, 2, 'ArrowRight');
+    expect(on.select).toHaveBeenCalledWith(2, 3);
+  });
+
+  it('moves across by tab, and back by shift-tab', () => {
+    const on = asks();
+    const into = shown({ drawing: room() }, on);
+
+    press(into, 2, 2, 'Tab');
+    expect(on.select).toHaveBeenCalledWith(2, 3);
+
+    press(into, 2, 2, 'Tab', true);
+    expect(on.select).toHaveBeenCalledWith(2, 1);
+  });
+
+  it('stops at the edge of the sheet rather than running past it', () => {
+    const on = asks();
+    const into = shown({ drawing: room() }, on);
+
+    press(into, 1, 1, 'ArrowUp');
+    press(into, 1, 1, 'ArrowLeft');
+    expect(on.select).toHaveBeenCalledTimes(2);
+    expect(on.select).toHaveBeenCalledWith(1, 1);
+  });
+
+  it('gives the focus to the cell it moved to, so the next key lands there', () => {
+    const into = shown({ drawing: room() });
+    document.body.append(into);
+
+    at(into, 2, 2)?.focus();
+    press(into, 2, 2, 'ArrowDown');
+
+    expect(document.activeElement).toBe(at(into, 3, 2));
+    into.remove();
+  });
+
+  it('asks the host for a window around a cell that is not drawn', () => {
+    // The sheet is a hundred rows and two of them are drawn; moving off the
+    // bottom of what is there is a question for the host, not a lost keystroke.
+    const on = asks();
+    const large = drawing({ sheets: [sheet({ rows: 2, of: { rows: 100, columns: 2 } })] });
+    const into = shown({ drawing: large }, on);
+
+    press(into, 2, 1, 'ArrowDown');
+    expect(on.showWindow).toHaveBeenCalledWith(3, 1);
+  });
+
+  it('empties a cell on delete, which is typing nothing into it', () => {
+    const on = asks();
+    const into = shown({ drawing: room() }, on);
+
+    press(into, 2, 2, 'Delete');
+    expect(on.edit).toHaveBeenCalledWith(2, 2, '');
+  });
+
+  it('leaves the keys a cell is typed into alone', () => {
+    const on = asks();
+    const into = shown({ drawing: room() }, on);
+
+    press(into, 2, 2, 'x');
+    expect(on.select).not.toHaveBeenCalled();
+  });
+});
+
 describe('what changes without redrawing the grid', () => {
   function showing(of: Partial<Showing> = {}): Showing {
     return {
@@ -515,7 +595,8 @@ describe('what the view says about a spec', () => {
     const refused = {
       kind: 'refused',
       why: 'B5 holds a formula',
-      override: null,
+      typed: null,
+      canOverride: false,
       choices: [],
     } as const;
     expect(shown({ refused }).querySelector('.refused')?.textContent).toContain('holds a formula');
@@ -526,7 +607,8 @@ describe('what the view says about a spec', () => {
     const refused = {
       kind: 'refused',
       why: 'B5 is filled by a range',
-      override: typed,
+      typed,
+      canOverride: true,
       choices: [
         {
           id: 'rangeFormula',
@@ -551,7 +633,8 @@ describe('what the view says about a spec', () => {
     const refused = {
       kind: 'refused',
       why: 'B5 is filled by a range',
-      override: typed,
+      typed,
+      canOverride: true,
       choices: [],
     } as const;
     const on = asks();
@@ -566,7 +649,8 @@ describe('what the view says about a spec', () => {
     const refused = {
       kind: 'refused',
       why: 'B5 is filled by a range',
-      override: typed,
+      typed,
+      canOverride: true,
       choices: [],
     } as const;
     const on = asks();
@@ -586,7 +670,8 @@ describe('what the view says about a spec', () => {
     const refused = {
       kind: 'refused',
       why: 'B5 is filled by a range',
-      override: typed,
+      typed,
+      canOverride: true,
       choices: [],
     } as const;
     const on = asks();
@@ -605,7 +690,8 @@ describe('what the view says about a spec', () => {
     const refused = {
       kind: 'refused',
       why: 'nothing is written there',
-      override: null,
+      typed: null,
+      canOverride: false,
       choices: [],
     } as const;
     expect(shown({ refused }).querySelector('.refused .go')).toBeNull();

@@ -762,7 +762,13 @@ Where it starts to feel like a spreadsheet.
       range is anchored at is offered as *the range's* formula, and taking it
       changes every cell the range fills. ② (split the range) and ① away from
       the anchor wait on §8 Q2, and the refusal points the reader at the anchor
-      meanwhile. The other rows are next.
+      meanwhile.
+      **`empty` ①** is in: typing into an address nothing reaches offers it as a
+      new `cells:` entry, written where the sheet keeps its cells — and the
+      `cells:` key itself where the sheet has none. ② (extend the `data:`
+      rectangle next to it) is the half that decides whether a spec grows a
+      hundred `cells:` entries or a table, and it lands with the rectangle work
+      Phase 8 needs anyway.
 - [x] Resolution dialog: candidates, each with a pre-computed impact summary and
       a sample of affected cells
       **Shipped**, as answers under the grid rather than a modal over it: each
@@ -1759,6 +1765,69 @@ this at a phase boundary rather than at the end.
   two serials either side of it, so the next reader knows it is deliberate.
 - A cell's own format — written, or the one its type takes — now wins over a
   band's. Both are requests about *that* cell; a band is something reaching it.
+
+### 2026-08-16 — Phase 7: typing into an empty cell, and one place for both offers
+
+*Amended the same day, after a reader asked whether every edit would now cost a
+click. It should not, and ADR-001 always said so: an edit with **one** meaning
+applies, and only an edit with several is a question.*
+
+- **A sole answer is taken rather than offered.** Typing into a blank cell just
+  writes it, as in any spreadsheet. The question comes back the moment there is
+  something to weigh it against — a `data:` rectangle directly above or to the
+  left, whose second answer is to extend it — and a range's formula is always a
+  question, because changing five hundred cells is not a thing to do quietly.
+  `Candidate.alone` is where a row says which it is.
+- **The grid moves under the keys**: arrows, tab and shift-tab, page up and
+  down, all clamped to the sheet. Off the edge of the drawn window the host is
+  asked for a window around where the reader went, and the redraw puts the focus
+  back — but only if the grid had it, so the text editor beside is never robbed.
+- **Delete empties a cell**, and emptying one *takes the entry out*. Writing
+  `A7:` with nothing under it looked like the obvious thing and is a spec the
+  compiler refuses: a cell needs at least one of `value`, `formula`, `rich`,
+  `style`, or `format` (`docs/spec.md` §3). So the entry goes — except for what
+  the cell *wears*: `{ value: 1, style: header }` keeps its style and loses its
+  value, which is what a spreadsheet leaves behind. A field of a `data:` block
+  is the format's own exception: `null` in a row is a blank cell (§9), so there
+  the ordinary write says it.
+- **A flow collection can have an entry taken out of it now.** `{ value: 0.085,
+  format: "0.0%" }` is how the spec's own documentation writes an expanded cell,
+  so refusing to touch it refused the common case. There are no lines to remove
+  inside one, so what goes is the entry and one separator — the comma after it,
+  or the comma before where it is the last — and the rest of the collection is
+  the file's own bytes on either side of the cut. The undo writes the
+  collection back as it was, which is byte-exact by construction.
+- **A cell written for its format alone can be typed into.** Emptying `B4:
+  { value: 0.085, format: "0.0%" }` leaves `{ format: "0.0%" }` — still a cell
+  (`docs/spec.md` §3), and typing `0.01` into it was refused as *mediated* and
+  offered an override, which is the wrong answer to an edit with one place to
+  go. The `value:` key is now written into the cell that has not got one, above
+  whatever is there, which is the order the spec's own examples use. `empty`
+  origins carry the node they were not written at, so the badge and the write
+  agree: a cell there is `direct`, and no cell at all still asks.
+- **A flow collection's span had stopped at its last member**, leaving the
+  bracket that closes it outside the node it closes. Correct for a block
+  collection, where the span deliberately stops short of the comments that
+  follow; wrong here, and it is what made the first attempt at the cut leave a
+  stray `}` behind.
+
+- **An address nothing reaches can be written now.** Typing into a blank cell
+  offers it as a new `cells:` entry — the `empty` row's first answer — with the
+  `cells:` key written too where the sheet has none. A formula goes in as
+  `A5:\n  formula: …` and a value as `A5: …`, which is the shape each has in the
+  spec (`docs/spec.md` §3).
+- **It is offered rather than taken**, even though it is the only answer today:
+  a blank cell beside a `data:` rectangle has a second one waiting — extending
+  the rectangle — and doing the first silently would be picking between them.
+- **No override beside it**, because an override must have something to override
+  (`docs/spec.md` §23), and an empty address has nothing. The refusal now says
+  `nothing writes A5 yet` rather than sounding like a mistake.
+- **A refusal's two offers came apart.** The answers used to ride on the
+  override's presence — a refusal with no cell to except carried no answer
+  either, which is exactly the empty cell's case. `Refused` now carries what was
+  typed once, with `choices` and `canOverride` beside it.
+- `meant` — what a reader's text means as a YAML scalar — moved down into
+  `intent`, where the direct path and the resolutions both read one rule.
 
 ### 2026-08-16 — Phase 7: the first row of the resolution table, and the way to choose
 

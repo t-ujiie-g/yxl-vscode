@@ -215,14 +215,17 @@ export interface Highlighted {
  *
  * `choices` are the ways the edit *could* be made, each with what it would move,
  * for the reader to pick between — the editor enumerates and never picks
- * (ADR-001). `override` is the same edit offered as the exception it would have
- * to be (`docs/spec.md` §23) — present when there is a cell an override could
- * name, and never taken without the reader saying so (ADR-007).
+ * (ADR-001). `canOverride` says the edit could also be written as the exception
+ * it would have to be (`docs/spec.md` §23), which is so wherever there is a cell
+ * an override could name, and is never taken without the reader saying so
+ * (ADR-007). Both offers are about `typed`, which is what the reader typed and
+ * what the view sends back when one of them is taken.
  */
 export interface Refused {
   readonly kind: 'refused';
   readonly why: string;
-  readonly override: Typed | null;
+  readonly typed: Typed | null;
+  readonly canOverride: boolean;
   readonly choices: readonly Choice[];
 }
 
