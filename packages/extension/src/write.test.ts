@@ -5,18 +5,7 @@ import { did, type History, nothing } from '@yxl-vscode/patch';
 import { type FilePath, filePath } from '@yxl-vscode/units';
 import type { Choice, Typed } from '@yxl-vscode/webview/protocol';
 import { describe, expect, it } from 'vitest';
-import {
-  emptied,
-  empty,
-  goBack,
-  type Port,
-  paste,
-  pastedWith,
-  resolve,
-  type Spec,
-  write,
-  writeOverride,
-} from './write';
+import { emptied, empty, type Port, resolve, type Spec, write, writeOverride } from './write';
 
 const ROOT = filePath('/specs/report.yxl.yaml') ?? ('' as FilePath);
 
@@ -47,7 +36,9 @@ function editor(sources: Record<string, string>) {
     },
     refuse: (why, offer) => {
       refusals.push(why);
-      offers.push(offer?.canOverride === true ? offer.typed : null);
+      offers.push(
+        offer?.canOverride === true && offer.about?.is === 'typed' ? offer.about.typed : null,
+      );
       answers.push([...(offer?.choices ?? [])]);
     },
     said: (what) => {
@@ -66,17 +57,6 @@ function editor(sources: Record<string, string>) {
   };
 
   return { spec, port, files, refusals, offers, answers, told, stack };
-}
-
-/** The grid's undo, as the preview runs it: the history in, the history it left back out. */
-async function back(
-  editing: ReturnType<typeof editor>,
-  redoing = false,
-): Promise<'here' | 'shell' | 'nowhere'> {
-  const taken = await goBack(editing.spec, editing.stack.history, redoing, editing.port);
-  editing.stack.history = taken.history;
-
-  return taken.at;
 }
 
 const typed = (of: Partial<Typed> = {}): Typed => ({
@@ -458,204 +438,5 @@ describe('a rectangle emptied', () => {
 
     await empty(spec, { ...rect, sheet: '' }, port);
     expect(refusals[0]).toContain('is not a name a sheet can have');
-  });
-});
-
-describe('an edit taken back where this editor still holds the file', () => {
-  const ONE = `${SALES}    cells:\n      A1: APAC\n`;
-
-  it('puts the file back byte for byte', async () => {
-    const editing = editor({ [ROOT]: ONE });
-    await write(editing.spec, typed(), editing.port);
-
-    expect(await back(editing)).toBe('here');
-    expect(editing.files[ROOT]).toBe(ONE);
-  });
-
-  it('takes them back one at a time, last first', async () => {
-    const both = `${SALES}    cells:\n      A1: APAC\n      B1: 1\n`;
-    const editing = editor({ [ROOT]: both });
-    await write(editing.spec, typed(), editing.port);
-    await write(editing.spec, typed({ col: 2, text: '2' }), editing.port);
-
-    expect(await back(editing)).toBe('here');
-    expect(editing.files[ROOT]).toBe(`${SALES}    cells:\n      A1: EMEA\n      B1: 1\n`);
-
-    expect(await back(editing)).toBe('here');
-    expect(editing.files[ROOT]).toBe(both);
-  });
-
-  it('puts an undone edit back on, and takes it back again', async () => {
-    const editing = editor({ [ROOT]: ONE });
-    await write(editing.spec, typed(), editing.port);
-    await back(editing);
-
-    expect(await back(editing, true)).toBe('here');
-    expect(editing.files[ROOT]).toContain('A1: EMEA');
-
-    expect(await back(editing)).toBe('here');
-    expect(editing.files[ROOT]).toBe(ONE);
-  });
-
-  it('takes back an edit that landed in an `$include`d file', async () => {
-    const included = 'name: Sales\ncells:\n  A1: APAC\n';
-    const editing = editor({
-      [ROOT]: 'sheets:\n  - $include: sales.yaml\n',
-      '/specs/sales.yaml': included,
-    });
-    await write(editing.spec, typed(), editing.port);
-
-    expect(await back(editing)).toBe('here');
-    expect(editing.files['/specs/sales.yaml']).toBe(included);
-  });
-});
-
-describe('an edit this editor no longer holds', () => {
-  const ONE = `${SALES}    cells:\n      A1: APAC\n`;
-
-  it('goes to the editor’s own stack where the file moved since', async () => {
-    const editing = editor({ [ROOT]: ONE });
-    await write(editing.spec, typed(), editing.port);
-    editing.files[ROOT] = `${SALES}    cells:\n      A1: EMEA\n      B1: 1\n`;
-
-    expect(await back(editing)).toBe('shell');
-    expect(editing.files[ROOT]).toContain('B1: 1');
-  });
-
-  it('goes there before this editor has written anything', async () => {
-    const editing = editor({ [ROOT]: ONE });
-
-    expect(await back(editing)).toBe('shell');
-    expect(await back(editing, true)).toBe('shell');
-  });
-
-  it('goes there where the spec no longer reads, and writes nothing', async () => {
-    const editing = editor({
-      [ROOT]: 'sheets:\n  - $include: sales.yaml\n',
-      '/specs/sales.yaml': 'name: Sales\ncells:\n  A1: APAC\n',
-    });
-    await write(editing.spec, typed(), editing.port);
-    editing.files[ROOT] = '- not a spec\n';
-
-    expect(await back(editing)).toBe('shell');
-    expect(editing.files['/specs/sales.yaml']).toContain('A1: EMEA');
-  });
-
-  it('forgets what it did once it makes an edit it cannot take back', async () => {
-    const reads = `${SALES}    cells:\n      C1: keep\n    data:\n      - at: A1\n        csv: rows.csv\n`;
-    const editing = editor({ [ROOT]: reads, '/specs/rows.csv': 'APAC,1\nEMEA,2\n' });
-    await write(editing.spec, typed({ col: 3, text: 'kept' }), editing.port);
-    await resolve(editing.spec, typed({ row: 2, text: 'LATAM' }), 'dataFile', editing.port);
-
-    expect(editing.files['/specs/rows.csv']).toBe('APAC,1\nLATAM,2\n');
-    expect(editing.stack.history).toEqual(nothing);
-    expect(await back(editing)).toBe('shell');
-  });
-});
-
-describe('an undo this editor has already spent', () => {
-  const ONE = `${SALES}    cells:\n      A1: APAC\n`;
-
-  it('says so rather than reaching for a stack it has unwound itself', async () => {
-    const editing = editor({ [ROOT]: ONE });
-    await write(editing.spec, typed(), editing.port);
-    await back(editing);
-
-    expect(await back(editing)).toBe('nowhere');
-    expect(editing.files[ROOT]).toBe(ONE);
-  });
-
-  it('has nothing to put on again while its own last edit still stands', async () => {
-    const editing = editor({ [ROOT]: ONE });
-    await write(editing.spec, typed(), editing.port);
-
-    expect(await back(editing, true)).toBe('nowhere');
-  });
-});
-
-describe('a rectangle put down somewhere else', () => {
-  const GRID = `${SALES}    cells:\n      A1: 1\n      A2: 2\n      C1: keep\n`;
-  const from = { sheet: 'Sales', top: 1, left: 1, bottom: 2, right: 1 };
-
-  it('writes every cell of it in one edit, and says how many', async () => {
-    const { spec, port, files, told } = editor({ [ROOT]: GRID });
-
-    await paste(spec, { from, sheet: 'Sales', row: 1, col: 2, cut: false }, port);
-    expect(files[ROOT]).toBe(
-      `${SALES}    cells:\n      A1: 1\n      A2: 2\n      C1: keep\n      B1: 1\n      B2: 2\n`,
-    );
-    expect(told).toEqual(['2 cells pasted.']);
-  });
-
-  it('empties what a cut took, and says the cells moved', async () => {
-    const { spec, port, files, told } = editor({ [ROOT]: GRID });
-
-    await paste(spec, { from, sheet: 'Sales', row: 1, col: 2, cut: true }, port);
-    expect(files[ROOT]).toBe(`${SALES}    cells:\n      C1: keep\n      B1: 1\n      B2: 2\n`);
-    expect(told).toEqual(['4 cells moved.']);
-  });
-
-  it('takes a formula with it, with the references it holds moved', async () => {
-    const spec = `${SALES}    cells:\n      A1: 2\n      A2: 3\n      B1: { formula: "A1*10" }\n`;
-    const { spec: read, port, files } = editor({ [ROOT]: spec });
-
-    await paste(
-      read,
-      {
-        from: { ...from, top: 1, bottom: 1, left: 2, right: 2 },
-        sheet: 'Sales',
-        row: 2,
-        col: 2,
-        cut: false,
-      },
-      port,
-    );
-    expect(files[ROOT]).toContain('B2:\n        formula: "A2*10"');
-  });
-
-  it('offers to paste into the ones that can take it', async () => {
-    const spec = `${SALES}    cells:\n      A1: 1\n      A2: 2\n      B2: 0\n    formulas:\n      - at: B1:B1\n        formula: "A1"\n`;
-    const { spec: read, port, answers } = editor({ [ROOT]: spec });
-
-    await paste(read, { from, sheet: 'Sales', row: 1, col: 2, cut: false }, port);
-    expect(answers[0]).toEqual([
-      { id: 'only', what: 'Paste into the ones that can take it', moves: 1, sample: ['Sales!B2'] },
-    ]);
-  });
-
-  it('pastes into those and leaves the rest where the reader takes that answer', async () => {
-    const spec = `${SALES}    cells:\n      A1: 1\n      A2: 2\n      B2: 0\n    formulas:\n      - at: B1:B1\n        formula: "A1"\n`;
-    const { spec: read, port, files, refusals } = editor({ [ROOT]: spec });
-
-    await pastedWith(read, { from, sheet: 'Sales', row: 1, col: 2, cut: false }, 'only', port);
-    expect(refusals).toEqual([]);
-    expect(files[ROOT]).toContain('B2: 2');
-  });
-
-  it('takes no answer it did not offer', async () => {
-    const { spec, port, files, refusals } = editor({ [ROOT]: GRID });
-
-    await pastedWith(spec, { from, sheet: 'Sales', row: 1, col: 2, cut: false }, 'anything', port);
-    expect(files[ROOT]).toBe(GRID);
-    expect(refusals[0]).toContain('no longer one of the ways');
-  });
-
-  it('refuses a sheet name no sheet can have', async () => {
-    const { spec, port, refusals } = editor({ [ROOT]: GRID });
-
-    await paste(
-      spec,
-      { from: { ...from, sheet: '' }, sheet: 'Sales', row: 1, col: 2, cut: false },
-      port,
-    );
-    expect(refusals[0]).toContain('is not a name a sheet can have');
-  });
-
-  it('can be taken back in place, like every other edit', async () => {
-    const editing = editor({ [ROOT]: GRID });
-
-    await paste(editing.spec, { from, sheet: 'Sales', row: 1, col: 2, cut: true }, editing.port);
-    expect(await back(editing)).toBe('here');
-    expect(editing.files[ROOT]).toBe(GRID);
   });
 });

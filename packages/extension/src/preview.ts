@@ -4,17 +4,16 @@ import { did, type History, nothing } from '@yxl-vscode/patch';
 import { addrAt, cellOf, filePath } from '@yxl-vscode/units';
 import type { FromView, Typed } from '@yxl-vscode/webview/protocol';
 import * as vscode from 'vscode';
+import { paste, pastedWith, pasteFrom, whose } from './clipboard';
 import { asOpen, put, reveal, textOf } from './documents';
 import { inspect, type Nodes, nodeUnder } from './inspect';
 import { type Projected, project, redraw, type Window } from './project';
+import { goBack } from './undo';
 import {
   emptied,
   empty,
-  goBack,
   type Offer,
   type Port,
-  paste,
-  pastedWith,
   resolve,
   type Spec,
   write,
@@ -243,6 +242,16 @@ export class Preview {
       return;
     }
 
+    if (asked.kind === 'pasteAt') {
+      this.tried(this.pasteHere(asked));
+      return;
+    }
+
+    if (asked.kind === 'pastedText') {
+      this.tried(this.pasteOutside(asked));
+      return;
+    }
+
     if (asked.kind === 'resolve') {
       this.tried(this.resolveWith(asked));
       return;
@@ -358,6 +367,32 @@ export class Preview {
     await pastedWith(spec, pasted, choice, this.port());
   }
 
+  /** `Cmd`+`V` in the grid; the clipboard is read here because a webview is never given one (ADR-035). */
+  private async pasteHere(asked: Extract<FromView, { kind: 'pasteAt' }>): Promise<void> {
+    const spec = this.spec();
+    if (spec === null) {
+      this.refuse('this spec has not finished loading', null);
+      return;
+    }
+
+    const { kind, ...where } = asked;
+    const taken = whose(where, await vscode.env.clipboard.readText());
+    if (taken.is === 'grid') await paste(spec, taken.pasted, this.port());
+    if (taken.is === 'clipboard') await pasteFrom(spec, taken.text, this.port());
+  }
+
+  /** The same rectangle again, in the shape the reader picked for it. */
+  private async pasteOutside(asked: Extract<FromView, { kind: 'pastedText' }>): Promise<void> {
+    const spec = this.spec();
+    if (spec === null) {
+      this.refuse('this spec has not finished loading', null);
+      return;
+    }
+
+    const { kind, choice, ...text } = asked;
+    await pasteFrom(spec, text, this.port(), choice);
+  }
+
   /** The edit again, made the way the reader chose from the answers it had. */
   private async resolveWith(asked: Extract<FromView, { kind: 'resolve' }>): Promise<void> {
     const spec = this.spec();
@@ -427,9 +462,7 @@ export class Preview {
     void this.panel.webview.postMessage({
       kind: 'refused',
       why: why.replace(/`/g, ''),
-      typed: offer?.typed ?? null,
-      ranged: offer?.ranged ?? null,
-      pasted: offer?.pasted ?? null,
+      about: offer?.about ?? null,
       canOverride: offer?.canOverride ?? false,
       choices: (offer?.choices ?? []).map((one) => ({
         ...one,

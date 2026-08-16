@@ -7,6 +7,7 @@ import {
   sheetOf,
 } from '@yxl-vscode/compile';
 import { type Op, type Path, renderScalar, type Value } from '@yxl-vscode/cst';
+import type { ScalarValue } from '@yxl-vscode/spec';
 import {
   type A1Addr,
   addrAt,
@@ -29,7 +30,9 @@ import {
   literalPath,
   located,
   type Reading,
+  standing,
 } from './direct';
+import { meaning } from './typed';
 
 /** A rectangle of cells copied in the grid, and the cell its top-left corner is going to. */
 export interface Pasting {
@@ -64,9 +67,7 @@ export function pasteRange(
     return refused('a cut cannot land on the cells it is taking, and these overlap');
   }
 
-  const ops = new Map<FilePath, Op[]>();
-  const fresh: Entry[] = [];
-  const cells = new Set<string>();
+  const going: Entry[] = [];
   const held: string[] = [];
 
   for (let row = where.from.rect.top; row <= where.from.rect.bottom; row += 1) {
@@ -75,47 +76,72 @@ export function pasteRange(
       if (cell === null) continue;
 
       const holds = taking(cell, by);
-      if (typeof holds === 'string') {
-        held.push(holds);
-        continue;
-      }
-
-      const at = addrAt({ col: col + by.cols, row: row + by.rows });
-      const already = cellAt(to, at);
-      if (already === null) {
-        fresh.push({ at, holds });
-        cells.add(qualified(where.to.sheet, at));
-        continue;
-      }
-
-      const landed = landing(to, already.provenance.value, at, holds, read);
-      if (typeof landed === 'string') {
-        held.push(landed);
-        continue;
-      }
-
-      ops.set(landed.file, [...(ops.get(landed.file) ?? []), ...landed.ops]);
-      cells.add(qualified(where.to.sheet, at));
+      if (typeof holds === 'string') held.push(holds);
+      else going.push({ at: addrAt({ col: col + by.cols, row: row + by.rows }), holds });
     }
   }
 
-  if (held.length > 0 && !only) return refused(standing(cells.size - fresh.length, held));
-  if (cells.size === 0) return refused('nothing in this rectangle can be pasted here');
+  const put = landed(to, where.to.sheet, going, read, held, only);
+  if (typeof put === 'string') return refused(put);
+
+  return together(grid, where, put.ops, put.cells, read);
+}
+
+/** One address a paste lands on, and what is going into it. */
+interface Entry {
+  readonly at: A1Addr;
+  readonly holds: Holds;
+}
+
+/** What a paste comes to: the ops for the file it lands in, and the cells it names. */
+interface Put {
+  readonly ops: Map<FilePath, Op[]>;
+  readonly cells: Set<string>;
+}
+
+/** Every cell of a paste written where it lands; one that cannot take it refuses the whole unless `only` (ADR-032). */
+function landed(
+  to: CompiledSheet,
+  sheet: SheetName,
+  going: readonly Entry[],
+  read: Reading,
+  refusals: readonly string[],
+  only: boolean,
+): Put | string {
+  const ops = new Map<FilePath, Op[]>();
+  const fresh: Entry[] = [];
+  const cells = new Set<string>();
+  const held = [...refusals];
+
+  for (const one of going) {
+    const already = cellAt(to, one.at);
+    if (already === null) {
+      fresh.push(one);
+      cells.add(qualified(sheet, one.at));
+      continue;
+    }
+
+    const landing = into(to, already.provenance.value, one, read);
+    if (typeof landing === 'string') {
+      held.push(landing);
+      continue;
+    }
+
+    ops.set(landing.file, [...(ops.get(landing.file) ?? []), ...landing.ops]);
+    cells.add(qualified(sheet, one.at));
+  }
+
+  if (held.length > 0 && !only) return standing(cells.size - fresh.length, held, 'pasted');
+  if (cells.size === 0) return 'nothing in this rectangle can be pasted here';
 
   if (fresh.length > 0) {
     const made = entries(to, fresh, read);
-    if (typeof made === 'string') return refused(made);
+    if (typeof made === 'string') return made;
 
     ops.set(made.file, [...(ops.get(made.file) ?? []), ...made.ops]);
   }
 
-  return together(grid, where, ops, cells, read);
-}
-
-/** One address nothing writes yet, and what is going into it. */
-interface Entry {
-  readonly at: A1Addr;
-  readonly holds: Holds;
+  return { ops, cells };
 }
 
 /** The edit, once every cell of the rectangle has said where it lands; a cut empties the source too. */
@@ -162,13 +188,13 @@ function together(
 }
 
 /** What one cell of the rectangle does where it lands: the ops that put it there, or why it cannot go. */
-function landing(
+function into(
   sheet: CompiledSheet,
   origin: FacetOrigin,
-  at: A1Addr,
-  holds: Holds,
+  one: Entry,
   read: Reading,
 ): Landed | string {
+  const { at, holds } = one;
   const found = literalPath(origin, sheet, at, read);
   if (found.kind === 'refused') return `\`${at}\` cannot be written: ${found.why}`;
 
@@ -270,15 +296,147 @@ function overlaps(rect: Rect, by: Offset): boolean {
   return Math.abs(by.cols) <= rect.right - rect.left && Math.abs(by.rows) <= rect.bottom - rect.top;
 }
 
-/** Why a rectangle was not pasted: how many of how many, then the first cell's own reason. */
-function standing(landing: number, held: readonly string[]): string {
-  const total = landing + held.length;
-  const others = held.length - 1;
-  const rest = others === 0 ? '' : ` (and ${others} other${others === 1 ? '' : 's'} here)`;
-
-  return `${held.length} of the ${total} cells here cannot be pasted, so none were: ${held[0]}${rest}`;
-}
-
 function refused(why: string): Intent & { kind: 'refused' } {
   return { kind: 'refused', why };
+}
+
+/** How a rectangle from outside the spec lands: as the cells it is, or as one `data:` block (§8 Q11). */
+export type Shape = 'cells' | 'data';
+
+/**
+ * A rectangle from another spreadsheet put down at an address. The fields mean
+ * what they would mean typed into a cell, and the shape is the reader's answer
+ * rather than a guess (ADR-028).
+ */
+export function pasteText(
+  grid: CompiledGrid,
+  where: { sheet: SheetName; at: A1Addr },
+  rows: readonly (readonly string[])[],
+  read: Reading,
+  shape: Shape,
+  only = false,
+): Intent {
+  const to = sheetOf(grid, where.sheet);
+  if (to === null) return refused(`there is no sheet named \`${where.sheet}\``);
+  if (rows.length === 0) return refused('there is nothing on the clipboard to put down');
+
+  const corner = cellOf(where.at);
+  const going: Entry[] = [];
+  for (const [down, row] of rows.entries()) {
+    for (const [across, field] of row.entries()) {
+      const at = addrAt({ col: corner.col + across, row: corner.row + down });
+      going.push({ at, holds: held(field) });
+    }
+  }
+
+  if (shape === 'data') return block(grid, to, where, rows, read);
+
+  const put = landed(to, where.sheet, going, read, [], only);
+  if (typeof put === 'string') return refused(put);
+
+  const written = [...put.ops.keys()];
+  const file = written[0];
+  if (file === undefined || written.length > 1) {
+    return refused(
+      `this rectangle would be written across ${written.map(beside).join(' and ')}, and this editor writes one file at a time`,
+    );
+  }
+
+  return {
+    kind: 'edit',
+    file,
+    patch: { ops: put.ops.get(file) ?? [] },
+    expects: { cells: put.cells, beyond: 'ask' },
+  };
+}
+
+/** Whether a rectangle could land as a `data:` block: only where nothing writes those cells already. */
+export function couldBlock(
+  grid: CompiledGrid,
+  where: { sheet: SheetName; at: A1Addr },
+  rows: readonly (readonly string[])[],
+): boolean {
+  const to = sheetOf(grid, where.sheet);
+  if (to === null || rows.length === 0) return false;
+
+  const corner = cellOf(where.at);
+
+  return rows.every((row, down) =>
+    row.every(
+      (_field, across) =>
+        cellAt(to, addrAt({ col: corner.col + across, row: corner.row + down })) === null,
+    ),
+  );
+}
+
+/** The rectangle as one `data:` block with its rows inline (`docs/spec.md` §9). */
+function block(
+  grid: CompiledGrid,
+  to: CompiledSheet,
+  where: { sheet: SheetName; at: A1Addr },
+  rows: readonly (readonly string[])[],
+  read: Reading,
+): Intent {
+  if (!couldBlock(grid, where, rows)) {
+    return refused('a `data:` block can only go where nothing writes those cells yet');
+  }
+
+  const found = located(to.node, read);
+  if (found.kind === 'refused') return found;
+  if (found.node.kind !== 'map') return refused('this sheet is not a mapping');
+
+  const body = [
+    `at: ${where.at}`,
+    'values:',
+    ...rows.map(
+      (row) => `  - [${row.map((field) => renderScalar(value(field), 'double')).join(', ')}]`,
+    ),
+  ].join('\n');
+
+  const already = found.node.entries.find((entry) => entry.key.value === 'data')?.value;
+  const op: Op =
+    already !== undefined && already.kind === 'seq'
+      ? {
+          op: 'insertSource',
+          path: [...found.path, 'data'],
+          index: already.items.length,
+          source: body,
+        }
+      : {
+          op: 'addSource',
+          path: found.path,
+          key: 'data',
+          source: `- ${body.replace(/\n/g, '\n  ')}`,
+        };
+
+  const corner = cellOf(where.at);
+  const cells = new Set<string>();
+  for (const [down, row] of rows.entries()) {
+    for (const across of row.keys()) {
+      cells.add(
+        qualified(where.sheet, addrAt({ col: corner.col + across, row: corner.row + down })),
+      );
+    }
+  }
+
+  return {
+    kind: 'edit',
+    file: found.file,
+    patch: { ops: [op] },
+    expects: { cells, beyond: 'ask' },
+  };
+}
+
+/** What a field off the clipboard would mean typed into a cell. */
+function held(field: string): Holds {
+  const meant = meaning(field);
+  if (meant.is === 'formula') return { formula: meant.body };
+
+  return { value: meant.is === 'value' ? meant.value : null };
+}
+
+/** The same, as the scalar a `data:` row holds. */
+function value(field: string): ScalarValue {
+  const meant = meaning(field);
+  return meant.is === 'value' ? meant.value : null;
 }

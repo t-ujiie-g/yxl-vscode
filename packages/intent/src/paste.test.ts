@@ -6,7 +6,8 @@ import { type A1Addr, type FilePath, filePath, type Rect, type SheetName } from 
 import { type Ctx, checked } from '@yxl-vscode/verify';
 import { describe, expect, it } from 'vitest';
 import { type Intent, reading } from './direct';
-import { pasteRange } from './paste';
+import { couldBlock, pasteRange, pasteText, type Shape } from './paste';
+import { tabular } from './tabular';
 
 const ROOT = filePath('spec.yxl.yaml') ?? ('' as FilePath);
 const SALES = 'sheets:\n  - name: Sales\n';
@@ -231,5 +232,84 @@ describe('a rectangle cut and put down somewhere else', () => {
 
   it('refuses to land on the cells it is taking', () => {
     expect(why(GRID, rect(1, 1, 2, 1), 'A2', { cut: true })).toContain('these overlap');
+  });
+});
+
+describe('a rectangle from another spreadsheet', () => {
+  const SHEET = `${SALES}    cells:\n      A1: keep\n`;
+
+  /** A clipboard rectangle put down at `at`, as the intent it comes to. */
+  const from = (source: string, text: string, at: string, shape: Shape = 'cells', only = false) => {
+    const { grid, read } = files({ [ROOT]: source });
+
+    return pasteText(
+      grid,
+      { sheet: 'Sales' as SheetName, at: at as A1Addr },
+      tabular(text),
+      read,
+      shape,
+      only,
+    );
+  };
+
+  const written = (source: string, text: string, at: string, shape: Shape = 'cells'): string => {
+    const intent = from(source, text, at, shape);
+    if (intent.kind !== 'edit') {
+      throw new Error(intent.kind === 'refused' ? intent.why : 'not a spec edit');
+    }
+
+    const { includes } = files({ [ROOT]: source });
+    const done = checked(source, intent.patch, intent.expects, {
+      root: ROOT,
+      file: intent.file,
+      read: includes,
+    });
+    if (done.ok === false)
+      throw new Error(`the checker refused it: ${done.diagnostics[0]?.message}`);
+
+    return done.text;
+  };
+
+  it('writes the fields as `cells:` entries, read the way the spec would read them', () => {
+    expect(written(SHEET, 'APAC\t2400000\nEMEA\t1750000', 'B1')).toBe(
+      `${SALES}    cells:\n      A1: keep\n      B1: APAC\n      C1: 2400000\n      B2: EMEA\n      C2: 1750000\n`,
+    );
+  });
+
+  it('writes over what is already there', () => {
+    expect(written(SHEET, 'LATAM', 'A1')).toBe(`${SALES}    cells:\n      A1: LATAM\n`);
+  });
+
+  it('writes the same rectangle as one `data:` block where the reader asks for one', () => {
+    expect(written(SHEET, 'APAC\t2400000\nEMEA\t1750000', 'B1', 'data')).toBe(
+      `${SALES}    cells:\n      A1: keep\n    data:\n      - at: B1\n        values:\n          - ["APAC", 2400000]\n          - ["EMEA", 1750000]\n`,
+    );
+  });
+
+  it('refuses a `data:` block over cells the spec already writes', () => {
+    const intent = from(SHEET, 'LATAM', 'A1', 'data');
+    expect(intent.kind === 'refused' && intent.why).toContain('nothing writes those cells yet');
+  });
+
+  it('says whether a `data:` block is one of the answers', () => {
+    const { grid } = files({ [ROOT]: SHEET });
+    const where = (at: string) => ({ sheet: 'Sales' as SheetName, at: at as A1Addr });
+
+    expect(couldBlock(grid, where('B1'), tabular('x\ty'))).toBe(true);
+    expect(couldBlock(grid, where('A1'), tabular('x'))).toBe(false);
+  });
+
+  it('refuses an empty clipboard rather than writing nothing', () => {
+    const intent = from(SHEET, '', 'B1');
+    expect(intent.kind === 'refused' && intent.why).toContain('nothing on the clipboard');
+  });
+
+  it('comes back byte for byte', () => {
+    const intent = from(SHEET, 'APAC\t1\nEMEA\t2', 'B1');
+    if (intent.kind !== 'edit') throw new Error('refused');
+
+    const done = applyPatch(SHEET, intent.patch, { file: ROOT });
+    if (done.back === null) throw new Error('no way back');
+    expect(applyPatch(done.text, done.back, { file: ROOT }).text).toBe(SHEET);
   });
 });

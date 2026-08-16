@@ -21,6 +21,7 @@ function asks(): Asks {
     copy: vi.fn(),
     paste: vi.fn(),
     pastedWith: vi.fn(),
+    pastedTextWith: vi.fn(),
   };
 }
 
@@ -709,9 +710,7 @@ describe('what the view says about a spec', () => {
     const refused = {
       kind: 'refused',
       why: 'B5 holds a formula',
-      typed: null,
-      ranged: null,
-      pasted: null,
+      about: null,
       canOverride: false,
       choices: [],
     } as const;
@@ -723,9 +722,7 @@ describe('what the view says about a spec', () => {
     const refused = {
       kind: 'refused',
       why: 'B5 is filled by a range',
-      ranged: null,
-      pasted: null,
-      typed,
+      about: { is: 'typed', typed },
       canOverride: true,
       choices: [
         {
@@ -751,9 +748,7 @@ describe('what the view says about a spec', () => {
     const refused = {
       kind: 'refused',
       why: 'B5 is filled by a range',
-      ranged: null,
-      pasted: null,
-      typed,
+      about: { is: 'typed', typed },
       canOverride: true,
       choices: [],
     } as const;
@@ -769,9 +764,7 @@ describe('what the view says about a spec', () => {
     const refused = {
       kind: 'refused',
       why: 'B5 is filled by a range',
-      ranged: null,
-      pasted: null,
-      typed,
+      about: { is: 'typed', typed },
       canOverride: true,
       choices: [],
     } as const;
@@ -792,9 +785,7 @@ describe('what the view says about a spec', () => {
     const refused = {
       kind: 'refused',
       why: 'B5 is filled by a range',
-      ranged: null,
-      pasted: null,
-      typed,
+      about: { is: 'typed', typed },
       canOverride: true,
       choices: [],
     } as const;
@@ -814,9 +805,7 @@ describe('what the view says about a spec', () => {
     const refused = {
       kind: 'refused',
       why: 'nothing is written there',
-      typed: null,
-      ranged: null,
-      pasted: null,
+      about: null,
       canOverride: false,
       choices: [],
     } as const;

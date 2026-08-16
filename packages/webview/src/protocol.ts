@@ -135,11 +135,42 @@ export interface Highlighted {
 export interface Refused {
   readonly kind: 'refused';
   readonly why: string;
-  readonly typed: Typed | null;
-  readonly ranged: Ranged | null;
-  readonly pasted: Pasted | null;
+  readonly about: About | null;
   readonly canOverride: boolean;
   readonly choices: readonly Choice[];
+}
+
+/**
+ * What a refusal is about — the gesture it came from, which the view sends back
+ * when one of the answers is taken. `typed` is the only one an override is
+ * offered beside (ADR-007).
+ */
+export type About =
+  | { readonly is: 'typed'; readonly typed: Typed }
+  | { readonly is: 'ranged'; readonly ranged: Ranged }
+  | { readonly is: 'pasted'; readonly pasted: Pasted }
+  | { readonly is: 'text'; readonly text: PastedText };
+
+/**
+ * `Cmd`+`V` in the grid: where it goes, what the grid holds of its own, and what
+ * its copy put on the clipboard — which is how the host tells the two pastes
+ * apart, since it is the host that reads the clipboard (ADR-035).
+ */
+export interface PastedAt {
+  readonly sheet: string;
+  readonly row: number;
+  readonly col: number;
+  readonly from: Ranged | null;
+  readonly cut: boolean;
+  readonly ours: string | null;
+}
+
+/** A rectangle from another spreadsheet as the clipboard gave it, and the cell it is going down on. */
+export interface PastedText {
+  readonly text: string;
+  readonly sheet: string;
+  readonly row: number;
+  readonly col: number;
 }
 
 /** A rectangle copied in the grid, and the cell its top-left corner is going down on. */
@@ -201,6 +232,8 @@ export type FromView =
   | { readonly kind: 'undo'; readonly redo: boolean }
   | ({ readonly kind: 'paste' } & Pasted)
   | ({ readonly kind: 'pasted'; readonly choice: string } & Pasted)
+  | ({ readonly kind: 'pasteAt' } & PastedAt)
+  | ({ readonly kind: 'pastedText'; readonly choice: string } & PastedText)
   | ({ readonly kind: 'resolve'; readonly choice: string } & Typed)
   | ({ readonly kind: 'override'; readonly reason: string } & Typed)
   | {

@@ -12,16 +12,7 @@ import {
   type Showing,
 } from './draw';
 import { between } from './keys';
-import type {
-  Drawing,
-  DrawnSheet,
-  Editable,
-  FromView,
-  Pasted,
-  Refused,
-  Source,
-  ToView,
-} from './protocol';
+import type { Drawing, DrawnSheet, Editable, FromView, Refused, Source, ToView } from './protocol';
 
 export { type Kept, sheetAgain } from './again';
 export { type Asks, type Copied, draw, type Reached, restate, type Showing } from './draw';
@@ -71,6 +62,8 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
   let said: string | null = null;
   /** The rectangle the reader has copied, which is a place rather than the cells in it (ADR-032). */
   let copied: Copied | null = null;
+  /** What our own copy last put on the system clipboard, which says whose paste this is. */
+  let ours: string | null = null;
 
   /** Where the last edit was typed, so a refusal can put the reader back at it. */
   let typedAt: { row: number; col: number } | null = null;
@@ -178,15 +171,23 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       refused = null;
       const rect = spanned() ?? between({ row, col }, { row, col });
       copied = { sheet: named(), rect, cut };
-      said = out(drawing?.sheets[sheet], rect);
+      const gone = out(drawing?.sheets[sheet], rect);
+      ours = gone.text;
+      said = gone.said;
       restated();
     },
     paste: (row, col) => {
-      if (copied === null) return;
-
       refused = null;
       said = null;
-      host.postMessage({ kind: 'paste', ...putting(copied, row, col) });
+      host.postMessage({
+        kind: 'pasteAt',
+        sheet: named(),
+        row,
+        col,
+        from: copied === null ? null : { sheet: copied.sheet, ...copied.rect },
+        cut: copied?.cut ?? false,
+        ours,
+      });
     },
     resolveWith: (typed, choice) => {
       host.postMessage({ ...typed, choice, kind: 'resolve' });
@@ -200,6 +201,11 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       refused = null;
       said = null;
       host.postMessage({ ...pasted, choice, kind: 'pasted' });
+    },
+    pastedTextWith: (text, choice) => {
+      refused = null;
+      said = null;
+      host.postMessage({ ...text, choice, kind: 'pastedText' });
     },
     overrideWith: (typed, reason) => {
       // `kind` last, or a spread message carrying its own `kind` is that message.
@@ -276,24 +282,25 @@ function start(): void {
 
 if (typeof document !== 'undefined') start();
 
-/** The rectangle onto the system clipboard (ADR-028), or what stopped it, said rather than nothing. */
-function out(sheet: DrawnSheet | undefined, rect: Rect): string | null {
-  if (sheet === undefined) return null;
+/** The rectangle onto the system clipboard (ADR-028): what went there, and what stopped it. */
+function out(
+  sheet: DrawnSheet | undefined,
+  rect: Rect,
+): { readonly text: string | null; readonly said: string | null } {
+  if (sheet === undefined) return { text: null, said: null };
 
   const what = flavours(sheet, rect);
-  if (what === null)
-    return 'this reaches past what the preview has drawn, so only the grid has it.';
+  if (what === null) {
+    return {
+      text: null,
+      said: 'this reaches past what the preview has drawn, so only the grid has it.',
+    };
+  }
 
-  return onto(what) ? null : 'this preview could not reach the clipboard, so only the grid has it.';
-}
-
-/** What a paste names: the rectangle it came from, and the cell it is going down on. */
-function putting(copied: Copied, row: number, col: number): Pasted {
-  return {
-    from: { sheet: copied.sheet, ...copied.rect },
-    sheet: copied.sheet,
-    row,
-    col,
-    cut: copied.cut,
-  };
+  return onto(what)
+    ? { text: what.text, said: null }
+    : {
+        text: null,
+        said: 'this preview could not reach the clipboard, so only the grid has it.',
+      };
 }

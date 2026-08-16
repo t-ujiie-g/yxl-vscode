@@ -403,7 +403,7 @@ not a date.
 | Delete, copy or cut a range | ✅ |
 | Copy, cut and paste inside the grid | ✅ — values and formulas, whose references move; looks are Phase 9 (ADR-032) |
 | Copy out into Excel or Sheets | ✅ — the whole look into Sheets; Excel takes everything but the fill (ADR-033) |
-| Paste from Excel or Sheets, values and looks | **Phase 8** |
+| Paste from Excel or Sheets | ✅ for the values; the looks wait on Phase 9's normalizer (ADR-034) |
 | A box to type an address into | **Phase 8** |
 | Find something in the sheet | **Phase 8** |
 | Bold, fill, borders, alignment, number format | **Phase 9** |
@@ -942,9 +942,15 @@ work.
       **Sheets takes all of it. Excel takes everything but the fill**, and that
       is where it is left (ADR-033, §8 Q15): this editor's job is the workbook
       the compiler builds, and that carries every style there is.
-- [ ] **Paste in** from Excel or Sheets: values from the TSV, look from the
+- [x] **Paste in** from Excel or Sheets: values from the TSV, look from the
       HTML, landing as *one* resolution — a `data:` rectangle where the shape
       says so, `cells:` where it does not (§4.4, §8 Q1, Q11)
+      **The values are in and the look is not** (ADR-034): a style write goes
+      through the normalizer, and the normalizer is Phase 9. The shape is
+      asked once with the lines each answer would add, which closes §8 Q11 —
+      one `data:` block, or `cells:` entries, and only the second where the
+      spec already writes those cells. A field means what it would mean typed
+      into the cell, so `1,234` is text and `1234` is a number.
 - [ ] A paste too big to ask about cell by cell: one summary, one answer, and
       the size of the diff it would make said before it is made
 - [ ] Find in the sheet, and go to what it found
@@ -1726,6 +1732,55 @@ and §8 Q15 keeps the leads for anyone who wants to pick it up.
 *What it costs:* a reader pasting a heading into Excel restyles it by hand.
 Said plainly in the README rather than discovered.
 
+### ADR-034 — A paste from outside carries values now and looks when the normalizer exists
+**Accepted.** Pasting a rectangle in from Excel or Sheets writes what the cells
+*hold* — read out of the `text/plain` flavour, each field meaning what it would
+mean typed into that cell. What they *wear* is not written, and the `text/html`
+flavour is not read at all yet.
+
+*Why:* §7 has no fast path — every style write goes through the normalizer
+(ADR-008), and the normalizer is Phase 9. Writing looks before it exists would
+put an anonymous inline style on every one of two hundred pasted cells, which is
+the exact outcome ADR-008 was written to prevent, and it would have to be undone
+by hand afterwards.
+
+*What this costs, and who pays:* a reader pasting a formatted report gets the
+numbers and re-applies the look. That is the same trade the internal paste makes
+(ADR-032), so the rule is one rule rather than two.
+
+*What it is not:* a decision about §8 Q12. How much of the HTML flavour is
+worth reading is still open, and is worth deciding when there is a normalizer to
+hand what is read to.
+
+### ADR-035 — The webview writes the clipboard and the host reads it
+**Accepted.** Copying out is done in the view, inside the gesture, because two
+flavours can only go on the clipboard that way (ADR-028). Pasting in is done in
+the **host**, with `vscode.env.clipboard.readText()`, because the view is never
+given a `paste` event to read one from.
+
+*What was measured:* `Cmd`+`C` reaches the webview and `execCommand('copy')`
+works from it — the copy-out lands in Excel and Sheets. `Cmd`+`V` reaches the
+webview's `keydown` and then nothing happens: no `paste` event on the cell, and
+none on a `<textarea>` focused inside the key handler either, which is the
+pattern that works in a browser. Two attempts, both measured in the extension
+host rather than in jsdom, where a synthetic event had made both look fine.
+
+*Why the asymmetry is not a wart:* the two directions genuinely differ. Writing
+needs the gesture and the flavours; reading needs neither — it needs a clipboard
+the host can simply ask for. `vscode.env.clipboard` is the API for exactly that,
+and it is the one place in this design where the extension host knows something
+the page cannot.
+
+*What it costs:* `readText()` is text only, so the `text/html` flavour is
+unreachable from the host. That does not bite yet — ADR-034 has the paste
+carrying values and not looks until the normalizer exists — and §8 Q12 now has a
+second constraint to answer to: whatever reads the HTML has to run somewhere
+that can see it.
+
+*What it buys back:* the view stops holding a decision it had no business
+holding. It says where the paste goes and what it has of its own; which of the
+two pastes this is, is worked out where the clipboard actually is.
+
 ## 8. Open questions
 
 - **Q1 — `cells:` A1 keys and row insertion.** Inserting a row rewrites every
@@ -1841,14 +1896,14 @@ Said plainly in the README rather than discovered.
   Q6 asks "native binary only, or also a wasm CLI?" — and the answer here is that
   the whole pipeline, `emit` included, already passes its tests on the JS target.
   That is directly useful to yxl and costs us nothing to report.
-- **Q11 — What shape does a paste land in?** ✅ *Answered for a paste inside the
-  grid, 2026-08-16 (ADR-032):* `cells:` entries, which is §4.4's `empty` row
-  scaled up — the same answer, for a rectangle instead of one cell. **Still open
-  for a paste from outside**, which is where the question really bites: two
-  hundred rows from a report want the `data:` rectangle, it diffs well and
-  survives a row insertion (Q1), and it holds no per-cell styling so a paste
-  that carries looks may have to be both. Decide that half with the paste that
-  needs it, against a real clipboard rather than in the abstract.
+- **Q11 — What shape does a paste land in?** ✅ *Answered 2026-08-16.* Inside the
+  grid, `cells:` entries — §4.4's `empty` row scaled up (ADR-032). From outside,
+  **the reader is asked**, once, with the lines each answer would add: one
+  `data:` block, or `cells:` entries. That is ADR-028's own process, and what
+  makes it answerable rather than a guess is that the two numbers are on the
+  buttons — 4 lines against 600. The `data:` block is offered only where nothing
+  writes those cells yet, since two writers for one address is not a shape
+  question but a mistake.
 - **Q12 — How much of the clipboard's HTML do we read?** Excel and Sheets both
   write `text/html`, and neither documents it. Number formats arrive as already
   formatted text, colours as inline styles that differ by version. The open
@@ -2193,6 +2248,74 @@ this at a phase boundary rather than at the end.
   two serials either side of it, so the next reader knows it is deliberate.
 - A cell's own format — written, or the one its type takes — now wins over a
   band's. Both are requests about *that* cell; a band is something reaching it.
+
+### 2026-08-16 — Refactoring pass after the clipboard (`AGENTS.md` §8)
+Three findings, taken in the order the lenses come in. Nothing about what the
+editor does changed: the same 1293 tests pass, unedited apart from the fixtures
+the first finding simplified.
+
+- **§8.2 — one type's shape was showing up as four problems.** `Offer` and
+  `Refused` carried the gesture a refusal was about as *four* mutually exclusive
+  nullable fields (`typed`, `ranged`, `pasted`, `text`), which the type did not
+  say. Downstream: three near-identical twenty-line builders, an if-else chain
+  over nullables in the view, and every test fixture writing four `null`s. It is
+  one `About` union now, the three builders are one `theseOnly(about, what,
+  cells)`, the view switches on `about.is`, and the fixtures say what they mean.
+- **§8.2 — `standing()` was written twice**, in `clear` and in `paste`, with the
+  verb as the only difference. One, in `direct`, taking the verb.
+- **§8.3 — `write.ts` was 674 lines and three subjects.** Split at the joints
+  that were already there: `clipboard.ts` for `Cmd`+`C` / `Cmd`+`V` and the
+  shape question (211 lines), `undo.ts` for `Cmd`+`Z` (59), and `write.ts` for
+  what a reader types and the half both share (366). The tests followed the
+  code, one file each.
+- **Considered and left**: `paste.ts` at 450 lines has a real boundary in it —
+  the rectangle from inside, the rectangle from outside, and where a cell lands
+  — but it is under §8.3's threshold and the three share more than they differ.
+  Left, with the note, so the next pass has a reason rather than a rediscovery.
+- **§8.4** every export the last four changes added has a direct test; **§8.5**
+  the phase table, ADRs and README were brought up to date as each landed;
+  **§8.7** `layers ok`, and the view holding one less decision than it did.
+- **This pass ends at: exports 371 blocks / 831 lines (avg 2.2), private 222 /
+  289 (1.3), inline 41 / 54 (1.3), 38 over the limit** — the same 38 it started
+  at, across 4 more files.
+
+### 2026-08-16 — Paste in, and the shape question answered on the buttons
+A rectangle copied in Excel or Google Sheets now lands in the grid. §8 **Q11 is
+closed** and §4.4's `empty` row is answered for a rectangle from outside.
+
+- **The grid's own rectangle wins while the clipboard still holds what its copy
+  put there**, and the clipboard's wins where it does not — only the first moves
+  a formula and empties a cut, so it is the one to prefer where both could
+  apply. What the view sends is where the paste goes, what it has of its own,
+  and what its copy last wrote out; the host reads the clipboard and decides.
+- **The clipboard is read on the host** (ADR-035), because a webview is never
+  given a `paste` event to read one from. Two attempts said so: the cell itself
+  got no event, and neither did a `<textarea>` focused inside the key handler,
+  which is the pattern that works in a browser. Both were measured in the
+  extension host — in jsdom a synthetic event had made both look fine, which is
+  the lesson worth keeping. `vscode.env.clipboard.readText()` is the API for it,
+  and the view is left saying *where* the paste goes and what it has of its own
+  rather than deciding whose paste it is.
+- **A field means what it would mean typed into that cell.** `1234` is a number,
+  `1,234` is text, `TRUE` is a boolean — the same reader a keystroke goes
+  through, so a paste cannot mean something a typed cell could not.
+- **The shape is asked once, with the two numbers on the buttons**: *As one
+  `data:` block — 4 lines* against *As `cells:` entries — 600 lines*. That is
+  what makes it a question a reader can answer rather than a preference they are
+  asked to hold an opinion about. The `data:` block is offered only where
+  nothing writes those cells yet: two writers for one address is not a shape
+  question but a mistake.
+- **The values land and the look does not** (ADR-034). A style write goes
+  through the normalizer, the normalizer is Phase 9, and writing looks without
+  it would put an anonymous inline style on every one of two hundred pasted
+  cells — which is the exact outcome ADR-008 exists to prevent. The `text/html`
+  flavour is not read at all yet, and §8 Q12 stays open with a better reason
+  than before.
+- **The landing is the same code the internal paste uses.** Both build a list of
+  *this address holds this*, and one function writes them: over the entry that
+  is there, or as new `cells:` entries. The refusals, the *ones that can take
+  it* answer, and the byte-for-byte undo come with it for nothing.
+- 31 new tests, 1293 in total; comment shape held at 38 over the limit.
 
 ### 2026-08-16 — What the look on the clipboard actually reaches
 Measured rather than assumed, by pasting a styled rectangle out of the preview.

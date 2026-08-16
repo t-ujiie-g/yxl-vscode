@@ -14,8 +14,6 @@ import {
   type Meaning,
   meaning,
   override,
-  type Pasting,
-  pasteRange,
   type Reading,
   type Resolving,
   reading,
@@ -24,19 +22,18 @@ import {
   setValue,
 } from '@yxl-vscode/intent';
 import type { IncludeReader } from '@yxl-vscode/loader';
-import { type History, redid, type Step, took } from '@yxl-vscode/patch';
+import type { Step } from '@yxl-vscode/patch';
 import type { SpecDoc } from '@yxl-vscode/spec';
 import {
   type A1Addr,
   addrAt,
   type FilePath,
-  filePath,
   qualified,
   type SheetName,
   sheetName,
 } from '@yxl-vscode/units';
 import { type Change, checked, checkedText } from '@yxl-vscode/verify';
-import type { Choice, Pasted, Ranged, Typed } from '@yxl-vscode/webview/protocol';
+import type { About, Choice, Ranged, Typed } from '@yxl-vscode/webview/protocol';
 
 /**
  * What the write needs of the world outside it, injected so it is testable
@@ -57,9 +54,7 @@ export interface Port {
  * (ADR-007). The subject is what the gesture named — a cell or a rectangle.
  */
 export interface Offer {
-  readonly typed: Typed | null;
-  readonly ranged: Ranged | null;
-  readonly pasted: Pasted | null;
+  readonly about: About | null;
   readonly canOverride: boolean;
   readonly choices: readonly Choice[];
 }
@@ -109,9 +104,7 @@ export async function write(spec: Spec, typed: Typed, port: Port, anyway = false
     // Rebuilt rather than spread: the incoming message carries its own `kind`.
     const offer = { sheet: typed.sheet, row: typed.row, col: typed.col, text: typed.text };
     port.refuse(intent.why, {
-      typed: offer,
-      ranged: null,
-      pasted: null,
+      about: { is: 'typed', typed: offer },
       canOverride: excepts(spec, where),
       choices: answers.map(shown),
     });
@@ -140,7 +133,12 @@ export async function empty(spec: Spec, ranged: Ranged, port: Port, only = false
 
   if (intent.kind === 'refused' && !only) {
     const some = clearRange(spec.grid, where, read, true);
-    port.refuse(intent.why, some.kind === 'edit' ? theseOnly(ranged, some.expects.cells) : null);
+    port.refuse(
+      intent.why,
+      some.kind === 'edit'
+        ? theseOnly({ is: 'ranged', ranged }, EMPTIED, some.expects.cells)
+        : null,
+    );
     return;
   }
 
@@ -152,105 +150,24 @@ export async function empty(spec: Spec, ranged: Ranged, port: Port, only = false
 }
 
 /**
- * A rectangle put down somewhere else, as one edit. A cell that cannot take it
- * refuses the whole and is offered as an answer instead: the same paste with
- * `only` the cells that can (ADR-001, ADR-032).
+ * The one answer a rectangle that cannot be done whole has: leave the cells
+ * that stood in the way where they are. The same answer for `Delete` and for
+ * either paste, which is why it is named the same on both sides.
  */
-export async function paste(spec: Spec, pasted: Pasted, port: Port, only = false): Promise<void> {
-  const where = pasting(pasted);
-  if (where === null) {
-    port.refuse(`\`${pasted.from.sheet}\` is not a name a sheet can have`, null);
-    return;
-  }
-
-  const read = reading(port.text);
-  const intent = pasteRange(spec.grid, where, read, only);
-
-  if (intent.kind === 'refused' && !only) {
-    const some = pasteRange(spec.grid, where, read, true);
-    port.refuse(intent.why, some.kind === 'edit' ? theseCells(pasted, some.expects.cells) : null);
-    return;
-  }
-
-  const done = await applied(spec, intent, port, { anyway: false, from: null, typed: null });
-  if (done && intent.kind === 'edit') {
-    const cells = intent.expects.cells.size;
-    port.said(`${cells} cell${cells === 1 ? '' : 's'} ${pasted.cut ? 'moved' : 'pasted'}.`);
-  }
-}
-
-/** That answer, taken. Worked out again rather than remembered: the file may have moved. */
-export async function pastedWith(
-  spec: Spec,
-  pasted: Pasted,
-  choice: string,
-  port: Port,
-): Promise<void> {
-  if (choice !== ONLY) {
-    port.refuse('that answer is no longer one of the ways this edit could be made', null);
-    return;
-  }
-
-  await paste(spec, pasted, port, true);
-}
-
-/** What the view named, in the units the resolver works in. */
-function pasting(pasted: Pasted): Pasting | null {
-  const from = sheetName(pasted.from.sheet);
-  const to = sheetName(pasted.sheet);
-  if (from === null || to === null) return null;
-
-  const { top, left, bottom, right } = pasted.from;
-
-  return {
-    from: { sheet: from, rect: { top, left, bottom, right } },
-    to: { sheet: to, at: addrAt({ col: pasted.col, row: pasted.row }) },
-    cut: pasted.cut,
-  };
-}
-
-/** The one answer a refused paste has: leave the cells that cannot take it where they are. */
-function theseCells(pasted: Pasted, cells: ReadonlySet<string>): Offer {
+export function theseOnly(about: About, what: string, cells: ReadonlySet<string>): Offer {
   const named = [...cells];
 
   return {
-    typed: null,
-    ranged: null,
-    pasted,
+    about,
     canOverride: false,
-    choices: [
-      {
-        id: ONLY,
-        what: 'Paste into the ones that can take it',
-        moves: named.length,
-        sample: named.slice(0, 3),
-      },
-    ],
+    choices: [{ id: ONLY, what, moves: named.length, sample: named.slice(0, 3) }],
   };
 }
 
-/** The one answer a refused rectangle has: leave what cannot be emptied where it is. */
-function theseOnly(ranged: Ranged, cells: ReadonlySet<string>): Offer {
-  const named = [...cells];
-
-  return {
-    typed: null,
-    ranged,
-    pasted: null,
-    canOverride: false,
-    choices: [
-      {
-        id: ONLY,
-        what: 'Empty the ones that can be',
-        moves: named.length,
-        sample: named.slice(0, 3),
-      },
-    ],
-  };
-}
-
-/** The answer that leaves what cannot be emptied, named the same on both sides. */
-const ONLY = 'only';
+/** The answer that leaves what could not be done, named the same on both sides. */
+export const ONLY = 'only';
+const EMPTIED = 'Empty the ones that can be';
+export const PASTED = 'Paste into the ones that can take it';
 
 /** That answer, taken. Worked out again rather than remembered: the file may have moved. */
 export async function emptied(
@@ -355,14 +272,19 @@ export async function writeOverride(
 }
 
 /** What is needed to ask this edit again where the checker finds it moves more than it named. */
-interface Asked {
+export interface Asked {
   readonly anyway: boolean;
   readonly from: string | null;
   readonly typed: Typed | null;
 }
 
 /** The half of a write that is the same whichever intent produced it. */
-async function applied(spec: Spec, intent: Intent, port: Port, asked: Asked): Promise<boolean> {
+export async function applied(
+  spec: Spec,
+  intent: Intent,
+  port: Port,
+  asked: Asked,
+): Promise<boolean> {
   if (intent.kind === 'refused') {
     port.refuse(intent.why, null);
     return false;
@@ -398,9 +320,7 @@ async function applied(spec: Spec, intent: Intent, port: Port, asked: Asked): Pr
       typed === null
         ? null
         : {
-            typed,
-            ranged: null,
-            pasted: null,
+            about: { is: 'typed', typed },
             canOverride: false,
             choices: [anyhow(done.surprises, asked.from)],
           },
@@ -418,63 +338,8 @@ async function applied(spec: Spec, intent: Intent, port: Port, asked: Asked): Pr
 }
 
 /** The cells an edit moved, named as an undo of it may name them (ADR-009). */
-function moved(changed: readonly Change[]): string[] {
+export function moved(changed: readonly Change[]): string[] {
   return changed.filter((one) => one.kind === 'cell').map((one) => qualified(one.sheet, one.at));
-}
-
-/** Where the grid's undo landed, and the history it left behind. */
-export interface Taken {
-  readonly at: 'here' | 'shell' | 'nowhere';
-  readonly history: History;
-}
-
-/**
- * The last edit taken back, or put on again, in the file itself — while this
- * editor is still the last thing to have touched it. Where it is not, the
- * editor's own undo is the only honest one and this says so (ADR-030).
- */
-export async function goBack(
-  spec: Spec,
-  history: History,
-  redoing: boolean,
-  port: Port,
-): Promise<Taken> {
-  const step = (redoing ? history.undone : history.done).at(-1);
-  if (step === undefined) {
-    return { at: owns(history, redoing, port) ? 'nowhere' : 'shell', history };
-  }
-
-  const file = filePath(step.file);
-  if (file === null) return { at: 'shell', history };
-
-  const source = port.text(file);
-  if (source === null || source !== port.left(file)) return { at: 'shell', history };
-
-  const done = checked(
-    source,
-    redoing ? step.patch : step.back,
-    { cells: new Set(step.moved), beyond: 'refuse' },
-    { root: spec.root, file, read: spec.read, params: spec.params },
-  );
-  if (done.ok === false || done.back === null) return { at: 'shell', history };
-
-  await port.put(file, done.text);
-  return {
-    at: 'here',
-    history: redoing
-      ? redid(history, { ...step, back: done.back, moved: moved(done.changed) })
-      : took(history),
-  };
-}
-
-/** Whether this editor still holds the file its history ends at, with nothing on this side left to take. */
-function owns(history: History, redoing: boolean, port: Port): boolean {
-  const step = (redoing ? history.done : history.undone).at(-1);
-  const file = step === undefined ? null : filePath(step.file);
-  if (file === null) return false;
-
-  const now = port.text(file);
-  return now !== null && now === port.left(file);
 }
 
 /** Whether an override could be written here: an address nothing writes has nothing to except (`docs/spec.md` §23). */

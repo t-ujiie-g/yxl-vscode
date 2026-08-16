@@ -269,6 +269,18 @@ export function located(id: NodeId, read: Reading): Found {
   return { kind: 'found', file: where.file, path: where.path, node, add: false };
 }
 
+/**
+ * Why a rectangle was not done: how many of how many, then the first cell's own
+ * reason. `doing` is the verb in the past — `emptied`, `pasted`.
+ */
+export function standing(done: number, held: readonly string[], doing: string): string {
+  const total = done + held.length;
+  const others = held.length - 1;
+  const rest = others === 0 ? '' : ` (and ${others} other${others === 1 ? '' : 's'} here)`;
+
+  return `${held.length} of the ${total} cells here cannot be ${doing}, so none were: ${held[0]}${rest}`;
+}
+
 /** A file as a reader would name it, which is not the whole way there. */
 export function beside(file: string): string {
   return file.split('/').slice(-2).join('/');
