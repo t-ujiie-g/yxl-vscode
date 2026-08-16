@@ -238,7 +238,8 @@ row by row, one test per row.
 | `param` | ① change the parameter default *(show the ripple count)* ② add to `overrides:` |
 | `defRef` | ① change the definition *(ripples to N)* ② detach this cell to a literal |
 | `formulaRange` | ① change the range's formula ② split the range so this row stands alone ③ `overrides:` |
-| `empty` | ① new `cells:` entry ② extend the adjacent `data:` rectangle, when there is one |
+| `empty`, with a cell | rewrite that cell *(auto)* — the spec wrote it for its look and it has one place a value goes |
+| `empty`, with none | ① new `cells:` entry ② extend the adjacent `data:` rectangle, when there is one |
 
 **`setStyle`** — the branchiest, and the one that decides whether the product
 feels good:
@@ -1765,6 +1766,33 @@ this at a phase boundary rather than at the end.
   two serials either side of it, so the next reader knows it is deliberate.
 - A cell's own format — written, or the one its type takes — now wins over a
   band's. Both are requests about *that* cell; a band is something reaching it.
+
+### 2026-08-16 — Refactoring pass after the write gestures (`AGENTS.md` §8)
+Walked the lenses in order over what the last three changes left. Nothing was
+broken; four things were said in more than one place, which is how they come to
+disagree.
+
+- **What a reader's text means was decided in four places** — `write`,
+  `writeOverride`, and twice inside the resolutions — each spelling out the
+  leading `=`, the empty box, and YAML's reading of a bare scalar. `meaning()`
+  in `intent` now answers once, in three cases, and everything reads it. A rule
+  about what a keystroke means, applied in two places, is a rule that will be
+  applied two ways.
+- **Five copies of "find the sheet by name"** across `intent` and `extension`.
+  `sheetOf` belongs to the package that owns the grid, and does now.
+- **`cst/entries.ts` was two subjects again** at 489 lines: entries as *lines*
+  — comments above, blank lines under, indentation — and entries as *text
+  between brackets*, which has none of those. The flow surgery moved to
+  `flow.ts`.
+- **`Found.add` was an optional boolean** read as `!found.add`, and the thing it
+  says — whether the write puts in a key the cell has not got — is now said on
+  the type it belongs to, once, and required. `Found` itself stopped being
+  exported: what the package shares is `located`, not its result type.
+- §4.4's `empty` row said the gesture has two answers. It has one where the
+  spec already wrote the cell, which is what the last change made true and the
+  table had not caught up with.
+- New seams got their own tests: `meaning` over the five readings, `sheetOf`
+  over both answers.
 
 ### 2026-08-16 — Phase 7: typing into an empty cell, and one place for both offers
 

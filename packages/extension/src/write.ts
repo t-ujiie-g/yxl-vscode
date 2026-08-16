@@ -1,10 +1,17 @@
-import { type CompiledGrid, cellAt, type DataReader, type Setting } from '@yxl-vscode/compile';
+import {
+  type CompiledGrid,
+  cellAt,
+  type DataReader,
+  type Setting,
+  sheetOf,
+} from '@yxl-vscode/compile';
 import {
   type Candidate,
   candidates,
   clearCell,
   type Intent,
-  meant,
+  type Meaning,
+  meaning,
   override,
   type Says,
   setFormula,
@@ -69,15 +76,13 @@ export async function write(spec: Spec, typed: Typed, port: Port): Promise<void>
   const at = addrAt({ col: typed.col, row: typed.row });
   const where = { sheet, at };
 
-  // A leading `=` is a formula, as it is in Excel and in every spreadsheet a
-  // reader has used; the spec's own two keys are the same distinction. Nothing
-  // typed at all is the cell emptied, which is not a value but the absence of
-  // one (`docs/spec.md` §3).
-  const intent = typed.text.startsWith('=')
-    ? setFormula(spec.grid, where, typed.text.slice(1), port.text)
-    : typed.text === ''
-      ? clearCell(spec.grid, where, port.text)
-      : setValue(spec.grid, where, meant(typed.text), port.text);
+  const meant = meaning(typed.text);
+  const intent =
+    meant.is === 'formula'
+      ? setFormula(spec.grid, where, meant.body, port.text)
+      : meant.is === 'empty'
+        ? clearCell(spec.grid, where, port.text)
+        : setValue(spec.grid, where, meant.value, port.text);
 
   if (intent.kind === 'refused') {
     const answers = candidates(spec.grid, where, typed.text, port.text);
@@ -135,6 +140,11 @@ export async function resolve(spec: Spec, typed: Typed, choice: string, port: Po
   if (done) port.said(`${taken.what.replace(/^C/, 'c')}: ${taken.moves.length} cells changed.`);
 }
 
+/** What an override says a cell holds, where the reader did not type a formula. */
+function value(meant: Meaning): string | number | boolean | null {
+  return meant.is === 'value' ? meant.value : null;
+}
+
 /** A candidate as the view shows one: what it does, and what it would move. */
 function shown(candidate: Candidate): Choice {
   return {
@@ -166,9 +176,9 @@ export async function writeOverride(
   }
 
   const at = addrAt({ col: typed.col, row: typed.row });
-  const says: Says = typed.text.startsWith('=')
-    ? { formula: typed.text.slice(1), ...(reason === undefined ? {} : { reason }) }
-    : { value: meant(typed.text), ...(reason === undefined ? {} : { reason }) };
+  const meant = meaning(typed.text);
+  const said = meant.is === 'formula' ? { formula: meant.body } : { value: value(meant) };
+  const says: Says = { ...said, ...(reason === undefined ? {} : { reason }) };
 
   const done = await applied(
     spec,
@@ -219,8 +229,8 @@ async function applied(spec: Spec, intent: Intent, port: Port): Promise<boolean>
  * §23).
  */
 function excepts(spec: Spec, where: { sheet: SheetName; at: A1Addr }): boolean {
-  const sheet = spec.grid.sheets.find((one) => one.name === where.sheet);
-  return sheet !== undefined && cellAt(sheet, where.at) !== null;
+  const sheet = sheetOf(spec.grid, where.sheet);
+  return sheet !== null && cellAt(sheet, where.at) !== null;
 }
 
 function surprising(surprises: readonly Change[]): string {

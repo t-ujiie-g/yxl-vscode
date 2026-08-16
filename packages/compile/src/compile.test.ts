@@ -1,6 +1,7 @@
-import { filePath } from '@yxl-vscode/units';
+import { filePath, type SheetName } from '@yxl-vscode/units';
 import { describe, expect, it } from 'vitest';
 import { CODE } from './codes';
+import { sheetOf } from './compile';
 import type { DataReader } from './ctx';
 import { cell as at, codes, grid, sheet } from './harness';
 
@@ -379,5 +380,14 @@ describe('an override', () => {
   it('is reported when it names a sheet that is not there', () => {
     const spec = `${SALES}    cells:\n      A1: 1\noverrides:\n  - at: Notes!A1\n    value: x\n`;
     expect(codes(spec)).toEqual([CODE.unknownSheet]);
+  });
+});
+
+describe('finding a sheet by the name a reader points at', () => {
+  it('answers with the sheet, and with nothing where the grid has none', () => {
+    const drawn = grid(`${SALES}    cells:\n      A1: 1\n`);
+
+    expect(sheetOf(drawn, 'Sales' as SheetName)?.name).toBe('Sales');
+    expect(sheetOf(drawn, 'Nowhere' as SheetName)).toBeNull();
   });
 });

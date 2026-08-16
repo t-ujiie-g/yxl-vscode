@@ -3,6 +3,7 @@ import {
   type CompiledSheet,
   cellAt,
   type FacetOrigin,
+  sheetOf,
 } from '@yxl-vscode/compile';
 import { type Node, nodeAt, type Op, type Path, parse, type Value } from '@yxl-vscode/cst';
 import { pathOf } from '@yxl-vscode/loader';
@@ -38,12 +39,13 @@ export type Text = (file: FilePath) => string | null;
 /**
  * Typing a value into a cell.
  *
- * Only the cells whose value one node of the spec wrote can be edited this way:
- * a literal at the cell, or one field of an inline `data:` block. Everything
- * else has more than one answer or none — a definition reaches other cells, a
- * CSV is a file of its own, a `formulas:` range is one formula for many cells —
- * and each of those is a *refusal with a reason* until the phase that can offer
- * the choice (ADR-006).
+ * The cells one node of the spec answers for can be edited this way: a literal
+ * at the cell, one field of an inline `data:` block, and a cell the spec wrote
+ * for its look alone, which has one place a value would go. Everything else has
+ * more than one answer or none — a definition reaches other cells, a CSV is a
+ * file of its own, a `formulas:` range is one formula for many cells — and each
+ * of those is a *refusal with a reason*, with the answers offered beside it
+ * (ADR-006).
  */
 export function setValue(
   grid: CompiledGrid,
@@ -51,8 +53,8 @@ export function setValue(
   value: string | number | boolean | null,
   text: Text,
 ): Intent {
-  const sheet = grid.sheets.find((one) => one.name === where.sheet);
-  if (sheet === undefined) return refused(`there is no sheet named \`${where.sheet}\``);
+  const sheet = sheetOf(grid, where.sheet);
+  if (sheet === null) return refused(`there is no sheet named \`${where.sheet}\``);
 
   const cell = cellAt(sheet, where.at);
   if (cell === null) return refused(`nothing writes \`${where.at}\` yet`);
@@ -69,13 +71,8 @@ export function setValue(
 }
 
 /**
- * The op that puts the value in: over the node that holds it, or as the `value`
- * key of a cell that has none.
- *
- * A cell can be written for a reason other than what it holds — `B4: { format:
- * "0.0%" }` is a number format and nothing else (`docs/spec.md` §3) — and
- * typing into one is still one change in one place. The key goes above whatever
- * is there, which is the order the spec's own examples write.
+ * The op that puts the value in, with the key written above whatever else the
+ * cell holds — the order the spec's own examples use.
  */
 function written(found: Found & { kind: 'found' }, value: Value): Op {
   if (!found.add) return { op: 'set', path: found.path, value };
@@ -104,8 +101,8 @@ export function setFormula(
   formula: string,
   text: Text,
 ): Intent {
-  const sheet = grid.sheets.find((one) => one.name === where.sheet);
-  if (sheet === undefined) return refused(`there is no sheet named \`${where.sheet}\``);
+  const sheet = sheetOf(grid, where.sheet);
+  if (sheet === null) return refused(`there is no sheet named \`${where.sheet}\``);
 
   const cell = cellAt(sheet, where.at);
   if (cell === null) return refused(`nothing writes \`${where.at}\` yet`);
@@ -127,8 +124,16 @@ export function setFormula(
   };
 }
 
-export type Found =
-  | { kind: 'found'; file: FilePath; path: Path; node: Node; add?: boolean }
+/**
+ * Where an edit would be written, or why it would not be.
+ *
+ * `add` is the difference between writing over what is there and writing a key
+ * that is not: a cell can be written for a reason other than what it holds —
+ * `B4: { format: "0.0%" }` is a number format and nothing else (`docs/spec.md`
+ * §3) — and typing into one puts the `value:` key in.
+ */
+type Found =
+  | { kind: 'found'; file: FilePath; path: Path; node: Node; add: boolean }
   | { kind: 'refused'; why: string };
 
 /** Where a value is written, for the origins one node can be edited through. */
@@ -220,7 +225,7 @@ export function located(id: NodeId, text: Text): Found {
   if (node === null)
     return refused(`nothing is at \`${where.path.join('.')}\` in \`${where.file}\``);
 
-  return { kind: 'found', file: where.file, path: where.path, node };
+  return { kind: 'found', file: where.file, path: where.path, node, add: false };
 }
 
 /** A file as a reader would name it, which is not the whole way there. */

@@ -1,4 +1,4 @@
-import type { CompiledGrid } from '@yxl-vscode/compile';
+import { type CompiledGrid, sheetOf } from '@yxl-vscode/compile';
 import { nodeAt, parse, renderScalar, type Value } from '@yxl-vscode/cst';
 import type { SpecDoc, Templated } from '@yxl-vscode/spec';
 import { type A1Addr, type QualifiedAddr, qualified, type SheetName } from '@yxl-vscode/units';
@@ -35,8 +35,8 @@ export function override(
   says: Says,
   text: Text,
 ): Intent {
-  const sheet = grid.sheets.find((one) => one.name === where.sheet);
-  if (sheet === undefined) {
+  const sheet = sheetOf(grid, where.sheet);
+  if (sheet === null) {
     return { kind: 'refused', why: `there is no sheet named \`${where.sheet}\`` };
   }
 

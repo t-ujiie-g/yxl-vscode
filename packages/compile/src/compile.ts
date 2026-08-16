@@ -4,6 +4,7 @@ import {
   cellOf,
   parseQualifiedAddr,
   type QualifiedAddr,
+  type SheetName,
   within,
 } from '@yxl-vscode/units';
 import { compileFacets } from './cell';
@@ -37,6 +38,11 @@ export function compile(doc: SpecDoc, options: Options = {}): CompiledGrid {
   for (const override of doc.overrides) applyOverride(ctx, override, drafts);
 
   return { sheets: drafts.map((draft) => draft.sheet), diagnostics: ctx.diagnostics };
+}
+
+/** The sheet of that name, or `null` where the grid has none. */
+export function sheetOf(grid: CompiledGrid, name: SheetName): CompiledSheet | null {
+  return grid.sheets.find((one) => one.name === name) ?? null;
 }
 
 /**
