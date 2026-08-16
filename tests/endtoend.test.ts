@@ -35,6 +35,8 @@ function opened(sample: { path: string }) {
       refusals.push(why);
     },
     said: () => {},
+    kept: () => {},
+    left: () => null,
   };
 
   return { dir, root, port, refusals, spec: () => read(root) };
