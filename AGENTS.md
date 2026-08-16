@@ -81,7 +81,8 @@ is one more than we want.
   `packages/webview/tsconfig.json` — so reaching for `document` or `process` in
   a core package is a compile error. Everything else takes its inputs as values
   and returns values. This is what makes the core
-  testable and Phase 11 (Tauri) a packaging change rather than a rewrite.
+  testable and the Tauri shell (`ROADMAP.md` Phase 14) a packaging change
+  rather than a rewrite.
 - TypeScript **strict** everywhere. `any` needs a comment saying why, and that
   comment is one of the few that earns its place (§8.6).
 

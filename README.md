@@ -39,6 +39,19 @@ Side**.
 The **Check** and **Build** commands need the `yxl` compiler on your `PATH`, or
 `yxl.path` set to it; the preview itself needs nothing.
 
+## What it is for
+
+Reading a spec in a grid is worth having, and it is not the point. The point is
+that on an ordinary day — open a workbook, paste a column out of a report, fix
+three numbers, bold a heading, send it on — **this is where that happens**, and
+the file that changed is still the YAML.
+
+`ROADMAP.md` §6 opens with the list that answers *can I work in this yet?*: every
+everyday gesture, with a ✅ or the phase it lands in. Typing, the arrows, `Tab`,
+`Delete` and undo are in. Range selection, the clipboard, a formatting toolbar,
+inserting rows, and seeing the charts a spec declares are not, and are the next
+four phases in that order.
+
 ## Where it is going
 
 `yxl` made a workbook into version-controllable text. This is to make that text
