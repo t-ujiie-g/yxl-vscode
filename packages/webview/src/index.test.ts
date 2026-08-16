@@ -71,6 +71,18 @@ function at(into: HTMLElement, row: number, col: number): HTMLTableCellElement |
 
 const typed: Typed = { sheet: 'Sales', row: 1, col: 1, text: '99' };
 
+/** Select `from`, then reach to `to` with the shift key, as a reader would. */
+function reachFrom(
+  into: HTMLElement,
+  from: { row: number; col: number },
+  to: { row: number; col: number },
+): void {
+  at(into, from.row, from.col)?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+  at(into, to.row, to.col)?.dispatchEvent(
+    new MouseEvent('mousedown', { bubbles: true, shiftKey: true }),
+  );
+}
+
 describe('what the view sends', () => {
   it('sends an edit as an edit, naming the sheet it is showing', () => {
     const { into, sent } = view();
@@ -204,5 +216,80 @@ describe('what the view does with what it is told', () => {
     told(drawing);
 
     expect(into.querySelector('.refused')).toBeNull();
+  });
+});
+
+describe('emptying what is selected', () => {
+  const wide: Drawing = {
+    ...drawing,
+    sheets: [
+      sheet({
+        rows: 4,
+        columns: 4,
+        of: { rows: 4, columns: 4 },
+        cells: [cell(), cell({ row: 2, col: 2 }), cell({ row: 3, col: 3 })],
+      }),
+    ],
+  };
+
+  it('sends one cell as an edit of nothing, which is what typing nothing is', () => {
+    const { into, sent, told } = view();
+    told(wide);
+
+    at(into, 2, 2)?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    at(into, 2, 2)?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true }));
+
+    expect(sent.filter((one) => one.kind === 'edit')).toEqual([
+      { kind: 'edit', sheet: 'Sales', row: 2, col: 2, text: '' },
+    ]);
+  });
+
+  it('sends the rectangle as it stands now, not as it stood when the grid was drawn', () => {
+    const { into, sent, told } = view();
+    told(wide);
+
+    // Selecting restates the grid rather than redrawing it, so a rectangle read
+    // off what the cells were drawn with is the selection before this one.
+    reachFrom(into, { row: 1, col: 1 }, { row: 2, col: 2 });
+    reachFrom(into, { row: 2, col: 2 }, { row: 3, col: 3 });
+    at(into, 3, 3)?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true }));
+
+    expect(sent.filter((one) => one.kind === 'empty')).toEqual([
+      { kind: 'empty', sheet: 'Sales', top: 2, left: 2, bottom: 3, right: 3 },
+    ]);
+  });
+});
+
+describe('taking an edit back from the grid', () => {
+  it('asks the host for it: the stack that holds the edit is the file own', () => {
+    const { into, sent } = view();
+
+    at(into, 1, 1)?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    at(into, 1, 1)?.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'z', metaKey: true, bubbles: true }),
+    );
+
+    expect(sent.filter((one) => one.kind === 'undo')).toEqual([{ kind: 'undo', redo: false }]);
+  });
+
+  it('asks for the redo where the reader held shift', () => {
+    const { into, sent } = view();
+
+    at(into, 1, 1)?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    at(into, 1, 1)?.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Z', metaKey: true, shiftKey: true, bubbles: true }),
+    );
+
+    expect(sent.filter((one) => one.kind === 'undo')).toEqual([{ kind: 'undo', redo: true }]);
+  });
+
+  it('takes the keyboard back when the host says it had to move it', () => {
+    const { into, told } = view();
+
+    at(into, 1, 1)?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    (document.activeElement as HTMLElement | null)?.blur();
+    told({ kind: 'focus' });
+
+    expect(document.activeElement?.getAttribute('data-at')).toBe('1:1');
   });
 });

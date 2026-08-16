@@ -9,6 +9,7 @@ import {
   type Candidate,
   candidates,
   clearCell,
+  clearRange,
   type Intent,
   type Meaning,
   meaning,
@@ -22,7 +23,7 @@ import type { IncludeReader } from '@yxl-vscode/loader';
 import type { SpecDoc } from '@yxl-vscode/spec';
 import { type A1Addr, addrAt, type FilePath, type SheetName, sheetName } from '@yxl-vscode/units';
 import { type Change, checked, checkedText } from '@yxl-vscode/verify';
-import type { Choice, Typed } from '@yxl-vscode/webview/protocol';
+import type { Choice, Ranged, Typed } from '@yxl-vscode/webview/protocol';
 
 /** What the write needs of the world outside it, injected so it is testable without an editor (ADR-004). */
 export interface Port {
@@ -91,6 +92,27 @@ export async function write(spec: Spec, typed: Typed, port: Port, anyway = false
   }
 
   await applied(spec, intent, port, { anyway, from: null, typed });
+}
+
+/**
+ * Every cell of a rectangle emptied, as one edit. A rectangle has no answers to
+ * choose between the way a typed cell does: it is made or it is refused, and
+ * the refusal says how many cells stood in the way (ADR-001).
+ */
+export async function empty(spec: Spec, ranged: Ranged, port: Port): Promise<void> {
+  const sheet = sheetName(ranged.sheet);
+  if (sheet === null) {
+    port.refuse(`\`${ranged.sheet}\` is not a name a sheet can have`, null);
+    return;
+  }
+
+  const { top, left, bottom, right } = ranged;
+  const intent = clearRange(spec.grid, { sheet, rect: { top, left, bottom, right } }, port.text);
+  const done = await applied(spec, intent, port, { anyway: false, from: null, typed: null });
+  if (done && intent.kind === 'edit') {
+    const cells = intent.expects.cells.size;
+    port.said(`${cells} cell${cells === 1 ? '' : 's'} emptied.`);
+  }
 }
 
 /**
@@ -184,7 +206,7 @@ export async function writeOverride(
 interface Asked {
   readonly anyway: boolean;
   readonly from: string | null;
-  readonly typed: Typed;
+  readonly typed: Typed | null;
 }
 
 /** The half of a write that is the same whichever intent produced it. */
@@ -218,11 +240,13 @@ async function applied(spec: Spec, intent: Intent, port: Port, asked: Asked): Pr
   }
   if (done.ok === 'ask' && !asked.anyway) {
     // Asked about, not refused (ADR-009); the same gesture again confirms it.
-    port.refuse(surprising(done.surprises), {
-      typed: asked.typed,
-      canOverride: false,
-      choices: [anyhow(done.surprises, asked.from)],
-    });
+    const typed = asked.typed;
+    port.refuse(
+      surprising(done.surprises),
+      typed === null
+        ? null
+        : { typed, canOverride: false, choices: [anyhow(done.surprises, asked.from)] },
+    );
     return false;
   }
 

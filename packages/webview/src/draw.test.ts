@@ -12,6 +12,8 @@ function asks(): Asks {
     setParam: vi.fn(),
     showWindow: vi.fn(),
     edit: vi.fn(),
+    empty: vi.fn(),
+    undo: vi.fn(),
     reachTo: vi.fn(),
     resolveWith: vi.fn(),
     overrideWith: vi.fn(),
@@ -553,7 +555,19 @@ describe('moving about the grid with the keys', () => {
     const into = shown({ drawing: room() }, on);
 
     press(into, 2, 2, 'Delete');
-    expect(on.edit).toHaveBeenCalledWith(2, 2, '');
+    expect(on.empty).toHaveBeenCalledWith(2, 2);
+  });
+
+  it('asks about the cell it was pressed on, and leaves the rectangle to the view', () => {
+    const on = asks();
+    const into = shown(
+      { drawing: room(), selected: { row: 3, col: 3 }, anchor: { row: 2, col: 2 } },
+      on,
+    );
+
+    press(into, 3, 3, 'Delete');
+    expect(on.empty).toHaveBeenCalledWith(3, 3);
+    expect(on.edit).not.toHaveBeenCalled();
   });
 
   it('leaves the keys a cell is typed into alone', () => {

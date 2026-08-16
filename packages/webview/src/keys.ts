@@ -1,3 +1,4 @@
+import type { Rect } from '@yxl-vscode/units';
 import type { DrawnCell, DrawnSheet } from './protocol';
 
 /** A cell of the grid, as the view points at one. */
@@ -101,16 +102,18 @@ function lastIn(sheet: DrawnSheet, held: ReadonlyMap<string, DrawnCell>, row: nu
   return last;
 }
 
+/** Whether this is the key that takes an edit back, or with `Shift` puts it again. */
+export function undoing(event: KeyboardEvent): boolean {
+  return (event.key === 'z' || event.key === 'Z') && (event.metaKey || event.ctrlKey);
+}
+
 /** Whether this is the key that takes the whole sheet. */
 export function takingAll(event: KeyboardEvent): boolean {
   return event.key === 'a' && (event.metaKey || event.ctrlKey) && !event.altKey;
 }
 
 /** The rectangle two corners make, in the order a reader would read it. */
-export function between(
-  one: At,
-  two: At,
-): { top: number; left: number; bottom: number; right: number } {
+export function between(one: At, two: At): Rect {
   return {
     top: Math.min(one.row, two.row),
     left: Math.min(one.col, two.col),

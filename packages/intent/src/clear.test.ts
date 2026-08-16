@@ -5,7 +5,7 @@ import { applyPatch } from '@yxl-vscode/patch';
 import { type A1Addr, type FilePath, filePath, type SheetName } from '@yxl-vscode/units';
 import { type Ctx, checked } from '@yxl-vscode/verify';
 import { describe, expect, it } from 'vitest';
-import { clearCell } from './clear';
+import { clearCell, clearRange } from './clear';
 import type { Intent, Text } from './direct';
 
 const ROOT = filePath('spec.yxl.yaml') ?? ('' as FilePath);
@@ -114,5 +114,78 @@ describe('what emptying will not do', () => {
     const done = checked(spec, intent.patch, intent.expects, { root: ROOT, file: ROOT, read });
 
     expect(done.ok).toBe(false);
+  });
+});
+
+describe('a rectangle emptied as one edit', () => {
+  const GRID = `${SALES}    cells:\n      A1: 1\n      B1: 2\n      A2:\n        value: 3\n        style: header\n      B2: 4\n      C1: keep\n`;
+
+  const rectangle = (
+    source: string,
+    rect: { top: number; left: number; bottom: number; right: number },
+  ) => {
+    const { grid, text } = files({ [ROOT]: source });
+    return clearRange(grid, { sheet: 'Sales' as SheetName, rect }, text);
+  };
+
+  const applied = (
+    source: string,
+    rect: { top: number; left: number; bottom: number; right: number },
+  ) => {
+    const intent = rectangle(source, rect);
+    if (intent.kind !== 'edit')
+      throw new Error(intent.kind === 'refused' ? intent.why : 'not a spec edit');
+
+    const { read } = files({ [ROOT]: source });
+    const done = checked(source, intent.patch, intent.expects, {
+      root: ROOT,
+      file: intent.file,
+      read,
+    });
+    if (done.ok !== true) throw new Error('the checker did not apply it');
+    return done.text;
+  };
+
+  it('takes every cell of the rectangle out in one patch, and leaves the rest', () => {
+    expect(applied(GRID, { top: 1, left: 1, bottom: 2, right: 2 })).toBe(
+      `${SALES}    cells:\n      A2:\n        style: header\n      C1: keep\n`,
+    );
+  });
+
+  it('claims every cell it empties, and only those', () => {
+    const intent = rectangle(GRID, { top: 1, left: 1, bottom: 1, right: 2 });
+    expect(intent.kind === 'edit' && [...intent.expects.cells].sort()).toEqual([
+      'Sales!A1',
+      'Sales!B1',
+    ]);
+  });
+
+  it('skips the addresses that hold nothing', () => {
+    expect(applied(GRID, { top: 1, left: 1, bottom: 5, right: 5 })).toBe(
+      `${SALES}    cells:\n      A2:\n        style: header\n`,
+    );
+  });
+
+  it('is undone as one step, back to the byte', () => {
+    const intent = rectangle(GRID, { top: 1, left: 1, bottom: 2, right: 2 });
+    if (intent.kind !== 'edit') throw new Error('refused');
+
+    const done = applyPatch(GRID, intent.patch, { file: ROOT });
+    if (done.back === null) throw new Error('no way back');
+    expect(applyPatch(done.text, done.back, { file: ROOT }).text).toBe(GRID);
+  });
+
+  it('refuses the whole where one cell cannot be emptied, saying how many and why', () => {
+    const spec = `${SALES}    cells:\n      A1: 1\n      A2: 2\n    formulas:\n      - at: B1:B2\n        formula: "A1"\n`;
+    const intent = rectangle(spec, { top: 1, left: 1, bottom: 2, right: 2 });
+
+    expect(intent.kind === 'refused' && intent.why).toBe(
+      "2 of the 4 cells here cannot be emptied, so none were: `B1` is where this range's one formula is written, and changing it changes every cell the range fills (and 1 other here)",
+    );
+  });
+
+  it('refuses a rectangle with nothing in it, rather than writing nothing', () => {
+    const intent = rectangle(GRID, { top: 8, left: 8, bottom: 9, right: 9 });
+    expect(intent.kind === 'refused' && intent.why).toContain('nothing in this range');
   });
 });
