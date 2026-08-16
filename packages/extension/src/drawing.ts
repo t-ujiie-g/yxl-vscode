@@ -40,6 +40,9 @@ const WINDOW = { rows: 200, columns: 50 };
 /** How far past what a spec writes a filled range is drawn: enough to see it continues. */
 const BEYOND = 50;
 
+/** The empty room drawn past what a spec writes, so the sheet is somewhere to work rather than a table of what is there. */
+const ROOM = { rows: 40, columns: 6 };
+
 export function drawn(
   file: string,
   projected: {
@@ -141,7 +144,7 @@ function drawSheet(
   };
 }
 
-/** How far the sheet is drawn: what it writes, and a look past that into a filled range. */
+/** How far the sheet is drawn: what it writes, a look past that into a filled range, and room to work in. */
 function extent(sheet: CompiledSheet): { rows: number; columns: number } {
   let rows = 0;
   let columns = 0;
@@ -162,7 +165,7 @@ function extent(sheet: CompiledSheet): { rows: number; columns: number } {
     columns = Math.max(columns, fill.rect.right);
   }
 
-  return { rows, columns };
+  return { rows: rows + ROOM.rows, columns: columns + ROOM.columns };
 }
 
 /** Every address in the window with anything to show — a band gives an empty cell a look. */
