@@ -1,11 +1,20 @@
 import type { Rect } from '@yxl-vscode/units';
 import { sheetAgain } from './again';
-import { type Asks, cellKey, draw, focusCell, type Reached, restate, type Showing } from './draw';
+import {
+  type Asks,
+  type Copied,
+  cellKey,
+  draw,
+  focusCell,
+  type Reached,
+  restate,
+  type Showing,
+} from './draw';
 import { between } from './keys';
-import type { Drawing, Editable, FromView, Refused, Source, ToView } from './protocol';
+import type { Drawing, Editable, FromView, Pasted, Refused, Source, ToView } from './protocol';
 
 export { type Kept, sheetAgain } from './again';
-export { type Asks, draw, type Reached, restate, type Showing } from './draw';
+export { type Asks, type Copied, draw, type Reached, restate, type Showing } from './draw';
 export type {
   Drawing,
   DrawnCell,
@@ -17,6 +26,7 @@ export type {
   FromView,
   Highlighted,
   Inspected,
+  Pasted,
   Refused,
   Sized,
   Source,
@@ -49,6 +59,8 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
   let reached: Reached | null = null;
   let refused: Refused | null = null;
   let said: string | null = null;
+  /** The rectangle the reader has copied, which is a place rather than the cells in it (ADR-032). */
+  let copied: Copied | null = null;
 
   /** Where the last edit was typed, so a refusal can put the reader back at it. */
   let typedAt: { row: number; col: number } | null = null;
@@ -63,6 +75,7 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
     reached,
     refused,
     said,
+    copied,
     editable: editable(),
   });
 
@@ -151,6 +164,19 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       said = null;
       host.postMessage({ kind: 'undo', redo });
     },
+    copy: (row, col, cut) => {
+      refused = null;
+      said = null;
+      copied = { sheet: named(), rect: spanned() ?? between({ row, col }, { row, col }), cut };
+      restated();
+    },
+    paste: (row, col) => {
+      if (copied === null) return;
+
+      refused = null;
+      said = null;
+      host.postMessage({ kind: 'paste', ...putting(copied, row, col) });
+    },
     resolveWith: (typed, choice) => {
       host.postMessage({ ...typed, choice, kind: 'resolve' });
     },
@@ -158,6 +184,11 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       refused = null;
       said = null;
       host.postMessage({ ...ranged, choice, kind: 'emptied' });
+    },
+    pastedWith: (pasted, choice) => {
+      refused = null;
+      said = null;
+      host.postMessage({ ...pasted, choice, kind: 'pasted' });
     },
     overrideWith: (typed, reason) => {
       // `kind` last, or a spread message carrying its own `kind` is that message.
@@ -233,3 +264,14 @@ function start(): void {
 }
 
 if (typeof document !== 'undefined') start();
+
+/** What a paste names: the rectangle it came from, and the cell it is going down on. */
+function putting(copied: Copied, row: number, col: number): Pasted {
+  return {
+    from: { sheet: copied.sheet, ...copied.rect },
+    sheet: copied.sheet,
+    row,
+    col,
+    cut: copied.cut,
+  };
+}

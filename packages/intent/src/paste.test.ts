@@ -1,0 +1,235 @@
+import { compile } from '@yxl-vscode/compile';
+import { parse } from '@yxl-vscode/cst';
+import { type IncludeReader, load } from '@yxl-vscode/loader';
+import { applyPatch } from '@yxl-vscode/patch';
+import { type A1Addr, type FilePath, filePath, type Rect, type SheetName } from '@yxl-vscode/units';
+import { type Ctx, checked } from '@yxl-vscode/verify';
+import { describe, expect, it } from 'vitest';
+import { type Intent, reading } from './direct';
+import { pasteRange } from './paste';
+
+const ROOT = filePath('spec.yxl.yaml') ?? ('' as FilePath);
+const SALES = 'sheets:\n  - name: Sales\n';
+
+function files(sources: Record<string, string>) {
+  const includes: IncludeReader = (_from, path) =>
+    sources[path] === undefined ? null : { file: filePath(path) ?? ROOT, source: sources[path] };
+
+  const { doc } = load(parse(sources[ROOT] ?? '', { file: ROOT }), includes);
+  if (doc === null) throw new Error('did not load');
+
+  return {
+    grid: compile(doc, { read: includes }),
+    read: reading((file) => sources[file] ?? null),
+    includes,
+  };
+}
+
+const rect = (top: number, left: number, bottom: number, right: number): Rect => ({
+  top,
+  left,
+  bottom,
+  right,
+});
+
+/** A rectangle copied from `Sales` and put down at `at`, as the intent it comes to. */
+function pasted(
+  source: string,
+  from: Rect,
+  at: string,
+  options: { cut?: boolean; only?: boolean; sheet?: string } = {},
+): Intent {
+  const { grid, read } = files({ [ROOT]: source });
+
+  return pasteRange(
+    grid,
+    {
+      from: { sheet: 'Sales' as SheetName, rect: from },
+      to: { sheet: (options.sheet ?? 'Sales') as SheetName, at: at as A1Addr },
+      cut: options.cut ?? false,
+    },
+    read,
+    options.only ?? false,
+  );
+}
+
+/** The gesture taken all the way through the checker, which is the only way in. */
+function after(source: string, from: Rect, at: string, options = {}): string {
+  const intent = pasted(source, from, at, options);
+  if (intent.kind === 'refused') throw new Error(`refused: ${intent.why}`);
+  if (intent.kind !== 'edit') throw new Error('a file was written, not a spec');
+
+  const { includes } = files({ [ROOT]: source });
+  const ctx: Ctx = { root: ROOT, file: intent.file, read: includes };
+  const done = checked(source, intent.patch, intent.expects, ctx);
+  if (done.ok === false) throw new Error(`the checker refused it: ${done.diagnostics[0]?.message}`);
+
+  return done.text;
+}
+
+/** Why a paste did not happen. */
+function why(source: string, from: Rect, at: string, options = {}): string {
+  const intent = pasted(source, from, at, options);
+  return intent.kind === 'refused' ? intent.why : 'it was not refused';
+}
+
+describe('a rectangle put down somewhere else', () => {
+  const GRID = `${SALES}    cells:\n      A1: 1\n      A2: 2\n      B1: 9\n      B2: 8\n`;
+
+  it('writes what each cell holds at the offset, in one patch', () => {
+    expect(after(GRID, rect(1, 1, 2, 1), 'C1')).toBe(
+      `${SALES}    cells:\n      A1: 1\n      A2: 2\n      B1: 9\n      B2: 8\n      C1: 1\n      C2: 2\n`,
+    );
+  });
+
+  it('writes over a cell that is already there, and leaves what it wears', () => {
+    const spec = `${SALES}    cells:\n      A1: 1\n      B1:\n        value: 9\n        style: header\n`;
+
+    expect(after(spec, rect(1, 1, 1, 1), 'B1')).toBe(
+      `${SALES}    cells:\n      A1: 1\n      B1:\n        value: 1\n        style: header\n`,
+    );
+  });
+
+  it('comes back byte for byte', () => {
+    const intent = pasted(GRID, rect(1, 1, 2, 2), 'C1');
+    if (intent.kind !== 'edit') throw new Error('refused');
+
+    const done = applyPatch(GRID, intent.patch, { file: ROOT });
+    if (done.back === null) throw new Error('no way back');
+    expect(applyPatch(done.text, done.back, { file: ROOT }).text).toBe(GRID);
+  });
+
+  it('refuses to put the cells back where they already are', () => {
+    expect(why(GRID, rect(1, 1, 2, 2), 'A1')).toBe('these cells are already here');
+  });
+
+  it('names the sheet it cannot find', () => {
+    expect(why(GRID, rect(1, 1, 1, 1), 'C1', { sheet: 'Nowhere' })).toContain(
+      'there is no sheet named `Nowhere`',
+    );
+  });
+
+  it('leaves a hole in the rectangle as a hole, rather than emptying what it lands on', () => {
+    const spec = `${SALES}    cells:\n      A1: 1\n      C2: keep\n`;
+
+    expect(after(spec, rect(1, 1, 2, 1), 'C1')).toBe(
+      `${SALES}    cells:\n      A1: 1\n      C2: keep\n      C1: 1\n`,
+    );
+  });
+});
+
+describe('a formula put down somewhere else', () => {
+  const WITH_FORMULA = `${SALES}    cells:\n      A1: 2\n      A2: 3\n      B1: { formula: "A1*10" }\n      B2: 0\n`;
+
+  it('moves the references it holds', () => {
+    expect(after(WITH_FORMULA, rect(1, 2, 1, 2), 'B2')).toContain('B2: { formula: "A2*10" }');
+  });
+
+  it('changes the shape of a cell written as a plain value', () => {
+    expect(after(WITH_FORMULA, rect(1, 2, 1, 2), 'B2')).toBe(
+      `${SALES}    cells:\n      A1: 2\n      A2: 3\n      B1: { formula: "A1*10" }\n      B2: { formula: "A2*10" }\n`,
+    );
+  });
+
+  it('takes the value out of a cell it gives a formula to, and leaves the style', () => {
+    const spec = `${SALES}    cells:\n      A1: { formula: "1+1" }\n      B1:\n        value: 9\n        style: header\n`;
+
+    expect(after(spec, rect(1, 1, 1, 1), 'B1')).toBe(
+      `${SALES}    cells:\n      A1: { formula: "1+1" }\n      B1:\n        style: header\n        formula: 1+1\n`,
+    );
+  });
+
+  it('says which formula could not be moved, and writes nothing', () => {
+    expect(why(WITH_FORMULA, rect(1, 2, 1, 2), 'A1')).toContain('would move off the sheet');
+  });
+
+  it('moves a cell a `formulas:` range fills by where that cell sits, not where the range starts', () => {
+    // `C2` is the range's second row, so it means `B3*2` there; put at `E5` it
+    // is three rows further down and two columns right again.
+    const spec = `${SALES}    cells:\n      B2: 1\n      B3: 2\n    formulas:\n      - at: C2:C3\n        formula: "B2*2"\n`;
+
+    expect(after(spec, rect(3, 3, 3, 3), 'E5')).toContain('E5:\n        formula: "D5*2"');
+  });
+});
+
+describe('a rectangle put down where nothing is written yet', () => {
+  it('writes new `cells:` entries', () => {
+    const spec = `${SALES}    cells:\n      A1: 1\n      A2: 2\n`;
+
+    expect(after(spec, rect(1, 1, 2, 1), 'D5')).toBe(
+      `${SALES}    cells:\n      A1: 1\n      A2: 2\n      D5: 1\n      D6: 2\n`,
+    );
+  });
+
+  it('writes the `cells:` key itself where the sheet has none', () => {
+    const spec = `${SALES}    data:\n      - at: A1\n        values:\n          - [1, 2]\n`;
+
+    expect(after(spec, rect(1, 1, 1, 1), 'D5')).toContain('cells:\n      D5: 1');
+  });
+
+  it('writes a formula as a new entry, quoted the way the spec writes one', () => {
+    const spec = `${SALES}    cells:\n      A1: 1\n      B1: { formula: "A1*2" }\n`;
+
+    expect(after(spec, rect(1, 2, 1, 2), 'D5')).toContain('D5:\n        formula: "C5*2"');
+  });
+});
+
+describe('a cell a paste cannot land on', () => {
+  it('refuses the whole where one of them cannot take it, saying how many and why', () => {
+    const spec = `${SALES}    cells:\n      A1: 1\n      A2: 2\n    formulas:\n      - at: C1:C2\n        formula: "A1"\n`;
+
+    expect(why(spec, rect(1, 1, 2, 1), 'C1')).toContain('2 of the 2 cells here cannot be pasted');
+  });
+
+  it('pastes the ones that can take it where the reader says so', () => {
+    const spec = `${SALES}    cells:\n      A1: 1\n      A2: 2\n      C2: 0\n    formulas:\n      - at: C1:C1\n        formula: "A1"\n`;
+
+    expect(after(spec, rect(1, 1, 2, 1), 'C1', { only: true })).toBe(
+      `${SALES}    cells:\n      A1: 1\n      A2: 2\n      C2: 2\n    formulas:\n      - at: C1:C1\n        formula: "A1"\n`,
+    );
+  });
+
+  it('writes into a `data:` field, and refuses to put a formula in one', () => {
+    const spec = `${SALES}    cells:\n      D1: 7\n      D2: { formula: "D1*2" }\n    data:\n      - at: A5\n        values:\n          - [1, 2]\n`;
+
+    expect(after(spec, rect(1, 4, 1, 4), 'A5')).toContain('- [7, 2]');
+    expect(why(spec, rect(2, 4, 2, 4), 'A5')).toContain('holds no formula');
+  });
+
+  it('refuses where nothing in the rectangle can be pasted', () => {
+    expect(why(`${SALES}    cells:\n      A1: 1\n`, rect(5, 5, 6, 6), 'A1')).toBe(
+      'nothing in this rectangle can be pasted here',
+    );
+  });
+});
+
+describe('a rectangle cut and put down somewhere else', () => {
+  const GRID = `${SALES}    cells:\n      A1: 1\n      A2: 2\n      C1: keep\n`;
+
+  it('empties what it took and writes it where it landed, in one patch', () => {
+    expect(after(GRID, rect(1, 1, 2, 1), 'B1', { cut: true })).toBe(
+      `${SALES}    cells:\n      C1: keep\n      B1: 1\n      B2: 2\n`,
+    );
+  });
+
+  it('keeps the `cells:` mapping it empties, because the same patch fills it again', () => {
+    const spec = `${SALES}    cells:\n      A1: 1\n      A2: 2\n`;
+
+    expect(after(spec, rect(1, 1, 2, 1), 'B1', { cut: true })).toBe(
+      `${SALES}    cells:\n      B1: 1\n      B2: 2\n`,
+    );
+  });
+
+  it('comes back byte for byte', () => {
+    const intent = pasted(GRID, rect(1, 1, 2, 1), 'B1', { cut: true });
+    if (intent.kind !== 'edit') throw new Error('refused');
+
+    const done = applyPatch(GRID, intent.patch, { file: ROOT });
+    if (done.back === null) throw new Error('no way back');
+    expect(applyPatch(done.text, done.back, { file: ROOT }).text).toBe(GRID);
+  });
+
+  it('refuses to land on the cells it is taking', () => {
+    expect(why(GRID, rect(1, 1, 2, 1), 'A2', { cut: true })).toContain('these overlap');
+  });
+});

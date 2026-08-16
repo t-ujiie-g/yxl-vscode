@@ -1,6 +1,6 @@
-import { columnLabel } from '@yxl-vscode/units';
+import { columnLabel, type Rect } from '@yxl-vscode/units';
 import { drawCell, typeInto } from './cell';
-import { type At, going, takingAll, undoing, within } from './keys';
+import { type At, copying, going, pasting, takingAll, undoing, within } from './keys';
 import {
   inspector,
   note,
@@ -17,6 +17,7 @@ import type {
   DrawnMerge,
   DrawnSheet,
   Editable,
+  Pasted,
   Ranged,
   Refused,
   Source,
@@ -35,9 +36,17 @@ export interface Showing {
   readonly reached: Reached | null;
   readonly refused: Refused | null;
   readonly said: string | null;
+  readonly copied: Copied | null;
 
   /** Whether the selected cell can be typed into, where one is selected. */
   readonly editable: Editable | null;
+}
+
+/** A rectangle the reader has copied, and whether putting it down takes it from where it is. */
+export interface Copied {
+  readonly sheet: string;
+  readonly rect: Rect;
+  readonly cut: boolean;
 }
 
 /** What the cursor in the text is reaching, and what to call it. */
@@ -62,8 +71,11 @@ export interface Asks {
   readonly edit: (row: number, col: number, text: string) => void;
   readonly empty: (row: number, col: number) => void;
   readonly undo: (redo: boolean) => void;
+  readonly copy: (row: number, col: number, cut: boolean) => void;
+  readonly paste: (row: number, col: number) => void;
   readonly resolveWith: (typed: Typed, choice: string) => void;
   readonly emptiedWith: (ranged: Ranged, choice: string) => void;
+  readonly pastedWith: (pasted: Pasted, choice: string) => void;
   readonly overrideWith: (typed: Typed, reason: string) => void;
 }
 
@@ -129,6 +141,7 @@ export function restate(into: HTMLElement, showing: Showing, asks: Asks): void {
 
   for (const cell of grid.querySelectorAll('td.selected')) cell.classList.remove('selected');
   for (const cell of grid.querySelectorAll('td.ranged')) cell.classList.remove('ranged');
+  for (const cell of grid.querySelectorAll('td.copied')) cell.classList.remove('copied');
   for (const cell of grid.querySelectorAll('td.reached')) cell.classList.remove('reached');
 
   const at = showing.selected;
@@ -140,6 +153,7 @@ export function restate(into: HTMLElement, showing: Showing, asks: Asks): void {
     const col = Number(key[0]);
     const row = Number(key[1]);
     if (ranged(showing, { row, col })) cell.classList.add('ranged');
+    if (copiedFrom(showing, { row, col })) cell.classList.add('copied');
   }
 
   for (const key of showing.reached?.cells ?? []) {
@@ -248,6 +262,19 @@ function ranged(showing: Showing, at: At): boolean {
   if (selected.row === anchor.row && selected.col === anchor.col) return false;
 
   return within(at, selected, anchor);
+}
+
+/** Whether this cell is one of those the reader has copied, on the sheet they copied from. */
+function copiedFrom(showing: Showing, at: At): boolean {
+  const { copied } = showing;
+  if (copied === null || copied.sheet !== showing.drawing.sheets[showing.sheet]?.name) return false;
+
+  return (
+    at.row >= copied.rect.top &&
+    at.row <= copied.rect.bottom &&
+    at.col >= copied.rect.left &&
+    at.col <= copied.rect.right
+  );
 }
 
 /** A key that is a character the reader meant to put in the cell. */
@@ -362,6 +389,7 @@ function line(
       drawn.classList.add('selected');
     }
     if (ranged(showing, { row, col })) drawn.classList.add('ranged');
+    if (copiedFrom(showing, { row, col })) drawn.classList.add('copied');
     if (showing.reached?.cells.has(cellKey(col, row)) === true) drawn.classList.add('reached');
 
     const said = problems.get(cellKey(col, row));
@@ -395,6 +423,19 @@ function line(
       if (undoing(event)) {
         event.preventDefault();
         asks.undo(event.shiftKey);
+        return;
+      }
+
+      const taking = copying(event);
+      if (taking !== null) {
+        event.preventDefault();
+        asks.copy(row, col, taking === 'cut');
+        return;
+      }
+
+      if (pasting(event)) {
+        event.preventDefault();
+        asks.paste(row, col);
         return;
       }
 

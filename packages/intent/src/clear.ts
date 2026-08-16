@@ -67,6 +67,7 @@ export function clearRange(
   where: { sheet: SheetName; rect: Rect },
   read: Reading,
   only = false,
+  adding: readonly Op[] = [],
 ): Intent {
   const sheet = sheetOf(grid, where.sheet);
   if (sheet === null) return { kind: 'refused', why: `there is no sheet named \`${where.sheet}\`` };
@@ -109,7 +110,7 @@ export function clearRange(
   return {
     kind: 'edit',
     file,
-    patch: { ops: whole(ops.get(file) ?? [], file, read) },
+    patch: { ops: whole(ops.get(file) ?? [], file, read, adding) },
     expects: { cells, beyond: 'ask' },
   };
 }
@@ -124,7 +125,12 @@ function standing(cleared: number, held: readonly string[]): string {
 }
 
 /** The same removals, with a mapping whose every entry is going taken out whole: an empty `cells:` will not load. */
-function whole(ops: readonly Op[], file: FilePath, read: Reading): Op[] {
+function whole(
+  ops: readonly Op[],
+  file: FilePath,
+  read: Reading,
+  adding: readonly Op[] = [],
+): Op[] {
   const root = read.parsed(file)?.root ?? null;
   if (root === null) return [...ops];
 
@@ -134,7 +140,7 @@ function whole(ops: readonly Op[], file: FilePath, read: Reading): Op[] {
 
   for (const op of ops) {
     const parent = op.op === 'remove' ? op.path.slice(0, -1) : null;
-    if (parent === null || parent.length === 0 || !leftEmpty(root, parent, going)) {
+    if (parent === null || parent.length === 0 || !leftEmpty(root, parent, going, adding)) {
       done.push(op);
       continue;
     }
@@ -147,12 +153,26 @@ function whole(ops: readonly Op[], file: FilePath, read: Reading): Op[] {
   return done;
 }
 
-/** Whether every entry of the mapping at `path` is one of the removals. */
-function leftEmpty(root: Node, path: Path, going: ReadonlySet<string>): boolean {
+/** Whether every entry of the mapping at `path` is going, with nothing the same patch adds left in it. */
+function leftEmpty(
+  root: Node,
+  path: Path,
+  going: ReadonlySet<string>,
+  adding: readonly Op[],
+): boolean {
   const holder = nodeAt(root, path);
   if (holder === null || holder.kind !== 'map' || holder.entries.length === 0) return false;
+  if (fills(path, adding)) return false;
 
   return holder.entries.every((entry) => going.has(mark([...path, String(entry.key.value)])));
+}
+
+/** Whether the patch puts something into the mapping at `path`, which is what keeps it. */
+function fills(path: Path, adding: readonly Op[]): boolean {
+  const here = mark(path);
+  const inside = `${here.slice(0, -1)},`;
+
+  return adding.some((one) => mark(one.path) === here || mark(one.path).startsWith(inside));
 }
 
 /** A path as one comparable string, so a removal can be asked what else is going. */

@@ -58,7 +58,8 @@ export function refusal(refused: Refused, asks: Asks): HTMLElement {
 
   const typed = refused.typed;
   const ranged = refused.ranged;
-  if (typed === null && ranged === null) return said;
+  const pasted = refused.pasted;
+  if (typed === null && ranged === null && pasted === null) return said;
 
   for (const choice of refused.choices) {
     const pick = document.createElement('button');
@@ -68,6 +69,7 @@ export function refusal(refused: Refused, asks: Asks): HTMLElement {
     pick.addEventListener('click', () => {
       if (typed !== null) asks.resolveWith(typed, choice.id);
       else if (ranged !== null) asks.emptiedWith(ranged, choice.id);
+      else if (pasted !== null) asks.pastedWith(pasted, choice.id);
     });
     said.append(' ', pick);
   }

@@ -18,6 +18,9 @@ function asks(): Asks {
     resolveWith: vi.fn(),
     emptiedWith: vi.fn(),
     overrideWith: vi.fn(),
+    copy: vi.fn(),
+    paste: vi.fn(),
+    pastedWith: vi.fn(),
   };
 }
 
@@ -79,6 +82,7 @@ function shown(of: Partial<Showing> = {}, on: Asks = asks()): HTMLElement {
       reached: null,
       refused: null,
       said: null,
+      copied: null,
       editable: null,
       ...of,
     },
@@ -202,6 +206,7 @@ describe('a sheet larger than the window drawn of it', () => {
       reached: null,
       refused: null,
       said: null,
+      copied: null,
       editable: null,
     });
 
@@ -225,6 +230,7 @@ describe('a sheet larger than the window drawn of it', () => {
       reached: null,
       refused: null,
       said: null,
+      copied: null,
       editable: null,
     });
 
@@ -591,6 +597,7 @@ describe('what changes without redrawing the grid', () => {
       reached: null,
       refused: null,
       said: null,
+      copied: null,
       editable: null,
       ...of,
     };
@@ -704,6 +711,7 @@ describe('what the view says about a spec', () => {
       why: 'B5 holds a formula',
       typed: null,
       ranged: null,
+      pasted: null,
       canOverride: false,
       choices: [],
     } as const;
@@ -716,6 +724,7 @@ describe('what the view says about a spec', () => {
       kind: 'refused',
       why: 'B5 is filled by a range',
       ranged: null,
+      pasted: null,
       typed,
       canOverride: true,
       choices: [
@@ -743,6 +752,7 @@ describe('what the view says about a spec', () => {
       kind: 'refused',
       why: 'B5 is filled by a range',
       ranged: null,
+      pasted: null,
       typed,
       canOverride: true,
       choices: [],
@@ -760,6 +770,7 @@ describe('what the view says about a spec', () => {
       kind: 'refused',
       why: 'B5 is filled by a range',
       ranged: null,
+      pasted: null,
       typed,
       canOverride: true,
       choices: [],
@@ -782,6 +793,7 @@ describe('what the view says about a spec', () => {
       kind: 'refused',
       why: 'B5 is filled by a range',
       ranged: null,
+      pasted: null,
       typed,
       canOverride: true,
       choices: [],
@@ -804,6 +816,7 @@ describe('what the view says about a spec', () => {
       why: 'nothing is written there',
       typed: null,
       ranged: null,
+      pasted: null,
       canOverride: false,
       choices: [],
     } as const;

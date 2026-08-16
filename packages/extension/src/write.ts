@@ -14,6 +14,8 @@ import {
   type Meaning,
   meaning,
   override,
+  type Pasting,
+  pasteRange,
   type Reading,
   type Resolving,
   reading,
@@ -34,7 +36,7 @@ import {
   sheetName,
 } from '@yxl-vscode/units';
 import { type Change, checked, checkedText } from '@yxl-vscode/verify';
-import type { Choice, Ranged, Typed } from '@yxl-vscode/webview/protocol';
+import type { Choice, Pasted, Ranged, Typed } from '@yxl-vscode/webview/protocol';
 
 /**
  * What the write needs of the world outside it, injected so it is testable
@@ -57,6 +59,7 @@ export interface Port {
 export interface Offer {
   readonly typed: Typed | null;
   readonly ranged: Ranged | null;
+  readonly pasted: Pasted | null;
   readonly canOverride: boolean;
   readonly choices: readonly Choice[];
 }
@@ -108,6 +111,7 @@ export async function write(spec: Spec, typed: Typed, port: Port, anyway = false
     port.refuse(intent.why, {
       typed: offer,
       ranged: null,
+      pasted: null,
       canOverride: excepts(spec, where),
       choices: answers.map(shown),
     });
@@ -147,6 +151,84 @@ export async function empty(spec: Spec, ranged: Ranged, port: Port, only = false
   }
 }
 
+/**
+ * A rectangle put down somewhere else, as one edit. A cell that cannot take it
+ * refuses the whole and is offered as an answer instead: the same paste with
+ * `only` the cells that can (ADR-001, ADR-032).
+ */
+export async function paste(spec: Spec, pasted: Pasted, port: Port, only = false): Promise<void> {
+  const where = pasting(pasted);
+  if (where === null) {
+    port.refuse(`\`${pasted.from.sheet}\` is not a name a sheet can have`, null);
+    return;
+  }
+
+  const read = reading(port.text);
+  const intent = pasteRange(spec.grid, where, read, only);
+
+  if (intent.kind === 'refused' && !only) {
+    const some = pasteRange(spec.grid, where, read, true);
+    port.refuse(intent.why, some.kind === 'edit' ? theseCells(pasted, some.expects.cells) : null);
+    return;
+  }
+
+  const done = await applied(spec, intent, port, { anyway: false, from: null, typed: null });
+  if (done && intent.kind === 'edit') {
+    const cells = intent.expects.cells.size;
+    port.said(`${cells} cell${cells === 1 ? '' : 's'} ${pasted.cut ? 'moved' : 'pasted'}.`);
+  }
+}
+
+/** That answer, taken. Worked out again rather than remembered: the file may have moved. */
+export async function pastedWith(
+  spec: Spec,
+  pasted: Pasted,
+  choice: string,
+  port: Port,
+): Promise<void> {
+  if (choice !== ONLY) {
+    port.refuse('that answer is no longer one of the ways this edit could be made', null);
+    return;
+  }
+
+  await paste(spec, pasted, port, true);
+}
+
+/** What the view named, in the units the resolver works in. */
+function pasting(pasted: Pasted): Pasting | null {
+  const from = sheetName(pasted.from.sheet);
+  const to = sheetName(pasted.sheet);
+  if (from === null || to === null) return null;
+
+  const { top, left, bottom, right } = pasted.from;
+
+  return {
+    from: { sheet: from, rect: { top, left, bottom, right } },
+    to: { sheet: to, at: addrAt({ col: pasted.col, row: pasted.row }) },
+    cut: pasted.cut,
+  };
+}
+
+/** The one answer a refused paste has: leave the cells that cannot take it where they are. */
+function theseCells(pasted: Pasted, cells: ReadonlySet<string>): Offer {
+  const named = [...cells];
+
+  return {
+    typed: null,
+    ranged: null,
+    pasted,
+    canOverride: false,
+    choices: [
+      {
+        id: ONLY,
+        what: 'Paste into the ones that can take it',
+        moves: named.length,
+        sample: named.slice(0, 3),
+      },
+    ],
+  };
+}
+
 /** The one answer a refused rectangle has: leave what cannot be emptied where it is. */
 function theseOnly(ranged: Ranged, cells: ReadonlySet<string>): Offer {
   const named = [...cells];
@@ -154,6 +236,7 @@ function theseOnly(ranged: Ranged, cells: ReadonlySet<string>): Offer {
   return {
     typed: null,
     ranged,
+    pasted: null,
     canOverride: false,
     choices: [
       {
@@ -317,6 +400,7 @@ async function applied(spec: Spec, intent: Intent, port: Port, asked: Asked): Pr
         : {
             typed,
             ranged: null,
+            pasted: null,
             canOverride: false,
             choices: [anyhow(done.surprises, asked.from)],
           },

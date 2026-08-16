@@ -12,10 +12,12 @@ import {
   type Parsed,
   type Path,
   parse,
+  renderScalar,
   type Value,
 } from '@yxl-vscode/cst';
 import { pathOf } from '@yxl-vscode/loader';
 import type { Patch } from '@yxl-vscode/patch';
+import type { ScalarValue } from '@yxl-vscode/spec';
 import {
   type A1Addr,
   type FilePath,
@@ -47,6 +49,9 @@ export type Intent =
 
 /** The text of a file the spec was read from, as it stands. */
 export type Text = (file: FilePath) => string | null;
+
+/** What a cell holds: one or the other, never both (`docs/spec.md` §3). */
+export type Holds = { readonly formula: string } | { readonly value: ScalarValue };
 
 /**
  * The files an edit reads: their text, and the tree parsed from it — which is
@@ -186,7 +191,12 @@ function valuePath(origin: FacetOrigin, sheet: CompiledSheet, at: A1Addr, read: 
 }
 
 /** The node that wrote a cell, where one node did. */
-function literalPath(origin: FacetOrigin, sheet: CompiledSheet, at: A1Addr, read: Reading): Found {
+export function literalPath(
+  origin: FacetOrigin,
+  sheet: CompiledSheet,
+  at: A1Addr,
+  read: Reading,
+): Found {
   switch (origin.kind) {
     case 'literal':
     case 'override':
@@ -221,6 +231,27 @@ function literalPath(origin: FacetOrigin, sheet: CompiledSheet, at: A1Addr, read
     default:
       return refused(`\`${at}\` on \`${sheet.name}\` holds nothing to change yet`);
   }
+}
+
+/** One `cells:` entry as it is written: a formula is a key under the address, a value its own scalar (`docs/spec.md` §3). */
+export function entryText(at: A1Addr, holds: Holds): string {
+  return 'formula' in holds
+    ? `${at}:\n  formula: ${renderScalar(holds.formula, 'double')}`
+    : `${at}: ${renderScalar(holds.value)}`;
+}
+
+/** The entry going in, with the `cells:` key itself where the sheet has none. */
+export function entryOp(path: Path, cells: boolean, at: A1Addr, holds: Holds): Op {
+  if (!cells) return { op: 'addSource', path, key: 'cells', source: entryText(at, holds) };
+
+  return 'formula' in holds
+    ? {
+        op: 'addSource',
+        path,
+        key: at,
+        source: `formula: ${renderScalar(holds.formula, 'double')}`,
+      }
+    : { op: 'add', path, key: at, value: holds.value, before: null };
 }
 
 /** The node an id names, read out of the file it lives in. */

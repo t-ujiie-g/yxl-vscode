@@ -200,6 +200,12 @@ body {
   box-shadow: inset 0 0 0 9999px rgb(37 99 235 / 16%);
 }
 
+/* The marching ants a copied rectangle wears in every spreadsheet. */
+.grid td.copied {
+  outline: 1px dashed #107c41;
+  outline-offset: -1px;
+}
+
 .grid td.problem {
   text-decoration: #d13438 wavy underline;
   text-underline-offset: 3px;
