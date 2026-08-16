@@ -76,17 +76,22 @@ describe('a drawn spec', () => {
     expect(at(source, 1, 3)?.style).toEqual({ 'font.bold': true });
   });
 
-  it('reaches only as far as the sheet holds something', () => {
+  it('reaches past what the sheet holds, so there is room to work in', () => {
     const sheet = drawn(`${SALES}    cells:\n      C4: x\n`);
-    expect([sheet.columns, sheet.rows]).toEqual([3, 4]);
+    expect([sheet.columns, sheet.rows]).toEqual([9, 44]);
+  });
+
+  it('is a grid even where the sheet writes nothing at all', () => {
+    const sheet = drawn(SALES);
+    expect([sheet.columns, sheet.rows]).toEqual([6, 40]);
   });
 
   it('follows a filled range past the written cells, but not to the end of the sheet', () => {
     // `D2:D1048576` is a legal thing to write; drawing it out would be a million
     // rows of nothing.
     const sheet = drawn(`${SALES}    formulas:\n      - at: D2:D1048576\n        formula: "A2"\n`);
-    expect(sheet.rows).toBe(50);
-    expect(sheet.columns).toBe(4);
+    expect(sheet.rows).toBe(90);
+    expect(sheet.columns).toBe(10);
   });
 
   it('draws the rows of a file it was given a way to read', () => {
@@ -180,7 +185,7 @@ describe('a drawn spec', () => {
     const sheet = drawn(TALL);
 
     expect([sheet.rows, sheet.at.row]).toEqual([200, 1]);
-    expect(sheet.of.rows).toBe(400);
+    expect(sheet.of.rows).toBe(440);
     expect(sheet.cells.every((cell) => cell.row <= 200)).toBe(true);
   });
 
@@ -197,7 +202,7 @@ describe('a drawn spec', () => {
     // The last window is the last 200 rows, not 200 rows of nothing past the end.
     const sheet = drawn(TALL, new Map([['Sales', { row: 9000, col: 1 }]]));
 
-    expect([sheet.at.row, sheet.rows]).toEqual([201, 200]);
+    expect([sheet.at.row, sheet.rows]).toEqual([241, 200]);
   });
 
   it('draws a window of a sheet too small to fill one', () => {
@@ -205,7 +210,7 @@ describe('a drawn spec', () => {
       `${SALES}    cells:\n      B2: x\n`,
       new Map([['Sales', { row: 5, col: 5 }]]),
     );
-    expect([sheet.at.row, sheet.at.col, sheet.rows, sheet.columns]).toEqual([1, 1, 2, 2]);
+    expect([sheet.at.row, sheet.at.col, sheet.rows, sheet.columns]).toEqual([1, 1, 42, 8]);
   });
 
   it('draws the window at the sheet it belongs to, whatever number that sheet is now', () => {

@@ -923,6 +923,13 @@ work.
       (ADR-031); what the cell it lands on *wears* stays; a cell that cannot
       take it offers the same "the ones that can" answer `Delete` does. The
       system clipboard is the next two items.
+- [x] **Room to work in**, past what the spec writes — a sheet that reaches
+      exactly as far as its last cell is a table of what is there, not a place
+      to work, and there is nowhere to paste into or type a new row. The grid
+      now draws empty rows and columns beyond the data, which is what every
+      spreadsheet does and what makes the `empty` row of §4.4 reachable at all.
+      Growing it further as the reader scrolls is not in: the room is a fixed
+      amount past the last cell.
 - [ ] **Copy out**: TSV *and* HTML on the clipboard, so Excel and Sheets receive
       the values and the look they were shown (**ADR-028**)
 - [ ] **Paste in** from Excel or Sheets: values from the TSV, look from the
@@ -948,7 +955,9 @@ whether the spec survives contact with a GUI (ADR-008).
 
 ### Phase 10 — Structural edits
 - [ ] `insertRow` / `insertCol` / `deleteRow` / `deleteCol`, with the
-      consequence enumeration and the expected-diff-size preview (§4.4)
+      consequence enumeration and the expected-diff-size preview (§4.4). The
+      row *header* is where a reader reaches for this, so the headers becoming
+      selectors (Phase 8) is the gesture it hangs off
 - [ ] `rekeyMap` for bulk A1 shifts in `cells:`
 - [ ] `merge` / `unmerge`, and band creation
 - [ ] The "convert this rectangle to `data:`" offer, at the moment a `cells:`
@@ -2137,6 +2146,28 @@ this at a phase boundary rather than at the end.
   two serials either side of it, so the next reader knows it is deliberate.
 - A cell's own format — written, or the one its type takes — now wins over a
   band's. Both are requests about *that* cell; a band is something reaching it.
+
+### 2026-08-16 — Room to work in
+The grid drew a sheet exactly as far as its last written cell, which makes it a
+table of what is there rather than a place to work: there was nowhere to paste
+into, nowhere to type a row that does not exist yet, and no empty column to
+reach for. It now draws **40 rows and 6 columns past** what the spec writes, and
+is a grid even for a sheet that writes nothing at all.
+
+- **The window machinery was already there** — 200 rows by 50 columns, scrolled
+  from the view (ADR-019). It simply never had more than the data to show, so
+  the fix is in one function: what a sheet's extent *is*.
+- **It costs nothing in the payload.** Only cells with something to show are
+  sent; the empty room is drawn by the view from the row and column counts it
+  already gets. A spec that writes four cells still sends four.
+- **What it makes reachable** is §4.4's `empty` row — typing into an address
+  nothing writes, and now pasting into one. Both were implemented and neither
+  could be got at without scrolling to a cell that was not drawn.
+- Growing the room further as the reader scrolls is deliberately not in: it is a
+  fixed amount past the last cell, and the roadmap says so rather than implying
+  a sheet without an end.
+- 1 new test, 1248 in total; four that pinned the old extent updated to the new
+  one.
 
 ### 2026-08-16 — Copy, cut and paste, as a place rather than a buffer
 `Cmd`+`C`, `Cmd`+`X` and `Cmd`+`V` work inside the grid. What a copy holds is a
