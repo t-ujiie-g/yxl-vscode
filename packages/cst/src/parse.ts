@@ -11,11 +11,8 @@ const STYLES: Record<string, ScalarStyle> = {
 };
 
 /**
- * Read YAML source into a span-carrying tree.
- *
- * The parser recovers rather than stopping, so a document with errors still
- * yields whatever tree it could build — an editor has to draw something while
- * the user is mid-keystroke.
+ * Read YAML source into a span-carrying tree. The parser recovers rather than
+ * stopping: an editor has to draw something while the reader is mid-keystroke.
  */
 export function parse(source: string, options: { file: string }): Parsed {
   const reader = new Reader(options.file, source);
@@ -33,10 +30,6 @@ export function parse(source: string, options: { file: string }): Parsed {
   return { root, diagnostics: reader.diagnostics, source, file: options.file };
 }
 
-/**
- * Walks the parser library's tokens into our tree, collecting what it cannot
- * represent as diagnostics rather than throwing.
- */
 class Reader {
   readonly diagnostics: Diagnostic[] = [];
 
@@ -88,9 +81,6 @@ class Reader {
     return {
       kind: 'scalar',
       value: style === 'plain' ? resolvePlain(resolved.value) : resolved.value,
-      // The bytes, not the reading of them: `"a\tb"` written with a real tab
-      // and written with an escape are one value and two files, and putting one
-      // back where the other was is an edit nobody asked for.
       source: this.text.slice(at.start, at.end),
       style: style ?? 'plain',
       span: at,
@@ -137,9 +127,8 @@ class Reader {
         ? this.mapping(token.items, token.offset, true)
         : this.sequence(token.items, token.offset, true);
 
-    // A collection's span stops at its last member, which here would leave the
-    // bracket that closes it outside the node it closes — and a rewrite of the
-    // collection would then write over the opening one and not the closing.
+    // `cover` stops at the last member, which would leave the closing bracket
+    // outside the node it closes.
     const closed = token.end.find(
       (one) => one.type === 'flow-map-end' || one.type === 'flow-seq-end',
     );
@@ -155,10 +144,7 @@ function blockStyle(token: CST.BlockScalar): ScalarStyle {
     : 'literal';
 }
 
-/**
- * A collection's span runs from its own offset to the end of its last member,
- * so it stops short of the trailing comments and blank lines that follow it.
- */
+/** A collection's span stops at its last member, short of the comments and blank lines after it. */
 function cover(offset: number, members: readonly { span: Span }[]): Span {
   const last = members.at(-1);
   return span(offset, last ? last.span.end : offset);
@@ -170,13 +156,8 @@ function emptyAt(offset: number): Scalar {
 }
 
 /**
- * Where an absent value sits: immediately after the `:`, not after the key. An
- * empty span before the separator would put a written value on the wrong side
- * of it.
- *
- * `sep` runs on past the indicator through the whitespace and the line break,
- * so the indicator has to be picked out by type rather than taken as the last
- * token — otherwise the position lands on the next line.
+ * Where an absent value sits: just after the `:`. `sep` runs on through the
+ * whitespace and line break, so the indicator is found by type, not taken last.
  */
 function afterSeparator(item: CST.CollectionItem, fallback: number): number {
   const indicator = item.sep?.find((token) => token.type === 'map-value-ind');

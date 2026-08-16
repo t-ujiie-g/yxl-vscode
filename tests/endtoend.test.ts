@@ -11,24 +11,11 @@ import { type Port, resolve, type Spec, write, writeOverride } from 'yxl-vscode/
 import { includeReader, yxlExamples } from './corpus';
 import { build, extract, oracleVersion, PINNED } from './oracle';
 
-/**
- * The end-to-end tier: a real spec, the write path the UI calls, and the
- * compiler that ships.
- *
- * Every other tier stops at the spec — they prove the file changed the way the
- * edit said it would. This one asks whether the **workbook** ends up holding
- * what the reader typed, and it is the only one where the compiler runs for
- * real rather than as a validator.
- */
+/** Tier 4: the write path the UI calls, then the compiler that ships, then what the workbook holds. */
 const QUICKSTART = yxlExamples().find((one) => one.name === 'quickstart.yxl.yaml');
 const WORKBOOK = yxlExamples().find((one) => one.name === 'workbook.yxl.yaml');
 
-/**
- * A copy of a spec, and the write path over it.
- *
- * The whole cookbook is copied rather than the one file: a spec assembled from
- * `$include` reads its neighbours, and an edit may land in one of them.
- */
+/** A copy of the whole cookbook — an `$include`d spec reads its neighbours — and the write path over it. */
 function opened(sample: { path: string }) {
   const dir = mkdtempSync(join(tmpdir(), 'yxl-e2e-'));
   cpSync(dirname(sample.path), dir, { recursive: true });
@@ -120,9 +107,7 @@ describe('the loop, closed', () => {
     const { dir, root, port, spec, refusals } = opened(QUICKSTART);
     const at = typed({ row: 3, col: 3, text: '99' });
 
-    // C2:C3 is one formula filling two cells, so the ordinary edit is refused
-    // and `overrides:` is the way through (ADR-007). What the workbook holds is
-    // the only proof that the exception really excepts.
+    // C2:C3 is one formula for two cells, so the override is the way through.
     await write(spec(), at, port);
     expect(refusals).toHaveLength(1);
 

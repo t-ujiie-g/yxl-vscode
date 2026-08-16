@@ -9,13 +9,7 @@ import {
 import type { StyleValues } from '@yxl-vscode/spec';
 import { type A1Addr, addrAt, type SheetName } from '@yxl-vscode/units';
 
-/**
- * One thing an edit changed, in the terms a reader would recognise.
- *
- * A cell is named by what about it moved — a value, a formula, a number format,
- * a look — because "this cell changed" is not enough to answer *was that what I
- * asked for*.
- */
+/** One thing an edit changed: a cell, by what about it moved, or a sheet. */
 export type Change =
   | {
       readonly kind: 'cell';
@@ -26,16 +20,9 @@ export type Change =
   | { readonly kind: 'sheet'; readonly name: SheetName; readonly what: 'added' | 'removed' };
 
 /**
- * Everything two compilations of a spec disagree about.
- *
- * This is what the verification loop compares against the patch's own claim
- * (ADR-009): the edit says which cells it is for, and anything else that moved
- * is the surprise the gate exists to catch.
- *
- * It answers for the addresses the projection *holds* — every cell either
- * compilation wrote, and the cells a `formulas:` range covers. A band's look
- * over an address nothing writes is not compared, for the same reason `reaches`
- * cannot count it: neither side has a cell there to compare.
+ * Everything two compilations disagree about, over the addresses either holds
+ * (ADR-009). A band's look over an empty address is not compared: neither side
+ * has a cell there.
  */
 export function diff(before: CompiledGrid, after: CompiledGrid): Change[] {
   const changes: Change[] = [];
@@ -78,12 +65,7 @@ function inSheet(before: CompiledSheet, after: CompiledSheet): Change[] {
   return changes;
 }
 
-/**
- * What a cell holds, with no cell and an empty cell saying the same thing.
- *
- * They look the same to a reader, so they compare the same here: a cell that
- * arrives holding nothing has not changed anything about the grid.
- */
+/** What a cell holds; no cell and an empty cell say the same thing. */
 function held(cell: CompiledCell | null) {
   return {
     value: cell?.value ?? null,
@@ -111,12 +93,8 @@ function addresses(before: CompiledSheet, after: CompiledSheet): A1Addr[] {
 }
 
 /**
- * How many addresses one comparison will look at.
- *
- * A `formulas:` range can cover a million cells, and comparing them one at a
- * time would make every edit to such a spec take a second. What is dropped is
- * addresses *inside a range* past the limit — where both sides hold the same
- * formula, shifted the same way, unless the range itself was the edit.
+ * How many addresses one comparison looks at. Past it, addresses inside a
+ * `formulas:` range are dropped: a million cells holding one shifted formula.
  */
 const REACH = 50_000;
 

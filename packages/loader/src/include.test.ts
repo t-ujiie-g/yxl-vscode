@@ -7,13 +7,7 @@ import { load } from './load';
 
 const MAIN = 'spec.yxl.yaml';
 
-/**
- * The whole filesystem, as a mapping of name to contents.
- *
- * Resolving a path against the file that wrote it is the shell's, so this one
- * looks a name up as written — what is being tested here is what the loader
- * does with what comes back.
- */
+/** The whole filesystem as a mapping, looked up as written: resolving is the shell's. */
 function reader(files: Record<string, string>): IncludeReader {
   return (_from, path) => {
     const source = files[path];

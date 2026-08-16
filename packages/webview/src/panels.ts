@@ -2,22 +2,7 @@ import { columnLabel } from '@yxl-vscode/units';
 import type { Asks, Reached, Showing } from './draw';
 import type { Choice, Drawing, Refused, Uncomputed } from './protocol';
 
-/**
- * Everything the preview says around the grid: the parameters to turn, the tabs
- * to pick a sheet with, and the sentences under it.
- *
- * Apart from the grid because they change on different beats — the grid when
- * the spec does, these whenever the reader points at something — and because a
- * file that draws a spreadsheet and writes prose is two files.
- */
-
-/**
- * The parameters, as boxes to turn.
- *
- * One spec stands for several workbooks (`docs/spec.md` §7); this is how a
- * reader looks at the others without editing anything. Emptying a box gives the
- * parameter back to the spec's own default.
- */
+/** The parameters as boxes to turn (`docs/spec.md` §7); emptying one gives the default back. */
 export function parameters(drawing: Drawing, asks: Asks): HTMLElement {
   const panel = document.createElement('details');
   panel.className = 'params';
@@ -50,13 +35,7 @@ export function parameters(drawing: Drawing, asks: Asks): HTMLElement {
   return panel;
 }
 
-/**
- * Why some cells show a formula rather than what it comes to.
- *
- * Said once, under the grid, rather than on every cell: a reader who sees one
- * formula among numbers is owed the reason, and the reason is the same for all
- * of them.
- */
+/** Why some cells show a formula rather than what it comes to, said once under the grid. */
 export function uncomputed(said: Uncomputed): string {
   if (said.kind === 'tooMany') {
     return `Nothing is computed here: this workbook holds more than ${said.limit} formulas, and computing some of them would make every total over the rest wrong.`;
@@ -69,14 +48,8 @@ export function uncomputed(said: Uncomputed): string {
 }
 
 /**
- * Why an edit did not happen, said where the edit was attempted — and the ways
- * it could still be made.
- *
- * The ways are the answers the edit has, each saying what it would move, and
- * then `overrides:` — the exception said out loud (`docs/spec.md` §23). All of
- * them are offered rather than taken: the editor enumerates and the reader
- * picks (ADR-001), and an escape hatch that opens on its own is not an escape
- * hatch (ADR-007).
+ * Why an edit did not happen, and the ways it could still be made: the answers
+ * it has (ADR-001), then `overrides:` (ADR-007) — all offered, none taken.
  */
 export function refusal(refused: Refused, asks: Asks): HTMLElement {
   const said = document.createElement('p');
@@ -97,9 +70,6 @@ export function refusal(refused: Refused, asks: Asks): HTMLElement {
 
   if (!refused.canOverride) return said;
 
-  // The reason is asked for here rather than in a box of the editor's, because
-  // the reader is looking at this sentence and because an override with no
-  // reason is the thing this construct exists to avoid (`docs/spec.md` §23).
   const why = document.createElement('input');
   why.type = 'text';
   why.className = 'reason';
@@ -153,12 +123,7 @@ export function reaching(reached: Reached): HTMLElement {
   return said;
 }
 
-/**
- * Where each facet of the selected cell came from.
- *
- * Every line is a place in a file, so every line can be gone to — which is half
- * of the bidirectional jump this release is for.
- */
+/** Where each facet of the selected cell came from; every line is a place to go to. */
 export function inspector(showing: Showing, asks: Asks): HTMLElement {
   const panel = document.createElement('section');
   panel.className = 'inspector';
@@ -168,8 +133,6 @@ export function inspector(showing: Showing, asks: Asks): HTMLElement {
   heading.textContent = at === null ? 'Nothing selected' : `${columnLabel(at.col)}${at.row}`;
   panel.append(heading);
 
-  // Said before the reader tries, and beside where the value came from — which
-  // is the half that makes it useful: *why* not is the line under it.
   const editable = showing.editable;
   if (editable !== null && editable !== 'direct') panel.append(locked(editable));
 

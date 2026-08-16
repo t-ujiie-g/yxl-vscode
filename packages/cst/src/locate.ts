@@ -1,11 +1,7 @@
 import type { Entry, Mapping, Node, Sequence } from './node';
 import type { Path } from './op';
 
-/**
- * A node together with what holds it, which is what an edit needs: replacing a
- * value only wants the node, but renaming or removing wants the entry it sits
- * in and the collection that entry belongs to.
- */
+/** A node together with what holds it, which renaming and removing need. */
 export type Site =
   | { readonly in: 'root'; readonly node: Node }
   | {
@@ -47,13 +43,7 @@ function step_(node: Node, step: string | number): Site | undefined {
   return item ? { in: 'seq', node: item, parent: node, index: step } : undefined;
 }
 
-/**
- * The node a path reaches, or `null` where it reaches nothing.
- *
- * `locate` answers with what *holds* the node as well, which an edit needs and
- * a reader of one does not. This is the short question, asked often enough to
- * be worth not asking the long one.
- */
+/** The node a path reaches, or `null` where it reaches nothing. */
 export function nodeAt(root: Node, path: Path): Node | null {
   return locate(root, path)?.node ?? null;
 }

@@ -5,14 +5,7 @@ import { MODELED_KEYS, type Opaque, type SpecDoc } from '@yxl-vscode/spec';
 import { describe, expect, it } from 'vitest';
 import { includeReader, type Sample, yxlExamples } from './corpus';
 
-/**
- * ADR-011's other half, over yxl's own examples.
- *
- * The rule is easy to state and easy to break quietly: a construct this editor
- * does not model is carried through untouched — never dropped, never
- * reformatted. The constructs here are real ones — charts, pivots, validations,
- * sparklines, print setup, protection.
- */
+/** ADR-011's other half over yxl's own examples: what is not modeled is carried through untouched. */
 const specs = yxlExamples().filter((sample) => sample.name.endsWith('.yxl.yaml'));
 
 /** Every construct this editor does not model, in the order the spec wrote them. */
@@ -32,14 +25,7 @@ function verbatim(source: string, doc: SpecDoc, file: string): string[] {
   return carried(doc, file).map((one) => source.slice(one.span.start, one.span.end));
 }
 
-/**
- * One edit, to something this editor *does* model: the first cell the spec
- * wrote as a bare scalar.
- *
- * Read off the file rather than the model, because what a patch addresses is a
- * YAML node: a cell written `A1: { value: x, style: y }` holds its value one
- * step further down, and that step is `intent`'s to know, not this test's.
- */
+/** One edit to something modeled: the first cell written as a bare scalar, read off the file. */
 function anEdit(source: string, file: string): { path: (string | number)[]; value: string } | null {
   for (const [index, sheet] of sheetsOf(source, file).entries()) {
     const cells = sheet.kind === 'map' ? entry(sheet, 'cells') : undefined;
@@ -87,10 +73,7 @@ describe('the corpus of specs that use what this editor does not model', () => {
   });
 
   it('holds enough specs where an edit and a carried construct meet', () => {
-    // Both halves have to be in one file for the assertion below to mean
-    // anything, and a suite that quietly skipped every spec would still be
-    // green. Charts, protection, print setup, pivots, shapes, sparklines and
-    // conditional formatting are the seven.
+    // A suite that skipped every spec would still be green.
     const both = specs.filter(
       (sample) =>
         anEdit(sample.source, sample.path) !== null &&

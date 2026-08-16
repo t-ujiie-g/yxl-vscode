@@ -9,13 +9,7 @@ const EDGES = [
   ['bottom', 'borderBottom'],
 ] as const;
 
-/**
- * One cell as a `<td>`: what it says, and what it looks like saying it.
- *
- * Everything a spec can put on a cell that CSS has an answer for is answered
- * here, and nothing else is: the merge it anchors, the text it shows, and the
- * style it wears. Which style that is was decided before the drawing was sent.
- */
+/** One cell as a `<td>`: what it says, and the look it was sent wearing. */
 export function drawCell(
   cell: DrawnCell | undefined,
   merge: DrawnMerge | undefined,
@@ -48,15 +42,9 @@ export function drawCell(
 }
 
 /**
- * Type into a cell, over the top of what it shows.
- *
- * Opened without a `seed`, the box holds what the *spec* holds — a formula as
- * `=SUM(A1:A2)`, not as the number it came to — because that is what the reader
- * is about to change. Opened by typing a character, it holds that character:
- * typing over a cell replaces it, and nobody presses anything first.
- *
- * Enter sends it, Escape and clicking away leave the cell alone: a gesture that
- * only *might* have been an edit is not one (ADR-001).
+ * Type into a cell. Without a `seed` the box holds what the spec holds — the
+ * formula, not its result; with one, that character. Enter sends, Escape and
+ * clicking away leave the cell alone.
  */
 export function typeInto(
   cell: HTMLTableCellElement,
@@ -71,16 +59,12 @@ export function typeInto(
 
   let sent = false;
   const leave = (): void => {
-    // Every box in this cell, not only this one: a box left behind is a white
-    // rectangle over the grid, positioned against whatever is positioned above
-    // it once the cell stops being.
+    // Every box in the cell: one left behind is a white rectangle over the grid.
     for (const other of cell.querySelectorAll('.typing')) other.remove();
     cell.classList.remove('editing');
   };
 
   box.addEventListener('keydown', (event) => {
-    // The cell under this box has keys of its own; what is typed here is typed
-    // here.
     event.stopPropagation();
 
     if (event.key === 'Enter') {
@@ -116,13 +100,7 @@ function standing(editable: Exclude<DrawnCell['editable'], 'direct'>): string {
     : 'more than one thing could change to make that edit';
 }
 
-/**
- * One run of a cell written in runs, wearing the font that run alone was given.
- *
- * Excel keeps a rich string's fonts on the string, so a run's look is not a
- * layer over the cell's — it is the run's own, and the cell's style is still
- * underneath it.
- */
+/** One run of a rich cell, wearing its own font over the cell's style. */
 function run(of: DrawnRun): HTMLElement {
   const piece = document.createElement('span');
   piece.textContent = of.text;
@@ -131,24 +109,9 @@ function run(of: DrawnRun): HTMLElement {
 }
 
 /**
- * What a cell shows.
- *
- * A **computed** formula shows its result, which is the point of computing it,
- * and the formula itself is a hover away. A formula that could not be computed
- * shows as its own text instead — never as a number, because a number that is
- * not the workbook's number is worse than no number at all (ADR-014).
- *
- * A cached value beside a formula is what Excel would show until it recomputes,
- * so it stands in where nothing was computed here.
- *
- * A number wears its format, so `0.085` under `0.0%` reads `8.5%` here as it
- * will in Excel. A pattern the formatter cannot read shows its own error rather
- * than throwing the view away.
- *
- * A cell **filled** by a `formulas:` range that was not computed shows where it
- * is filled from. The range holds one formula, written as it applies at its
- * anchor, and printing that text in every cell would be printing something
- * false in all but one.
+ * What a cell shows: a computed result, else the cached value, else the formula
+ * itself — never a number that is not the workbook's (ADR-014). A number wears
+ * its format; a filled cell that was not computed says where it is filled from.
  */
 function shown(cell: DrawnCell): string {
   const computed = cell.computed;
@@ -166,13 +129,7 @@ function formatted(value: ScalarValue, format: string | null): string {
   return value === null ? '' : String(value);
 }
 
-/**
- * What the cell says about its own formula on hover.
- *
- * A cell of a filled range holds the formula as it applies at the range's
- * anchor, so it says where it is reading from as well — the same formula means
- * a different thing one row down, and it is Excel that shifts it.
- */
+/** The formula on hover; a filled cell holds it as it applies at the anchor, so it says so. */
 function told(cell: DrawnCell): string {
   const formula = `=${cell.formula ?? ''}`;
   const why = cell.computed?.kind === 'unsupported' ? ` — not computed: ${cell.computed.why}` : '';

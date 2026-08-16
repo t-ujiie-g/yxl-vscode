@@ -64,23 +64,14 @@ export interface Asks {
 }
 
 /**
- * The whole view: a tab per sheet, and the grid of whichever is showing.
- *
- * Rebuilt outright whenever the host sends a new drawing, because that is what
- * a projection is (ADR-001) — there is no state here to reconcile, and the
- * spec is the only thing that changed.
- *
- * What the *view* holds of its own — which cell is selected, what the cursor
- * reaches, the answer to the last question — is not that, and rebuilding the
- * grid for it would be both wasteful and wrong: a click that replaces the cell
- * it landed on is a cell that can never be double-clicked. `restate` is the
- * entry point for those.
+ * The whole view, rebuilt outright whenever the host sends a new drawing
+ * (ADR-001). What the view holds of its own goes through `restate`: a click
+ * that replaced the cell it landed on could never be double-clicked.
  */
 export function draw(into: HTMLElement, showing: Showing, asks: Asks): void {
   const { drawing } = showing;
-  // A reader who was on the grid is still on the grid after it is rebuilt, and
-  // the keys that move the selection only arrive at a cell that has the focus.
-  // Only if they *were*: taking it would take it from the text editor beside.
+  // Focus is put back only where the grid had it: taking it would take it
+  // from the text editor beside.
   const held = into.contains(document.activeElement);
   const was = into.querySelector('.scroller');
   const same = was?.getAttribute('data-of') === looking(showing);
@@ -102,8 +93,7 @@ export function draw(into: HTMLElement, showing: Showing, asks: Asks): void {
   if (sheet !== undefined) {
     const box = scroller(sheet, showing, asks);
     into.append(box);
-    // After it is in the page: an element with no layout box has nowhere to
-    // scroll to, and the assignment would be dropped.
+    // Only once it is in the page: an element with no layout box cannot scroll.
     box.scrollTop = kept.top;
     box.scrollLeft = kept.left;
   }
@@ -119,13 +109,7 @@ export function draw(into: HTMLElement, showing: Showing, asks: Asks): void {
   }
 }
 
-/**
- * What the view holds of its own, shown without rebuilding what the host sent.
- *
- * Selection, the cursor's highlight, and the inspector all change many times
- * per drawing; the grid changes when the spec does. Keeping them apart is what
- * makes the grid something a reader can click twice on.
- */
+/** What the view holds of its own, shown without rebuilding what the host sent. */
 export function restate(into: HTMLElement, showing: Showing, asks: Asks): void {
   const under = into.querySelector('.under');
   const grid = into.querySelector('.grid');
@@ -177,14 +161,9 @@ function looking(showing: Showing): string {
 }
 
 /**
- * The sheet as something to scroll through: the drawn window, sitting in a box
- * padded out to the size of the whole sheet.
- *
- * The scrollbar then says how much sheet there is, while the grid holds only a
- * window's worth of cells however large the sheet is. Coming near an
- * edge of what is drawn asks the host for a window around where the reader now
- * is; the scroll position outlives the redraw that answers, because the padding
- * puts every row at the same offset whichever window is drawn.
+ * The drawn window in a box padded to the whole sheet's size, so the scrollbar
+ * says how much sheet there is and every row keeps its offset whichever window
+ * is drawn. Nearing an edge asks the host for the next window.
  */
 function scroller(sheet: DrawnSheet, showing: Showing, asks: Asks): HTMLElement {
   const box = document.createElement('div');
@@ -203,10 +182,7 @@ function scroller(sheet: DrawnSheet, showing: Showing, asks: Asks): HTMLElement 
 function grid(sheet: DrawnSheet, showing: Showing, asks: Asks): HTMLElement {
   const table = document.createElement('table');
   table.className = 'grid';
-  // A table laid out `fixed` only *is* laid out fixed if it has a width of its
-  // own; left to size itself it reverts to the automatic algorithm, where one
-  // cell holding a long formula stretches its column and drags the sheet out of
-  // shape. The width is the sheet's own: the gutter, plus every column of it.
+  // `table-layout: fixed` is inert without an explicit width.
   table.style.width = `${GUTTER + across(sheet, sheet.of.columns + 1)}px`;
   table.append(headings(sheet));
 
@@ -230,13 +206,7 @@ function grid(sheet: DrawnSheet, showing: Showing, asks: Asks): HTMLElement {
   return table;
 }
 
-/**
- * The selection moved, and the reader's focus with it.
- *
- * A cell outside the drawn window is not in the page at all, so the host is
- * asked for a window around it and the redraw puts the focus back where the
- * reader was.
- */
+/** The selection moved, and the focus with it; a cell outside the drawn window is asked for. */
 function goTo(
   from: HTMLElement,
   sheet: DrawnSheet,
@@ -288,12 +258,7 @@ function markedBy(sheet: DrawnSheet): Map<string, string[]> {
   return problems;
 }
 
-/**
- * Each merge at its top-left cell, and every address it swallows.
- *
- * Excel shows the top-left cell's value across the whole region, so the rest of
- * it must not be drawn at all — a `<td>` there would push the row along.
- */
+/** Each merge at its top-left cell, and every address it swallows, which must not be drawn. */
 function mergedIn(sheet: DrawnSheet): Merged {
   const anchored = new Map<string, DrawnMerge>();
   const covered = new Set<string>();
@@ -340,13 +305,7 @@ function headings(sheet: DrawnSheet): HTMLElement {
   return head;
 }
 
-/**
- * A cell holding nothing but the width of the columns the window left out.
- *
- * A `td` even in the heading row: a `th` there would be frozen to the edge like
- * the headings it sits among, and this one has to scroll with what it stands in
- * for.
- */
+/** The width of the columns the window left out; a `td` even among headings, since it must scroll. */
 function pad(width: number): HTMLElement {
   const cell = document.createElement('td');
   cell.className = 'pad';
@@ -402,25 +361,17 @@ function line(
       drawn.title = said.join('\n');
     }
     const type = (seed?: string): void => {
-      // The box lives *inside* the cell, so a second one would be a second box
-      // in the same cell rather than a replacement.
       if (drawn.querySelector('.typing') !== null) return;
 
       typeInto(drawn, held.get(cellKey(col, row)), seed, (text) => {
         asks.edit(row, col, text);
-        // Down a cell *and* onto it: the box is gone, and a cell that does not
-        // hold the focus is a grid whose arrow keys do nothing.
         goTo(drawn, sheet, { row: row + 1, col }, asks);
       });
     };
 
-    // Focusable so the keys that start an edit reach the cell, and not
-    // tab-reachable, because a grid of ten thousand tab stops is a page nobody
-    // can leave.
+    // Focusable, so keys reach it; not tab-reachable, or the page cannot be left.
     drawn.tabIndex = -1;
     drawn.addEventListener('mousedown', (event) => {
-      // Shift takes the selection to here; the drag that starts here begins a
-      // new one, exactly as it does in a spreadsheet.
       if (event.shiftKey) asks.reachTo(row, col);
       else asks.select(row, col);
     });
@@ -429,8 +380,7 @@ function line(
     });
     drawn.addEventListener('dblclick', () => type());
     drawn.addEventListener('keydown', (event) => {
-      // Typing *in* the box is not typing *at* the cell, and the box is a child
-      // of the cell — so its keys arrive here too unless this says otherwise.
+      // The edit box is a child of the cell, so its keys bubble here.
       if (event.target !== drawn) return;
 
       if (takingAll(event)) {
@@ -453,17 +403,12 @@ function line(
         return;
       }
 
-      // Emptying a cell is typing nothing into it, which the write path already
-      // reads as a cell that holds nothing.
       if (event.key === 'Delete' || event.key === 'Backspace') {
         event.preventDefault();
         asks.edit(row, col, '');
         return;
       }
 
-      // Typing over a cell replaces it, and the first character typed is part
-      // of what was typed — the same as a spreadsheet, where nobody presses
-      // anything first.
       if (typed(event)) {
         event.preventDefault();
         type(event.key);

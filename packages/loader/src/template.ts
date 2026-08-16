@@ -29,10 +29,7 @@ import { CODE, type Code } from './codes';
 import { type Ctx, reject } from './ctx';
 import { expectText } from './read';
 
-/**
- * One of the vocabularies a spec's text is read into: how to read it, what to
- * call it when it will not read, and the code that says so.
- */
+/** One vocabulary a spec's text is read into: the reader, what to call it, and the code. */
 export interface Kind<T> {
   readonly code: Code;
   readonly noun: string;
@@ -127,12 +124,8 @@ export function readTextAs<T>(
 }
 
 /**
- * Whether the text holds a `${...}` a parameter will fill in.
- *
- * `$$` is a literal `$` and a lone `$` is itself, so neither opens one
- * (`docs/spec.md` §7). An unclosed `${` is not treated as a placeholder: yxl
- * refuses it, and reading it here as one would hide the mistake behind a value
- * that never resolves.
+ * Whether the text holds a `${...}` a parameter will fill in. `$$` and a lone
+ * `$` do not open one, and neither does an unclosed `${` (`docs/spec.md` §7).
  */
 function holdsPlaceholder(text: string): boolean {
   for (let index = 0; index < text.length; index++) {

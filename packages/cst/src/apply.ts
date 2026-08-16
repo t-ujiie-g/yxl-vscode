@@ -9,15 +9,10 @@ import { parse } from './parse';
 import { renderScalar, type Value } from './write';
 
 /**
- * Apply ops to YAML source, changing only the bytes the ops reach.
- *
- * Nothing is re-serialized. Each op becomes a replacement of one range, and the
- * text between the ranges is the original file — so comments, key order,
- * quoting style, blank lines, and indentation survive because they are never
- * rewritten in the first place, rather than because a printer was careful.
- *
- * An op that cannot be applied is refused with a diagnostic and changes
- * nothing; the rest still apply.
+ * Apply ops to YAML source, changing only the bytes the ops reach: each op is
+ * one replaced range and everything between is the original file (ADR-017).
+ * An op that cannot be applied is refused with a diagnostic; the rest still
+ * apply.
  */
 export function apply(source: string, ops: readonly Op[], options: { file: string }): Applied {
   const { root, diagnostics: parseErrors } = parse(source, options);
@@ -63,9 +58,8 @@ function editFor(source: string, op: Op, site: Site, refuse: Refuse): Edit | und
 
     case 'clear': {
       if (block(site.node)) {
-        // Emptying one means deciding what is left — `key: >-` with nothing
-        // under it, or the key with no value at all — and nothing has needed
-        // the answer yet.
+        // `key: >-` with no body and `key:` with no value are different files,
+        // and nothing has needed either yet.
         refuse(CODE.blockScalarNotSupported, blockScalar(op.path), site.node.span);
         return undefined;
       }
@@ -99,36 +93,21 @@ function styleOf(node: Node) {
   return node.kind === 'scalar' ? node.style : undefined;
 }
 
-/**
- * A value written where there was none sits directly against the `:` that
- * precedes it, and `a:APAC` is one token, not a pair. Anywhere else the space
- * is already in the file and must not be doubled.
- */
+/** `a:APAC` is one token, so a value written onto a bare `key:` needs a space first. */
 function separatingSpace(source: string, node: Node): string {
   const empty = node.span.start === node.span.end;
   return empty && source[node.span.start - 1] === ':' ? ' ' : '';
 }
 
-/**
- * A `|` or `>` scalar, whose span is its indented body rather than a value on
- * the line.
- */
+/** A `|` or `>` scalar, whose span is its indented body. */
 function block(node: Node): boolean {
   return node.kind === 'scalar' && (node.style === 'literal' || node.style === 'folded');
 }
 
 /**
- * A new value into a block scalar, keeping the block.
- *
- * The span is the body alone: the `|` or `>-` that opens it, and the chomping
- * that ends it, sit outside it and are never touched. What is rewritten is the
- * text under the header, indented to where the body already sits — a line that
- * came back shallower would close the block early and take the rest of the
- * mapping with it.
- *
- * The value is written as text rather than rendered: quoting a scalar inside a
- * block would put the quotes *in* the string, which is the one thing a block
- * scalar exists to avoid.
+ * A new value into a block scalar's body, indented to where the body sits: a
+ * shallower line would close the block early. Written as text, not rendered —
+ * quotes inside a block scalar are part of the string.
  */
 function intoBlock(source: string, value: Value, node: Node, refuse: Refuse): Edit | undefined {
   const body = lineEnd(source, node.span.start);
@@ -154,12 +133,7 @@ function blockScalar(path: Path): string {
   return `\`${formatPath(path)}\` is a block scalar, which this editor does not empty`;
 }
 
-/**
- * Apply the edits back to front, so an earlier edit's offsets are still valid
- * when it is its turn. Overlapping edits are refused rather than resolved —
- * two ops fighting over the same bytes is a caller mistake, and picking a
- * winner would hide it.
- */
+/** Back to front, so earlier offsets stay valid; overlapping edits are refused, not resolved. */
 function splice(source: string, edits: readonly Edit[], refuse: Refuse): string {
   const ordered = [...edits].sort((a, b) => b.span.start - a.span.start);
   let text = source;

@@ -9,15 +9,8 @@ const INFINITY = /^([-+])?\.(?:inf|Inf|INF)$/;
 const NOT_A_NUMBER = /^\.(?:nan|NaN|NAN)$/;
 
 /**
- * The YAML 1.2 core schema's resolution of a plain scalar.
- *
- * Only plain scalars reach this: a quoted or block scalar is a string by the
- * syntax alone, which is the distinction `"007"` relies on.
- *
- * An integer too large for a double resolves to a string rather than to a
- * rounded number, so nothing silently loses digits on the way through. The
- * caller keeps the original `source` either way (`Scalar.source`), so a consumer
- * that wants the digits can always have them.
+ * The YAML 1.2 core schema's resolution of a plain scalar. An integer too large
+ * for a double stays a string rather than losing digits.
  */
 export function resolvePlain(source: string): string | number | boolean | null {
   if (NULL.test(source)) return null;

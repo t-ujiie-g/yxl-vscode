@@ -26,9 +26,7 @@ const deferred = fixtures('deferred');
 
 describe('the oracle', () => {
   it('is the version this editor targets', () => {
-    // Not a skip: the schema moves until yxl's v1.0, so a disagreement with the
-    // wrong build says nothing about this code, and a missing one says nothing
-    // at all. `YXL_BIN` names a build that is not on the path.
+    // Not a skip: a disagreement with the wrong build says nothing about this code.
     const how = `install yxl ${PINNED}, or point YXL_BIN at it`;
     expect(oracleVersion(), how).toBe(PINNED);
   });
@@ -48,10 +46,7 @@ describe.each(documents)('$name', (sample) => {
 
 describe.each(refused)('$name', (fixture) => {
   it('is refused here, and by the compiler too', () => {
-    // The invariant that matters (ADR-018): this editor is never *stricter*
-    // than the compiler. Refusing to read a spec that builds would make the
-    // editor an obstacle rather than a help, and it is the failure mode a
-    // second implementation of the schema produces.
+    // Never stricter than the compiler (ADR-018).
     expect(read(fixture.path).ok).toBe(false);
     expect(check(fixture.path).ok).toBe(false);
   });
@@ -59,10 +54,7 @@ describe.each(refused)('$name', (fixture) => {
 
 describe.each(deferred)('$name', (fixture) => {
   it('is refused by the compiler, and carried here', () => {
-    // The other direction is deliberate, not a defect: `yxl build --check` is
-    // the validator of record and this editor validates only what projection
-    // requires (ADR-011). These are the cases where that gap is real, listed so
-    // that it is measured rather than claimed.
+    // Looser than the compiler on purpose (ADR-011), and measured rather than claimed.
     expect(check(fixture.path).ok).toBe(false);
     expect(read(fixture.path)).toEqual({ ok: true, said: '' });
   });

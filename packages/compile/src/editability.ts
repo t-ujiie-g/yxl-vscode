@@ -2,32 +2,17 @@ import type { FacetOrigin } from './provenance';
 import type { StyleLayer } from './style';
 
 /**
- * What happens when someone edits this facet (ADR-006).
- *
- * Derived from where the facet came from and from nothing else, so that the UI
- * holds no second opinion about what is editable: a phase that adds an origin
- * gets its behaviour here, once.
- *
- * - `direct` — one change in the spec says it, so the edit applies.
- * - `mediated` — several would, and picking for the user is the one thing this
- *   editor does not do (ADR-001), so it asks.
- * - `external` — the value lives in a file beside the spec: edit that, or
- *   divert the edit to `overrides:` (ADR-007).
- * - `readonly` — nothing in the spec can carry the edit, and the UI says why.
+ * What happens when someone edits this facet (ADR-006), derived from its origin
+ * and nothing else: `direct` applies, `mediated` asks (ADR-001), `external`
+ * edits the file beside the spec, `readonly` says why not.
  */
 export type Editability = 'direct' | 'mediated' | 'external' | 'readonly';
 
 /**
- * How editable a value or a format is.
- *
- * `empty` answers by where the cell is: a spec that wrote the cell for some
- * other reason — a number format of its own — has one place a value would go,
- * and one place is `direct`. With no cell there at all the gesture has two
- * candidates — a new `cells:` entry, or extending the `data:` rectangle next to
- * it — which is what asking is for.
- *
- * Nothing is `readonly` yet: that answer belongs to a sealed region and to an
- * evaluated result, and both arrive with the work that introduces them.
+ * How editable a value or a format is. An `empty` origin with a cell is
+ * `direct` — one place a value would go — and without one asks, since a new
+ * entry and an extended `data:` rectangle are both answers. Nothing is
+ * `readonly` yet.
  */
 export function editabilityOf(origin: FacetOrigin): Editability {
   switch (origin.kind) {
@@ -45,12 +30,8 @@ export function editabilityOf(origin: FacetOrigin): Editability {
 }
 
 /**
- * How editable one property of a look is, from the layer that supplies it.
- *
- * A definition is `mediated` however it was reached: forty cells may wear it,
- * so the answer is a choice between changing them all and forking this one, and
- * a band is `mediated` for the same reason at column scale. What the cell itself
- * said, or an override did, is one node and applies directly.
+ * How editable one property of a look is: a definition or a band reaches many
+ * cells and asks; what the cell itself said applies directly.
  */
 export function editabilityOfLayer(layer: StyleLayer): Editability {
   if (layer.name !== null) return 'mediated';

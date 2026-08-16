@@ -1,11 +1,4 @@
-/**
- * Every diagnostic this package can raise.
- *
- * A code is stable and greppable, so it is API: it appears in messages users
- * report and in tests that pin behaviour. Naming them in one place keeps the
- * `cst.` prefix from being spelled at each throw site and makes the set
- * readable as a whole.
- */
+/** Every diagnostic this package can raise; a code is stable and greppable, so it is API. */
 export const CODE = {
   alias: 'cst.alias',
   unexpectedToken: 'cst.unexpected-token',

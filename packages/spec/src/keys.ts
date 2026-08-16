@@ -9,13 +9,9 @@ export const INCLUDE_KEY = '$include';
 const CELL_KEYS = ['value', 'formula', 'rich', 'type', 'format', 'style'] as const;
 
 /**
- * The keys each construct of this AST is read from, which is also the line
- * between what this editor edits and what it only carries: a key that is not
- * here is kept verbatim and marked opaque (ADR-011).
- *
- * The document's and the sheet's lists are deliberately short of what yxl
- * accepts and will grow phase by phase; the rest are complete, because a cell
- * or a style is modeled or it is not.
+ * The keys each construct is read from; a key not here is kept verbatim and
+ * marked opaque (ADR-011). The document's and the sheet's lists are short of
+ * what yxl accepts and grow as constructs are modeled.
  */
 export const MODELED_KEYS = {
   document: keySet(['sheets', 'params', 'defs', 'overrides', 'date1904']),

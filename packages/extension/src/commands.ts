@@ -5,14 +5,7 @@ import { run, versionOf, versionWarning } from './cli';
 /** Where yxl is installed, and how to get one. */
 const INSTALL = 'https://github.com/t-ujiie-g/yxl#install';
 
-/**
- * The compiler, run from the editor: check a spec, or build the workbook.
- *
- * `yxl build --check` is the validator of record (ADR-011), so this is how a
- * reader hears what the preview deliberately does not say — an undefined
- * reference, a sheet name Excel will refuse, anything this editor carries
- * without understanding.
- */
+/** The compiler, run from the editor: check a spec or build the workbook — the validator of record (ADR-011). */
 export class Compiler {
   private readonly output = vscode.window.createOutputChannel('yxl');
   private warned = false;

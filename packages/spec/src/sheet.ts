@@ -5,13 +5,8 @@ import type { DataBlock } from './data';
 import type { Opaque, SpecNode, Templated } from './node';
 
 /**
- * One sheet of the workbook.
- *
- * `keyOrder` names the sheet's keys in the order the spec wrote them, opaque
- * ones included: where a `data:` block and a `cells:` entry write the same
- * cell, whichever key came later wins (`docs/spec.md` §2), and nothing else
- * here records that. Anything this editor does not model is in `opaque` rather
- * than dropped (ADR-011).
+ * One sheet. `keyOrder` is the sheet's keys as written, because where two
+ * constructs write one cell the later key wins (`docs/spec.md` §2).
  */
 export interface Sheet extends SpecNode {
   readonly name: Templated<SheetName>;
@@ -26,12 +21,9 @@ export interface Sheet extends SpecNode {
 }
 
 /**
- * One formula filled across a region: written as it applies at the range's
- * top-left cell, and shifted into every other cell by that cell's offset.
- *
- * The body is kept without a leading `=`. A `{ $ref: }` cannot stand here — a
- * defined name gives every cell the *same* formula, which is the opposite of
- * filling a range (`docs/spec.md` §3).
+ * One formula filled across a region, written as it applies at the top-left
+ * cell and shifted into every other (`docs/spec.md` §3). No leading `=`, and
+ * never a `$ref`.
  */
 export interface FormulaRange extends SpecNode {
   readonly at: Templated<A1Range>;

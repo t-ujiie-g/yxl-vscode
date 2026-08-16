@@ -7,18 +7,44 @@ import type { Mapping, Node, Sequence } from './node';
 import type { Edit, Op, Path, Refuse } from './op';
 import { renderScalar } from './write';
 
-/**
- * A construct written into a sequence, on lines of its own.
- *
- * The lines arrive as the caller spelled them and are indented into place here,
- * because where they land is this layer's business and what they say is not.
- */
+/** A construct written into a sequence on lines of its own, indented into place here. */
 export function insertedBlock(
   source: string,
   op: Extract<Op, { op: 'insertSource' }>,
   site: Site,
   refuse: Refuse,
 ): Edit | undefined {
+  const placed = intoSequence(source, op, site, refuse);
+  if (placed === undefined) return undefined;
+
+  const written = `${item(op.source, placed.prefix)}${lineBreak(source)}`;
+  return { span: span(placed.at, placed.at), text: written };
+}
+
+/** A scalar written into a sequence as one item. */
+export function insertion(
+  source: string,
+  op: Extract<Op, { op: 'insert' }>,
+  site: Site,
+  refuse: Refuse,
+): Edit | undefined {
+  const placed = intoSequence(source, op, site, refuse);
+  if (placed === undefined) return undefined;
+
+  const written = `${placed.prefix}${renderScalar(op.value)}${lineBreak(source)}`;
+  return { span: span(placed.at, placed.at), text: written };
+}
+
+/**
+ * Where an item goes into a block sequence, and the prefix — indentation and
+ * `- ` — it takes from a neighbour. An empty sequence has none to copy.
+ */
+function intoSequence(
+  source: string,
+  op: { readonly path: Path; readonly index: number },
+  site: Site,
+  refuse: Refuse,
+): { at: number; prefix: string } | undefined {
   const target = site.node;
   if (target.kind !== 'seq') {
     refuse(CODE.notASequence, `\`${formatPath(op.path)}\` is not a sequence`, target.span);
@@ -40,38 +66,25 @@ export function insertedBlock(
   }
 
   const prefix = source.slice(lineStart(source, neighbour.span.start), neighbour.span.start);
-  const written = `${item(op.source, prefix)}${lineBreak(source)}`;
-
   const append = op.index >= target.items.length;
   const at = append
     ? lineEnd(source, neighbour.span.end)
     : aboveComments(source, lineStart(source, neighbour.span.start));
-  return { span: span(at, at), text: written };
+
+  return { at, prefix };
 }
 
-/**
- * A key with a construct under it, where the key is not there yet.
- *
- * Written at the end of the mapping, because a key that was never there has no
- * place it belongs, and the end is where a reader looks for what was added.
- */
+/** A key with a construct under it, written at the end of the mapping. */
 export function addedBlock(
   source: string,
   op: Extract<Op, { op: 'addSource' }>,
   site: Site,
   refuse: Refuse,
 ): Edit | undefined {
-  const target = site.node;
-  if (target.kind !== 'map') {
-    refuse(CODE.notAMapping, `\`${formatPath(op.path)}\` is not a mapping`, target.span);
-    return undefined;
-  }
+  const target = mappingFor(op, site, refuse);
+  if (target === undefined) return undefined;
   if (target.flow) {
     refuse(CODE.flowNotSupported, insideFlow(op.path), target.span);
-    return undefined;
-  }
-  if (target.entries.some((entry) => entry.key.value === op.key)) {
-    refuse(CODE.keyExists, `\`${op.key}\` is already there`, target.span);
     return undefined;
   }
 
@@ -94,32 +107,10 @@ export function addedBlock(
   return { span: span(at, at), text: written };
 }
 
-/** Lines as they go into the file: the first where it lands, the rest under it. */
-function item(source: string, prefix: string): string {
-  const [first, ...rest] = source.split('\n');
-  const under = prefix.endsWith('- ') ? `${prefix.slice(0, -2)}  ` : prefix;
-
-  return [`${prefix}${first ?? ''}`, ...rest.map((line) => `${under}${line}`)].join('\n');
-}
-
 /**
- * How far this file indents one level.
- *
- * Read off the file rather than assumed, because a spec written with four
- * spaces is not one this editor should start writing two into. Two where there
- * is nothing to read it from, which is what every example uses.
- */
-function stepOf(source: string): string {
-  const nested = /\n( +)\S/.exec(source);
-  return nested?.[1] ?? '  ';
-}
-
-/**
- * A new entry in a mapping, on a line of its own.
- *
- * `before` names the entry it goes above; without one it goes last. The layout
- * comes from an entry that is already there, for the same reason a sequence's
- * does — a mapping with none has nothing to copy and nothing to guess from.
+ * A new entry in a mapping, above the entry `before` names or last without one.
+ * The layout comes from an entry already there; a mapping with none has nothing
+ * to copy.
  */
 export function addition(
   source: string,
@@ -127,15 +118,8 @@ export function addition(
   site: Site,
   refuse: Refuse,
 ): Edit | undefined {
-  const target = site.node;
-  if (target.kind !== 'map') {
-    refuse(CODE.notAMapping, `\`${formatPath(op.path)}\` is not a mapping`, target.span);
-    return undefined;
-  }
-  if (target.entries.some((entry) => entry.key.value === op.key)) {
-    refuse(CODE.keyExists, `\`${op.key}\` is already there`, target.span);
-    return undefined;
-  }
+  const target = mappingFor(op, site, refuse);
+  if (target === undefined) return undefined;
   if (target.flow) return { span: target.span, text: withEntry(source, target, op) };
 
   const first = target.entries[0];
@@ -166,6 +150,38 @@ export function addition(
   return { span: span(at, at), text: written };
 }
 
+/** The mapping a key goes into, refused where the site is not one or already has the key. */
+function mappingFor(
+  op: { readonly path: Path; readonly key: string },
+  site: Site,
+  refuse: Refuse,
+): Mapping | undefined {
+  const target = site.node;
+  if (target.kind !== 'map') {
+    refuse(CODE.notAMapping, `\`${formatPath(op.path)}\` is not a mapping`, target.span);
+    return undefined;
+  }
+  if (target.entries.some((entry) => entry.key.value === op.key)) {
+    refuse(CODE.keyExists, `\`${op.key}\` is already there`, target.span);
+    return undefined;
+  }
+  return target;
+}
+
+/** Lines as they go into the file: the first where it lands, the rest under it. */
+function item(source: string, prefix: string): string {
+  const [first, ...rest] = source.split('\n');
+  const under = prefix.endsWith('- ') ? `${prefix.slice(0, -2)}  ` : prefix;
+
+  return [`${prefix}${first ?? ''}`, ...rest.map((line) => `${under}${line}`)].join('\n');
+}
+
+/** How far this file indents one level, read off the file; two spaces where nothing says. */
+function stepOf(source: string): string {
+  const nested = /\n( +)\S/.exec(source);
+  return nested?.[1] ?? '  ';
+}
+
 /** An entry taken out of the file, with the lines that belong to it. */
 export function removal(source: string, path: Path, site: Site, refuse: Refuse): Edit | undefined {
   if (site.in === 'root') {
@@ -181,13 +197,7 @@ export function removal(source: string, path: Path, site: Site, refuse: Refuse):
   return { span: taken(source, site), text: '' };
 }
 
-/**
- * Whether this is the entry written on the `- ` line of a sequence item.
- *
- * Taking its line takes the dash with it and the rest of the mapping stops
- * being an item at all. Moving the dash down to the entry that follows is a
- * structural edit, not a removal.
- */
+/** The entry on a sequence item's `- ` line: taking its line takes the dash. */
 function opensAnItem(source: string, start: number): boolean {
   return source.slice(lineStart(source, start), start).trimEnd().endsWith('-');
 }
@@ -195,12 +205,8 @@ function opensAnItem(source: string, start: number): boolean {
 type Held = Extract<Site, { in: 'map' } | { in: 'seq' }>;
 
 /**
- * The text a removal covers.
- *
- * More than the entry's own lines: a comment block directly above an entry
- * introduces it, and leaving it behind orphans it onto whatever follows. A
- * blank line under the entry goes too, where one separates it from the next —
- * otherwise removing an entry leaves the gap that used to be around it.
+ * The text a removal covers: the entry, the comment block directly above it,
+ * and the blank line under it where one separates it from the next.
  */
 function taken(source: string, site: Held): Span {
   const own = site.in === 'map' ? site.entry.span : site.node.span;
@@ -208,8 +214,8 @@ function taken(source: string, site: Held): Span {
 
   const start = aboveComments(source, lineStart(source, own.start));
 
-  // A block scalar's body ends where the next line begins, and asking for the
-  // end of *that* line would take the entry after it as well.
+  // A block scalar's body already ends at a line break; asking for the end of
+  // *that* line would take the next entry too.
   const end = source[own.end - 1] === '\n' ? own.end : lineEnd(source, own.end);
   if (next === undefined) return span(start, end);
 
@@ -234,15 +240,10 @@ function blankLines(source: string, from: number, limit: number): number {
 /**
  * What a removal takes out, and what putting it back needs to know.
  *
- * An entry with lines of its own goes back above the entry that followed it, or
- * last where none did, and `inexact` is the reason it could *not* go back byte
- * for byte — `null` where it can. Both reasons are about lines that stay
- * behind: a blank line no anchor can be expressed across, and an entry with no
- * sibling left to be put back beside. A caller that will not make an edit it
- * cannot undo refuses on it (ADR-026).
- *
- * Inside a flow collection there are no lines to put back, so what is kept is
- * the collection's own text, to be written over it again.
+ * An entry goes back above the entry that followed it, or last; `inexact` is
+ * the reason it could *not* go back byte for byte, which a caller refuses on
+ * (ADR-026). Inside a flow collection there are no lines, so what is kept is
+ * the collection's own text.
  */
 export type Removal =
   | {
@@ -259,16 +260,11 @@ export type Removal =
       readonly source: string;
     };
 
-/**
- * What a `remove` at this path would take out, read before the removal — the
- * only moment the text is still there.
- */
+/** What a `remove` at this path would take out, read while the text is still there. */
 export function removalOf(source: string, root: Node, path: Path): Removal | null {
   const site = locate(root, path);
   if (site === undefined || site.in === 'root') return null;
 
-  // Nothing in a flow collection has lines of its own, so what puts it back is
-  // the collection's own text, written over whatever the removal leaves.
   if (site.parent.flow) {
     return {
       of: 'flow',
@@ -311,14 +307,7 @@ export function removalOf(source: string, root: Node, path: Path): Removal | nul
   };
 }
 
-/**
- * Lines put back exactly as they were taken out.
- *
- * The text is not re-indented or re-rendered on the way in: it came out of this
- * file, and an undo that reformatted what it puts back would be an edit of its
- * own. Where it lands is named the way a removal saw it — above the entry that
- * followed, or last where nothing did.
- */
+/** Lines put back exactly as they were taken out, where the removal saw them. */
 export function restoration(
   source: string,
   op: Extract<Op, { op: 'restore' }>,
@@ -373,45 +362,6 @@ function whereItWas(
 
   const last = target.entries[target.entries.length - 1];
   return last === undefined ? nothingLeft() : lineEnd(source, last.span.end);
-}
-
-export function insertion(
-  source: string,
-  op: Extract<Op, { op: 'insert' }>,
-  site: Site,
-  refuse: Refuse,
-): Edit | undefined {
-  const target = site.node;
-  if (target.kind !== 'seq') {
-    refuse(CODE.notASequence, `\`${formatPath(op.path)}\` is not a sequence`, target.span);
-    return undefined;
-  }
-  if (target.flow) {
-    refuse(CODE.flowNotSupported, insideFlow(op.path), target.span);
-    return undefined;
-  }
-
-  // The prefix of an existing item — its indentation and its `- ` — is the one
-  // reliable source for how this sequence is laid out. An empty sequence has
-  // none, so there is nothing to copy and nothing to guess from.
-  const neighbour = target.items[Math.min(op.index, target.items.length - 1)];
-  if (!neighbour) {
-    refuse(
-      CODE.emptySequence,
-      `\`${formatPath(op.path)}\` has no item to take its layout from`,
-      target.span,
-    );
-    return undefined;
-  }
-
-  const prefix = source.slice(lineStart(source, neighbour.span.start), neighbour.span.start);
-  const line = `${prefix}${renderScalar(op.value)}${lineBreak(source)}`;
-
-  const append = op.index >= target.items.length;
-  const at = append
-    ? lineEnd(source, neighbour.span.end)
-    : aboveComments(source, lineStart(source, neighbour.span.start));
-  return { span: span(at, at), text: line };
 }
 
 function carriesTheDash(path: Path): string {

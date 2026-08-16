@@ -4,14 +4,7 @@ import type { Sheet, SpecDoc, SpecNode } from '@yxl-vscode/spec';
 import type { A1Addr, NodeId } from '@yxl-vscode/units';
 import type { Source } from '@yxl-vscode/webview/protocol';
 
-/**
- * Where every facet of one cell came from, in the words a reader wants.
- *
- * This is the provenance table's promise made visible: *this is bold because
- * `defs.styles.header` says so, blue because column B's band says so, and its
- * value came from row 12 of `sales.csv`*. Each answer carries the file and the
- * span it lives at, so the view can offer to go there.
- */
+/** Where every facet of one cell came from, in a reader's words, with the place to go to. */
 export function inspect(nodes: Nodes, sheet: CompiledSheet, at: A1Addr, from: string): Source[] {
   const cell = cellAt(sheet, at);
   const found: Source[] = [];
@@ -23,10 +16,7 @@ export function inspect(nodes: Nodes, sheet: CompiledSheet, at: A1Addr, from: st
     }
   }
 
-  // Layers are in the order they apply, and the last to give a leaf is the one
-  // the cell wears — so a later layer replaces an earlier answer rather than
-  // adding a second one. Two lines for `font.size` would be two claims about one
-  // fact, with nothing saying which of them the reader is looking at.
+  // The last layer to give a leaf is the one the cell wears, so it replaces.
   const wears = new Map<string, Source>();
   for (const layer of styleAt(sheet, at)) {
     const where = nodes.get(layer.node);
@@ -52,13 +42,7 @@ function facet(nodes: Nodes, name: string, origin: FacetOrigin, from: string): S
   return [{ facet: name, says: says(origin, where, from), ...sited(where) }];
 }
 
-/**
- * The node a reader wants to be taken to.
- *
- * A `defRef` names two — the reference and the definition it points at — and it
- * is the definition that answers "why is it this value", which is the question
- * being asked.
- */
+/** The node a reader wants to be taken to: for a `$ref`, the definition. */
 function nodeOf(origin: FacetOrigin): string | null {
   if (origin.kind === 'empty') return null;
   return origin.kind === 'defRef' ? origin.def : origin.node;
@@ -93,12 +77,7 @@ function through(from: string, where: Described | undefined): string {
   return from === 'cell' ? 'the cell itself' : (where?.what ?? `a ${from} band`);
 }
 
-/**
- * A file as the spec would name it: where it sits relative to the spec itself.
- *
- * The absolute path is this machine's business, not the reader's — and it is
- * the same path in every spec on the team, spelled differently on each of them.
- */
+/** A file as the spec would name it, relative to the spec; the absolute path is this machine's. */
 function beside(from: string, file: string): string {
   const near = relative(dirname(from), file);
   return near === '' || near.startsWith('..') ? file : near;
@@ -111,13 +90,7 @@ function sited(where: Described | undefined): { file: string; start: number; end
     : { file: where.file, start: where.span.start, end: where.span.end };
 }
 
-/**
- * The innermost node whose span holds an offset, which is the one a cursor is
- * *in* rather than merely inside.
- *
- * A cell sits inside a sheet which sits inside the document, and all three
- * spans hold the cursor; the smallest is the one the reader is looking at.
- */
+/** The innermost node whose span holds an offset: the cell, not the sheet it sits in. */
 export function nodeUnder(nodes: Nodes, file: string, offset: number): NodeId | null {
   let found: NodeId | null = null;
   let narrowest = Number.POSITIVE_INFINITY;
@@ -145,13 +118,7 @@ interface Described {
 /** Every node a provenance can name, by its id. */
 export type Nodes = ReadonlyMap<string, Described>;
 
-/**
- * Every node a provenance can name, and what to call it.
- *
- * The wording lives here rather than in `compile` because it is for a person to
- * read, and the core is UI-free (ADR-004). What the core carries is the
- * identity; this turns it into a sentence.
- */
+/** Every node a provenance can name, and what to call it (the core carries identity, not prose — ADR-004). */
 export function nodesOf(doc: SpecDoc): Nodes {
   const nodes = new Map<string, Described>();
   const put = (node: SpecNode, what: string): void => {

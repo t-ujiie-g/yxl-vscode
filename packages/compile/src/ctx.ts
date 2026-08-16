@@ -13,11 +13,9 @@ import { CODE, type Code } from './codes';
 import { asIs, behind, type Filled, fill, resolveParams } from './params';
 
 /**
- * A file a `data:` block names, opened.
- *
- * Its path resolves against **the spec that was opened**, not against the file
- * the block was written in — which is where it differs from `$include`, and is
- * `docs/spec.md` §9's rule rather than a choice made here.
+ * A file a `data:` block names, opened. Its path resolves against the spec that
+ * was opened, not the file the block is in — unlike `$include` (`docs/spec.md`
+ * §9).
  */
 export interface DataFile {
   readonly file: FilePath;
@@ -28,12 +26,9 @@ export interface DataFile {
 export type DataReader = (from: FilePath, path: FilePath) => DataFile | null;
 
 /**
- * What compiling a document has in hand throughout: the parameters resolved
- * once, the definitions indexed once, the way out to a data file, and somewhere
- * to put what it could not draw.
- *
- * A definition is looked up by name rather than walked for, because a spec of
- * any size references far more often than it declares.
+ * What compiling has in hand throughout: parameters resolved once, definitions
+ * indexed once, the way out to a data file, and somewhere to put what it could
+ * not draw.
  */
 export interface Ctx {
   readonly diagnostics: Diagnostic[];
@@ -47,11 +42,7 @@ export interface Ctx {
   readonly styles: ReadonlyMap<string, StyleDef>;
 }
 
-/**
- * Where each parameter is declared, together with every parameter its default
- * depends on: a cell reading `title` is changed by an edit to the `quarter`
- * that `title` is built from.
- */
+/** Where each parameter is declared, with every parameter its default is built from. */
 function declarations(doc: SpecDoc): ReadonlyMap<string, readonly NodeId[]> {
   const at = new Map(doc.params.map((param) => [String(param.name), param.id]));
   const chains = behind(doc.params);
@@ -98,13 +89,7 @@ export function reject(ctx: Ctx, code: Code, message: string, node: SpecNode): v
   ctx.diagnostics.push(error(code, message, { file: node.file, span: node.span }));
 }
 
-/**
- * A value with its parameters substituted, reporting the ones that could not be.
- *
- * The placeholder itself survives an unresolved name, so a grid drawn from a
- * half-written spec shows `${region}` where the value will be rather than a
- * blank that says nothing.
- */
+/** A value with its parameters substituted; an unresolved placeholder survives as text. */
 export function filled(ctx: Ctx, value: ScalarValue, node: SpecNode): Filled {
   if (typeof value !== 'string') return asIs(value);
 
@@ -113,11 +98,7 @@ export function filled(ctx: Ctx, value: ScalarValue, node: SpecNode): Filled {
   return done;
 }
 
-/**
- * The same as text, which is what almost every caller wants: an address, a
- * name, a path, a number format. Only a cell's own value cares what type came
- * back, and it asks `filled` directly.
- */
+/** The same, as text — what every caller but a cell's own value wants. */
 export function text(ctx: Ctx, value: ScalarValue | Template, node: SpecNode): string {
   const done =
     typeof value === 'object' && value !== null

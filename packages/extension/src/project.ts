@@ -10,13 +10,7 @@ import { type Nodes, nodesOf } from './inspect';
 
 export type { Window, Windows } from './drawing';
 
-/**
- * A spec, read and drawn — and everything that could not be, said once.
- *
- * The `doc` and the `grid` come back too: the drawing is what the view needs,
- * and a question about *why* a cell looks the way it does is answered from
- * these. Recomputing them per question would be the same work done twice.
- */
+/** A spec read and drawn, with the `doc` and `grid` the inspector answers from. */
 export interface Projected {
   readonly drawing: Drawing;
   readonly evaluation: Evaluation | null;
@@ -26,13 +20,7 @@ export interface Projected {
   readonly nodes: Nodes;
 }
 
-/**
- * The whole pipeline, as one function over text: parse, load, compile, flatten.
- *
- * Kept apart from anything VS Code so that it is ordinary to test and ordinary
- * to reason about — the host below it only decides *when* to call this and
- * where to put what comes back.
- */
+/** The whole pipeline as one function over text: parse, load, compile, flatten. */
 export function project(
   text: string,
   file: string,
@@ -71,13 +59,7 @@ export function project(
   return { drawing: drawn(file, projected, params, windows), ...projected };
 }
 
-/**
- * The same spec drawn at a different part of a sheet.
- *
- * Scrolling changes only which cells the view is handed, so it re-reads and
- * recompiles nothing: that work is what a keystroke costs, and scrolling is not
- * a keystroke.
- */
+/** The same spec drawn at a different part of a sheet, without re-reading or recompiling. */
 export function redraw(projected: Projected, params: Setting, windows: Windows): Drawing {
   const { doc, grid } = projected;
   if (doc === null || grid === null) return projected.drawing;

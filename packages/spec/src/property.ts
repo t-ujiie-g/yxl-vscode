@@ -2,17 +2,10 @@ import type { Color } from '@yxl-vscode/units';
 import type { BorderStyle, HAlign, VAlign } from './style';
 
 /**
- * A look as the *leaves* it is made of, named by the path that reaches them in
- * a spec: `font.bold`, `border.left.color`.
- *
- * A `Style` says how a spec writes a look; this says what a look is worth
- * arguing about. Two of them layer per leaf, which is exactly what `extends:`
- * and a band do (`docs/spec.md` §4, §6) — a child setting `font.bold` keeps the
- * base's face and size — and it is what lets a layer record *only* what it
- * contributed (ADR-005).
- *
- * `border.all` is not here: it is a shorthand for the four sides, and keeping it
- * would mean every reader of a border had to know that.
+ * A look as the leaves it is made of — `font.bold`, `border.left.color` — which
+ * layer per leaf, as `extends:` and a band do (`docs/spec.md` §4, §6), and let
+ * a layer record only what it contributed (ADR-005). `border.all` is expanded
+ * into its four sides.
  */
 export interface StyleValues {
   readonly 'font.bold'?: boolean;
@@ -39,7 +32,6 @@ export interface StyleValues {
   readonly format?: string;
 }
 
-/** The leaves, once, so that the type below and any walk over them agree. */
 const STYLE_PROPERTIES = [
   'font.bold',
   'font.italic',

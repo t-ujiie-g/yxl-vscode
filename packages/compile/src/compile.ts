@@ -15,15 +15,9 @@ import { compileSheet, type Drafted } from './sheet';
 import type { StyleLayer } from './style';
 
 /**
- * The grid a spec projects to: pure, deterministic, and computed forward only
- * (ADR-001).
- *
- * No filesystem and no host (ADR-004): `read` is how it reaches the file a
- * `csv:` or `json:` block names. Without one it says which file it did not
- * read, rather than guessing at what was in it.
- *
- * `params` is what the caller wants the spec's parameters to be — one spec
- * drawn as several workbooks, which is what `--set` does on the command line.
+ * The grid a spec projects to: pure and computed forward only (ADR-001). `read`
+ * is how it reaches a `csv:` or `json:` file (ADR-004); `params` is what the
+ * caller wants the parameters to be, as `--set` is.
  */
 export interface Options {
   readonly read?: DataReader;
@@ -45,13 +39,7 @@ export function sheetOf(grid: CompiledGrid, name: SheetName): CompiledSheet | nu
   return grid.sheets.find((one) => one.name === name) ?? null;
 }
 
-/**
- * The cell at an address, whether a spec wrote it or a `formulas:` range covers
- * it.
- *
- * A written cell wins: an override lands on one cell of a filled range and
- * takes it out of the range, which is the case `docs/spec.md` §23 exists for.
- */
+/** The cell at an address, written or filled by a range; a written cell wins (`docs/spec.md` §23). */
 export function cellAt(sheet: CompiledSheet, at: A1Addr): CompiledCell | null {
   const written = sheet.cells.get(at);
   if (written !== undefined) return written;
@@ -82,12 +70,9 @@ export function cellAt(sheet: CompiledSheet, at: A1Addr): CompiledCell | null {
 }
 
 /**
- * Every layer that makes an address look how it looks, in the order they apply:
- * the column bands over it, then the rows, then whatever the cell itself said,
- * then an override (`docs/spec.md` §4).
- *
- * An address, not a cell — a band reaches the cells in its span whether a spec
- * wrote them or not, so an empty cell has a look and this answers for it.
+ * Every layer that makes an address look how it looks, in the order they apply
+ * — column bands, rows, the cell, an override (`docs/spec.md` §4). An address,
+ * not a cell: an empty one has a look too.
  */
 export function styleAt(sheet: CompiledSheet, at: A1Addr): readonly StyleLayer[] {
   const cell = cellOf(at);
@@ -99,13 +84,7 @@ export function styleAt(sheet: CompiledSheet, at: A1Addr): readonly StyleLayer[]
   return [...bands.flatMap((band) => band.style), ...(sheet.cells.get(at)?.style ?? [])];
 }
 
-/**
- * An override, applied after everything that wrote the cell — by construction
- * rather than by where it sits in the file (`docs/spec.md` §23, ADR-007).
- *
- * The facets it does not give are left as they were, which is why this replaces
- * the cell's value only when the override wrote one.
- */
+/** An override, applied after everything that wrote the cell; facets it does not give are left alone (`docs/spec.md` §23). */
 function applyOverride(ctx: Ctx, override: Override, drafts: readonly Drafted[]): void {
   const read = overrideAddr(ctx, override);
   if (read === null) return;
@@ -122,12 +101,7 @@ function applyOverride(ctx: Ctx, override: Override, drafts: readonly Drafted[])
   draft.cells.set(read.at, under === null ? written : layer(under, written, override));
 }
 
-/**
- * Where an override lands.
- *
- * The loader read it unless a `${...}` stood in the way, in which case the
- * parameters are in hand now and the address can be read at last.
- */
+/** Where an override lands, read now if a `${...}` stopped the loader reading it. */
 function overrideAddr(ctx: Ctx, override: Override): QualifiedAddr | null {
   if (!('kind' in override.at)) return override.at;
 

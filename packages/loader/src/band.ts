@@ -69,10 +69,7 @@ interface BandBody {
   };
 }
 
-/**
- * Everything but the selector, which the two axes share (`docs/spec.md` §4)
- * apart from the key their size is written under.
- */
+/** Everything but the selector, which both axes share apart from the size key (`docs/spec.md` §4). */
 function readBandBody(
   band: Opened,
   what: string,

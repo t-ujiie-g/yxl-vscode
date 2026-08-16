@@ -35,22 +35,13 @@ import type { FacetOrigin } from './provenance';
 import { layersOf } from './style';
 import { readCsv, readJson } from './table';
 
-/**
- * A sheet under construction: the compiled form, and the cell map still open
- * for the overrides that apply after everything else has written.
- */
+/** A sheet under construction, its cell map still open for the overrides that apply last. */
 export interface Drafted {
   readonly sheet: CompiledSheet;
   readonly cells: Map<string, CompiledCell>;
 }
 
-/**
- * A sheet, drawn.
- *
- * The written cells are placed in the order the sheet's keys were written,
- * because that is the order they apply in (`docs/spec.md` §2): where a `data:`
- * block and a `cells:` entry reach the same address, whichever came later wins.
- */
+/** A sheet, drawn: cells placed in the order the keys were written, since the later key wins (`docs/spec.md` §2). */
 export function compileSheet(ctx: Ctx, sheet: Sheet): Drafted {
   const cells = new Map<string, CompiledCell>();
   const fills: CompiledFill[] = [];
@@ -83,12 +74,7 @@ function placeCells(ctx: Ctx, sheet: Sheet, cells: Map<string, CompiledCell>): v
   }
 }
 
-/**
- * A `data:` block's rows, laid down from its anchor.
- *
- * A `null` field and a row that stops short both write no cell — which is what
- * leaves room for a `formulas:` range to fill the gap (`docs/spec.md` §9).
- */
+/** A `data:` block's rows laid down from its anchor; a `null` field writes no cell (`docs/spec.md` §9). */
 function placeData(ctx: Ctx, block: DataBlock, cells: Map<string, CompiledCell>): void {
   const anchor = address(ctx, block.at, block);
   if (anchor === null) return;
@@ -108,13 +94,7 @@ function placeData(ctx: Ctx, block: DataBlock, cells: Map<string, CompiledCell>)
   place(cells, anchor, rows, (row, col) => ({ kind: 'external', node: block.id, file, row, col }));
 }
 
-/**
- * The rows a block names, read through the injected reader (ADR-004).
- *
- * The path resolves against the spec that was opened rather than against the
- * file the block was written in — `docs/spec.md` §9's rule, and the one place
- * it differs from `$include`.
- */
+/** The rows a block names, read through the injected reader (ADR-004) against the opened spec (`docs/spec.md` §9). */
 function readTable(
   ctx: Ctx,
   block: DataBlock,
@@ -193,14 +173,7 @@ function placeFill(ctx: Ctx, range: FormulaRange, fills: CompiledFill[]): void {
   });
 }
 
-/**
- * The sheet's name with its parameters filled in.
- *
- * The loader parsed the name it was *written* as; substitution can produce
- * something Excel would refuse, and that is not re-checked here — `yxl build`
- * is the validator of record for what a name may be (ADR-011). What matters to
- * this projection is that a sheet has one identity, spelled one way.
- */
+/** The sheet's name with its parameters filled in; what Excel would refuse is the compiler's to say (ADR-011). */
 function named(ctx: Ctx, sheet: Sheet): SheetName {
   const spelled = text(ctx, sheet.name, sheet);
   return sheetName(spelled) ?? (spelled as SheetName);

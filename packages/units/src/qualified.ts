@@ -1,33 +1,21 @@
 import { type A1Addr, parseA1Addr } from './a1';
 import { type SheetName, sheetName } from './name';
 
-/**
- * A cell named together with the sheet it sits on — `Sales!E37` — which is how
- * a construct outside any sheet, an override, has to say where it lands.
- */
+/** A cell named together with its sheet — `Sales!E37` — as an override's `at:` is. */
 export interface QualifiedAddr {
   readonly sheet: SheetName;
   readonly at: A1Addr;
 }
 
-/**
- * A cell named with its sheet, in the spelling everything here reads back.
- *
- * One convention, in the package that owns addresses: a computed value, a
- * changed cell, and an override's `at:` all name a cell the same way, and
- * `parseQualifiedAddr` is the other half of this function.
- */
+/** `Sales!E37` — the one spelling of a qualified cell; `parseQualifiedAddr` reads it back. */
 export function qualified(sheet: SheetName, at: A1Addr): string {
   return `${sheet}!${at}`;
 }
 
 /**
- * Read a sheet-qualified cell reference, in either of Excel's two spellings:
- * bare (`Sales!E37`), or quoted where the name needs it (`'Q3 data'!A1`, an
- * apostrophe inside written `''`).
- *
- * The sheet is required and the reference is one cell: a range is refused, so
- * an override cannot quietly become a second way to style a region.
+ * Read a sheet-qualified cell reference in either of Excel's spellings —
+ * `Sales!E37`, or `'Q3 data'!A1` with `''` for an apostrophe. One cell only:
+ * a range is refused (`docs/spec.md` §23).
  */
 export function parseQualifiedAddr(text: string): QualifiedAddr | null {
   const split = text.startsWith("'") ? quoted(text) : plain(text);
@@ -38,7 +26,7 @@ export function parseQualifiedAddr(text: string): QualifiedAddr | null {
   return sheet === null || at === null ? null : { sheet, at };
 }
 
-/** Excel quotes any sheet name that could be read as something else, so the first `!` divides. */
+/** An unquoted name holds no `!`, so the first one divides. */
 function plain(text: string): { name: string; rest: string } | null {
   const bang = text.indexOf('!');
   return bang < 0 ? null : { name: text.slice(0, bang), rest: text.slice(bang + 1) };

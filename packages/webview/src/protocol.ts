@@ -2,16 +2,10 @@ import type { Computed } from '@yxl-vscode/evaluate';
 import type { ScalarValue, StyleValues } from '@yxl-vscode/spec';
 
 /**
- * What the host sends the view, and the only thing the view knows about a spec.
- *
- * `uncomputed` is why some cells show a formula rather than what it comes to,
- * or `null` where everything computed.
- *
- * A projection, flattened for the wire: VS Code serializes a webview message as
- * JSON, so the `Map` and the branded types a `CompiledGrid` holds would not
- * survive the trip. Flattening here rather than in the view keeps every
- * decision about *what a cell looks like* on the side that has the provenance
- * to decide it (ADR-001).
+ * What the host sends the view, and all the view knows of a spec: a projection
+ * flattened for JSON, with every decision about how a cell looks made on the
+ * side that has the provenance (ADR-001). `uncomputed` says why some cells show
+ * a formula rather than a result.
  */
 export interface Drawing {
   readonly kind: 'drawing';
@@ -23,25 +17,14 @@ export interface Drawing {
 }
 
 /**
- * Why a formula shows as a formula.
- *
- * `names` is what the preview could not resolve well enough to compute anything
- * from — a table, a workbook-defined name, a function Excel has and this does
- * not. `tooMany` is a workbook past the size this will compute, where nothing is
- * computed rather than the part that fit: a total over half a computed range is
- * a wrong number.
+ * Why a formula shows as a formula: `names` the preview cannot compute from, or
+ * a workbook with `tooMany` formulas, where nothing is computed rather than part.
  */
 export type Uncomputed =
   | { readonly kind: 'names'; readonly names: readonly string[] }
   | { readonly kind: 'tooMany'; readonly limit: number };
 
-/**
- * One declared parameter, as it stands in this preview.
- *
- * `set` is true when the reader has given it a value here rather than letting
- * the spec's default stand — one spec drawn as several workbooks, which is what
- * `--set` does on the command line (`docs/spec.md` §7).
- */
+/** One declared parameter; `set` where the reader gave it a value here rather than the default (`docs/spec.md` §7). */
 export interface DrawnParam {
   readonly name: string;
   readonly value: string;
@@ -49,16 +32,9 @@ export interface DrawnParam {
 }
 
 /**
- * One sheet, sized to what it holds.
- *
- * `at` and `rows`/`columns` are the window being drawn; `of` is how far the
- * sheet reaches. A sheet larger than one page is drawn a window at a time and
- * the view asks for another as the reader scrolls, so the grid never holds more
- * elements than a page needs however large the sheet is.
- *
- * A spec with three cells draws three cells' worth of grid rather than a
- * million empty ones: the box is what its written cells, merges, and filled
- * ranges reach.
+ * One sheet: the window drawn (`at`, `rows`, `columns`) out of how far the
+ * sheet reaches (`of`), so the grid never holds more than a page however large
+ * the sheet.
  */
 export interface DrawnSheet {
   readonly name: string;
@@ -73,27 +49,14 @@ export interface DrawnSheet {
   readonly problems: readonly MarkedCell[];
 }
 
-/**
- * A diagnostic on the cells it is about.
- *
- * Not every diagnostic has one: a sheet with no name or a band with a bad `at`
- * reaches no cell, and those stay in the list under the grid. The ones that do
- * are worth marking where the reader is looking.
- */
+/** A diagnostic on the cell it is about; one that reaches no cell stays in the list under the grid. */
 export interface MarkedCell {
   readonly row: number;
   readonly col: number;
   readonly message: string;
 }
 
-/**
- * Whether a cell can be typed into, in the terms of what stands in the way.
- *
- * `direct` — one node of the spec says it, and typing changes that node.
- * `mediated` — more than one thing could change to make the edit, so it is a
- * question rather than an edit until the phase that asks it.
- * `external` — the value lives in a file beside the spec.
- */
+/** Whether a cell can be typed into: one node says it, several could, or a file beside the spec does. */
 export type Editable = 'direct' | 'mediated' | 'external';
 
 /** One run of a `rich:` cell: a piece of its text, and the look that piece wears. */
@@ -102,14 +65,7 @@ export interface DrawnRun {
   readonly style: StyleValues;
 }
 
-/**
- * A run of columns or rows a band declares something about.
- *
- * `size` is in the spec's own units — character widths across, points down —
- * and is `null` where the band set none, which is every band that only styles
- * or only hides. A run is not a *sized* run: it is a band with a span, and the
- * size is one of the things it may not say.
- */
+/** A run of columns or rows a band declares; `size` in the spec's units, `null` where it set none. */
 export interface Sized {
   readonly first: number;
   readonly last: number;
@@ -118,34 +74,11 @@ export interface Sized {
 }
 
 /**
- * One cell as it is drawn: what it holds, what it is called, and how it looks.
- *
- * `value` and `formula` are what the *spec* holds: a formula with the cached
- * result Excel shows until it recomputes, and neither is anything this computed.
- * What it computed is `computed`, and it is a separate field on purpose — that
- * is the whole of ADR-014 made structural.
- *
- * `format` is the number format that applies here, which is not always the one
- * in `style`: Excel does not apply an *inherited* format to a text cell
- * (`docs/spec.md` §4), and that is decided where the layers are.
- *
- * `filledFrom` names the anchor of the `formulas:` range this cell belongs to,
- * for every cell of it but the anchor. The `formula` is the one the range holds,
- * written as it applies **there** rather than here — so a cell of a range that
- * was not computed says which cell it is really reading instead of showing a
- * formula that is wrong where it stands. A computed one shows its own result,
- * because the shift Excel applies is what computing it applied too.
- *
- * `rich` is a cell whose text is written in runs of its own (`docs/spec.md` §3),
- * and it is what the cell *says* — a cell that has runs has no `value`.
- *
- * `computed` is what the formula came to, or why it could not be computed.
- *
- * `overridden` is a cell an `overrides:` entry writes: an exception somebody
- * made on purpose, and worth seeing without asking.
- *
- * `editable` is whether this cell can be typed into at all, and why not where
- * it cannot — a fact the reader is owed *before* they try, not after.
+ * One cell as it is drawn. `value` and `formula` are what the spec holds and
+ * `computed` is separate on purpose (ADR-014). `format` is the one that applies
+ * here — an inherited format does not reach a text cell (`docs/spec.md` §4).
+ * `filledFrom` is the anchor of the range a cell belongs to, whose `formula` is
+ * written as it applies there. `overridden` marks an `overrides:` cell.
  */
 export interface DrawnCell {
   readonly row: number;
@@ -168,14 +101,7 @@ export interface DrawnMerge {
   readonly right: number;
 }
 
-/**
- * Where one facet of a cell came from, and where to go to change it.
- *
- * `facet` is what the answer is about — `value`, `format`, or a style leaf like
- * `font.bold` — and `says` is the answer in the words a reader wants. The span
- * is into `file`, which is not always the file that was opened: an `$include`
- * makes a definition live somewhere else.
- */
+/** Where one facet of a cell came from, in a reader's words, and the span in `file` to go to. */
 export interface Source {
   readonly facet: string;
   readonly says: string;
@@ -193,13 +119,7 @@ export interface Inspected {
   readonly sources: readonly Source[];
 }
 
-/**
- * The cells one node of the spec reaches, for the cursor that is sitting in it.
- *
- * The other half of the jump: a reader with the cursor on `defs.styles.header`
- * sees which cells wear it. A cell is named by its sheet, because a definition
- * reaches across all of them.
- */
+/** The cells the node under the text cursor reaches, named with their sheet. */
 export interface Highlighted {
   readonly kind: 'highlighted';
   readonly says: string;
@@ -207,19 +127,10 @@ export interface Highlighted {
 }
 
 /**
- * Why an edit did not happen, for the view to say where the reader is looking.
- *
- * A refusal is an answer, so it goes next to the grid rather than into a corner
- * of the window: an edit that appears to do nothing is the one thing worse than
- * an edit that is refused.
- *
- * `choices` are the ways the edit *could* be made, each with what it would move,
- * for the reader to pick between — the editor enumerates and never picks
- * (ADR-001). `canOverride` says the edit could also be written as the exception
- * it would have to be (`docs/spec.md` §23), which is so wherever there is a cell
- * an override could name, and is never taken without the reader saying so
- * (ADR-007). Both offers are about `typed`, which is what the reader typed and
- * what the view sends back when one of them is taken.
+ * Why an edit did not happen, said beside the grid. `choices` are the ways it
+ * could be made, for the reader to pick between (ADR-001); `canOverride` offers
+ * the exception (ADR-007). Both are about `typed`, which the view sends back
+ * when one is taken.
  */
 export interface Refused {
   readonly kind: 'refused';
@@ -229,13 +140,7 @@ export interface Refused {
   readonly choices: readonly Choice[];
 }
 
-/**
- * One way of making a refused edit, as the reader is shown it.
- *
- * `moves` is how many cells the choice would change and `sample` a few of them
- * by name: a count alone is a number to guess at, and the whole list of four
- * hundred is not a thing to read before deciding.
- */
+/** One way of making a refused edit: what it does, how many cells it `moves`, and a `sample` of them. */
 export interface Choice {
   readonly id: string;
   readonly what: string;
@@ -251,13 +156,7 @@ export interface Typed {
   readonly text: string;
 }
 
-/**
- * Something the host did, said where the reader asked for it.
- *
- * The counterpart of a refusal: an edit that *worked* is usually its own
- * announcement — the grid changes — but one that lands somewhere the reader
- * cannot see needs a word, and one that lands nowhere needs it more.
- */
+/** Something the host did that the grid does not show on its own, said where the reader asked. */
 export interface Said {
   readonly kind: 'said';
   readonly text: string;
@@ -267,21 +166,9 @@ export interface Said {
 export type ToView = Drawing | Inspected | Highlighted | Refused | Said;
 
 /**
- * Everything the view sends back.
- *
- * Questions, knobs, and — since the phase that writes — one edit: *where did
- * this cell come from*, *take me there*, *draw it as though this parameter were
- * something else*, *draw the part of the sheet I have scrolled to*, and *put
- * this in that cell*.
- *
- * `edit`, `resolve` and `override` carry what the reader typed, not what it
- * means. A leading `=` makes it a formula, exactly as it does in Excel, and
- * deciding that here would be deciding it twice. The last two are sent only
- * after the first was refused and the reader chose between the answers.
- *
- * A sheet is named rather than numbered, here and in the answers: the spec may
- * have been read again since the view drew it, and a name is what the reader
- * pointed at (ADR-023).
+ * Everything the view sends back. `edit`, `resolve` and `override` carry what
+ * the reader typed, not what it means — that is decided once, on the host. A
+ * sheet is named, not numbered (ADR-023).
  */
 export type FromView =
   | { readonly kind: 'inspect'; readonly sheet: string; readonly row: number; readonly col: number }
@@ -302,12 +189,7 @@ export type FromView =
       readonly col: number;
     };
 
-/**
- * Something the projection could not do, as the view lists it.
- *
- * The span is an offset into `file`, which the view cannot read — it carries it
- * only to ask the host to go there, the same way an inspector line does.
- */
+/** Something the projection could not do; the span is carried only to ask the host to go there. */
 export interface DrawnDiagnostic {
   readonly code: string;
   readonly message: string;

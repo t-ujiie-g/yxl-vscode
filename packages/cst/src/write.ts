@@ -6,12 +6,8 @@ export type Value = string | number | boolean | null;
 const INDICATORS = new Set('-?:,[]{}#&*!|>\'"%@`');
 
 /**
- * A value as YAML source, in the style it should keep.
- *
- * `style` is the style the node being replaced already had. Keeping it makes
- * the diff say only what changed: overwriting `"APAC"` with EMEA should produce
- * `"EMEA"`, not switch the file to plain style on the way past. A style that
- * cannot carry the new value is dropped rather than honoured.
+ * A value as YAML source, keeping the `style` the replaced node had so the diff
+ * says only what changed. A style that cannot carry the value is dropped.
  */
 export function renderScalar(value: Value, style?: ScalarStyle): string {
   if (value === null) return 'null';
@@ -30,13 +26,7 @@ function renderNumber(value: number): string {
   return String(value);
 }
 
-/**
- * Whether text can be written bare without reading back as something else.
- *
- * The type check is the reader run backwards: if resolving the text yields
- * anything but the same text, writing it plain would change its type, so it has
- * to be quoted. That keeps this rule and `resolvePlain` from ever disagreeing.
- */
+/** Whether text written bare reads back as itself — `resolvePlain` run backwards. */
 function isPlainSafe(text: string): boolean {
   if (text === '') return false;
   if (text !== text.trim()) return false;

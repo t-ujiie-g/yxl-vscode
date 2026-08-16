@@ -14,13 +14,7 @@ const SETTLE = 150;
 /** The same, for a cursor, which moves more often and costs less to answer. */
 const FOLLOW = 80;
 
-/**
- * The preview: one panel per spec, beside the text.
- *
- * The text editor stays what it was — this is a projection of the document, not
- * a second editor for it (ADR-001), and everything it shows is recomputed from
- * the file rather than kept in step with it.
- */
+/** The preview: one panel per spec, beside the text, recomputed from the file on every change (ADR-001). */
 export class Preview {
   private static open = new Map<string, Preview>();
 
@@ -37,10 +31,7 @@ export class Preview {
   private readonly params = new Map<string, string>();
   private readonly windows = new Map<string, Window>();
 
-  /**
-   * One engine for the life of the panel: standing one up registers five
-   * hundred functions, and a keystroke should not pay for that.
-   */
+  /** One engine for the life of the panel: standing one up registers five hundred functions. */
   private readonly engine: Engine = univerEngine();
 
   static show(document: vscode.TextDocument, extension: vscode.Uri): void {
@@ -68,16 +59,13 @@ export class Preview {
     this.panel.webview.html = this.page(extension);
 
     this.listeners.push(
-      // Any file this spec is *made of*, not only the one that was opened: an
-      // edit to a `$include`d sheet or to `defs.yaml` is an edit to this
-      // drawing, and it arrives unsaved — a preview that waited for the save
-      // would show the reader the spec they no longer have.
+      // Any file the spec is made of, unsaved: a `WorkspaceEdit` into an
+      // `$include`d file leaves its buffer dirty and no save ever comes.
       vscode.workspace.onDidChangeTextDocument((change) => {
         if (this.reads(change.document)) this.later();
       }),
       vscode.workspace.onDidSaveTextDocument((saved) => {
-        // A `csv:` or a file changed outside this editor, which no change event
-        // spoke for.
+        // A file changed outside this editor, which no change event spoke for.
         if (!this.reads(saved)) this.later();
       }),
       vscode.window.onDidChangeTextEditorSelection((moved) => this.follow(moved.textEditor)),
@@ -93,13 +81,7 @@ export class Preview {
     this.settling = setTimeout(() => this.redraw(), SETTLE);
   }
 
-  /**
-   * Which cells the node under the cursor reaches — the other half of the jump.
-   *
-   * A cursor sits inside every span that holds it, so the *innermost* node is
-   * the one being pointed at: the cell rather than the sheet, the definition
-   * rather than the document.
-   */
+  /** Which cells the node under the text cursor reaches. */
   private follow(editor: vscode.TextEditor): void {
     if (!this.reads(editor.document)) return;
 
@@ -107,14 +89,7 @@ export class Preview {
     this.following = setTimeout(() => this.reaching(editor), FOLLOW);
   }
 
-  /** Whether a cursor in this document is a cursor in the spec being previewed. */
-  /**
-   * Whether this document is one the drawing was made of.
-   *
-   * Every file the last redraw actually *read* — the spec, what it `$include`s,
-   * and the CSV a `data:` block points at, which is a file the spec is made of
-   * and has no node in it to be found by.
-   */
+  /** Whether the last drawing was read from this document — the spec, an `$include`, a `data:` file. */
   private reads(document: vscode.TextDocument): boolean {
     return (
       document.uri.toString() === this.document.uri.toString() ||
@@ -134,12 +109,8 @@ export class Preview {
     const grid = this.drawn?.grid;
     if (editor === undefined || grid === undefined || grid === null) return;
 
-    // Spans are offsets into the text they were read from. Asking one about a
-    // cursor in text that has since been edited names whatever node the shift
-    // happens to land in, so nothing is said until the read catches up — which
-    // the redraw below does, and then says it. The spec's own file is read from
-    // the editor holding it, so its version is the test; an `$include` is read
-    // from disk, so what matters there is whether the editor has saved.
+    // Spans are offsets into the text as it was read; until the redraw catches
+    // up, a cursor in edited text names whatever the shift lands on.
     const own = editor.document.uri.toString() === this.document.uri.toString();
     const inStep = own ? this.document.version === this.read : !editor.document.isDirty;
     if (!inStep) {
@@ -203,12 +174,7 @@ export class Preview {
     this.reaching();
   }
 
-  /**
-   * What the view may ask for: where a cell came from, take me there, and draw
-   * it as though a parameter were something else. None of them touches the file
-   * (ADR-001) — the last one changes what is *drawn*, which is the point of a
-   * preview that stands for several workbooks.
-   */
+  /** What the view asked for. */
   private answer(asked: FromView): void {
     if (asked.kind === 'reveal') {
       void reveal(asked.file, asked.start, asked.end);
@@ -216,8 +182,7 @@ export class Preview {
     }
 
     if (asked.kind === 'window') {
-      // A window that has not moved is a redraw that would change nothing, and
-      // answering it is what turns one stray scroll into a loop.
+      // Answering a window that has not moved turns one stray scroll into a loop.
       const at = this.windows.get(asked.sheet);
       if (at?.row === asked.row && at.col === asked.col) return;
 
@@ -248,7 +213,6 @@ export class Preview {
     }
 
     if (asked.kind === 'setParam') {
-      // Emptying the box gives the parameter back to the spec's own default.
       if (asked.value === '') this.params.delete(asked.name);
       else this.params.set(asked.name, asked.value);
 
@@ -296,13 +260,7 @@ export class Preview {
     await resolve(spec, typed, choice, this.port());
   }
 
-  /**
-   * The same edit, written as an override — after asking what it is for.
-   *
-   * The reason came with the asking, from a box beside the refusal itself: an
-   * override is an exception somebody made on purpose, and that is where they
-   * got to say so (`docs/spec.md` §23).
-   */
+  /** The same edit, written as an override, with the reason the reader gave (`docs/spec.md` §23). */
   private async overrideWith(asked: Extract<FromView, { kind: 'override' }>): Promise<void> {
     const spec = this.spec();
     if (spec === null) {
@@ -314,13 +272,7 @@ export class Preview {
     await writeOverride(spec, typed, reason === '' ? undefined : reason, this.port());
   }
 
-  /**
-   * Work that may fail, with the failure said rather than dropped.
-   *
-   * A rejected promise from a message handler goes nowhere anyone can see, and
-   * an edit that vanishes without a word is the worst thing this editor can do
-   * — the reader cannot tell it from one that was never sent.
-   */
+  /** Work that may fail, with the failure said: a rejected promise from a message handler goes nowhere. */
   private tried(work: Promise<void>): void {
     void work.catch((failed: unknown) => {
       this.refuse(failed instanceof Error ? failed.message : String(failed), null);
@@ -347,13 +299,7 @@ export class Preview {
     };
   }
 
-  /**
-   * Why an edit did not happen, said in the preview rather than in a corner.
-   *
-   * A notification is where a reader looks when something *finished*; a refused
-   * edit is something they are in the middle of, and their eyes are on the cell
-   * they typed into.
-   */
+  /** Why an edit did not happen, said in the preview where the reader is looking. */
   private refuse(why: string, offer: Offer | null): void {
     void this.panel.webview.postMessage({
       kind: 'refused',

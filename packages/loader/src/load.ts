@@ -9,29 +9,16 @@ import { readOverrides } from './override';
 import { expectBool, openEntries } from './read';
 import { readSheets } from './sheet';
 
-/**
- * What reading one file produced.
- *
- * `doc` is null only when there was nothing to read — an empty file, or a root
- * that is not a mapping. Anything less total than that still yields a document:
- * the diagnostics say what could not be read, and the rest is projected.
- */
+/** What reading one file produced; `doc` is null only where there was nothing to read at all. */
 export interface Loaded {
   readonly doc: SpecDoc | null;
   readonly diagnostics: readonly Diagnostic[];
 }
 
 /**
- * Read a parsed file into the AST.
- *
- * `include` is how the core reaches the files an `$include` names without
- * knowing what a file is (ADR-004). Leaving it out is a legitimate way to read
- * one file alone — every include then reports that it was not expanded, rather
- * than being read as the construct it stands in for.
- *
- * The parser's own diagnostics are not repeated here — a caller that wants both
- * has both, and merging them would report a syntax error twice. Diagnostics
- * from a file this one *included* are here, since nobody else parsed it.
+ * Read a parsed file into the AST. Without `include`, every `$include` reports
+ * that it was not expanded. The parser's own diagnostics are not repeated here;
+ * those of included files are, since nobody else parsed them.
  */
 export function load(parsed: Parsed, include?: IncludeReader): Loaded {
   const file = filePath(parsed.file);

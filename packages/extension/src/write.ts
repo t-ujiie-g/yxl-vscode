@@ -24,14 +24,7 @@ import { type A1Addr, addrAt, type FilePath, type SheetName, sheetName } from '@
 import { type Change, checked, checkedText } from '@yxl-vscode/verify';
 import type { Choice, Typed } from '@yxl-vscode/webview/protocol';
 
-/**
- * What the write needs of the world outside it.
- *
- * The file as the reader has it — an open buffer differs from the disk — and a
- * way to put text back. Kept as three functions rather than reached for
- * directly, so that what happens between a gesture and a byte is testable
- * without an editor around it (ADR-004).
- */
+/** What the write needs of the world outside it, injected so it is testable without an editor (ADR-004). */
 export interface Port {
   readonly text: (file: FilePath) => string | null;
   readonly put: (file: FilePath, text: string) => void | Promise<void>;
@@ -39,11 +32,7 @@ export interface Port {
   readonly said: (what: string) => void;
 }
 
-/**
- * What a reader can do about a refusal: take one of the answers the edit has,
- * or write it as the exception (ADR-007). Both are about the text they typed,
- * and `null` is a refusal there is nothing to be done about.
- */
+/** What a reader can do about a refusal: take an answer, or write the exception (ADR-007). */
 export interface Offer {
   readonly typed: Typed;
   readonly canOverride: boolean;
@@ -59,13 +48,9 @@ export interface Spec {
 }
 
 /**
- * What a reader typed into a cell, all the way to the file.
- *
- * Three things have to agree before a byte moves: the gesture has to name one
- * node of the spec (ADR-006), the checker has to find that the edit changed
- * only what it said it would (ADR-009), and the patch has to be one that can be
- * taken back (ADR-026). Each refusal is a sentence, because an edit that
- * quietly does nothing is worse than one that says why not.
+ * What a reader typed into a cell, all the way to the file: the gesture names
+ * a node (ADR-006), the checker agrees (ADR-009), and the patch can be taken
+ * back (ADR-026). Every refusal is a sentence.
  */
 export async function write(spec: Spec, typed: Typed, port: Port, anyway = false): Promise<void> {
   const sheet = sheetName(typed.sheet);
@@ -88,22 +73,17 @@ export async function write(spec: Spec, typed: Typed, port: Port, anyway = false
   if (intent.kind === 'refused') {
     const answers = candidates(resolving(spec, port), where, typed.text);
 
-    // One answer, and nothing being chosen between: an edit with one meaning
-    // applies, and only an edit with several is a question (ADR-001). Asking
-    // anyway would put a click in front of the most ordinary thing anyone does
-    // with a spreadsheet — typing into a blank cell.
+    // An edit with one meaning applies; only one with several is a question (ADR-001).
     const sole = answers.length === 1 ? answers[0] : undefined;
     if (sole?.alone === true) {
       await applied(spec, sole.intent, port, { anyway, from: sole.id, typed });
       return;
     }
 
+    // Rebuilt rather than spread: the incoming message carries its own `kind`.
+    const offer = { sheet: typed.sheet, row: typed.row, col: typed.col, text: typed.text };
     port.refuse(intent.why, {
-      // Built rather than passed through: what arrives here is the *message*
-      // that asked for the edit, and a message carries its own `kind`. Handing
-      // that back for the view to send again is how an override went out as an
-      // edit and came back refused by the rule it was the exception to.
-      typed: { sheet: typed.sheet, row: typed.row, col: typed.col, text: typed.text },
+      typed: offer,
       canOverride: excepts(spec, where),
       choices: answers.map(shown),
     });
@@ -114,12 +94,8 @@ export async function write(spec: Spec, typed: Typed, port: Port, anyway = false
 }
 
 /**
- * One of the answers to a refused edit, taken.
- *
- * The candidates are worked out again rather than remembered from the refusal:
- * the spec may have been edited by hand since it was shown, and an answer
- * computed against a file that has moved on is an answer to a question nobody
- * asked.
+ * One of the answers to a refused edit, taken. The candidates are worked out
+ * again rather than remembered: the file may have moved since they were shown.
  */
 export async function resolve(
   spec: Spec,
@@ -134,9 +110,7 @@ export async function resolve(
     return;
   }
 
-  // *Apply it anyway* is the same gesture again, with the surprises accepted:
-  // the edit is worked out from the file as it stands rather than remembered,
-  // so what is confirmed is what the reader was shown a moment ago.
+  // *Apply it anyway* is the same gesture again, with the surprises accepted.
   const again = ANYWAY.exec(choice);
   if (again !== null) {
     const id = again[1] ?? '';
@@ -179,14 +153,7 @@ function shown(candidate: Candidate): Choice {
   };
 }
 
-/**
- * The same edit as an `overrides:` entry, which is where an edit with no other
- * home goes (`docs/spec.md` §23).
- *
- * Written only because a reader asked for it after being told why an ordinary
- * edit was refused (ADR-007), and `reason` is theirs to give — nothing in the
- * compiler reads it, and whoever opens the spec in six months does.
- */
+/** The same edit as an `overrides:` entry (`docs/spec.md` §23), because the reader asked for it (ADR-007). */
 export async function writeOverride(
   spec: Spec,
   typed: Typed,
@@ -213,10 +180,7 @@ export async function writeOverride(
   if (done) port.said(`${sheet}!${at} is now written as an override.`);
 }
 
-/**
- * What the write path needs to ask *this* edit again, where the checker finds
- * that it moves more than it named.
- */
+/** What is needed to ask this edit again where the checker finds it moves more than it named. */
 interface Asked {
   readonly anyway: boolean;
   readonly from: string | null;
@@ -243,8 +207,6 @@ async function applied(spec: Spec, intent: Intent, port: Port, asked: Asked): Pr
     params: spec.params,
   };
 
-  // A companion file is not a spec: what arrives is the file as it should be,
-  // and the check is the same one with it overlaid.
   const done =
     intent.kind === 'wrote'
       ? checkedText(source, intent.text, intent.expects, where)
@@ -255,10 +217,7 @@ async function applied(spec: Spec, intent: Intent, port: Port, asked: Asked): Pr
     return false;
   }
   if (done.ok === 'ask' && !asked.anyway) {
-    // The edit is not refused: it is *asked about*, with what else it would
-    // move, and the answer is the reader's (ADR-009). What confirms it is the
-    // same gesture again, so what lands is worked out from the file as it
-    // stands rather than from a copy held while the question was open.
+    // Asked about, not refused (ADR-009); the same gesture again confirms it.
     port.refuse(surprising(done.surprises), {
       typed: asked.typed,
       canOverride: false,
@@ -271,13 +230,7 @@ async function applied(spec: Spec, intent: Intent, port: Port, asked: Asked): Pr
   return true;
 }
 
-/**
- * Whether this gesture could be written as an override.
- *
- * An address nothing is written at has nothing to except, and the offer would
- * be the editor inventing a cell for a reader who mistyped (`docs/spec.md`
- * §23).
- */
+/** Whether an override could be written here: an address nothing writes has nothing to except (`docs/spec.md` §23). */
 function excepts(spec: Spec, where: { sheet: SheetName; at: A1Addr }): boolean {
   const sheet = sheetOf(spec.grid, where.sheet);
   return sheet !== null && cellAt(sheet, where.at) !== null;

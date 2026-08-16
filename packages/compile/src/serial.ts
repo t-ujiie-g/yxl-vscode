@@ -1,12 +1,4 @@
-/**
- * A date or an elapsed time as the number Excel stores.
- *
- * `docs/spec.md` §3: `type: date` accepts `YYYY-MM-DD` or `YYYY-MM-DD HH:MM:SS`
- * and `type: duration` accepts `H:MM` or `H:MM:SS` with the hours unbounded —
- * an *elapsed* time, so `26:30:00` is twenty-six and a half hours. Excel keeps
- * both as numbers and lets the format say what they mean, which is why this
- * conversion has to happen before a format can be applied.
- */
+/** A date or an elapsed time as the number Excel stores (`docs/spec.md` §3). */
 
 /** The default formats a typed cell takes when the spec writes none. */
 export const DATE_FORMAT = 'yyyy-mm-dd';
@@ -23,12 +15,9 @@ interface Dated {
 }
 
 /**
- * The serial for a date under the workbook's epoch, or `null` when the text is
- * not one.
- *
- * The 1900 system carries Excel's own bug — it counts a 1900-02-29 that never
- * happened — so every date from 1900-03-01 is numbered one higher. Leaving that
- * out would put every modern date a day early.
+ * The serial for a date under the workbook's epoch, or `null`. The 1900 system
+ * keeps Excel's own bug — a 1900-02-29 that never happened — or every modern
+ * date lands a day early.
  */
 export function dateSerial(text: string, from1904: boolean): Dated | null {
   const read = DATE.exec(text);
@@ -50,12 +39,7 @@ export function dateSerial(text: string, from1904: boolean): Dated | null {
   };
 }
 
-/**
- * The serial for an elapsed time: its length as a fraction of a day.
- *
- * Unlike a date's, it does not depend on the workbook's epoch — an hour is an
- * hour under either.
- */
+/** The serial for an elapsed time: its length as a fraction of a day, under either epoch. */
 export function durationSerial(text: string): number | null {
   const read = DURATION.exec(text);
   if (read === null) return null;

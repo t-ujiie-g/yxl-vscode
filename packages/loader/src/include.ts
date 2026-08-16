@@ -5,16 +5,9 @@ import { CODE } from './codes';
 import { type Ctx, keyOf, reject, type Site } from './ctx';
 
 /**
- * Where a node really is, following an `$include` that stands in its place.
- *
- * `null` means the include could not be followed and the reason was reported;
- * the construct that asked is left with nothing to read, which is the same
- * position it would be in if the key had been missing.
- *
- * An include replaces its whole node, so what comes back is the *included*
- * file's root: a new file, and a path that starts again at that root. Nested
- * includes follow through, and one that comes back round is refused with the
- * loop written out.
+ * Where a node really is, following an `$include` that stands in its place —
+ * the included file's root, with a path that starts again there. `null` with
+ * the reason reported where it could not be followed; a loop is named.
  */
 export function follow(ctx: Ctx, node: Node, path: Path): Site | null {
   const written = includePath(node);
@@ -65,12 +58,7 @@ export function follow(ctx: Ctx, node: Node, path: Path): Site | null {
   return follow(next, parsed.root, []);
 }
 
-/**
- * The path an include names, or `null` when the node is not one.
- *
- * The value is read here rather than through the ordinary text reader, which
- * follows includes and would come back to this.
- */
+/** The path an include names, or `null` when the node is not one. */
 function includePath(node: Node): string | null {
   if (node.kind !== 'map') return null;
 

@@ -10,13 +10,7 @@ export interface Where {
   readonly left: number;
 }
 
-/**
- * A row's height and a column's width, in pixels.
- *
- * A hidden band is nothing across, which is what hidden means; a band that set
- * no size takes Excel's default — 15 points of height, 8.43 characters of
- * width.
- */
+/** A row's height in pixels; hidden is nothing, and unset is Excel's default. */
 export function heightOf(sheet: DrawnSheet, row: number): number {
   const run = sized(sheet.heights, row);
   if (run?.hidden === true) return 0;
@@ -65,18 +59,9 @@ export function columnAt(sheet: DrawnSheet, left: number): number {
 }
 
 /**
- * The window to ask the host for from where the reader has scrolled to, or
- * `null` while the drawn one still covers it.
- *
- * The margin is what keeps this from asking on every scrolled row: a new window
- * is wanted only on nearing an edge of the drawn one, and it is asked for
- * centred on the reader, so the next ask is a long way off in either direction.
- *
- * The last window of a sheet is the *last* one — asking to be centred past the
- * end gets the same window back, and asking again for what was already answered
- * is a loop with a redraw in it. So the ask is clamped here the way the
- * host clamps it, which makes "there is nothing more to draw" an answer of
- * `null` rather than a question repeated forever.
+ * The window to ask the host for from where the reader has scrolled, or `null`
+ * while the drawn one still covers it. Clamped here the way the host clamps it,
+ * or the last window is a question repeated forever.
  */
 export function wanted(sheet: DrawnSheet, at: Where): { row: number; col: number } | null {
   const row = rowAt(sheet, at.top);

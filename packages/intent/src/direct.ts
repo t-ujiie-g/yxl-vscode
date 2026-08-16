@@ -18,15 +18,9 @@ import {
 import type { Expects } from '@yxl-vscode/verify';
 
 /**
- * What a gesture on the grid came to.
- *
- * Either an edit to make — which file it is in, what it does, and what it says
- * it will change — or a refusal in words a reader can act on. There is no third
- * answer where the editor guesses (ADR-001).
- *
- * `edit` is a patch over a spec; `wrote` is a companion file the spec *reads* —
- * a CSV beside it — which is not YAML and has no patch algebra, so what it
- * carries is the file as it should be.
+ * What a gesture came to: an edit to make, with what it claims to change, or a
+ * refusal in words a reader can act on (ADR-001). `edit` is a patch over a
+ * spec; `wrote` is a companion file, which has no patch algebra, as it should be.
  */
 export type Intent =
   | {
@@ -47,15 +41,8 @@ export type Intent =
 export type Text = (file: FilePath) => string | null;
 
 /**
- * Typing a value into a cell.
- *
- * The cells one node of the spec answers for can be edited this way: a literal
- * at the cell, one field of an inline `data:` block, and a cell the spec wrote
- * for its look alone, which has one place a value would go. Everything else has
- * more than one answer or none — a definition reaches other cells, a CSV is a
- * file of its own, a `formulas:` range is one formula for many cells — and each
- * of those is a *refusal with a reason*, with the answers offered beside it
- * (ADR-006).
+ * Typing a value into a cell one node of the spec answers for. Everything else
+ * has more than one answer or none, and is a refusal with a reason (ADR-006).
  */
 export function setValue(
   grid: CompiledGrid,
@@ -80,10 +67,7 @@ export function setValue(
   };
 }
 
-/**
- * The op that puts the value in, with the key written above whatever else the
- * cell holds — the order the spec's own examples use.
- */
+/** The op that puts the value in; a new `value:` key goes first, as the spec's examples write it. */
 function written(found: Found & { kind: 'found' }, value: Value): Op {
   if (!found.add) return { op: 'set', path: found.path, value };
 
@@ -98,13 +82,7 @@ function written(found: Found & { kind: 'found' }, value: Value): Op {
   };
 }
 
-/**
- * Typing a formula into a cell that already holds one.
- *
- * A cell written as a bare value has no `formula:` key to write into, and
- * giving it one is a change of shape rather than of content — which is the
- * phase after this one.
- */
+/** Typing a formula into a cell that already holds one; giving a value cell a formula is a change of shape. */
 export function setFormula(
   grid: CompiledGrid,
   where: { sheet: SheetName; at: A1Addr },
@@ -135,12 +113,8 @@ export function setFormula(
 }
 
 /**
- * Where an edit would be written, or why it would not be.
- *
- * `add` is the difference between writing over what is there and writing a key
- * that is not: a cell can be written for a reason other than what it holds —
- * `B4: { format: "0.0%" }` is a number format and nothing else (`docs/spec.md`
- * §3) — and typing into one puts the `value:` key in.
+ * Where an edit would be written, or why not. `add` is a `value:` key the cell
+ * has not got — `B4: { format: "0.0%" }` is a cell (`docs/spec.md` §3).
  */
 export type Found =
   | { kind: 'found'; file: FilePath; path: Path; node: Node; add: boolean }
@@ -161,26 +135,18 @@ function valuePath(origin: FacetOrigin, sheet: CompiledSheet, at: A1Addr, text: 
   const written = literalPath(origin, sheet, at, text);
   if (written.kind === 'refused') return written;
 
-  // `A1: 42` writes the value at the cell itself; `A1: { value: 42, … }` writes
-  // it under a key. Which one this spec used is a fact about the file, and the
-  // file is what says so.
   if (written.node.kind !== 'map') return written;
 
   const holds = (key: string): boolean =>
     written.node.kind === 'map' && written.node.entries.some((entry) => entry.key.value === key);
 
-  // A `value:` beside a `formula:` is the result Excel cached, not the cell's
-  // own value (`docs/spec.md` §3). Typing a number over it would leave the
-  // formula in place and the workbook showing something else until Excel
-  // recomputed — a lie with a long life. Change the formula instead.
+  // A `value:` beside a `formula:` is Excel's cached result (`docs/spec.md` §3).
   if (holds('formula')) {
     return refused(`\`${at}\` holds a formula — type a formula to change it, starting with \`=\``);
   }
 
   if (holds('value')) return { ...written, path: [...written.path, 'value'] };
 
-  // A cell with no `value:` key of its own — written for its number format, or
-  // its style, and nothing else. The value goes in as the key it has not got.
   return { ...written, add: true };
 }
 

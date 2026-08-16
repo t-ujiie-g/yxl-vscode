@@ -100,11 +100,7 @@ describe('identity across two reads', () => {
   });
 
   it('gives a sequence item a new id when one is inserted before it', () => {
-    // The weakness ADR-015's identity map exists to cover, pinned so that the
-    // day it is covered, this test is what changes. Until a caller holds an id
-    // across an edit — the preview does not — nothing is hurt by it
-    // (ADR-023). Note the id itself is not free either: it stays a valid id and
-    // starts naming the band next door.
+    // Pinned, not endorsed: a path-derived id shifts under an insertion (ADR-015, ADR-023).
     const inserted =
       'sheets:\n  - name: Sales\n    columns:\n      - at: A\n      - at: B\n      - at: D\n';
     expect(bandId(inserted, 'D')).not.toBe(bandId(BANDS, 'D'));

@@ -1,11 +1,4 @@
-/**
- * Every diagnostic compiling can raise.
- *
- * These are the things that stop a construct from being *drawn*: a reference
- * that names nothing, an address that will not resolve, a source this projection
- * cannot read. What a spec must satisfy to build is `yxl build --check`'s to say
- * (ADR-011).
- */
+/** Every diagnostic this package can raise; a code is stable and greppable, so it is API. */
 export const CODE = {
   unknownParam: 'compile.unknown-param',
   noSuchParam: 'compile.no-such-param',
