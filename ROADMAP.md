@@ -729,7 +729,14 @@ the inverse is unique, so no dialog is needed yet.
       that introduces the entry with it, since the two belong together. Proved
       over the corpus: every entry of every spec, removed one at a time, comes
       back byte for byte or is not removed at all.
-- [ ] Tier 4 end-to-end green
+- [x] Tier 4 end-to-end green
+      **Green**, and it is the first tier where the compiler runs for real: a
+      real spec is copied out, edited through the same `write` the UI calls,
+      built with the pinned `yxl`, and read back with `yxl extract` — the
+      compiler's own reader, so this tier needs no `.xlsx` library of its own.
+      Three edits are followed all the way: a value, a formula (which arrives as
+      a formula, not as the number it stood for), and an override over a filled
+      range, where the range around it still holds its own formula.
 
 ### Phase 7 — `mediated` write-back
 Where it starts to feel like a spreadsheet.
@@ -1721,6 +1728,27 @@ this at a phase boundary rather than at the end.
   two serials either side of it, so the next reader knows it is deliberate.
 - A cell's own format — written, or the one its type takes — now wins over a
   band's. Both are requests about *that* cell; a band is something reaching it.
+
+### 2026-08-16 — Phase 6 complete: the loop closes on a real workbook
+
+- **Tier 4 is green**, which is the last box in Phase 6 and the first time the
+  compiler runs for real rather than as a validator. A real spec is copied out
+  of yxl's cookbook, edited through the same `write` the UI calls, built with
+  the pinned `yxl`, and read back — so the question answered is not "did the
+  file change" but "does the **workbook** hold what the reader typed".
+- **`yxl extract` is how it looks inside the `.xlsx`** (`docs/spec.md` §22). The
+  compiler already has a reader; what it writes back is a spec this editor can
+  load, so the tier needs no spreadsheet library of its own and no ADR for one.
+  It is a migration aid rather than a mirror, which is enough to ask what a cell
+  holds.
+- Three edits are followed the whole way: a **value**; a **formula**, which has
+  to arrive as a formula and not as the number it stood for (ADR-014); and an
+  **override** over a cell a `formulas:` range filled, where the assertion is
+  both that the exception took and that the range around it still holds its own
+  formula.
+- The write path was already testable without an editor around it (ADR-004), so
+  this tier needed a filesystem `Port` and nothing else — the seam that made
+  `write.ts` unit-testable is the seam that made it end-to-end testable.
 
 ### 2026-08-16 — Phase 6: an entry taken out comes back as it was
 

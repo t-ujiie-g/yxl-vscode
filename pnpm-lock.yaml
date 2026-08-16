@@ -251,9 +251,15 @@ importers:
       '@yxl-vscode/units':
         specifier: workspace:*
         version: link:../packages/units
+      '@yxl-vscode/webview':
+        specifier: workspace:*
+        version: link:../packages/webview
       yaml:
         specifier: ^2.9.0
         version: 2.9.0
+      yxl-vscode:
+        specifier: workspace:*
+        version: link:../packages/extension
 
 packages:
 
