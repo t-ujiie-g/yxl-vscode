@@ -710,10 +710,7 @@ describe('what the view says about a spec', () => {
     const refused = {
       kind: 'refused',
       why: 'B5 holds a formula',
-      typed: null,
-      ranged: null,
-      pasted: null,
-      text: null,
+      about: null,
       canOverride: false,
       choices: [],
     } as const;
@@ -725,10 +722,7 @@ describe('what the view says about a spec', () => {
     const refused = {
       kind: 'refused',
       why: 'B5 is filled by a range',
-      ranged: null,
-      pasted: null,
-      text: null,
-      typed,
+      about: { is: 'typed', typed },
       canOverride: true,
       choices: [
         {
@@ -754,10 +748,7 @@ describe('what the view says about a spec', () => {
     const refused = {
       kind: 'refused',
       why: 'B5 is filled by a range',
-      ranged: null,
-      pasted: null,
-      text: null,
-      typed,
+      about: { is: 'typed', typed },
       canOverride: true,
       choices: [],
     } as const;
@@ -773,10 +764,7 @@ describe('what the view says about a spec', () => {
     const refused = {
       kind: 'refused',
       why: 'B5 is filled by a range',
-      ranged: null,
-      pasted: null,
-      text: null,
-      typed,
+      about: { is: 'typed', typed },
       canOverride: true,
       choices: [],
     } as const;
@@ -797,10 +785,7 @@ describe('what the view says about a spec', () => {
     const refused = {
       kind: 'refused',
       why: 'B5 is filled by a range',
-      ranged: null,
-      pasted: null,
-      text: null,
-      typed,
+      about: { is: 'typed', typed },
       canOverride: true,
       choices: [],
     } as const;
@@ -820,10 +805,7 @@ describe('what the view says about a spec', () => {
     const refused = {
       kind: 'refused',
       why: 'nothing is written there',
-      typed: null,
-      ranged: null,
-      pasted: null,
-      text: null,
+      about: null,
       canOverride: false,
       choices: [],
     } as const;

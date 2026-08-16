@@ -1,6 +1,6 @@
 import { columnLabel } from '@yxl-vscode/units';
 import type { Asks, Reached, Showing } from './draw';
-import type { Choice, Drawing, Refused, Uncomputed } from './protocol';
+import type { About, Choice, Drawing, Refused, Uncomputed } from './protocol';
 
 /** The parameters as boxes to turn (`docs/spec.md` §7); emptying one gives the default back. */
 export function parameters(drawing: Drawing, asks: Asks): HTMLElement {
@@ -56,27 +56,19 @@ export function refusal(refused: Refused, asks: Asks): HTMLElement {
   said.className = 'refused';
   said.append(refused.why);
 
-  const typed = refused.typed;
-  const ranged = refused.ranged;
-  const pasted = refused.pasted;
-  const text = refused.text;
-  if (typed === null && ranged === null && pasted === null && text === null) return said;
+  const about = refused.about;
+  if (about === null) return said;
 
   for (const choice of refused.choices) {
     const pick = document.createElement('button');
     pick.type = 'button';
     pick.className = 'choice';
     pick.textContent = `${choice.what} — ${moved(choice)}`;
-    pick.addEventListener('click', () => {
-      if (typed !== null) asks.resolveWith(typed, choice.id);
-      else if (ranged !== null) asks.emptiedWith(ranged, choice.id);
-      else if (pasted !== null) asks.pastedWith(pasted, choice.id);
-      else if (text !== null) asks.pastedTextWith(text, choice.id);
-    });
+    pick.addEventListener('click', () => taken(about, choice.id, asks));
     said.append(' ', pick);
   }
 
-  if (typed === null || !refused.canOverride) return said;
+  if (about.is !== 'typed' || !refused.canOverride) return said;
 
   const why = document.createElement('input');
   why.type = 'text';
@@ -87,13 +79,21 @@ export function refusal(refused: Refused, asks: Asks): HTMLElement {
   go.type = 'button';
   go.className = 'go';
   go.textContent = 'Write it as an override';
-  go.addEventListener('click', () => asks.overrideWith(typed, why.value));
+  go.addEventListener('click', () => asks.overrideWith(about.typed, why.value));
   why.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter') asks.overrideWith(typed, why.value);
+    if (event.key === 'Enter') asks.overrideWith(about.typed, why.value);
   });
 
   said.append(' ', why, ' ', go);
   return said;
+}
+
+/** An answer taken, back to the gesture the refusal was about. */
+function taken(about: About, choice: string, asks: Asks): void {
+  if (about.is === 'typed') asks.resolveWith(about.typed, choice);
+  if (about.is === 'ranged') asks.emptiedWith(about.ranged, choice);
+  if (about.is === 'pasted') asks.pastedWith(about.pasted, choice);
+  if (about.is === 'text') asks.pastedTextWith(about.text, choice);
 }
 
 /** What a choice would move, as a count a reader can act on and a few names. */

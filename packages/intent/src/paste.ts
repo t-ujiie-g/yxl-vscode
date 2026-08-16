@@ -30,6 +30,7 @@ import {
   literalPath,
   located,
   type Reading,
+  standing,
 } from './direct';
 import { meaning } from './typed';
 
@@ -130,7 +131,7 @@ function landed(
     cells.add(qualified(sheet, one.at));
   }
 
-  if (held.length > 0 && !only) return standing(cells.size - fresh.length, held);
+  if (held.length > 0 && !only) return standing(cells.size - fresh.length, held, 'pasted');
   if (cells.size === 0) return 'nothing in this rectangle can be pasted here';
 
   if (fresh.length > 0) {
@@ -293,15 +294,6 @@ const HOLDS = new Set(['value', 'formula', 'rich', 'type']);
 /** Whether the rectangle would land on itself, which is what a cut cannot do. */
 function overlaps(rect: Rect, by: Offset): boolean {
   return Math.abs(by.cols) <= rect.right - rect.left && Math.abs(by.rows) <= rect.bottom - rect.top;
-}
-
-/** Why a rectangle was not pasted: how many of how many, then the first cell's own reason. */
-function standing(landing: number, held: readonly string[]): string {
-  const total = landing + held.length;
-  const others = held.length - 1;
-  const rest = others === 0 ? '' : ` (and ${others} other${others === 1 ? '' : 's'} here)`;
-
-  return `${held.length} of the ${total} cells here cannot be pasted, so none were: ${held[0]}${rest}`;
 }
 
 function refused(why: string): Intent & { kind: 'refused' } {

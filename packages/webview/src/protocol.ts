@@ -135,13 +135,21 @@ export interface Highlighted {
 export interface Refused {
   readonly kind: 'refused';
   readonly why: string;
-  readonly typed: Typed | null;
-  readonly ranged: Ranged | null;
-  readonly pasted: Pasted | null;
-  readonly text: PastedText | null;
+  readonly about: About | null;
   readonly canOverride: boolean;
   readonly choices: readonly Choice[];
 }
+
+/**
+ * What a refusal is about — the gesture it came from, which the view sends back
+ * when one of the answers is taken. `typed` is the only one an override is
+ * offered beside (ADR-007).
+ */
+export type About =
+  | { readonly is: 'typed'; readonly typed: Typed }
+  | { readonly is: 'ranged'; readonly ranged: Ranged }
+  | { readonly is: 'pasted'; readonly pasted: Pasted }
+  | { readonly is: 'text'; readonly text: PastedText };
 
 /**
  * `Cmd`+`V` in the grid: where it goes, what the grid holds of its own, and what

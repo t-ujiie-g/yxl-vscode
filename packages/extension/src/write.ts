@@ -10,44 +10,30 @@ import {
   candidates,
   clearCell,
   clearRange,
-  couldBlock,
   type Intent,
   type Meaning,
   meaning,
   override,
-  type Pasting,
-  pasteRange,
-  pasteText,
   type Reading,
   type Resolving,
   reading,
   type Says,
-  type Shape,
   setFormula,
   setValue,
-  tabular,
 } from '@yxl-vscode/intent';
 import type { IncludeReader } from '@yxl-vscode/loader';
-import { type History, redid, type Step, took } from '@yxl-vscode/patch';
+import type { Step } from '@yxl-vscode/patch';
 import type { SpecDoc } from '@yxl-vscode/spec';
 import {
   type A1Addr,
   addrAt,
   type FilePath,
-  filePath,
   qualified,
   type SheetName,
   sheetName,
 } from '@yxl-vscode/units';
 import { type Change, checked, checkedText } from '@yxl-vscode/verify';
-import type {
-  Choice,
-  Pasted,
-  PastedAt,
-  PastedText,
-  Ranged,
-  Typed,
-} from '@yxl-vscode/webview/protocol';
+import type { About, Choice, Ranged, Typed } from '@yxl-vscode/webview/protocol';
 
 /**
  * What the write needs of the world outside it, injected so it is testable
@@ -68,10 +54,7 @@ export interface Port {
  * (ADR-007). The subject is what the gesture named — a cell or a rectangle.
  */
 export interface Offer {
-  readonly typed: Typed | null;
-  readonly ranged: Ranged | null;
-  readonly pasted: Pasted | null;
-  readonly text: PastedText | null;
+  readonly about: About | null;
   readonly canOverride: boolean;
   readonly choices: readonly Choice[];
 }
@@ -121,10 +104,7 @@ export async function write(spec: Spec, typed: Typed, port: Port, anyway = false
     // Rebuilt rather than spread: the incoming message carries its own `kind`.
     const offer = { sheet: typed.sheet, row: typed.row, col: typed.col, text: typed.text };
     port.refuse(intent.why, {
-      typed: offer,
-      ranged: null,
-      pasted: null,
-      text: null,
+      about: { is: 'typed', typed: offer },
       canOverride: excepts(spec, where),
       choices: answers.map(shown),
     });
@@ -153,7 +133,12 @@ export async function empty(spec: Spec, ranged: Ranged, port: Port, only = false
 
   if (intent.kind === 'refused' && !only) {
     const some = clearRange(spec.grid, where, read, true);
-    port.refuse(intent.why, some.kind === 'edit' ? theseOnly(ranged, some.expects.cells) : null);
+    port.refuse(
+      intent.why,
+      some.kind === 'edit'
+        ? theseOnly({ is: 'ranged', ranged }, EMPTIED, some.expects.cells)
+        : null,
+    );
     return;
   }
 
@@ -165,264 +150,24 @@ export async function empty(spec: Spec, ranged: Ranged, port: Port, only = false
 }
 
 /**
- * A rectangle put down somewhere else, as one edit. A cell that cannot take it
- * refuses the whole and is offered as an answer instead: the same paste with
- * `only` the cells that can (ADR-001, ADR-032).
+ * The one answer a rectangle that cannot be done whole has: leave the cells
+ * that stood in the way where they are. The same answer for `Delete` and for
+ * either paste, which is why it is named the same on both sides.
  */
-export async function paste(spec: Spec, pasted: Pasted, port: Port, only = false): Promise<void> {
-  const where = pasting(pasted);
-  if (where === null) {
-    port.refuse(`\`${pasted.from.sheet}\` is not a name a sheet can have`, null);
-    return;
-  }
-
-  const read = reading(port.text);
-  const intent = pasteRange(spec.grid, where, read, only);
-
-  if (intent.kind === 'refused' && !only) {
-    const some = pasteRange(spec.grid, where, read, true);
-    port.refuse(intent.why, some.kind === 'edit' ? theseCells(pasted, some.expects.cells) : null);
-    return;
-  }
-
-  const done = await applied(spec, intent, port, { anyway: false, from: null, typed: null });
-  if (done && intent.kind === 'edit') {
-    const cells = intent.expects.cells.size;
-    port.said(`${cells} cell${cells === 1 ? '' : 's'} ${pasted.cut ? 'moved' : 'pasted'}.`);
-  }
-}
-
-/** That answer, taken. Worked out again rather than remembered: the file may have moved. */
-export async function pastedWith(
-  spec: Spec,
-  pasted: Pasted,
-  choice: string,
-  port: Port,
-): Promise<void> {
-  if (choice !== ONLY) {
-    port.refuse('that answer is no longer one of the ways this edit could be made', null);
-    return;
-  }
-
-  await paste(spec, pasted, port, true);
-}
-
-/** What the view named, in the units the resolver works in. */
-function pasting(pasted: Pasted): Pasting | null {
-  const from = sheetName(pasted.from.sheet);
-  const to = sheetName(pasted.sheet);
-  if (from === null || to === null) return null;
-
-  const { top, left, bottom, right } = pasted.from;
-
-  return {
-    from: { sheet: from, rect: { top, left, bottom, right } },
-    to: { sheet: to, at: addrAt({ col: pasted.col, row: pasted.row }) },
-    cut: pasted.cut,
-  };
-}
-
-/** Whose paste `Cmd`+`V` is: the rectangle the grid holds, what the clipboard holds, or neither. */
-export type Whose =
-  | { readonly is: 'grid'; readonly pasted: Pasted }
-  | { readonly is: 'clipboard'; readonly text: PastedText }
-  | { readonly is: 'neither' };
-
-/**
- * Which paste this is, given what the clipboard turned out to hold. The grid's
- * own rectangle wins while the clipboard still holds what its copy put there,
- * because only that one moves a formula and empties a cut (ADR-032, ADR-035).
- */
-export function whose(asked: PastedAt, held: string): Whose {
-  const { sheet, row, col, from, cut, ours } = asked;
-  const own = from !== null && (held === '' || held === ours);
-  if (own && from !== null) return { is: 'grid', pasted: { from, sheet, row, col, cut } };
-
-  return held === ''
-    ? { is: 'neither' }
-    : { is: 'clipboard', text: { text: held, sheet, row, col } };
-}
-
-/**
- * A rectangle from another spreadsheet put down in the grid. The shape it lands
- * in is the reader's to pick, with the lines each answer would add said before
- * it is made (ADR-028, §8 Q11).
- */
-export async function pasteFrom(
-  spec: Spec,
-  asked: PastedText,
-  port: Port,
-  choice?: string,
-): Promise<void> {
-  const sheet = sheetName(asked.sheet);
-  if (sheet === null) {
-    port.refuse(`\`${asked.sheet}\` is not a name a sheet can have`, null);
-    return;
-  }
-
-  const where = { sheet, at: addrAt({ col: asked.col, row: asked.row }) };
-  const rows = tabular(asked.text);
-  if (rows.length === 0) {
-    port.refuse('there is nothing on the clipboard to put down', null);
-    return;
-  }
-
-  if (choice === ONLY) {
-    await land(spec, where, rows, 'cells', true, asked, port);
-    return;
-  }
-
-  const shapes = ways(spec, where, rows);
-  const taken =
-    choice === undefined ? (shapes.length === 1 ? shapes[0] : undefined) : shaped(shapes, choice);
-
-  if (taken === undefined) {
-    if (choice !== undefined) {
-      port.refuse('that answer is no longer one of the ways this edit could be made', null);
-      return;
-    }
-
-    port.refuse(counted(rows), {
-      typed: null,
-      ranged: null,
-      pasted: null,
-      text: asked,
-      canOverride: false,
-      choices: shapes,
-    });
-    return;
-  }
-
-  await land(spec, where, rows, taken.id === 'data' ? 'data' : 'cells', false, asked, port);
-}
-
-/** The rectangle written in the shape that was picked, with the answer a refusal has. */
-async function land(
-  spec: Spec,
-  where: { sheet: SheetName; at: A1Addr },
-  rows: readonly (readonly string[])[],
-  shape: Shape,
-  only: boolean,
-  asked: PastedText,
-  port: Port,
-): Promise<void> {
-  const read = reading(port.text);
-  const intent = pasteText(spec.grid, where, rows, read, shape, only);
-
-  if (intent.kind === 'refused' && shape === 'cells' && !only) {
-    const some = pasteText(spec.grid, where, rows, read, 'cells', true);
-    port.refuse(intent.why, some.kind === 'edit' ? theseFields(asked, some.expects.cells) : null);
-    return;
-  }
-
-  const done = await applied(spec, intent, port, { anyway: false, from: null, typed: null });
-  if (done && intent.kind === 'edit') {
-    const cells = intent.expects.cells.size;
-    port.said(`${cells} cell${cells === 1 ? '' : 's'} pasted.`);
-  }
-}
-
-function shaped(shapes: readonly Choice[], choice: string): Choice | undefined {
-  return shapes.find((one) => one.id === choice);
-}
-
-/** How many cells the clipboard holds, asked before the shape is picked. */
-function counted(rows: readonly (readonly string[])[]): string {
-  const cells = rows.reduce((sum, row) => sum + row.length, 0);
-  return `${cells} cells from the clipboard: how should they be written?`;
-}
-
-/** The shapes a rectangle from outside could land in, with the lines each would add. */
-function ways(
-  spec: Spec,
-  where: { sheet: SheetName; at: A1Addr },
-  rows: readonly (readonly string[])[],
-): Choice[] {
-  const cells = rows.reduce((sum, row) => sum + row.length, 0);
-  const entries: Choice = {
-    id: 'cells',
-    what: `As \`cells:\` entries — ${cells} line${cells === 1 ? '' : 's'}`,
-    moves: cells,
-    sample: [],
-  };
-  if (!couldBlock(spec.grid, where, rows)) return [entries];
-
-  return [
-    {
-      id: 'data',
-      what: `As one \`data:\` block — ${rows.length + 2} lines`,
-      moves: cells,
-      sample: [],
-    },
-    entries,
-  ];
-}
-
-/** The one answer a refused paste from outside has: leave the cells that cannot take it. */
-function theseFields(asked: PastedText, cells: ReadonlySet<string>): Offer {
+export function theseOnly(about: About, what: string, cells: ReadonlySet<string>): Offer {
   const named = [...cells];
 
   return {
-    typed: null,
-    ranged: null,
-    pasted: null,
-    text: asked,
+    about,
     canOverride: false,
-    choices: [
-      {
-        id: ONLY,
-        what: 'Paste into the ones that can take it',
-        moves: named.length,
-        sample: named.slice(0, 3),
-      },
-    ],
+    choices: [{ id: ONLY, what, moves: named.length, sample: named.slice(0, 3) }],
   };
 }
 
-/** The one answer a refused paste has: leave the cells that cannot take it where they are. */
-function theseCells(pasted: Pasted, cells: ReadonlySet<string>): Offer {
-  const named = [...cells];
-
-  return {
-    typed: null,
-    ranged: null,
-    pasted,
-    text: null,
-    canOverride: false,
-    choices: [
-      {
-        id: ONLY,
-        what: 'Paste into the ones that can take it',
-        moves: named.length,
-        sample: named.slice(0, 3),
-      },
-    ],
-  };
-}
-
-/** The one answer a refused rectangle has: leave what cannot be emptied where it is. */
-function theseOnly(ranged: Ranged, cells: ReadonlySet<string>): Offer {
-  const named = [...cells];
-
-  return {
-    typed: null,
-    ranged,
-    pasted: null,
-    text: null,
-    canOverride: false,
-    choices: [
-      {
-        id: ONLY,
-        what: 'Empty the ones that can be',
-        moves: named.length,
-        sample: named.slice(0, 3),
-      },
-    ],
-  };
-}
-
-/** The answer that leaves what cannot be emptied, named the same on both sides. */
-const ONLY = 'only';
+/** The answer that leaves what could not be done, named the same on both sides. */
+export const ONLY = 'only';
+const EMPTIED = 'Empty the ones that can be';
+export const PASTED = 'Paste into the ones that can take it';
 
 /** That answer, taken. Worked out again rather than remembered: the file may have moved. */
 export async function emptied(
@@ -527,14 +272,19 @@ export async function writeOverride(
 }
 
 /** What is needed to ask this edit again where the checker finds it moves more than it named. */
-interface Asked {
+export interface Asked {
   readonly anyway: boolean;
   readonly from: string | null;
   readonly typed: Typed | null;
 }
 
 /** The half of a write that is the same whichever intent produced it. */
-async function applied(spec: Spec, intent: Intent, port: Port, asked: Asked): Promise<boolean> {
+export async function applied(
+  spec: Spec,
+  intent: Intent,
+  port: Port,
+  asked: Asked,
+): Promise<boolean> {
   if (intent.kind === 'refused') {
     port.refuse(intent.why, null);
     return false;
@@ -570,10 +320,7 @@ async function applied(spec: Spec, intent: Intent, port: Port, asked: Asked): Pr
       typed === null
         ? null
         : {
-            typed,
-            ranged: null,
-            pasted: null,
-            text: null,
+            about: { is: 'typed', typed },
             canOverride: false,
             choices: [anyhow(done.surprises, asked.from)],
           },
@@ -591,63 +338,8 @@ async function applied(spec: Spec, intent: Intent, port: Port, asked: Asked): Pr
 }
 
 /** The cells an edit moved, named as an undo of it may name them (ADR-009). */
-function moved(changed: readonly Change[]): string[] {
+export function moved(changed: readonly Change[]): string[] {
   return changed.filter((one) => one.kind === 'cell').map((one) => qualified(one.sheet, one.at));
-}
-
-/** Where the grid's undo landed, and the history it left behind. */
-export interface Taken {
-  readonly at: 'here' | 'shell' | 'nowhere';
-  readonly history: History;
-}
-
-/**
- * The last edit taken back, or put on again, in the file itself — while this
- * editor is still the last thing to have touched it. Where it is not, the
- * editor's own undo is the only honest one and this says so (ADR-030).
- */
-export async function goBack(
-  spec: Spec,
-  history: History,
-  redoing: boolean,
-  port: Port,
-): Promise<Taken> {
-  const step = (redoing ? history.undone : history.done).at(-1);
-  if (step === undefined) {
-    return { at: owns(history, redoing, port) ? 'nowhere' : 'shell', history };
-  }
-
-  const file = filePath(step.file);
-  if (file === null) return { at: 'shell', history };
-
-  const source = port.text(file);
-  if (source === null || source !== port.left(file)) return { at: 'shell', history };
-
-  const done = checked(
-    source,
-    redoing ? step.patch : step.back,
-    { cells: new Set(step.moved), beyond: 'refuse' },
-    { root: spec.root, file, read: spec.read, params: spec.params },
-  );
-  if (done.ok === false || done.back === null) return { at: 'shell', history };
-
-  await port.put(file, done.text);
-  return {
-    at: 'here',
-    history: redoing
-      ? redid(history, { ...step, back: done.back, moved: moved(done.changed) })
-      : took(history),
-  };
-}
-
-/** Whether this editor still holds the file its history ends at, with nothing on this side left to take. */
-function owns(history: History, redoing: boolean, port: Port): boolean {
-  const step = (redoing ? history.done : history.undone).at(-1);
-  const file = step === undefined ? null : filePath(step.file);
-  if (file === null) return false;
-
-  const now = port.text(file);
-  return now !== null && now === port.left(file);
 }
 
 /** Whether an override could be written here: an address nothing writes has nothing to except (`docs/spec.md` §23). */

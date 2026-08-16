@@ -4,21 +4,18 @@ import { did, type History, nothing } from '@yxl-vscode/patch';
 import { addrAt, cellOf, filePath } from '@yxl-vscode/units';
 import type { FromView, Typed } from '@yxl-vscode/webview/protocol';
 import * as vscode from 'vscode';
+import { paste, pastedWith, pasteFrom, whose } from './clipboard';
 import { asOpen, put, reveal, textOf } from './documents';
 import { inspect, type Nodes, nodeUnder } from './inspect';
 import { type Projected, project, redraw, type Window } from './project';
+import { goBack } from './undo';
 import {
   emptied,
   empty,
-  goBack,
   type Offer,
   type Port,
-  paste,
-  pastedWith,
-  pasteFrom,
   resolve,
   type Spec,
-  whose,
   write,
   writeOverride,
 } from './write';
@@ -465,10 +462,7 @@ export class Preview {
     void this.panel.webview.postMessage({
       kind: 'refused',
       why: why.replace(/`/g, ''),
-      typed: offer?.typed ?? null,
-      ranged: offer?.ranged ?? null,
-      pasted: offer?.pasted ?? null,
-      text: offer?.text ?? null,
+      about: offer?.about ?? null,
       canOverride: offer?.canOverride ?? false,
       choices: (offer?.choices ?? []).map((one) => ({
         ...one,

@@ -108,10 +108,7 @@ describe('what the view sends', () => {
     const refused: Refused = {
       kind: 'refused',
       why: 'filled by a range',
-      typed: offer,
-      ranged: null,
-      pasted: null,
-      text: null,
+      about: { is: 'typed', typed: offer },
       canOverride: true,
       choices: [],
     };
@@ -131,10 +128,7 @@ describe('what the view sends', () => {
     told({
       kind: 'refused',
       why: 'filled by a range',
-      typed,
-      ranged: null,
-      pasted: null,
-      text: null,
+      about: { is: 'typed', typed },
       canOverride: true,
       choices,
     });
@@ -150,10 +144,7 @@ describe('what the view sends', () => {
     told({
       kind: 'refused',
       why: 'filled by a range',
-      typed,
-      ranged: null,
-      pasted: null,
-      text: null,
+      about: { is: 'typed', typed },
       canOverride: true,
       choices: [],
     });
@@ -189,10 +180,7 @@ describe('what the view does with what it is told', () => {
     told({
       kind: 'refused',
       why: 'filled by a range',
-      typed: null,
-      ranged: null,
-      pasted: null,
-      text: null,
+      about: null,
       canOverride: false,
       choices: [],
     });
@@ -212,10 +200,7 @@ describe('what the view does with what it is told', () => {
     told({
       kind: 'refused',
       why: 'filled by a range',
-      typed: null,
-      ranged: null,
-      pasted: null,
-      text: null,
+      about: null,
       canOverride: false,
       choices: [],
     });
@@ -236,10 +221,7 @@ describe('what the view does with what it is told', () => {
     told({
       kind: 'refused',
       why: 'filled by a range',
-      typed: null,
-      ranged: null,
-      pasted: null,
-      text: null,
+      about: null,
       canOverride: false,
       choices: [],
     });
@@ -328,10 +310,7 @@ describe('an answer offered about a rectangle', () => {
   const held: Refused = {
     kind: 'refused',
     why: '2 of the 4 cells here cannot be emptied, so none were',
-    typed: null,
-    pasted: null,
-    text: null,
-    ranged: { sheet: 'Sales', top: 1, left: 1, bottom: 2, right: 2 },
+    about: { is: 'ranged', ranged: { sheet: 'Sales', top: 1, left: 1, bottom: 2, right: 2 } },
     canOverride: false,
     choices: [{ id: 'only', what: 'Empty the ones that can be', moves: 2, sample: ['Sales!A1'] }],
   };

@@ -8,7 +8,7 @@ import {
   type Rect,
   type SheetName,
 } from '@yxl-vscode/units';
-import { beside, type Intent, located, type Reading, setValue } from './direct';
+import { beside, type Intent, located, type Reading, setValue, standing } from './direct';
 
 /**
  * Emptying a cell. A cell with nothing in it is not something the format can
@@ -93,7 +93,9 @@ export function clearRange(
     }
   }
 
-  if (held.length > 0 && !only) return { kind: 'refused', why: standing(cells.size, held) };
+  if (held.length > 0 && !only) {
+    return { kind: 'refused', why: standing(cells.size, held, 'emptied') };
+  }
   if (cells.size === 0) {
     return { kind: 'refused', why: 'nothing in this range holds anything to empty' };
   }
@@ -113,15 +115,6 @@ export function clearRange(
     patch: { ops: whole(ops.get(file) ?? [], file, read, adding) },
     expects: { cells, beyond: 'ask' },
   };
-}
-
-/** Why a range was not emptied: how many of how many, then the first cell's own reason. */
-function standing(cleared: number, held: readonly string[]): string {
-  const total = cleared + held.length;
-  const others = held.length - 1;
-  const rest = others === 0 ? '' : ` (and ${others} other${others === 1 ? '' : 's'} here)`;
-
-  return `${held.length} of the ${total} cells here cannot be emptied, so none were: ${held[0]}${rest}`;
 }
 
 /** The same removals, with a mapping whose every entry is going taken out whole: an empty `cells:` will not load. */

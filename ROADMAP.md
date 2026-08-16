@@ -2249,6 +2249,36 @@ this at a phase boundary rather than at the end.
 - A cell's own format — written, or the one its type takes — now wins over a
   band's. Both are requests about *that* cell; a band is something reaching it.
 
+### 2026-08-16 — Refactoring pass after the clipboard (`AGENTS.md` §8)
+Three findings, taken in the order the lenses come in. Nothing about what the
+editor does changed: the same 1293 tests pass, unedited apart from the fixtures
+the first finding simplified.
+
+- **§8.2 — one type's shape was showing up as four problems.** `Offer` and
+  `Refused` carried the gesture a refusal was about as *four* mutually exclusive
+  nullable fields (`typed`, `ranged`, `pasted`, `text`), which the type did not
+  say. Downstream: three near-identical twenty-line builders, an if-else chain
+  over nullables in the view, and every test fixture writing four `null`s. It is
+  one `About` union now, the three builders are one `theseOnly(about, what,
+  cells)`, the view switches on `about.is`, and the fixtures say what they mean.
+- **§8.2 — `standing()` was written twice**, in `clear` and in `paste`, with the
+  verb as the only difference. One, in `direct`, taking the verb.
+- **§8.3 — `write.ts` was 674 lines and three subjects.** Split at the joints
+  that were already there: `clipboard.ts` for `Cmd`+`C` / `Cmd`+`V` and the
+  shape question (211 lines), `undo.ts` for `Cmd`+`Z` (59), and `write.ts` for
+  what a reader types and the half both share (366). The tests followed the
+  code, one file each.
+- **Considered and left**: `paste.ts` at 450 lines has a real boundary in it —
+  the rectangle from inside, the rectangle from outside, and where a cell lands
+  — but it is under §8.3's threshold and the three share more than they differ.
+  Left, with the note, so the next pass has a reason rather than a rediscovery.
+- **§8.4** every export the last four changes added has a direct test; **§8.5**
+  the phase table, ADRs and README were brought up to date as each landed;
+  **§8.7** `layers ok`, and the view holding one less decision than it did.
+- **This pass ends at: exports 371 blocks / 831 lines (avg 2.2), private 222 /
+  289 (1.3), inline 41 / 54 (1.3), 38 over the limit** — the same 38 it started
+  at, across 4 more files.
+
 ### 2026-08-16 — Paste in, and the shape question answered on the buttons
 A rectangle copied in Excel or Google Sheets now lands in the grid. §8 **Q11 is
 closed** and §4.4's `empty` row is answered for a rectangle from outside.
