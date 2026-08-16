@@ -213,14 +213,31 @@ export interface Highlighted {
  * of the window: an edit that appears to do nothing is the one thing worse than
  * an edit that is refused.
  *
- * `override` is the same edit, offered as the exception it would have to be
- * (`docs/spec.md` §23) — present when there is a cell an override could name,
- * and never taken without the reader saying so (ADR-007).
+ * `choices` are the ways the edit *could* be made, each with what it would move,
+ * for the reader to pick between — the editor enumerates and never picks
+ * (ADR-001). `override` is the same edit offered as the exception it would have
+ * to be (`docs/spec.md` §23) — present when there is a cell an override could
+ * name, and never taken without the reader saying so (ADR-007).
  */
 export interface Refused {
   readonly kind: 'refused';
   readonly why: string;
   readonly override: Typed | null;
+  readonly choices: readonly Choice[];
+}
+
+/**
+ * One way of making a refused edit, as the reader is shown it.
+ *
+ * `moves` is how many cells the choice would change and `sample` a few of them
+ * by name: a count alone is a number to guess at, and the whole list of four
+ * hundred is not a thing to read before deciding.
+ */
+export interface Choice {
+  readonly id: string;
+  readonly what: string;
+  readonly moves: number;
+  readonly sample: readonly string[];
 }
 
 /** What a reader typed into a cell, as the view sent it. */
@@ -254,10 +271,10 @@ export type ToView = Drawing | Inspected | Highlighted | Refused | Said;
  * something else*, *draw the part of the sheet I have scrolled to*, and *put
  * this in that cell*.
  *
- * `edit` and `override` carry what the reader typed, not what it means. A
- * leading `=` makes it a formula, exactly as it does in Excel, and deciding that
- * here would be deciding it twice. `override` is the second of those only
- * because the reader asked for it after being told why the first was refused.
+ * `edit`, `resolve` and `override` carry what the reader typed, not what it
+ * means. A leading `=` makes it a formula, exactly as it does in Excel, and
+ * deciding that here would be deciding it twice. The last two are sent only
+ * after the first was refused and the reader chose between the answers.
  *
  * A sheet is named rather than numbered, here and in the answers: the spec may
  * have been read again since the view drew it, and a name is what the reader
@@ -273,6 +290,7 @@ export type FromView =
     }
   | { readonly kind: 'setParam'; readonly name: string; readonly value: string }
   | ({ readonly kind: 'edit' } & Typed)
+  | ({ readonly kind: 'resolve'; readonly choice: string } & Typed)
   | ({ readonly kind: 'override'; readonly reason: string } & Typed)
   | {
       readonly kind: 'window';

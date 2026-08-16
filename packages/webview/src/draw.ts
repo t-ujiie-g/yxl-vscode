@@ -55,6 +55,7 @@ export interface Asks {
   readonly setParam: (name: string, value: string) => void;
   readonly showWindow: (row: number, col: number) => void;
   readonly edit: (row: number, col: number, text: string) => void;
+  readonly resolveWith: (typed: Typed, choice: string) => void;
   readonly overrideWith: (typed: Typed, reason: string) => void;
 }
 

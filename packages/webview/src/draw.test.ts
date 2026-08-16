@@ -12,6 +12,7 @@ function asks(): Asks {
     setParam: vi.fn(),
     showWindow: vi.fn(),
     edit: vi.fn(),
+    resolveWith: vi.fn(),
     overrideWith: vi.fn(),
   };
 }
@@ -511,13 +512,48 @@ describe('what the view says about a spec', () => {
   });
 
   it('says why an edit did not happen, where the edit was made', () => {
-    const refused = { kind: 'refused', why: 'B5 holds a formula', override: null } as const;
+    const refused = {
+      kind: 'refused',
+      why: 'B5 holds a formula',
+      override: null,
+      choices: [],
+    } as const;
     expect(shown({ refused }).querySelector('.refused')?.textContent).toContain('holds a formula');
+  });
+
+  it('lists each answer with what it would move, which is what makes it a choice', () => {
+    const typed = { sheet: 'Sales', row: 5, col: 2, text: '=B1*2' };
+    const refused = {
+      kind: 'refused',
+      why: 'B5 is filled by a range',
+      override: typed,
+      choices: [
+        {
+          id: 'rangeFormula',
+          what: 'Change the range at B2',
+          moves: 4,
+          sample: ['B2', 'B3', 'B4'],
+        },
+      ],
+    } as const;
+    const on = asks();
+    const into = shown({ refused }, on);
+
+    const pick = into.querySelector('.refused .choice');
+    expect(pick?.textContent).toBe('Change the range at B2 — 4 cells (B2, B3, B4, …)');
+
+    pick?.dispatchEvent(new MouseEvent('click'));
+    expect(on.resolveWith).toHaveBeenCalledWith(typed, 'rangeFormula');
   });
 
   it('offers the exception where there is a cell it could be about', () => {
     const typed = { sheet: 'Sales', row: 5, col: 2, text: '5' };
-    const refused = { kind: 'refused', why: 'B5 is filled by a range', override: typed } as const;
+    const refused = {
+      kind: 'refused',
+      why: 'B5 is filled by a range',
+      override: typed,
+      choices: [],
+    } as const;
     const on = asks();
     const into = shown({ refused }, on);
 
@@ -527,7 +563,12 @@ describe('what the view says about a spec', () => {
 
   it('takes the reason from the box beside it, where one was given', () => {
     const typed = { sheet: 'Sales', row: 5, col: 2, text: '5' };
-    const refused = { kind: 'refused', why: 'B5 is filled by a range', override: typed } as const;
+    const refused = {
+      kind: 'refused',
+      why: 'B5 is filled by a range',
+      override: typed,
+      choices: [],
+    } as const;
     const on = asks();
     const into = shown({ refused }, on);
 
@@ -542,7 +583,12 @@ describe('what the view says about a spec', () => {
 
   it('takes Enter in that box as the same answer', () => {
     const typed = { sheet: 'Sales', row: 5, col: 2, text: '5' };
-    const refused = { kind: 'refused', why: 'B5 is filled by a range', override: typed } as const;
+    const refused = {
+      kind: 'refused',
+      why: 'B5 is filled by a range',
+      override: typed,
+      choices: [],
+    } as const;
     const on = asks();
     const into = shown({ refused }, on);
 
@@ -556,7 +602,12 @@ describe('what the view says about a spec', () => {
   });
 
   it('offers nothing where there is nothing an override could name', () => {
-    const refused = { kind: 'refused', why: 'nothing is written there', override: null } as const;
+    const refused = {
+      kind: 'refused',
+      why: 'nothing is written there',
+      override: null,
+      choices: [],
+    } as const;
     expect(shown({ refused }).querySelector('.refused .go')).toBeNull();
   });
 

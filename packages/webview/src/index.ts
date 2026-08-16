@@ -117,6 +117,9 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       typedAt = { row, col };
       host.postMessage({ kind: 'edit', sheet: named(), row, col, text });
     },
+    resolveWith: (typed, choice) => {
+      host.postMessage({ ...typed, choice, kind: 'resolve' });
+    },
     overrideWith: (typed, reason) => {
       // `kind` last: whatever the host handed back is spread first, and a
       // message that ends in someone else's `kind` is that other message.

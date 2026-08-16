@@ -255,7 +255,8 @@ body {
   margin: 0;
 }
 
-.go {
+.go,
+.choice {
   padding: 0;
   border: 0;
   background: none;
@@ -265,8 +266,15 @@ body {
   cursor: pointer;
 }
 
-.go:hover {
+.go:hover,
+.choice:hover {
   text-decoration: underline;
+}
+
+/* Each answer on a line of its own: they are read against each other. */
+.choice {
+  display: block;
+  margin-top: 0.3rem;
 }
 
 .problems {
