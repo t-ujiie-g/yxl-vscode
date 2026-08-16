@@ -1,6 +1,6 @@
-import { copyFileSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { cpSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 import { type CompiledGrid, cellAt, compile } from '@yxl-vscode/compile';
 import { parse } from '@yxl-vscode/cst';
 import { load } from '@yxl-vscode/loader';
@@ -21,14 +21,19 @@ import { build, extract, oracleVersion, PINNED } from './oracle';
  * real rather than as a validator.
  */
 const QUICKSTART = yxlExamples().find((one) => one.name === 'quickstart.yxl.yaml');
+const WORKBOOK = yxlExamples().find((one) => one.name === 'workbook.yxl.yaml');
 
-/** A copy of a spec, alone in a directory of its own, and the write path over it. */
+/**
+ * A copy of a spec, and the write path over it.
+ *
+ * The whole cookbook is copied rather than the one file: a spec assembled from
+ * `$include` reads its neighbours, and an edit may land in one of them.
+ */
 function opened(sample: { path: string }) {
   const dir = mkdtempSync(join(tmpdir(), 'yxl-e2e-'));
-  const path = join(dir, 'spec.yxl.yaml');
-  copyFileSync(sample.path, path);
+  cpSync(dirname(sample.path), dir, { recursive: true });
 
-  const root = filePath(path) ?? ('' as FilePath);
+  const root = filePath(join(dir, basename(sample.path))) ?? ('' as FilePath);
   const refusals: string[] = [];
   const port: Port = {
     text: (file) => {
@@ -61,15 +66,15 @@ function read(root: FilePath): Spec {
   };
 }
 
-/** The workbook the compiler makes of the edited spec, as a grid again. */
-function built(dir: string, root: FilePath): CompiledGrid {
+/** The workbook the compiler makes of the edited spec, read back as a spec. */
+function built(dir: string, root: FilePath): Spec {
   const book = join(dir, 'out.xlsx');
   const back = join(dir, 'back.yxl.yaml');
 
   build(root, book);
   extract(book, back);
 
-  return read(filePath(back) ?? ('' as FilePath)).grid;
+  return read(filePath(back) ?? ('' as FilePath));
 }
 
 function cell(grid: CompiledGrid, sheet: string, at: string) {
@@ -95,7 +100,7 @@ describe('the loop, closed', () => {
     await write(spec(), typed({ row: 2, col: 1, text: 'LATAM' }), port);
     expect(refusals).toEqual([]);
 
-    expect(cell(built(dir, root), 'Sales', 'A2')?.value).toBe('LATAM');
+    expect(cell(built(dir, root).grid, 'Sales', 'A2')?.value).toBe('LATAM');
   });
 
   it('carries a typed formula into the workbook, as a formula', async () => {
@@ -107,7 +112,7 @@ describe('the loop, closed', () => {
 
     // The formula, not the number it stood for: a workbook holding 8300000
     // would be this editor having computed something and written it (ADR-014).
-    expect(cell(built(dir, root), 'Sales', 'B5')?.formula).toBe('SUM(B2:B3)*2');
+    expect(cell(built(dir, root).grid, 'Sales', 'B5')?.formula).toBe('SUM(B2:B3)*2');
   });
 
   it('carries an override into the workbook, over the range that filled the cell', async () => {
@@ -124,7 +129,7 @@ describe('the loop, closed', () => {
     await writeOverride(spec(), at, 'the audit settled this row', port);
     expect(refusals).toHaveLength(1);
 
-    const grid = built(dir, root);
+    const { grid } = built(dir, root);
     expect(cell(grid, 'Sales', 'C3')?.value).toBe(99);
     expect(cell(grid, 'Sales', 'C2')?.formula).toBe('B2*0.05');
   });
@@ -142,7 +147,7 @@ describe('the loop, closed', () => {
     await resolve(spec(), at, 'rangeFormula', port);
     expect(refusals).toHaveLength(1);
 
-    const grid = built(dir, root);
+    const { grid } = built(dir, root);
     expect([cell(grid, 'Sales', 'C2')?.formula, cell(grid, 'Sales', 'C3')?.formula]).toEqual([
       'B2*0.1',
       'B2*0.1',
@@ -158,7 +163,7 @@ describe('the loop, closed', () => {
     await write(spec(), typed({ row: 7, col: 1, text: 'Footnote' }), port);
     expect(refusals).toEqual([]);
 
-    expect(cell(built(dir, root), 'Sales', 'A7')?.value).toBe('Footnote');
+    expect(cell(built(dir, root).grid, 'Sales', 'A7')?.value).toBe('Footnote');
   });
 
   it('empties a cell written in the flow form, keeping the format it wears', async () => {
@@ -170,7 +175,7 @@ describe('the loop, closed', () => {
     await write(spec(), typed({ row: 4, col: 2, text: '' }), port);
     expect(refusals).toEqual([]);
 
-    const grid = built(dir, root);
+    const { grid } = built(dir, root);
     expect(cell(grid, 'Sales', 'B4')?.value).toBeNull();
     expect(cell(grid, 'Sales', 'B4')?.format).toBe('0.0%');
   });
@@ -186,9 +191,35 @@ describe('the loop, closed', () => {
     await write(spec(), { ...at, text: '0.01' }, port);
     expect(refusals).toEqual([]);
 
-    const grid = built(dir, root);
+    const { grid } = built(dir, root);
     expect(cell(grid, 'Sales', 'B4')?.value).toBe(0.01);
     expect(cell(grid, 'Sales', 'B4')?.format).toBe('0.0%');
+  });
+
+  it('carries a changed definition into every cell that reads it', async () => {
+    if (!WORKBOOK) return;
+    const { dir, root, port, spec, refusals } = opened(WORKBOOK);
+    const at = typed({ sheet: 'Summary', row: 17, col: 2, text: '9999' });
+
+    // `B17: { $ref: target_revenue }` in `sheets/summary.yaml`, reading a
+    // definition in `defs.yaml`: the edit lands in neither the sheet's file nor
+    // the one that was opened.
+    await write(spec(), at, port);
+    expect(refusals).toHaveLength(1);
+
+    await resolve(spec(), at, 'definition', port);
+    expect(refusals).toHaveLength(1);
+
+    expect(readFileSync(join(dir, 'workbook', 'defs.yaml'), 'utf8')).toContain(
+      'target_revenue: 9999',
+    );
+
+    // The workbook holds it as Excel does: a defined name, and a cell that
+    // reads it (`docs/spec.md` §6), which is the point of the definition
+    // answer — the sharing survives the edit.
+    const after = built(dir, root);
+    expect(after.doc.defs.values.find((one) => one.name === 'target_revenue')?.value).toBe(9999);
+    expect(cell(after.grid, 'Summary', 'B17')?.formula).toBe('target_revenue');
   });
 
   it('takes a cell back out of the workbook when it is emptied', async () => {
@@ -201,6 +232,6 @@ describe('the loop, closed', () => {
     await write(spec(), typed({ row: 7, col: 1, text: '' }), port);
     expect(refusals).toEqual([]);
 
-    expect(cell(built(dir, root), 'Sales', 'A7')).toBeNull();
+    expect(cell(built(dir, root).grid, 'Sales', 'A7')).toBeNull();
   });
 });

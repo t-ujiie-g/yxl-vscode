@@ -828,7 +828,13 @@ Where it starts to feel like a spreadsheet.
       `cells:` key itself where the sheet has none. ② (extend the `data:`
       rectangle next to it) is the half that decides whether a spec grows a
       hundred `cells:` entries or a table, and it lands with the rectangle work
-      Phase 8 needs anyway.
+      Phase 10 needs anyway.
+      **`defRef` ① and ②** are in, which is the row this phase is *about*:
+      change the definition every cell reading it follows, or write this one
+      cell as a value of its own. Both are offered, always — one moves forty
+      cells and the other moves one, and nothing but the reader knows which was
+      meant. The count beside each is `reaches`, the same answer the inspector
+      highlights with.
 - [x] Resolution dialog: candidates, each with a pre-computed impact summary and
       a sample of affected cells
       **Shipped**, as answers under the grid rather than a modal over it: each
@@ -1962,6 +1968,53 @@ this at a phase boundary rather than at the end.
   two serials either side of it, so the next reader knows it is deliberate.
 - A cell's own format — written, or the one its type takes — now wins over a
   band's. Both are requests about *that* cell; a band is something reaching it.
+
+### 2026-08-16 — Phase 7: the definition row, which is what the phase is for
+
+- **A cell that reads a `defs.values` entry can be edited now**, and it is the
+  row `mediated` write-back exists to answer: *change `tax_rate`, which every
+  cell reading it follows* — with the count — or *write `B4` as a value of its
+  own, leaving the definition alone*.
+- **Both are always offered.** One moves forty cells and the other moves one,
+  and nothing but the reader knows which they meant (ADR-001). This is the row
+  where `Candidate.alone` earns its keep by staying `false`.
+- **Detaching keeps what the cell says beside the reference.** `B2: { value:
+  { $ref: tax_rate }, format: "0.0%" }` loses its `$ref` and keeps its format,
+  because what is written over is the node holding the reference and not the
+  cell.
+- **The edit lands in whichever file wrote the thing being changed.** Tier 4
+  proves it over yxl's `workbook.yxl.yaml`: the cell is in
+  `sheets/summary.yaml`, the definition in `defs.yaml`, and the reader opened
+  neither. The tier now copies the whole cookbook rather than one file, which
+  is what a spec assembled from `$include` needs.
+- The workbook keeps the sharing: `target_revenue` comes back as a defined name
+  Excel holds, with `B17` reading it. 8 new tests, 1097 in total.
+- **The preview was reading one file from the editor and the rest from the
+  disk.** Two defects, one symptom — the definition changed and the grid kept
+  showing the old number:
+  1. it redrew on a change to the document that was *opened* and on a *save* of
+     anything else, and a `WorkspaceEdit` leaves the buffer dirty with no save
+     ever coming. It now redraws for a change to **any file the spec is made
+     of**, which is what `knows` already answered for the cursor.
+  2. the redraw took the opened document's text from its buffer and every
+     `$include`d file from `node:fs`. So even once it fired, it drew the disk's
+     copy. Every file now answers with what the editor holds where it holds
+     anything — for the drawing *and* for the verification loop, which was
+     otherwise checking the next edit against a file the reader had already
+     changed.
+  The composition is a function (`openFirst`) with the editor injected, so the
+  part that can be tested without VS Code is.
+- **Swept before merging** (`AGENTS.md` §8). The rule *the buffer where there is
+  one, the file otherwise* had ended up written twice in `preview.ts`, once as a
+  reader and once as a lookup, with the reader rebuilt on every call. It is one
+  named reader now. And `preview.ts` — the largest file in the tree at 437 lines
+  — was carrying a half that is not about previews: reading a document, writing
+  one, and revealing a span. Those moved to `documents.ts`, which is *the
+  editor's files* beside `files.ts`'s *the disk*, and the preview is 381 lines
+  about a panel and the messages it answers.
+  Left alone: `resolve.ts` at 283 lines is the resolution table with a function
+  per row, and splitting it per row would scatter the table. Revisit at five
+  rows.
 
 ### 2026-08-16 — The roadmap re-cut around the day's work, not the architecture's
 

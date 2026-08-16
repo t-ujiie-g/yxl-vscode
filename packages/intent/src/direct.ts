@@ -132,7 +132,7 @@ export function setFormula(
  * `B4: { format: "0.0%" }` is a number format and nothing else (`docs/spec.md`
  * §3) — and typing into one puts the `value:` key in.
  */
-type Found =
+export type Found =
   | { kind: 'found'; file: FilePath; path: Path; node: Node; add: boolean }
   | { kind: 'refused'; why: string };
 

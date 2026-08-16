@@ -1,9 +1,9 @@
 import { reaches } from '@yxl-vscode/compile';
 import { type Engine, univerEngine } from '@yxl-vscode/evaluate';
-import { addrAt, cellOf, type FilePath, filePath } from '@yxl-vscode/units';
+import { addrAt, cellOf, filePath } from '@yxl-vscode/units';
 import type { FromView, Typed } from '@yxl-vscode/webview/protocol';
 import * as vscode from 'vscode';
-import { readBeside } from './files';
+import { asOpen, put, reveal, textOf } from './documents';
 import { inspect, knows, type Nodes, nodeUnder } from './inspect';
 import { type Projected, project, redraw, type Window } from './project';
 import { type Offer, type Port, resolve, type Spec, write, writeOverride } from './write';
@@ -66,12 +66,17 @@ export class Preview {
     this.panel.webview.html = this.page(extension);
 
     this.listeners.push(
+      // Any file this spec is *made of*, not only the one that was opened: an
+      // edit to a `$include`d sheet or to `defs.yaml` is an edit to this
+      // drawing, and it arrives unsaved — a preview that waited for the save
+      // would show the reader the spec they no longer have.
       vscode.workspace.onDidChangeTextDocument((change) => {
-        if (change.document.uri.toString() === document.uri.toString()) this.later();
+        if (this.reads(change.document)) this.later();
       }),
       vscode.workspace.onDidSaveTextDocument((saved) => {
-        // A `$include` or a `csv:` this spec reads may have been what changed.
-        if (saved.uri.toString() !== document.uri.toString()) this.later();
+        // A `csv:` or a file changed outside this editor, which no change event
+        // spoke for.
+        if (!this.reads(saved)) this.later();
       }),
       vscode.window.onDidChangeTextEditorSelection((moved) => this.follow(moved.textEditor)),
     );
@@ -153,7 +158,7 @@ export class Preview {
     const drawn = project(
       this.document.getText(),
       file,
-      readBeside,
+      asOpen,
       this.params,
       this.windows,
       this.engine,
@@ -190,7 +195,7 @@ export class Preview {
    */
   private answer(asked: FromView): void {
     if (asked.kind === 'reveal') {
-      void this.reveal(asked.file, asked.start, asked.end);
+      void reveal(asked.file, asked.start, asked.end);
       return;
     }
 
@@ -312,13 +317,13 @@ export class Preview {
     const root = filePath(this.document.uri.fsPath);
     if (drawn?.grid == null || drawn.doc == null || root === null) return null;
 
-    return { root, doc: drawn.doc, grid: drawn.grid, read: readBeside, params: this.params };
+    return { root, doc: drawn.doc, grid: drawn.grid, read: asOpen, params: this.params };
   }
 
   private port(): Port {
     return {
-      text: (file) => this.textOf(file),
-      put: (file, text) => this.put(file, text),
+      text: (file) => textOf(this.document, file),
+      put: (file, text) => put(file, text),
       refuse: (why, offer) => this.refuse(why, offer),
       said: (what) => {
         void this.panel.webview.postMessage({ kind: 'said', text: what });
@@ -344,44 +349,6 @@ export class Preview {
         what: one.what.replace(/`/g, ''),
       })),
     });
-  }
-
-  /** The file as the reader has it: the buffer if it is open, the disk if not. */
-  private textOf(file: FilePath): string | null {
-    const open = vscode.workspace.textDocuments.find((one) => one.uri.fsPath === file);
-    if (open !== undefined) return open.getText();
-
-    const here = filePath(this.document.uri.fsPath);
-    return here === null ? null : (readBeside(here, file)?.source ?? null);
-  }
-
-  /** The whole file, replaced — the patch already decided what changed in it. */
-  private async put(file: FilePath, text: string): Promise<void> {
-    const document = await vscode.workspace.openTextDocument(vscode.Uri.file(file));
-    const whole = new vscode.Range(
-      document.positionAt(0),
-      document.positionAt(document.getText().length),
-    );
-
-    const edit = new vscode.WorkspaceEdit();
-    edit.replace(document.uri, whole, text);
-    await vscode.workspace.applyEdit(edit);
-  }
-
-  /**
-   * Take the reader to the node behind a cell — in whichever file it lives,
-   * since an `$include` puts a definition somewhere else.
-   */
-  private async reveal(file: string, start: number, end: number): Promise<void> {
-    const document = await vscode.workspace.openTextDocument(vscode.Uri.file(file));
-    const at = new vscode.Range(document.positionAt(start), document.positionAt(end));
-
-    const editor = await vscode.window.showTextDocument(document, {
-      viewColumn: vscode.ViewColumn.One,
-      preserveFocus: false,
-      selection: at,
-    });
-    editor.revealRange(at, vscode.TextEditorRevealType.InCenterIfOutsideViewport);
   }
 
   private close(): void {
