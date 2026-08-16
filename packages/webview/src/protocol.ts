@@ -138,8 +138,17 @@ export interface Refused {
   readonly typed: Typed | null;
   readonly ranged: Ranged | null;
   readonly pasted: Pasted | null;
+  readonly text: PastedText | null;
   readonly canOverride: boolean;
   readonly choices: readonly Choice[];
+}
+
+/** A rectangle from another spreadsheet as the clipboard gave it, and the cell it is going down on. */
+export interface PastedText {
+  readonly text: string;
+  readonly sheet: string;
+  readonly row: number;
+  readonly col: number;
 }
 
 /** A rectangle copied in the grid, and the cell its top-left corner is going down on. */
@@ -201,6 +210,8 @@ export type FromView =
   | { readonly kind: 'undo'; readonly redo: boolean }
   | ({ readonly kind: 'paste' } & Pasted)
   | ({ readonly kind: 'pasted'; readonly choice: string } & Pasted)
+  | ({ readonly kind: 'pasteText' } & PastedText)
+  | ({ readonly kind: 'pastedText'; readonly choice: string } & PastedText)
   | ({ readonly kind: 'resolve'; readonly choice: string } & Typed)
   | ({ readonly kind: 'override'; readonly reason: string } & Typed)
   | {

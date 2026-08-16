@@ -21,6 +21,7 @@ function asks(): Asks {
     copy: vi.fn(),
     paste: vi.fn(),
     pastedWith: vi.fn(),
+    pastedTextWith: vi.fn(),
   };
 }
 
@@ -712,6 +713,7 @@ describe('what the view says about a spec', () => {
       typed: null,
       ranged: null,
       pasted: null,
+      text: null,
       canOverride: false,
       choices: [],
     } as const;
@@ -725,6 +727,7 @@ describe('what the view says about a spec', () => {
       why: 'B5 is filled by a range',
       ranged: null,
       pasted: null,
+      text: null,
       typed,
       canOverride: true,
       choices: [
@@ -753,6 +756,7 @@ describe('what the view says about a spec', () => {
       why: 'B5 is filled by a range',
       ranged: null,
       pasted: null,
+      text: null,
       typed,
       canOverride: true,
       choices: [],
@@ -771,6 +775,7 @@ describe('what the view says about a spec', () => {
       why: 'B5 is filled by a range',
       ranged: null,
       pasted: null,
+      text: null,
       typed,
       canOverride: true,
       choices: [],
@@ -794,6 +799,7 @@ describe('what the view says about a spec', () => {
       why: 'B5 is filled by a range',
       ranged: null,
       pasted: null,
+      text: null,
       typed,
       canOverride: true,
       choices: [],
@@ -817,6 +823,7 @@ describe('what the view says about a spec', () => {
       typed: null,
       ranged: null,
       pasted: null,
+      text: null,
       canOverride: false,
       choices: [],
     } as const;

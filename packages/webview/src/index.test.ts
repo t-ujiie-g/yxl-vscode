@@ -71,6 +71,9 @@ function at(into: HTMLElement, row: number, col: number): HTMLTableCellElement |
 
 const typed: Typed = { sheet: 'Sales', row: 1, col: 1, text: '99' };
 
+/** The tick a paste waits for the clipboard on, where the page is never given one. */
+const settled = (): Promise<void> => new Promise((done) => setTimeout(done, 0));
+
 /** Select `from`, then reach to `to` with the shift key, as a reader would. */
 function reachFrom(
   into: HTMLElement,
@@ -111,6 +114,7 @@ describe('what the view sends', () => {
       typed: offer,
       ranged: null,
       pasted: null,
+      text: null,
       canOverride: true,
       choices: [],
     };
@@ -133,6 +137,7 @@ describe('what the view sends', () => {
       typed,
       ranged: null,
       pasted: null,
+      text: null,
       canOverride: true,
       choices,
     });
@@ -151,6 +156,7 @@ describe('what the view sends', () => {
       typed,
       ranged: null,
       pasted: null,
+      text: null,
       canOverride: true,
       choices: [],
     });
@@ -189,6 +195,7 @@ describe('what the view does with what it is told', () => {
       typed: null,
       ranged: null,
       pasted: null,
+      text: null,
       canOverride: false,
       choices: [],
     });
@@ -211,6 +218,7 @@ describe('what the view does with what it is told', () => {
       typed: null,
       ranged: null,
       pasted: null,
+      text: null,
       canOverride: false,
       choices: [],
     });
@@ -234,6 +242,7 @@ describe('what the view does with what it is told', () => {
       typed: null,
       ranged: null,
       pasted: null,
+      text: null,
       canOverride: false,
       choices: [],
     });
@@ -324,6 +333,7 @@ describe('an answer offered about a rectangle', () => {
     why: '2 of the 4 cells here cannot be emptied, so none were',
     typed: null,
     pasted: null,
+    text: null,
     ranged: { sheet: 'Sales', top: 1, left: 1, bottom: 2, right: 2 },
     canOverride: false,
     choices: [{ id: 'only', what: 'Empty the ones that can be', moves: 2, sample: ['Sales!A1'] }],
@@ -374,12 +384,13 @@ describe('a rectangle copied in the grid', () => {
     expect(into.querySelectorAll('td.copied')).toHaveLength(4);
   });
 
-  it('names the rectangle and where it is going', () => {
+  it('names the rectangle and where it is going', async () => {
     const { into, sent } = view();
 
     reachFrom(into, { row: 1, col: 1 }, { row: 2, col: 2 });
     press(into, 2, 2, 'c');
     press(into, 1, 2, 'v');
+    await settled();
 
     expect(sent.filter((one) => one.kind === 'paste')).toEqual([
       {
@@ -393,12 +404,13 @@ describe('a rectangle copied in the grid', () => {
     ]);
   });
 
-  it('takes one cell as a rectangle of one', () => {
+  it('takes one cell as a rectangle of one', async () => {
     const { into, sent } = view();
 
     at(into, 1, 1)?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
     press(into, 1, 1, 'c');
     press(into, 2, 2, 'v');
+    await settled();
 
     expect(sent.filter((one) => one.kind === 'paste')[0]).toMatchObject({
       from: { sheet: 'Sales', top: 1, left: 1, bottom: 1, right: 1 },
@@ -407,7 +419,7 @@ describe('a rectangle copied in the grid', () => {
     });
   });
 
-  it('says a cut is a cut, and puts nothing down until it is asked to', () => {
+  it('says a cut is a cut, and puts nothing down until it is asked to', async () => {
     const { into, sent } = view();
 
     reachFrom(into, { row: 1, col: 1 }, { row: 1, col: 2 });
@@ -415,14 +427,16 @@ describe('a rectangle copied in the grid', () => {
     expect(sent.filter((one) => one.kind === 'paste')).toEqual([]);
 
     press(into, 2, 1, 'v');
+    await settled();
     expect(sent.filter((one) => one.kind === 'paste')[0]).toMatchObject({ cut: true });
   });
 
-  it('puts nothing down where nothing was copied', () => {
+  it('puts nothing down where nothing was copied', async () => {
     const { into, sent } = view();
 
     at(into, 1, 1)?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
     press(into, 1, 1, 'v');
+    await settled();
 
     expect(sent.filter((one) => one.kind === 'paste')).toEqual([]);
   });
@@ -452,5 +466,52 @@ describe('a rectangle copied out of the grid', () => {
 
     expect(wrote['text/plain']).toBe('APAC');
     expect(wrote['text/html']).toBe('<table><tr><td>APAC</td></tr></table>');
+  });
+});
+
+describe('a rectangle pasted in from another spreadsheet', () => {
+  /** `Cmd`+`V` on a cell, and the clipboard the browser hands the page for it. */
+  const pasteInto = (into: HTMLElement, row: number, col: number, text: string) => {
+    at(into, row, col)?.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'v', metaKey: true, bubbles: true }),
+    );
+
+    const event = new Event('paste', { bubbles: true });
+    Object.defineProperty(event, 'clipboardData', { value: { getData: () => text } });
+    at(into, row, col)?.dispatchEvent(event);
+  };
+
+  it('sends what the clipboard held, and where it goes, not what it means', async () => {
+    const { into, sent } = view();
+
+    pasteInto(into, 2, 1, 'APAC\t1\nEMEA\t2');
+    await settled();
+
+    expect(sent.filter((one) => one.kind === 'pasteText')).toEqual([
+      { kind: 'pasteText', text: 'APAC\t1\nEMEA\t2', sheet: 'Sales', row: 2, col: 1 },
+    ]);
+  });
+
+  it('puts its own rectangle down where the clipboard still holds what it copied', async () => {
+    const { into, sent } = view();
+
+    at(into, 1, 1)?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    at(into, 1, 1)?.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'c', metaKey: true, bubbles: true }),
+    );
+    pasteInto(into, 2, 2, 'APAC');
+    await settled();
+
+    expect(sent.filter((one) => one.kind === 'pasteText')).toEqual([]);
+    expect(sent.filter((one) => one.kind === 'paste')).toHaveLength(1);
+  });
+
+  it('sends nothing at all for an empty clipboard', async () => {
+    const { into, sent } = view();
+
+    pasteInto(into, 1, 1, '');
+    await settled();
+
+    expect(sent.filter((one) => one.kind === 'pasteText' || one.kind === 'paste')).toEqual([]);
   });
 });

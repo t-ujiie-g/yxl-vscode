@@ -12,6 +12,7 @@ import {
   type Port,
   paste,
   pastedWith,
+  pasteFrom,
   resolve,
   type Spec,
   write,
@@ -657,5 +658,78 @@ describe('a rectangle put down somewhere else', () => {
     await paste(editing.spec, { from, sheet: 'Sales', row: 1, col: 2, cut: true }, editing.port);
     expect(await back(editing)).toBe('here');
     expect(editing.files[ROOT]).toBe(GRID);
+  });
+});
+
+describe('a rectangle from another spreadsheet', () => {
+  const SHEET = `${SALES}    cells:\n      A1: keep\n`;
+  const at = (row: number, col: number) => ({ sheet: 'Sales', row, col });
+
+  it('asks which shape it should land in, with the lines each would add', async () => {
+    const { spec, port, answers, refusals, files } = editor({ [ROOT]: SHEET });
+
+    await pasteFrom(spec, { ...at(1, 2), text: 'APAC\t1\nEMEA\t2' }, port);
+    expect(refusals[0]).toBe('4 cells from the clipboard: how should they be written?');
+    expect(answers[0]).toEqual([
+      { id: 'data', what: 'As one `data:` block — 4 lines', moves: 4, sample: [] },
+      { id: 'cells', what: 'As `cells:` entries — 4 lines', moves: 4, sample: [] },
+    ]);
+    expect(files[ROOT]).toBe(SHEET);
+  });
+
+  it('writes it as `cells:` entries where that is the answer', async () => {
+    const { spec, port, files, told } = editor({ [ROOT]: SHEET });
+
+    await pasteFrom(spec, { ...at(1, 2), text: 'APAC\t1' }, port, 'cells');
+    expect(files[ROOT]).toBe(`${SALES}    cells:\n      A1: keep\n      B1: APAC\n      C1: 1\n`);
+    expect(told).toEqual(['2 cells pasted.']);
+  });
+
+  it('writes it as one `data:` block where that is the answer', async () => {
+    const { spec, port, files } = editor({ [ROOT]: SHEET });
+
+    await pasteFrom(spec, { ...at(1, 2), text: 'APAC\t1' }, port, 'data');
+    expect(files[ROOT]).toContain(
+      'data:\n      - at: B1\n        values:\n          - ["APAC", 1]',
+    );
+  });
+
+  it('does not ask where only one shape is open to it', async () => {
+    const { spec, port, files, refusals } = editor({ [ROOT]: SHEET });
+
+    await pasteFrom(spec, { ...at(1, 1), text: 'LATAM' }, port);
+    expect(refusals).toEqual([]);
+    expect(files[ROOT]).toBe(`${SALES}    cells:\n      A1: LATAM\n`);
+  });
+
+  it('takes no answer it did not offer', async () => {
+    const { spec, port, files, refusals } = editor({ [ROOT]: SHEET });
+
+    await pasteFrom(spec, { ...at(1, 2), text: 'APAC' }, port, 'anything');
+    expect(files[ROOT]).toBe(SHEET);
+    expect(refusals[0]).toContain('no longer one of the ways');
+  });
+
+  it('refuses an empty clipboard', async () => {
+    const { spec, port, refusals } = editor({ [ROOT]: SHEET });
+
+    await pasteFrom(spec, { ...at(1, 2), text: '' }, port);
+    expect(refusals[0]).toContain('nothing on the clipboard');
+  });
+
+  it('offers to paste into the ones that can take it', async () => {
+    const spec = `${SALES}    cells:\n      A1: keep\n    formulas:\n      - at: B1:B1\n        formula: "A1"\n`;
+    const { spec: read, port, answers } = editor({ [ROOT]: spec });
+
+    await pasteFrom(read, { ...at(1, 2), text: 'x\ty' }, port, 'cells');
+    expect(answers[0]?.[0]?.what).toBe('Paste into the ones that can take it');
+  });
+
+  it('can be taken back in place, like every other edit', async () => {
+    const editing = editor({ [ROOT]: SHEET });
+
+    await pasteFrom(editing.spec, { ...at(1, 2), text: 'APAC\t1' }, editing.port, 'cells');
+    expect(await back(editing)).toBe('here');
+    expect(editing.files[ROOT]).toBe(SHEET);
   });
 });

@@ -403,7 +403,7 @@ not a date.
 | Delete, copy or cut a range | ✅ |
 | Copy, cut and paste inside the grid | ✅ — values and formulas, whose references move; looks are Phase 9 (ADR-032) |
 | Copy out into Excel or Sheets | ✅ — the whole look into Sheets; Excel takes everything but the fill (ADR-033) |
-| Paste from Excel or Sheets, values and looks | **Phase 8** |
+| Paste from Excel or Sheets | ✅ for the values; the looks wait on Phase 9's normalizer (ADR-034) |
 | A box to type an address into | **Phase 8** |
 | Find something in the sheet | **Phase 8** |
 | Bold, fill, borders, alignment, number format | **Phase 9** |
@@ -942,9 +942,15 @@ work.
       **Sheets takes all of it. Excel takes everything but the fill**, and that
       is where it is left (ADR-033, §8 Q15): this editor's job is the workbook
       the compiler builds, and that carries every style there is.
-- [ ] **Paste in** from Excel or Sheets: values from the TSV, look from the
+- [x] **Paste in** from Excel or Sheets: values from the TSV, look from the
       HTML, landing as *one* resolution — a `data:` rectangle where the shape
       says so, `cells:` where it does not (§4.4, §8 Q1, Q11)
+      **The values are in and the look is not** (ADR-034): a style write goes
+      through the normalizer, and the normalizer is Phase 9. The shape is
+      asked once with the lines each answer would add, which closes §8 Q11 —
+      one `data:` block, or `cells:` entries, and only the second where the
+      spec already writes those cells. A field means what it would mean typed
+      into the cell, so `1,234` is text and `1234` is a number.
 - [ ] A paste too big to ask about cell by cell: one summary, one answer, and
       the size of the diff it would make said before it is made
 - [ ] Find in the sheet, and go to what it found
@@ -1726,6 +1732,26 @@ and §8 Q15 keeps the leads for anyone who wants to pick it up.
 *What it costs:* a reader pasting a heading into Excel restyles it by hand.
 Said plainly in the README rather than discovered.
 
+### ADR-034 — A paste from outside carries values now and looks when the normalizer exists
+**Accepted.** Pasting a rectangle in from Excel or Sheets writes what the cells
+*hold* — read out of the `text/plain` flavour, each field meaning what it would
+mean typed into that cell. What they *wear* is not written, and the `text/html`
+flavour is not read at all yet.
+
+*Why:* §7 has no fast path — every style write goes through the normalizer
+(ADR-008), and the normalizer is Phase 9. Writing looks before it exists would
+put an anonymous inline style on every one of two hundred pasted cells, which is
+the exact outcome ADR-008 was written to prevent, and it would have to be undone
+by hand afterwards.
+
+*What this costs, and who pays:* a reader pasting a formatted report gets the
+numbers and re-applies the look. That is the same trade the internal paste makes
+(ADR-032), so the rule is one rule rather than two.
+
+*What it is not:* a decision about §8 Q12. How much of the HTML flavour is
+worth reading is still open, and is worth deciding when there is a normalizer to
+hand what is read to.
+
 ## 8. Open questions
 
 - **Q1 — `cells:` A1 keys and row insertion.** Inserting a row rewrites every
@@ -1841,14 +1867,14 @@ Said plainly in the README rather than discovered.
   Q6 asks "native binary only, or also a wasm CLI?" — and the answer here is that
   the whole pipeline, `emit` included, already passes its tests on the JS target.
   That is directly useful to yxl and costs us nothing to report.
-- **Q11 — What shape does a paste land in?** ✅ *Answered for a paste inside the
-  grid, 2026-08-16 (ADR-032):* `cells:` entries, which is §4.4's `empty` row
-  scaled up — the same answer, for a rectangle instead of one cell. **Still open
-  for a paste from outside**, which is where the question really bites: two
-  hundred rows from a report want the `data:` rectangle, it diffs well and
-  survives a row insertion (Q1), and it holds no per-cell styling so a paste
-  that carries looks may have to be both. Decide that half with the paste that
-  needs it, against a real clipboard rather than in the abstract.
+- **Q11 — What shape does a paste land in?** ✅ *Answered 2026-08-16.* Inside the
+  grid, `cells:` entries — §4.4's `empty` row scaled up (ADR-032). From outside,
+  **the reader is asked**, once, with the lines each answer would add: one
+  `data:` block, or `cells:` entries. That is ADR-028's own process, and what
+  makes it answerable rather than a guess is that the two numbers are on the
+  buttons — 4 lines against 600. The `data:` block is offered only where nothing
+  writes those cells yet, since two writers for one address is not a shape
+  question but a mistake.
 - **Q12 — How much of the clipboard's HTML do we read?** Excel and Sheets both
   write `text/html`, and neither documents it. Number formats arrive as already
   formatted text, colours as inline styles that differ by version. The open
@@ -2193,6 +2219,38 @@ this at a phase boundary rather than at the end.
   two serials either side of it, so the next reader knows it is deliberate.
 - A cell's own format — written, or the one its type takes — now wins over a
   band's. Both are requests about *that* cell; a band is something reaching it.
+
+### 2026-08-16 — Paste in, and the shape question answered on the buttons
+A rectangle copied in Excel or Google Sheets now lands in the grid. §8 **Q11 is
+closed** and §4.4's `empty` row is answered for a rectangle from outside.
+
+- **The view sends what the clipboard held, not what it means.** `Cmd`+`V` is no
+  longer taken over by the grid: the clipboard only arrives in the `paste` event
+  the key sets off, and the view decides there whose paste this is — its own
+  rectangle where the clipboard still holds what our copy put on it, the
+  clipboard's where it does not. Where a page is never given a paste event at
+  all, the rectangle the grid holds is what lands, so the internal paste cannot
+  be lost to it.
+- **A field means what it would mean typed into that cell.** `1234` is a number,
+  `1,234` is text, `TRUE` is a boolean — the same reader a keystroke goes
+  through, so a paste cannot mean something a typed cell could not.
+- **The shape is asked once, with the two numbers on the buttons**: *As one
+  `data:` block — 4 lines* against *As `cells:` entries — 600 lines*. That is
+  what makes it a question a reader can answer rather than a preference they are
+  asked to hold an opinion about. The `data:` block is offered only where
+  nothing writes those cells yet: two writers for one address is not a shape
+  question but a mistake.
+- **The values land and the look does not** (ADR-034). A style write goes
+  through the normalizer, the normalizer is Phase 9, and writing looks without
+  it would put an anonymous inline style on every one of two hundred pasted
+  cells — which is the exact outcome ADR-008 exists to prevent. The `text/html`
+  flavour is not read at all yet, and §8 Q12 stays open with a better reason
+  than before.
+- **The landing is the same code the internal paste uses.** Both build a list of
+  *this address holds this*, and one function writes them: over the entry that
+  is there, or as new `cells:` entries. The refusals, the *ones that can take
+  it* answer, and the byte-for-byte undo come with it for nothing.
+- 29 new tests, 1291 in total; comment shape held at 38 over the limit.
 
 ### 2026-08-16 — What the look on the clipboard actually reaches
 Measured rather than assumed, by pasting a styled rectangle out of the preview.

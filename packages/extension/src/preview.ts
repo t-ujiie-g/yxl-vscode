@@ -15,6 +15,7 @@ import {
   type Port,
   paste,
   pastedWith,
+  pasteFrom,
   resolve,
   type Spec,
   write,
@@ -243,6 +244,11 @@ export class Preview {
       return;
     }
 
+    if (asked.kind === 'pasteText' || asked.kind === 'pastedText') {
+      this.tried(this.pasteOutside(asked));
+      return;
+    }
+
     if (asked.kind === 'resolve') {
       this.tried(this.resolveWith(asked));
       return;
@@ -358,6 +364,22 @@ export class Preview {
     await pastedWith(spec, pasted, choice, this.port());
   }
 
+  /** A rectangle from another spreadsheet, in the shape the reader picked for it. */
+  private async pasteOutside(
+    asked: Extract<FromView, { kind: 'pasteText' | 'pastedText' }>,
+  ): Promise<void> {
+    const spec = this.spec();
+    if (spec === null) {
+      this.refuse('this spec has not finished loading', null);
+      return;
+    }
+
+    const { kind, ...text } = asked;
+    const choice = 'choice' in text ? text.choice : undefined;
+
+    await pasteFrom(spec, text, this.port(), choice);
+  }
+
   /** The edit again, made the way the reader chose from the answers it had. */
   private async resolveWith(asked: Extract<FromView, { kind: 'resolve' }>): Promise<void> {
     const spec = this.spec();
@@ -430,6 +452,7 @@ export class Preview {
       typed: offer?.typed ?? null,
       ranged: offer?.ranged ?? null,
       pasted: offer?.pasted ?? null,
+      text: offer?.text ?? null,
       canOverride: offer?.canOverride ?? false,
       choices: (offer?.choices ?? []).map((one) => ({
         ...one,

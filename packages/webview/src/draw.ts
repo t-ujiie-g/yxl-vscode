@@ -18,6 +18,7 @@ import type {
   DrawnSheet,
   Editable,
   Pasted,
+  PastedText,
   Ranged,
   Refused,
   Source,
@@ -76,6 +77,7 @@ export interface Asks {
   readonly resolveWith: (typed: Typed, choice: string) => void;
   readonly emptiedWith: (ranged: Ranged, choice: string) => void;
   readonly pastedWith: (pasted: Pasted, choice: string) => void;
+  readonly pastedTextWith: (text: PastedText, choice: string) => void;
   readonly overrideWith: (typed: Typed, reason: string) => void;
 }
 
@@ -433,8 +435,9 @@ function line(
         return;
       }
 
+      // Not taken over: the clipboard only arrives in the `paste` event this
+      // key sets off, and the view decides there which paste this is.
       if (pasting(event)) {
-        event.preventDefault();
         asks.paste(row, col);
         return;
       }
