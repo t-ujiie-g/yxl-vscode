@@ -48,6 +48,8 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
   let drawing: Drawing | null = null;
   let sheet = 0;
   let selected: Showing['selected'] = null;
+  /** Where a range was started from, which stays put while the selection moves. */
+  let anchor: Showing['anchor'] = null;
   let sources: readonly Source[] | null = null;
   let reached: Reached | null = null;
   let refused: Refused | null = null;
@@ -60,7 +62,7 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
     if (drawing !== null) {
       draw(
         into,
-        { drawing, sheet, selected, sources, reached, refused, said, editable: editable() },
+        { drawing, sheet, selected, anchor, sources, reached, refused, said, editable: editable() },
         asks,
       );
     }
@@ -71,7 +73,7 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
     if (drawing !== null) {
       restate(
         into,
-        { drawing, sheet, selected, sources, reached, refused, said, editable: editable() },
+        { drawing, sheet, selected, anchor, sources, reached, refused, said, editable: editable() },
         asks,
       );
     }
@@ -92,11 +94,22 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
     showSheet: (index) => {
       sheet = index;
       selected = null;
+      anchor = null;
       sources = null;
       reached = null;
       redraw();
     },
     select: (row, col) => {
+      selected = { row, col };
+      anchor = { row, col };
+      sources = null;
+      host.postMessage({ kind: 'inspect', sheet: named(), row, col });
+      restated();
+    },
+    reachTo: (row, col) => {
+      // The anchor stays where the selection was started from, so a range grows
+      // and shrinks from the corner the reader put it at.
+      anchor ??= selected;
       selected = { row, col };
       sources = null;
       host.postMessage({ kind: 'inspect', sheet: named(), row, col });
@@ -150,6 +163,7 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       if (drawing?.file !== sent.file) {
         sheet = 0;
         selected = null;
+        anchor = null;
       } else if (was !== undefined) {
         sheet = sheetAgain(sent.sheets, { name: was.name, index: sheet });
       }

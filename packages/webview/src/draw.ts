@@ -1,5 +1,6 @@
 import { columnLabel } from '@yxl-vscode/units';
 import { drawCell, typeInto } from './cell';
+import { type At, going, takingAll, within } from './keys';
 import {
   inspector,
   note,
@@ -26,7 +27,9 @@ import { across, down, heightOf, type Where, wanted, widthOf } from './window';
 export interface Showing {
   readonly drawing: Drawing;
   readonly sheet: number;
-  readonly selected: { readonly row: number; readonly col: number } | null;
+  readonly selected: At | null;
+  /** The corner the selection was started from, where it reaches further than one cell. */
+  readonly anchor: At | null;
   readonly sources: readonly Source[] | null;
   readonly reached: Reached | null;
   readonly refused: Refused | null;
@@ -51,6 +54,7 @@ export function cellKey(col: number, row: number): string {
 export interface Asks {
   readonly showSheet: (index: number) => void;
   readonly select: (row: number, col: number) => void;
+  readonly reachTo: (row: number, col: number) => void;
   readonly reveal: (source: Source) => void;
   readonly setParam: (name: string, value: string) => void;
   readonly showWindow: (row: number, col: number) => void;
@@ -131,11 +135,19 @@ export function restate(into: HTMLElement, showing: Showing, asks: Asks): void {
   }
 
   for (const cell of grid.querySelectorAll('td.selected')) cell.classList.remove('selected');
+  for (const cell of grid.querySelectorAll('td.ranged')) cell.classList.remove('ranged');
   for (const cell of grid.querySelectorAll('td.reached')) cell.classList.remove('reached');
 
   const at = showing.selected;
   if (at !== null)
     grid.querySelector(`td[data-at="${cellKey(at.col, at.row)}"]`)?.classList.add('selected');
+
+  for (const cell of grid.querySelectorAll<HTMLElement>('td[data-at]')) {
+    const key = cell.getAttribute('data-at')?.split(':') ?? [];
+    const col = Number(key[0]);
+    const row = Number(key[1]);
+    if (ranged(showing, { row, col })) cell.classList.add('ranged');
+  }
 
   for (const key of showing.reached?.cells ?? []) {
     grid.querySelector(`td[data-at="${key}"]`)?.classList.add('reached');
@@ -219,36 +231,6 @@ function grid(sheet: DrawnSheet, showing: Showing, asks: Asks): HTMLElement {
 }
 
 /**
- * How far a key moves the selection, or `null` where it moves nothing.
- *
- * The keys a spreadsheet moves by, and the reason the grid is worth using
- * without a mouse: arrows by one, tab across, page by a window's worth of rows.
- */
-function stepping(event: KeyboardEvent, sheet: DrawnSheet): { rows: number; cols: number } | null {
-  if (event.ctrlKey || event.metaKey || event.altKey) return null;
-  const page = Math.max(1, sheet.rows - 1);
-
-  switch (event.key) {
-    case 'ArrowUp':
-      return { rows: -1, cols: 0 };
-    case 'ArrowDown':
-      return { rows: 1, cols: 0 };
-    case 'ArrowLeft':
-      return { rows: 0, cols: -1 };
-    case 'ArrowRight':
-      return { rows: 0, cols: 1 };
-    case 'Tab':
-      return { rows: 0, cols: event.shiftKey ? -1 : 1 };
-    case 'PageUp':
-      return { rows: -page, cols: 0 };
-    case 'PageDown':
-      return { rows: page, cols: 0 };
-    default:
-      return null;
-  }
-}
-
-/**
  * The selection moved, and the reader's focus with it.
  *
  * A cell outside the drawn window is not in the page at all, so the host is
@@ -260,12 +242,14 @@ function goTo(
   sheet: DrawnSheet,
   to: { row: number; col: number },
   asks: Asks,
+  extend = false,
 ): void {
   const at = {
     row: Math.min(Math.max(to.row, 1), sheet.of.rows),
     col: Math.min(Math.max(to.col, 1), sheet.of.columns),
   };
-  asks.select(at.row, at.col);
+  if (extend) asks.reachTo(at.row, at.col);
+  else asks.select(at.row, at.col);
 
   const grid = from.closest('.grid');
   const next = grid?.querySelector<HTMLElement>(`td[data-at="${cellKey(at.col, at.row)}"]`);
@@ -276,6 +260,15 @@ function goTo(
 
   next.focus({ preventScroll: true });
   next.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+}
+
+/** Whether this cell is inside the rectangle the reader has selected. */
+function ranged(showing: Showing, at: At): boolean {
+  const { selected, anchor } = showing;
+  if (selected === null || anchor === null) return false;
+  if (selected.row === anchor.row && selected.col === anchor.col) return false;
+
+  return within(at, selected, anchor);
 }
 
 /** A key that is a character the reader meant to put in the cell. */
@@ -400,6 +393,7 @@ function line(
     if (showing.selected?.row === row && showing.selected.col === col) {
       drawn.classList.add('selected');
     }
+    if (ranged(showing, { row, col })) drawn.classList.add('ranged');
     if (showing.reached?.cells.has(cellKey(col, row)) === true) drawn.classList.add('reached');
 
     const said = problems.get(cellKey(col, row));
@@ -422,17 +416,32 @@ function line(
     // tab-reachable, because a grid of ten thousand tab stops is a page nobody
     // can leave.
     drawn.tabIndex = -1;
-    drawn.addEventListener('click', () => asks.select(row, col));
+    drawn.addEventListener('mousedown', (event) => {
+      // Shift takes the selection to here; the drag that starts here begins a
+      // new one, exactly as it does in a spreadsheet.
+      if (event.shiftKey) asks.reachTo(row, col);
+      else asks.select(row, col);
+    });
+    drawn.addEventListener('mouseenter', (event) => {
+      if ((event.buttons & 1) === 1) asks.reachTo(row, col);
+    });
     drawn.addEventListener('dblclick', () => type());
     drawn.addEventListener('keydown', (event) => {
       // Typing *in* the box is not typing *at* the cell, and the box is a child
       // of the cell — so its keys arrive here too unless this says otherwise.
       if (event.target !== drawn) return;
 
-      const step = stepping(event, sheet);
-      if (step !== null) {
+      if (takingAll(event)) {
         event.preventDefault();
-        goTo(drawn, sheet, { row: row + step.rows, col: col + step.cols }, asks);
+        asks.select(1, 1);
+        asks.reachTo(sheet.of.rows, sheet.of.columns);
+        return;
+      }
+
+      const move = going(event, sheet, held, { row, col });
+      if (move !== null) {
+        event.preventDefault();
+        goTo(drawn, sheet, move.to, asks, move.extend);
         return;
       }
 
