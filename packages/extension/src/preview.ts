@@ -1,9 +1,10 @@
-import { reaches } from '@yxl-vscode/compile';
+import { type DataReader, reaches } from '@yxl-vscode/compile';
 import { type Engine, univerEngine } from '@yxl-vscode/evaluate';
+import type { IncludeReader } from '@yxl-vscode/loader';
 import { addrAt, cellOf, type FilePath, filePath } from '@yxl-vscode/units';
 import type { FromView, Typed } from '@yxl-vscode/webview/protocol';
 import * as vscode from 'vscode';
-import { readBeside } from './files';
+import { openFirst, readBeside } from './files';
 import { inspect, knows, type Nodes, nodeUnder } from './inspect';
 import { type Projected, project, redraw, type Window } from './project';
 import { type Offer, type Port, resolve, type Spec, write, writeOverride } from './write';
@@ -158,7 +159,7 @@ export class Preview {
     const drawn = project(
       this.document.getText(),
       file,
-      readBeside,
+      this.reading(),
       this.params,
       this.windows,
       this.engine,
@@ -317,7 +318,7 @@ export class Preview {
     const root = filePath(this.document.uri.fsPath);
     if (drawn?.grid == null || drawn.doc == null || root === null) return null;
 
-    return { root, doc: drawn.doc, grid: drawn.grid, read: readBeside, params: this.params };
+    return { root, doc: drawn.doc, grid: drawn.grid, read: this.reading(), params: this.params };
   }
 
   private port(): Port {
@@ -351,10 +352,21 @@ export class Preview {
     });
   }
 
+  /**
+   * Every file this spec is made of, as the reader has it.
+   *
+   * The one that was opened comes from its own buffer; so must the rest, or a
+   * spec assembled from `$include` is drawn half from the editor and half from
+   * the disk.
+   */
+  private reading(): IncludeReader & DataReader {
+    return openFirst(readBeside, (file) => buffered(file));
+  }
+
   /** The file as the reader has it: the buffer if it is open, the disk if not. */
   private textOf(file: FilePath): string | null {
-    const open = vscode.workspace.textDocuments.find((one) => one.uri.fsPath === file);
-    if (open !== undefined) return open.getText();
+    const held = buffered(file);
+    if (held !== null) return held;
 
     const here = filePath(this.document.uri.fsPath);
     return here === null ? null : (readBeside(here, file)?.source ?? null);
@@ -416,4 +428,10 @@ export class Preview {
   </body>
 </html>`;
   }
+}
+
+/** What the editor holds for a file, where it holds anything for it. */
+function buffered(file: FilePath): string | null {
+  const open = vscode.workspace.textDocuments.find((one) => one.uri.fsPath === file);
+  return open === undefined ? null : open.getText();
 }

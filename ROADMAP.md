@@ -1989,13 +1989,21 @@ this at a phase boundary rather than at the end.
   is what a spec assembled from `$include` needs.
 - The workbook keeps the sharing: `target_revenue` comes back as a defined name
   Excel holds, with `B17` reading it. 8 new tests, 1097 in total.
-- **The preview was watching one file and drawing several.** It redrew on a
-  change to the document that was *opened*, and on a *save* of anything else —
-  so an edit landing in `defs.yaml` changed the file and left the grid showing
-  the old number, because a `WorkspaceEdit` leaves the buffer dirty and no save
-  ever came. It now redraws for a change to any file the spec is made of, which
-  is what `knows` already answered for the cursor. A preview that waits for a
-  save is showing a spec the reader no longer has.
+- **The preview was reading one file from the editor and the rest from the
+  disk.** Two defects, one symptom — the definition changed and the grid kept
+  showing the old number:
+  1. it redrew on a change to the document that was *opened* and on a *save* of
+     anything else, and a `WorkspaceEdit` leaves the buffer dirty with no save
+     ever coming. It now redraws for a change to **any file the spec is made
+     of**, which is what `knows` already answered for the cursor.
+  2. the redraw took the opened document's text from its buffer and every
+     `$include`d file from `node:fs`. So even once it fired, it drew the disk's
+     copy. Every file now answers with what the editor holds where it holds
+     anything — for the drawing *and* for the verification loop, which was
+     otherwise checking the next edit against a file the reader had already
+     changed.
+  The composition is a function (`openFirst`) with the editor injected, so the
+  part that can be tested without VS Code is.
 
 ### 2026-08-16 — The roadmap re-cut around the day's work, not the architecture's
 

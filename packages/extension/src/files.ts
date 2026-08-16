@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import type { DataReader } from '@yxl-vscode/compile';
 import type { IncludeReader } from '@yxl-vscode/loader';
-import { filePath } from '@yxl-vscode/units';
+import { type FilePath, filePath } from '@yxl-vscode/units';
 
 /**
  * The half of reading a spec that belongs to the host (ADR-004): resolve a path
@@ -30,3 +30,25 @@ export const readBeside: IncludeReader & DataReader = (from, path) => {
     return null;
   }
 };
+
+/**
+ * The same reader, answering with what the *editor* holds where it holds
+ * anything.
+ *
+ * A `$include`d sheet or a `defs.yaml` that has been edited and not saved is
+ * the spec the reader is looking at. Reading the disk's copy would draw them a
+ * workbook they no longer have — and, worse, would verify their next edit
+ * against it.
+ */
+export function openFirst(
+  beside: IncludeReader & DataReader,
+  opened: (file: FilePath) => string | null,
+): IncludeReader & DataReader {
+  return (from, path) => {
+    const found = beside(from, path);
+    if (found === null) return null;
+
+    const held = opened(found.file);
+    return held === null ? found : { file: found.file, source: held };
+  };
+}
