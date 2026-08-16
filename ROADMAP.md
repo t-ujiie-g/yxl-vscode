@@ -2004,6 +2004,17 @@ this at a phase boundary rather than at the end.
      changed.
   The composition is a function (`openFirst`) with the editor injected, so the
   part that can be tested without VS Code is.
+- **Swept before merging** (`AGENTS.md` §8). The rule *the buffer where there is
+  one, the file otherwise* had ended up written twice in `preview.ts`, once as a
+  reader and once as a lookup, with the reader rebuilt on every call. It is one
+  named reader now. And `preview.ts` — the largest file in the tree at 437 lines
+  — was carrying a half that is not about previews: reading a document, writing
+  one, and revealing a span. Those moved to `documents.ts`, which is *the
+  editor's files* beside `files.ts`'s *the disk*, and the preview is 381 lines
+  about a panel and the messages it answers.
+  Left alone: `resolve.ts` at 283 lines is the resolution table with a function
+  per row, and splitting it per row would scatter the table. Revisit at five
+  rows.
 
 ### 2026-08-16 — The roadmap re-cut around the day's work, not the architecture's
 

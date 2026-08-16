@@ -1,10 +1,9 @@
-import { type DataReader, reaches } from '@yxl-vscode/compile';
+import { reaches } from '@yxl-vscode/compile';
 import { type Engine, univerEngine } from '@yxl-vscode/evaluate';
-import type { IncludeReader } from '@yxl-vscode/loader';
-import { addrAt, cellOf, type FilePath, filePath } from '@yxl-vscode/units';
+import { addrAt, cellOf, filePath } from '@yxl-vscode/units';
 import type { FromView, Typed } from '@yxl-vscode/webview/protocol';
 import * as vscode from 'vscode';
-import { openFirst, readBeside } from './files';
+import { asOpen, put, reveal, textOf } from './documents';
 import { inspect, knows, type Nodes, nodeUnder } from './inspect';
 import { type Projected, project, redraw, type Window } from './project';
 import { type Offer, type Port, resolve, type Spec, write, writeOverride } from './write';
@@ -159,7 +158,7 @@ export class Preview {
     const drawn = project(
       this.document.getText(),
       file,
-      this.reading(),
+      asOpen,
       this.params,
       this.windows,
       this.engine,
@@ -196,7 +195,7 @@ export class Preview {
    */
   private answer(asked: FromView): void {
     if (asked.kind === 'reveal') {
-      void this.reveal(asked.file, asked.start, asked.end);
+      void reveal(asked.file, asked.start, asked.end);
       return;
     }
 
@@ -318,13 +317,13 @@ export class Preview {
     const root = filePath(this.document.uri.fsPath);
     if (drawn?.grid == null || drawn.doc == null || root === null) return null;
 
-    return { root, doc: drawn.doc, grid: drawn.grid, read: this.reading(), params: this.params };
+    return { root, doc: drawn.doc, grid: drawn.grid, read: asOpen, params: this.params };
   }
 
   private port(): Port {
     return {
-      text: (file) => this.textOf(file),
-      put: (file, text) => this.put(file, text),
+      text: (file) => textOf(this.document, file),
+      put: (file, text) => put(file, text),
       refuse: (why, offer) => this.refuse(why, offer),
       said: (what) => {
         void this.panel.webview.postMessage({ kind: 'said', text: what });
@@ -350,55 +349,6 @@ export class Preview {
         what: one.what.replace(/`/g, ''),
       })),
     });
-  }
-
-  /**
-   * Every file this spec is made of, as the reader has it.
-   *
-   * The one that was opened comes from its own buffer; so must the rest, or a
-   * spec assembled from `$include` is drawn half from the editor and half from
-   * the disk.
-   */
-  private reading(): IncludeReader & DataReader {
-    return openFirst(readBeside, (file) => buffered(file));
-  }
-
-  /** The file as the reader has it: the buffer if it is open, the disk if not. */
-  private textOf(file: FilePath): string | null {
-    const held = buffered(file);
-    if (held !== null) return held;
-
-    const here = filePath(this.document.uri.fsPath);
-    return here === null ? null : (readBeside(here, file)?.source ?? null);
-  }
-
-  /** The whole file, replaced — the patch already decided what changed in it. */
-  private async put(file: FilePath, text: string): Promise<void> {
-    const document = await vscode.workspace.openTextDocument(vscode.Uri.file(file));
-    const whole = new vscode.Range(
-      document.positionAt(0),
-      document.positionAt(document.getText().length),
-    );
-
-    const edit = new vscode.WorkspaceEdit();
-    edit.replace(document.uri, whole, text);
-    await vscode.workspace.applyEdit(edit);
-  }
-
-  /**
-   * Take the reader to the node behind a cell — in whichever file it lives,
-   * since an `$include` puts a definition somewhere else.
-   */
-  private async reveal(file: string, start: number, end: number): Promise<void> {
-    const document = await vscode.workspace.openTextDocument(vscode.Uri.file(file));
-    const at = new vscode.Range(document.positionAt(start), document.positionAt(end));
-
-    const editor = await vscode.window.showTextDocument(document, {
-      viewColumn: vscode.ViewColumn.One,
-      preserveFocus: false,
-      selection: at,
-    });
-    editor.revealRange(at, vscode.TextEditorRevealType.InCenterIfOutsideViewport);
   }
 
   private close(): void {
@@ -428,10 +378,4 @@ export class Preview {
   </body>
 </html>`;
   }
-}
-
-/** What the editor holds for a file, where it holds anything for it. */
-function buffered(file: FilePath): string | null {
-  const open = vscode.workspace.textDocuments.find((one) => one.uri.fsPath === file);
-  return open === undefined ? null : open.getText();
 }
