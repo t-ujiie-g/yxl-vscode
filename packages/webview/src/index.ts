@@ -1,6 +1,6 @@
 import type { Rect } from '@yxl-vscode/units';
 import { sheetAgain } from './again';
-import { flavours, onto } from './clipboard';
+import { caught, flavours, onto } from './clipboard';
 import {
   type Asks,
   type Copied,
@@ -76,13 +76,12 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
   /** Where a paste is going, while the clipboard it lands from is still on its way. */
   let landing: { row: number; col: number } | null = null;
 
-  into.addEventListener('paste', (event) => {
+  /** The paste taken, from whichever of the two clipboards it turns out to hold. */
+  const took = (text: string): void => {
     const where = landing;
     landing = null;
     if (where === null) return;
 
-    event.preventDefault();
-    const text = (event as ClipboardEvent).clipboardData?.getData('text/plain') ?? '';
     if (copied !== null && (text === '' || text === ours)) {
       host.postMessage({ kind: 'paste', ...putting(copied, where.row, where.col) });
       return;
@@ -91,6 +90,15 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
     if (text === '') return;
 
     host.postMessage({ kind: 'pasteText', text, sheet: named(), row: where.row, col: where.col });
+  };
+
+  // A `paste` the grid is given itself is taken too: whichever of the two
+  // arrives first clears the landing, so the other is a no-op.
+  into.addEventListener('paste', (event) => {
+    if (landing === null) return;
+
+    event.preventDefault();
+    took((event as ClipboardEvent).clipboardData?.getData('text/plain') ?? '');
   });
 
   /** Where the last edit was typed, so a refusal can put the reader back at it. */
@@ -207,15 +215,13 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
     paste: (row, col) => {
       refused = null;
       said = null;
-      // The clipboard arrives in the `paste` event the key sets off. Where the
-      // page is never given one, the rectangle the grid holds is what lands.
       landing = { row, col };
-      setTimeout(() => {
-        if (landing === null) return;
-
-        landing = null;
-        if (copied !== null) host.postMessage({ kind: 'paste', ...putting(copied, row, col) });
-      }, 0);
+      caught(took, () => {
+        // Nothing arrived: the page was given no clipboard at all, and the
+        // rectangle the grid holds is the only paste there is.
+        if (landing !== null) took('');
+        if (drawing !== null) focusCell(into, showing(drawing));
+      });
     },
     resolveWith: (typed, choice) => {
       host.postMessage({ ...typed, choice, kind: 'resolve' });

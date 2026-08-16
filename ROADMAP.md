@@ -2228,9 +2228,15 @@ closed** and §4.4's `empty` row is answered for a rectangle from outside.
   longer taken over by the grid: the clipboard only arrives in the `paste` event
   the key sets off, and the view decides there whose paste this is — its own
   rectangle where the clipboard still holds what our copy put on it, the
-  clipboard's where it does not. Where a page is never given a paste event at
-  all, the rectangle the grid holds is what lands, so the internal paste cannot
-  be lost to it.
+  clipboard's where it does not.
+- **A page is only given that event where the paste has somewhere editable to
+  land**, which a focused `<td>` is not — measured in the webview, where the
+  first attempt did nothing at all. So a textarea goes under the cursor for the
+  length of the gesture and is taken away again on the next tick, with the cell
+  given the keyboard back. The grid still takes a `paste` of its own if it is
+  ever handed one; whichever arrives first clears the landing, so the other is a
+  no-op. And where neither arrives, the rectangle the grid holds is what lands,
+  so the internal paste cannot be lost to any of this.
 - **A field means what it would mean typed into that cell.** `1234` is a number,
   `1,234` is text, `TRUE` is a boolean — the same reader a keystroke goes
   through, so a paste cannot mean something a typed cell could not.

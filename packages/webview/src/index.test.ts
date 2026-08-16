@@ -470,15 +470,18 @@ describe('a rectangle copied out of the grid', () => {
 });
 
 describe('a rectangle pasted in from another spreadsheet', () => {
-  /** `Cmd`+`V` on a cell, and the clipboard the browser hands the page for it. */
+  /** `Cmd`+`V` on a cell, and the clipboard the browser hands the catcher it puts under it. */
   const pasteInto = (into: HTMLElement, row: number, col: number, text: string) => {
     at(into, row, col)?.dispatchEvent(
       new KeyboardEvent('keydown', { key: 'v', metaKey: true, bubbles: true }),
     );
 
+    const catcher = document.querySelector('textarea.catcher');
+    if (catcher === null) throw new Error('nothing was put under the cursor to catch the paste');
+
     const event = new Event('paste', { bubbles: true });
     Object.defineProperty(event, 'clipboardData', { value: { getData: () => text } });
-    at(into, row, col)?.dispatchEvent(event);
+    catcher.dispatchEvent(event);
   };
 
   it('sends what the clipboard held, and where it goes, not what it means', async () => {
@@ -513,5 +516,16 @@ describe('a rectangle pasted in from another spreadsheet', () => {
     await settled();
 
     expect(sent.filter((one) => one.kind === 'pasteText' || one.kind === 'paste')).toEqual([]);
+  });
+
+  it('takes the catcher away again, and gives the cell the keyboard back', async () => {
+    const { into } = view();
+
+    at(into, 1, 1)?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    pasteInto(into, 1, 1, 'APAC');
+    await settled();
+
+    expect(document.querySelector('textarea.catcher')).toBeNull();
+    expect(document.activeElement?.getAttribute('data-at')).toBe('1:1');
   });
 });
