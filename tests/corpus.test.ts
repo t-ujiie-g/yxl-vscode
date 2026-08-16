@@ -17,6 +17,22 @@ function scalars(node: Node, path: Path = []): { path: Path; node: Node }[] {
   return node.items.flatMap((item, index) => scalars(item, [...path, index]));
 }
 
+/** Every entry and item in the tree, as the path that would remove it. */
+function places(node: Node, path: Path = []): Path[] {
+  if (node.kind === 'scalar') return [];
+  if (node.kind === 'map') {
+    return node.entries.flatMap((e) => {
+      const here = [...path, e.key.value as string];
+      return [here, ...places(e.value, here)];
+    });
+  }
+
+  return node.items.flatMap((item, index) => {
+    const here = [...path, index];
+    return [here, ...places(item, here)];
+  });
+}
+
 function read(sample: Sample) {
   return parse(sample.source, { file: sample.name });
 }
@@ -33,6 +49,9 @@ describe('the corpus', () => {
     expect(fixtures.length).toBeGreaterThan(0);
   });
 });
+
+/** How many removals each sample undid, which the last test reads. */
+const putBack: number[] = [];
 
 describe.each(corpus)('$name', (sample) => {
   it('is retained character for character by the parser library', () => {
@@ -94,6 +113,32 @@ describe.each(corpus)('$name', (sample) => {
     expect(after[moved[0] as number]).toContain('SENTINEL');
   });
 
+  it('puts back every entry a removal takes out, or does not take it out', () => {
+    // Every entry and item in the file, one at a time: a removal either comes
+    // back byte for byte or never happens (ADR-026). The corpus is where the
+    // layouts a removal has to survive actually live — comments above an entry,
+    // blank lines between them, a subtree under a key.
+    const { root } = read(sample);
+    if (!root) return;
+
+    let undone = 0;
+    for (const path of places(root)) {
+      const ops = [{ op: 'remove', path } as const];
+      const done = applyPatch(sample.source, { ops }, { file: sample.name });
+
+      if (done.back === null) {
+        expect(done.text, `${path.join('.')} was removed with no way back`).toBe(sample.source);
+        continue;
+      }
+
+      const back = applyPatch(done.text, done.back, { file: sample.name });
+      expect(back.text, `${path.join('.')} did not come back as it was`).toBe(sample.source);
+      undone += 1;
+    }
+
+    putBack.push(undone);
+  });
+
   it('comes back byte for byte when the edit is undone', () => {
     // The other half of what makes an edit safe to make: the same file, not a
     // file that parses to the same thing (ADR-010). Over a corpus written to be
@@ -112,5 +157,14 @@ describe.each(corpus)('$name', (sample) => {
     if (done.back === null) throw new Error('no way back');
 
     expect(applyPatch(done.text, done.back, { file: sample.name }).text).toBe(sample.source);
+  });
+});
+
+describe('the removals those round trips made', () => {
+  it('put entries back often enough to prove something', () => {
+    // Last, because it reads what the tests above counted. A suite that refused
+    // every removal would otherwise be a green suite that asserted nothing.
+    const total = putBack.reduce((sum, one) => sum + one, 0);
+    expect(total).toBeGreaterThan(300);
   });
 });

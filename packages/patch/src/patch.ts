@@ -1,4 +1,13 @@
-import { type Applied, apply, type Node, nodeAt, type Op, type Path, parse } from '@yxl-vscode/cst';
+import {
+  type Applied,
+  apply,
+  type Node,
+  nodeAt,
+  type Op,
+  type Path,
+  parse,
+  removalOf,
+} from '@yxl-vscode/cst';
 import { type Diagnostic, error, type Span, span } from '@yxl-vscode/diag';
 import { CODE } from './codes';
 
@@ -57,10 +66,8 @@ export interface Inverted {
  * done is the first thing undone, so ops that touch each other come apart the
  * way they went together.
  *
- * Some edits have no inverse in this algebra yet — removing an entry that holds
- * a mapping rather than a scalar is the one that will matter, and it belongs to
- * the phase that adds structural edits. Those are refused rather than applied
- * and regretted.
+ * Some edits still have no inverse: a removal that could not be put back where
+ * it was, to the byte, is refused rather than applied and regretted (ADR-026).
  */
 export function invert(source: string, patch: Patch, options: Options): Inverted {
   const { root, diagnostics: read } = parse(source, options);
@@ -70,7 +77,7 @@ export function invert(source: string, patch: Patch, options: Options): Inverted
   const ops: Op[] = [];
 
   for (const op of [...patch.ops].reverse()) {
-    const back = inverseOf(root, op, options, diagnostics);
+    const back = inverseOf(source, root, op, options, diagnostics);
     if (back === null) return { patch: null, diagnostics };
     ops.push(back);
   }
@@ -78,7 +85,13 @@ export function invert(source: string, patch: Patch, options: Options): Inverted
   return { patch: { ops }, diagnostics };
 }
 
-function inverseOf(root: Node, op: Op, options: Options, into: Diagnostic[]): Op | null {
+function inverseOf(
+  source: string,
+  root: Node,
+  op: Op,
+  options: Options,
+  into: Diagnostic[],
+): Op | null {
   const found = nodeAt(root, op.path);
   const refuse = (message: string): null => {
     const where: Span = found?.span ?? span(0, 0);
@@ -121,25 +134,23 @@ function inverseOf(root: Node, op: Op, options: Options, into: Diagnostic[]): Op
 
     case 'remove': {
       if (found === null) return refuse('nothing is there to put back');
-      if (found.kind !== 'scalar') {
-        return refuse('an entry holding more than a scalar cannot be put back yet');
-      }
+      if (op.path.length === 0) return refuse('the document root cannot be put back');
 
-      const step = op.path[op.path.length - 1];
-      const holder = op.path.slice(0, -1);
-      if (typeof step === 'number') {
-        return { op: 'insert', path: holder, index: step, value: found.value };
-      }
-      if (step === undefined) return refuse('the document root cannot be put back');
+      const taken = removalOf(source, root, op.path);
+      if (taken === null) return refuse('nothing is there to put back');
+      if (taken.inexact !== null) return refuse(taken.inexact);
 
       return {
-        op: 'add',
-        path: holder,
-        key: step,
-        value: found.value,
-        before: after(root, op.path),
+        op: 'restore',
+        path: op.path.slice(0, -1),
+        key: taken.key,
+        before: taken.before,
+        source: source.slice(taken.span.start, taken.span.end),
       };
     }
+
+    case 'restore':
+      return { op: 'remove', path: [...op.path, op.key] };
   }
 }
 
@@ -152,14 +163,4 @@ function keyOf(root: Node, path: Path): string | null {
   if (holder === null || holder.kind !== 'map') return null;
 
   return holder.entries.some((one) => one.key.value === step) ? step : null;
-}
-
-/** The key of the entry after this one, which is where "back where it was" means. */
-function after(root: Node, path: Path): string | null {
-  const holder = nodeAt(root, path.slice(0, -1));
-  if (holder === null || holder.kind !== 'map') return null;
-
-  const index = holder.entries.findIndex((one) => one.key.value === path[path.length - 1]);
-  const next = holder.entries[index + 1];
-  return next === undefined ? null : String(next.key.value);
 }
