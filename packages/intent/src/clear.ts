@@ -1,5 +1,5 @@
 import { type CompiledGrid, cellAt, sheetOf } from '@yxl-vscode/compile';
-import type { Node, Op, Path } from '@yxl-vscode/cst';
+import { type Node, nodeAt, type Op, type Path, parse } from '@yxl-vscode/cst';
 import {
   type A1Addr,
   addrAt,
@@ -36,7 +36,7 @@ export function clearCell(
   return {
     kind: 'edit',
     file: found.file,
-    patch: { ops: emptying(found.node, found.path) },
+    patch: { ops: whole(emptying(found.node, found.path), found.file, text) },
     expects: { cells: new Set([qualified(where.sheet, where.at)]), beyond: 'ask' },
   };
 }
@@ -58,14 +58,15 @@ function emptying(node: Node, path: Path): Op[] {
 }
 
 /**
- * Emptying every cell of a rectangle, as one edit. Applied only where every
- * cell in it can be emptied directly; one that cannot — filled by a range, read
- * from a file — refuses the whole, naming how many and why (ADR-001).
+ * Emptying every cell of a rectangle, as one edit. A cell that cannot be
+ * emptied — filled by a range, read from a file — refuses the whole and names
+ * how many stood in the way, unless `only` says to leave them (ADR-001).
  */
 export function clearRange(
   grid: CompiledGrid,
   where: { sheet: SheetName; rect: Rect },
   text: Text,
+  only = false,
 ): Intent {
   const sheet = sheetOf(grid, where.sheet);
   if (sheet === null) return { kind: 'refused', why: `there is no sheet named \`${where.sheet}\`` };
@@ -91,7 +92,7 @@ export function clearRange(
     }
   }
 
-  if (held.length > 0) return { kind: 'refused', why: standing(cells.size, held) };
+  if (held.length > 0 && !only) return { kind: 'refused', why: standing(cells.size, held) };
   if (cells.size === 0) {
     return { kind: 'refused', why: 'nothing in this range holds anything to empty' };
   }
@@ -108,7 +109,7 @@ export function clearRange(
   return {
     kind: 'edit',
     file,
-    patch: { ops: ops.get(file) ?? [] },
+    patch: { ops: whole(ops.get(file) ?? [], file, text) },
     expects: { cells, beyond: 'ask' },
   };
 }
@@ -120,4 +121,42 @@ function standing(cleared: number, held: readonly string[]): string {
   const rest = others === 0 ? '' : ` (and ${others} other${others === 1 ? '' : 's'} here)`;
 
   return `${held.length} of the ${total} cells here cannot be emptied, so none were: ${held[0]}${rest}`;
+}
+
+/** The same removals, with a mapping whose every entry is going taken out whole: an empty `cells:` will not load. */
+function whole(ops: readonly Op[], file: FilePath, text: Text): Op[] {
+  const source = text(file);
+  const { root } = source === null ? { root: null } : parse(source, { file });
+  if (root === null) return [...ops];
+
+  const going = new Set(ops.filter((one) => one.op === 'remove').map((one) => mark(one.path)));
+  const emptied = new Set<string>();
+  const done: Op[] = [];
+
+  for (const op of ops) {
+    const parent = op.op === 'remove' ? op.path.slice(0, -1) : null;
+    if (parent === null || parent.length === 0 || !leftEmpty(root, parent, going)) {
+      done.push(op);
+      continue;
+    }
+    if (emptied.has(mark(parent))) continue;
+
+    emptied.add(mark(parent));
+    done.push({ op: 'remove', path: parent });
+  }
+
+  return done;
+}
+
+/** Whether every entry of the mapping at `path` is one of the removals. */
+function leftEmpty(root: Node, path: Path, going: ReadonlySet<string>): boolean {
+  const holder = nodeAt(root, path);
+  if (holder === null || holder.kind !== 'map' || holder.entries.length === 0) return false;
+
+  return holder.entries.every((entry) => going.has(mark([...path, String(entry.key.value)])));
+}
+
+/** A path as one comparable string, so a removal can be asked what else is going. */
+function mark(path: Path): string {
+  return JSON.stringify(path);
 }

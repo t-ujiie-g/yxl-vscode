@@ -6,7 +6,16 @@ import * as vscode from 'vscode';
 import { asOpen, put, reveal, textOf } from './documents';
 import { inspect, type Nodes, nodeUnder } from './inspect';
 import { type Projected, project, redraw, type Window } from './project';
-import { empty, type Offer, type Port, resolve, type Spec, write, writeOverride } from './write';
+import {
+  emptied,
+  empty,
+  type Offer,
+  type Port,
+  resolve,
+  type Spec,
+  write,
+  writeOverride,
+} from './write';
 
 /** Long enough that typing does not redraw on every keystroke, short enough to feel live. */
 const SETTLE = 150;
@@ -212,6 +221,11 @@ export class Preview {
       return;
     }
 
+    if (asked.kind === 'emptied') {
+      this.tried(this.emptiedWith(asked));
+      return;
+    }
+
     if (asked.kind === 'resolve') {
       this.tried(this.resolveWith(asked));
       return;
@@ -280,6 +294,18 @@ export class Preview {
     await empty(spec, ranged, this.port());
   }
 
+  /** The rectangle again, emptied of only the cells that can be. */
+  private async emptiedWith(asked: Extract<FromView, { kind: 'emptied' }>): Promise<void> {
+    const spec = this.spec();
+    if (spec === null) {
+      this.refuse('this spec has not finished loading', null);
+      return;
+    }
+
+    const { kind, choice, ...ranged } = asked;
+    await emptied(spec, ranged, choice, this.port());
+  }
+
   /** The edit again, made the way the reader chose from the answers it had. */
   private async resolveWith(asked: Extract<FromView, { kind: 'resolve' }>): Promise<void> {
     const spec = this.spec();
@@ -337,6 +363,7 @@ export class Preview {
       kind: 'refused',
       why: why.replace(/`/g, ''),
       typed: offer?.typed ?? null,
+      ranged: offer?.ranged ?? null,
       canOverride: offer?.canOverride ?? false,
       choices: (offer?.choices ?? []).map((one) => ({
         ...one,

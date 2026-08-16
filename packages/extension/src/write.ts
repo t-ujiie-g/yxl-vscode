@@ -33,9 +33,13 @@ export interface Port {
   readonly said: (what: string) => void;
 }
 
-/** What a reader can do about a refusal: take an answer, or write the exception (ADR-007). */
+/**
+ * What a reader can do about a refusal: take an answer, or write the exception
+ * (ADR-007). The subject is what the gesture named — a cell or a rectangle.
+ */
 export interface Offer {
-  readonly typed: Typed;
+  readonly typed: Typed | null;
+  readonly ranged: Ranged | null;
   readonly canOverride: boolean;
   readonly choices: readonly Choice[];
 }
@@ -85,6 +89,7 @@ export async function write(spec: Spec, typed: Typed, port: Port, anyway = false
     const offer = { sheet: typed.sheet, row: typed.row, col: typed.col, text: typed.text };
     port.refuse(intent.why, {
       typed: offer,
+      ranged: null,
       canOverride: excepts(spec, where),
       choices: answers.map(shown),
     });
@@ -95,11 +100,11 @@ export async function write(spec: Spec, typed: Typed, port: Port, anyway = false
 }
 
 /**
- * Every cell of a rectangle emptied, as one edit. A rectangle has no answers to
- * choose between the way a typed cell does: it is made or it is refused, and
- * the refusal says how many cells stood in the way (ADR-001).
+ * Every cell of a rectangle emptied, as one edit. One that cannot be emptied
+ * refuses the whole and is offered as an answer instead: the same rectangle
+ * with `only` those that can (ADR-001).
  */
-export async function empty(spec: Spec, ranged: Ranged, port: Port): Promise<void> {
+export async function empty(spec: Spec, ranged: Ranged, port: Port, only = false): Promise<void> {
   const sheet = sheetName(ranged.sheet);
   if (sheet === null) {
     port.refuse(`\`${ranged.sheet}\` is not a name a sheet can have`, null);
@@ -107,12 +112,57 @@ export async function empty(spec: Spec, ranged: Ranged, port: Port): Promise<voi
   }
 
   const { top, left, bottom, right } = ranged;
-  const intent = clearRange(spec.grid, { sheet, rect: { top, left, bottom, right } }, port.text);
+  const where = { sheet, rect: { top, left, bottom, right } };
+  const intent = clearRange(spec.grid, where, port.text, only);
+
+  if (intent.kind === 'refused' && !only) {
+    const some = clearRange(spec.grid, where, port.text, true);
+    port.refuse(intent.why, some.kind === 'edit' ? theseOnly(ranged, some.expects.cells) : null);
+    return;
+  }
+
   const done = await applied(spec, intent, port, { anyway: false, from: null, typed: null });
   if (done && intent.kind === 'edit') {
     const cells = intent.expects.cells.size;
     port.said(`${cells} cell${cells === 1 ? '' : 's'} emptied.`);
   }
+}
+
+/** The one answer a refused rectangle has: leave what cannot be emptied where it is. */
+function theseOnly(ranged: Ranged, cells: ReadonlySet<string>): Offer {
+  const named = [...cells];
+
+  return {
+    typed: null,
+    ranged,
+    canOverride: false,
+    choices: [
+      {
+        id: ONLY,
+        what: 'Empty the ones that can be',
+        moves: named.length,
+        sample: named.slice(0, 3),
+      },
+    ],
+  };
+}
+
+/** The answer that leaves what cannot be emptied, named the same on both sides. */
+const ONLY = 'only';
+
+/** That answer, taken. Worked out again rather than remembered: the file may have moved. */
+export async function emptied(
+  spec: Spec,
+  ranged: Ranged,
+  choice: string,
+  port: Port,
+): Promise<void> {
+  if (choice !== ONLY) {
+    port.refuse('that answer is no longer one of the ways this edit could be made', null);
+    return;
+  }
+
+  await empty(spec, ranged, port, true);
 }
 
 /**
@@ -245,7 +295,12 @@ async function applied(spec: Spec, intent: Intent, port: Port, asked: Asked): Pr
       surprising(done.surprises),
       typed === null
         ? null
-        : { typed, canOverride: false, choices: [anyhow(done.surprises, asked.from)] },
+        : {
+            typed,
+            ranged: null,
+            canOverride: false,
+            choices: [anyhow(done.surprises, asked.from)],
+          },
     );
     return false;
   }

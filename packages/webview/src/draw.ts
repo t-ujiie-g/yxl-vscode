@@ -17,6 +17,7 @@ import type {
   DrawnMerge,
   DrawnSheet,
   Editable,
+  Ranged,
   Refused,
   Source,
   Typed,
@@ -62,6 +63,7 @@ export interface Asks {
   readonly empty: (row: number, col: number) => void;
   readonly undo: (redo: boolean) => void;
   readonly resolveWith: (typed: Typed, choice: string) => void;
+  readonly emptiedWith: (ranged: Ranged, choice: string) => void;
   readonly overrideWith: (typed: Typed, reason: string) => void;
 }
 

@@ -4,7 +4,7 @@ import { type IncludeReader, load } from '@yxl-vscode/loader';
 import { type FilePath, filePath } from '@yxl-vscode/units';
 import type { Choice, Typed } from '@yxl-vscode/webview/protocol';
 import { describe, expect, it } from 'vitest';
-import { empty, type Port, resolve, type Spec, write, writeOverride } from './write';
+import { emptied, empty, type Port, resolve, type Spec, write, writeOverride } from './write';
 
 const ROOT = filePath('/specs/report.yxl.yaml') ?? ('' as FilePath);
 
@@ -375,9 +375,42 @@ describe('a rectangle emptied', () => {
     expect(refusals[0]).toContain('cannot be emptied, so none were');
   });
 
-  it('offers nothing to choose from: a rectangle is made or refused', async () => {
+  const HELD = `${SALES}    cells:\n      A1: 1\n      A2: 2\n    formulas:\n      - at: B1:B2\n        formula: "A1"\n`;
+
+  it('offers to empty the ones that can be, naming how many and which', async () => {
+    const { spec, port, answers } = editor({ [ROOT]: HELD });
+
+    await empty(spec, rect, port);
+    expect(answers[0]).toEqual([
+      {
+        id: 'only',
+        what: 'Empty the ones that can be',
+        moves: 2,
+        sample: ['Sales!A1', 'Sales!A2'],
+      },
+    ]);
+  });
+
+  it('empties those and leaves the rest where the reader takes that answer', async () => {
+    const { spec, port, files, told, refusals } = editor({ [ROOT]: HELD });
+
+    await emptied(spec, rect, 'only', port);
+    expect(refusals).toEqual([]);
+    expect(files[ROOT]).toBe(`${SALES}    formulas:\n      - at: B1:B2\n        formula: "A1"\n`);
+    expect(told).toEqual(['2 cells emptied.']);
+  });
+
+  it('takes no answer it did not offer', async () => {
+    const { spec, port, files, refusals } = editor({ [ROOT]: HELD });
+
+    await emptied(spec, rect, 'anything', port);
+    expect(files[ROOT]).toBe(HELD);
+    expect(refusals[0]).toContain('no longer one of the ways');
+  });
+
+  it('offers nothing where nothing in the rectangle could be emptied', async () => {
     const { spec, port, answers } = editor({
-      [ROOT]: `${SALES}    cells:\n      A1: 1\n    formulas:\n      - at: B1:B2\n        formula: "A1"\n`,
+      [ROOT]: `${SALES}    cells:\n      C1: 1\n    formulas:\n      - at: B1:B2\n        formula: "A1"\n`,
     });
 
     await empty(spec, rect, port);

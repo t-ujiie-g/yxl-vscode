@@ -136,6 +136,7 @@ export interface Refused {
   readonly kind: 'refused';
   readonly why: string;
   readonly typed: Typed | null;
+  readonly ranged: Ranged | null;
   readonly canOverride: boolean;
   readonly choices: readonly Choice[];
 }
@@ -186,6 +187,7 @@ export type FromView =
   | { readonly kind: 'setParam'; readonly name: string; readonly value: string }
   | ({ readonly kind: 'edit' } & Typed)
   | ({ readonly kind: 'empty' } & Ranged)
+  | ({ readonly kind: 'emptied'; readonly choice: string } & Ranged)
   | { readonly kind: 'undo'; readonly redo: boolean }
   | ({ readonly kind: 'resolve'; readonly choice: string } & Typed)
   | ({ readonly kind: 'override'; readonly reason: string } & Typed)

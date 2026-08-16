@@ -152,6 +152,11 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
     resolveWith: (typed, choice) => {
       host.postMessage({ ...typed, choice, kind: 'resolve' });
     },
+    emptiedWith: (ranged, choice) => {
+      refused = null;
+      said = null;
+      host.postMessage({ ...ranged, choice, kind: 'emptied' });
+    },
     overrideWith: (typed, reason) => {
       // `kind` last, or a spread message carrying its own `kind` is that message.
       host.postMessage({ ...typed, reason, kind: 'override' });

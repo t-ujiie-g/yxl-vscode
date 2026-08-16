@@ -105,15 +105,16 @@ describe('what emptying will not do', () => {
     expect(intent.kind === 'refused' && intent.why).toContain('filled by the range');
   });
 
-  it('refuses the only cell a sheet has, which would leave `cells:` with nothing', () => {
+  it('takes `cells:` out with the only cell it held, which cannot be left empty', () => {
     const spec = `${SALES}    cells:\n      A1: APAC\n`;
     const intent = emptied(spec, 'A1');
-    if (intent.kind !== 'edit') throw new Error('it should be tried and refused, not withheld');
+    if (intent.kind !== 'edit') throw new Error('refused');
 
     const { read } = files({ [ROOT]: spec });
     const done = checked(spec, intent.patch, intent.expects, { root: ROOT, file: ROOT, read });
+    if (done.ok !== true) throw new Error('the checker did not apply it');
 
-    expect(done.ok).toBe(false);
+    expect(done.text).toBe(SALES);
   });
 });
 
@@ -182,6 +183,34 @@ describe('a rectangle emptied as one edit', () => {
     expect(intent.kind === 'refused' && intent.why).toBe(
       "2 of the 4 cells here cannot be emptied, so none were: `B1` is where this range's one formula is written, and changing it changes every cell the range fills (and 1 other here)",
     );
+  });
+
+  it('takes the mapping out whole where every cell it held is going', () => {
+    const spec = `${SALES}    cells:\n      A1: 1\n      B1: 2\n`;
+    const { grid, text } = files({ [ROOT]: spec });
+    const intent = clearRange(
+      grid,
+      { sheet: 'Sales' as SheetName, rect: { top: 1, left: 1, bottom: 1, right: 2 } },
+      text,
+    );
+    if (intent.kind !== 'edit') throw new Error('refused');
+
+    expect(intent.patch.ops).toEqual([{ op: 'remove', path: ['sheets', 0, 'cells'] }]);
+  });
+
+  it('comes back byte for byte when a whole mapping went', () => {
+    const spec = `${SALES}    cells:\n      A1: 1\n      B1: 2\n`;
+    const { grid, text } = files({ [ROOT]: spec });
+    const intent = clearRange(
+      grid,
+      { sheet: 'Sales' as SheetName, rect: { top: 1, left: 1, bottom: 1, right: 2 } },
+      text,
+    );
+    if (intent.kind !== 'edit') throw new Error('refused');
+
+    const done = applyPatch(spec, intent.patch, { file: ROOT });
+    if (done.back === null) throw new Error('no way back');
+    expect(applyPatch(done.text, done.back, { file: ROOT }).text).toBe(spec);
   });
 
   it('refuses a rectangle with nothing in it, rather than writing nothing', () => {
