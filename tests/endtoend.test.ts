@@ -160,4 +160,17 @@ describe('the loop, closed', () => {
 
     expect(cell(built(dir, root), 'Sales', 'A7')?.value).toBe('Footnote');
   });
+
+  it('takes a cell back out of the workbook when it is emptied', async () => {
+    if (!QUICKSTART) return;
+    const { dir, root, port, spec, refusals } = opened(QUICKSTART);
+
+    await write(spec(), typed({ row: 7, col: 1, text: 'Footnote' }), port);
+    // Emptying it is not writing nothing into it: a cell with nothing in it is
+    // not something the format can say (`docs/spec.md` §3), so the entry goes.
+    await write(spec(), typed({ row: 7, col: 1, text: '' }), port);
+    expect(refusals).toEqual([]);
+
+    expect(cell(built(dir, root), 'Sales', 'A7')).toBeNull();
+  });
 });

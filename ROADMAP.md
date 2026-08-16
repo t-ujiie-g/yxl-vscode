@@ -1782,8 +1782,14 @@ applies, and only an edit with several is a question.*
   down, all clamped to the sheet. Off the edge of the drawn window the host is
   asked for a window around where the reader went, and the redraw puts the focus
   back — but only if the grid had it, so the text editor beside is never robbed.
-- **Delete empties a cell**, which is the write path already there: typing
-  nothing into a cell is a cell that holds nothing.
+- **Delete empties a cell**, and emptying one *takes the entry out*. Writing
+  `A7:` with nothing under it looked like the obvious thing and is a spec the
+  compiler refuses: a cell needs at least one of `value`, `formula`, `rich`,
+  `style`, or `format` (`docs/spec.md` §3). So the entry goes — except for what
+  the cell *wears*: `{ value: 1, style: header }` keeps its style and loses its
+  value, which is what a spreadsheet leaves behind. A field of a `data:` block
+  is the format's own exception: `null` in a row is a blank cell (§9), so there
+  the ordinary write says it.
 
 - **An address nothing reaches can be written now.** Typing into a blank cell
   offers it as a new `cells:` entry — the `empty` row's first answer — with the

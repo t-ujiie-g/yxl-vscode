@@ -2,6 +2,7 @@ import { type CompiledGrid, cellAt, type DataReader, type Setting } from '@yxl-v
 import {
   type Candidate,
   candidates,
+  clearCell,
   type Intent,
   meant,
   override,
@@ -69,10 +70,14 @@ export async function write(spec: Spec, typed: Typed, port: Port): Promise<void>
   const where = { sheet, at };
 
   // A leading `=` is a formula, as it is in Excel and in every spreadsheet a
-  // reader has used; the spec's own two keys are the same distinction.
+  // reader has used; the spec's own two keys are the same distinction. Nothing
+  // typed at all is the cell emptied, which is not a value but the absence of
+  // one (`docs/spec.md` §3).
   const intent = typed.text.startsWith('=')
     ? setFormula(spec.grid, where, typed.text.slice(1), port.text)
-    : setValue(spec.grid, where, meant(typed.text), port.text);
+    : typed.text === ''
+      ? clearCell(spec.grid, where, port.text)
+      : setValue(spec.grid, where, meant(typed.text), port.text);
 
   if (intent.kind === 'refused') {
     const answers = candidates(spec.grid, where, typed.text, port.text);

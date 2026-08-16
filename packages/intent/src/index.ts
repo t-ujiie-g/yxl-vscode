@@ -1,3 +1,4 @@
+export { clearCell } from './clear';
 export { type Intent, setFormula, setValue, type Text } from './direct';
 export { meant } from './meant';
 export { override, type Says } from './override';

@@ -72,7 +72,6 @@ describe('what a reader typed, all the way to the file', () => {
       ['42', 'B1: 42'],
       ['true', 'B1: true'],
       ['4.5', 'B1: 4.5'],
-      ['', 'B1:'],
     ] as const) {
       const { spec: read, port, files } = editor(spec);
       await write(read, typed({ col: 2, text }), port);
@@ -293,5 +292,19 @@ describe('a cell nothing has written yet', () => {
 
     await resolve(spec, typed({ row: 3, col: 1, text: 'Total' }), 'newCell', port);
     expect(files[ROOT]).toContain('A3: Total');
+  });
+});
+
+describe('a cell emptied', () => {
+  it('takes the entry out rather than leaving a cell with nothing in it', async () => {
+    // `A1:` with no value is a spec the compiler refuses (`docs/spec.md` §3),
+    // so Delete has to take the line, not blank it.
+    const { spec, port, files, refusals } = editor({
+      [ROOT]: `${SALES}    cells:\n      A1: APAC\n      B1: 1\n`,
+    });
+
+    await write(spec, typed({ text: '' }), port);
+    expect(refusals).toEqual([]);
+    expect(files[ROOT]).toBe(`${SALES}    cells:\n      B1: 1\n`);
   });
 });
