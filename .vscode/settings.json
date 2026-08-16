@@ -1,5 +1,0 @@
-{
-    "yaml.schemas": {
-        "https://raw.githubusercontent.com/t-ujiie-g/yxl/main/docs/yxl.schema.json": "*.yxl.yaml"
-    }
-}
