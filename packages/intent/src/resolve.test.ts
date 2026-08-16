@@ -131,6 +131,66 @@ describe('a cell nothing has written yet', () => {
   });
 });
 
+describe('a cell that reads a definition', () => {
+  const SHARED = `defs:
+  values:
+    tax_rate: 0.085
+sheets:
+  - name: Sales
+    cells:
+      A1: 1
+      B1: { $ref: tax_rate }
+      B2:
+        value: { $ref: tax_rate }
+        format: "0.0%"
+`;
+
+  it('offers both answers: the definition, or this cell alone', () => {
+    expect(offered(SHARED, 'B1', '0.1').map((one) => one.id)).toEqual(['definition', 'detach']);
+  });
+
+  it('counts what changing the definition would move, which is the point of asking', () => {
+    const [change] = offered(SHARED, 'B1', '0.1');
+
+    expect(change?.what).toContain('tax_rate');
+    expect(change?.moves).toEqual([
+      { sheet: 'Sales', at: 'B1' },
+      { sheet: 'Sales', at: 'B2' },
+    ]);
+  });
+
+  it('changes the definition where the definition is the answer', () => {
+    const [change] = offered(SHARED, 'B1', '0.1');
+    if (change === undefined) throw new Error('nothing was offered');
+
+    expect(taken(SHARED, change)).toContain('tax_rate: 0.1');
+  });
+
+  it('detaches the one cell, leaving the definition where it was', () => {
+    const [, detach] = offered(SHARED, 'B1', '0.1');
+    if (detach === undefined) throw new Error('nothing was offered');
+
+    const after = taken(SHARED, detach);
+    expect(after).toContain('B1: 0.1');
+    expect(after).toContain('tax_rate: 0.085');
+  });
+
+  it('detaches a cell that says more than the reference, keeping what it says', () => {
+    const [, detach] = offered(SHARED, 'B2', '0.1');
+    if (detach === undefined) throw new Error('nothing was offered');
+
+    expect(taken(SHARED, detach)).toContain('        value: 0.1\n        format: "0.0%"');
+  });
+
+  it('asks even though one answer moves a single cell, because the other does not', () => {
+    expect(offered(SHARED, 'B1', '0.1').every((one) => !one.alone)).toBe(true);
+  });
+
+  it('says nothing about a formula typed into one, which is a different namespace', () => {
+    expect(offered(SHARED, 'B1', '=A1*2')).toEqual([]);
+  });
+});
+
 describe('what it will not offer', () => {
   it('says nothing away from the anchor, where the formula would be off by a row', () => {
     // `=B2*0.1` typed into C2 means `B1*0.1` to a range anchored at C1, and

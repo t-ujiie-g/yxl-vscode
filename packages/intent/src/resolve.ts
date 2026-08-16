@@ -7,9 +7,16 @@ import {
   reaches,
   sheetOf,
 } from '@yxl-vscode/compile';
-import { type Op, type Path, renderScalar } from '@yxl-vscode/cst';
-import { type A1Addr, addrAt, cellOf, qualified, type SheetName } from '@yxl-vscode/units';
-import { type Intent, located, type Text } from './direct';
+import { type Node, type Op, type Path, renderScalar } from '@yxl-vscode/cst';
+import {
+  type A1Addr,
+  addrAt,
+  cellOf,
+  type FilePath,
+  qualified,
+  type SheetName,
+} from '@yxl-vscode/units';
+import { type Found, type Intent, located, type Text } from './direct';
 import { meaning } from './typed';
 
 /**
@@ -58,10 +65,91 @@ export function candidates(
   }
 
   const origin = cell.provenance.value;
+  if (origin.kind === 'defRef') return definition(grid, origin, where, typed, text);
   if (origin.kind !== 'formulaRange') return [];
 
   const written = rangeFormula(grid, origin, typed, text);
   return written === null ? [] : [written];
+}
+
+/**
+ * A cell that reads a `defs.values` entry (`docs/spec.md` §6), and the two
+ * answers typing into one has.
+ *
+ * They are the shape of the whole phase: change the thing many cells share, or
+ * take this one cell out of the sharing. Neither is the obvious answer — which
+ * is why a definition is `mediated` and always asks — and the difference
+ * between them is the count beside each.
+ */
+function definition(
+  grid: CompiledGrid,
+  origin: Extract<FacetOrigin, { kind: 'defRef' }>,
+  where: { sheet: SheetName; at: A1Addr },
+  typed: string,
+  text: Text,
+): readonly Candidate[] {
+  const meant = meaning(typed);
+  if (meant.is !== 'value') return [];
+
+  const offered: Candidate[] = [];
+  const def = located(origin.def, text);
+
+  if (def.kind === 'found' && def.node.kind === 'scalar') {
+    const moves = reaches(grid, origin.def);
+    offered.push({
+      id: 'definition',
+      what: `Change \`${String(def.path[def.path.length - 1])}\`, which every cell reading it follows`,
+      moves,
+      alone: false,
+      intent: {
+        kind: 'edit',
+        file: def.file,
+        patch: { ops: [{ op: 'set', path: def.path, value: meant.value }] },
+        expects: {
+          cells: new Set(moves.map((one) => qualified(one.sheet as SheetName, one.at))),
+          beyond: 'refuse',
+        },
+      },
+    });
+  }
+
+  const holder = reference(located(origin.node, text));
+  if (holder !== null) {
+    offered.push({
+      id: 'detach',
+      what: `Write \`${where.at}\` as a value of its own, leaving the definition alone`,
+      moves: [{ sheet: where.sheet, at: where.at }],
+      alone: false,
+      intent: {
+        kind: 'edit',
+        file: holder.file,
+        // Text rather than a value: what is written over is a mapping, and the
+        // bytes it was are what puts it back (ADR-026).
+        patch: { ops: [{ op: 'write', path: holder.path, source: renderScalar(meant.value) }] },
+        expects: { cells: new Set([qualified(where.sheet, where.at)]), beyond: 'refuse' },
+      },
+    });
+  }
+
+  return offered;
+}
+
+/**
+ * The node that holds the `$ref`, which is the cell itself where the spec wrote
+ * `A1: { $ref: name }` and its `value:` where the cell says more than that.
+ */
+function reference(found: Found): { file: FilePath; path: Path } | null {
+  if (found.kind === 'refused' || found.node.kind !== 'map') return null;
+
+  const refs = (node: Node): boolean =>
+    node.kind === 'map' && node.entries.some((entry) => entry.key.value === '$ref');
+
+  if (refs(found.node)) return { file: found.file, path: found.path };
+
+  const held = found.node.entries.find((entry) => entry.key.value === 'value');
+  return held !== undefined && refs(held.value)
+    ? { file: found.file, path: [...found.path, 'value'] }
+    : null;
 }
 
 /**

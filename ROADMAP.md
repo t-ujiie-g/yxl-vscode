@@ -828,7 +828,13 @@ Where it starts to feel like a spreadsheet.
       `cells:` key itself where the sheet has none. ② (extend the `data:`
       rectangle next to it) is the half that decides whether a spec grows a
       hundred `cells:` entries or a table, and it lands with the rectangle work
-      Phase 8 needs anyway.
+      Phase 10 needs anyway.
+      **`defRef` ① and ②** are in, which is the row this phase is *about*:
+      change the definition every cell reading it follows, or write this one
+      cell as a value of its own. Both are offered, always — one moves forty
+      cells and the other moves one, and nothing but the reader knows which was
+      meant. The count beside each is `reaches`, the same answer the inspector
+      highlights with.
 - [x] Resolution dialog: candidates, each with a pre-computed impact summary and
       a sample of affected cells
       **Shipped**, as answers under the grid rather than a modal over it: each
@@ -1962,6 +1968,27 @@ this at a phase boundary rather than at the end.
   two serials either side of it, so the next reader knows it is deliberate.
 - A cell's own format — written, or the one its type takes — now wins over a
   band's. Both are requests about *that* cell; a band is something reaching it.
+
+### 2026-08-16 — Phase 7: the definition row, which is what the phase is for
+
+- **A cell that reads a `defs.values` entry can be edited now**, and it is the
+  row `mediated` write-back exists to answer: *change `tax_rate`, which every
+  cell reading it follows* — with the count — or *write `B4` as a value of its
+  own, leaving the definition alone*.
+- **Both are always offered.** One moves forty cells and the other moves one,
+  and nothing but the reader knows which they meant (ADR-001). This is the row
+  where `Candidate.alone` earns its keep by staying `false`.
+- **Detaching keeps what the cell says beside the reference.** `B2: { value:
+  { $ref: tax_rate }, format: "0.0%" }` loses its `$ref` and keeps its format,
+  because what is written over is the node holding the reference and not the
+  cell.
+- **The edit lands in whichever file wrote the thing being changed.** Tier 4
+  proves it over yxl's `workbook.yxl.yaml`: the cell is in
+  `sheets/summary.yaml`, the definition in `defs.yaml`, and the reader opened
+  neither. The tier now copies the whole cookbook rather than one file, which
+  is what a spec assembled from `$include` needs.
+- The workbook keeps the sharing: `target_revenue` comes back as a defined name
+  Excel holds, with `B17` reading it. 8 new tests, 1097 in total.
 
 ### 2026-08-16 — The roadmap re-cut around the day's work, not the architecture's
 
