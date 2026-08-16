@@ -131,14 +131,11 @@ export function addition(
     refuse(CODE.notAMapping, `\`${formatPath(op.path)}\` is not a mapping`, target.span);
     return undefined;
   }
-  if (target.flow) {
-    refuse(CODE.flowNotSupported, insideFlow(op.path), target.span);
-    return undefined;
-  }
   if (target.entries.some((entry) => entry.key.value === op.key)) {
     refuse(CODE.keyExists, `\`${op.key}\` is already there`, target.span);
     return undefined;
   }
+  if (target.flow) return { span: target.span, text: withEntry(source, target, op) };
 
   const first = target.entries[0];
   if (!first) {
@@ -195,6 +192,40 @@ function opensAnItem(source: string, start: number): boolean {
 }
 
 type Held = Extract<Site, { in: 'map' } | { in: 'seq' }>;
+
+/**
+ * A flow mapping with an entry written into it, as text.
+ *
+ * `before` names the entry it goes above, as it does in the block form, and
+ * without one it goes last. Everything but the entry and its separator is the
+ * file's own bytes, so nothing else in the collection is reformatted.
+ */
+function withEntry(source: string, target: Mapping, op: Extract<Op, { op: 'add' }>): string {
+  const whole = target.span;
+  const written = `${renderScalar(op.key)}: ${renderScalar(op.value)}`;
+
+  const above = target.entries.find((entry) => entry.key.value === op.before);
+  if (above !== undefined) {
+    return (
+      source.slice(whole.start, above.span.start) +
+      written +
+      ', ' +
+      source.slice(above.span.start, whole.end)
+    );
+  }
+
+  const last = target.entries[target.entries.length - 1];
+  if (last === undefined) {
+    return `${source.slice(whole.start, whole.start + 1)} ${written} ${source.slice(whole.end - 1, whole.end)}`;
+  }
+
+  return (
+    source.slice(whole.start, last.span.end) +
+    ', ' +
+    written +
+    source.slice(last.span.end, whole.end)
+  );
+}
 
 /**
  * A flow collection with one of its entries cut out, as text.

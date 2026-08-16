@@ -1797,6 +1797,14 @@ applies, and only an edit with several is a question.*
   or the comma before where it is the last — and the rest of the collection is
   the file's own bytes on either side of the cut. The undo writes the
   collection back as it was, which is byte-exact by construction.
+- **A cell written for its format alone can be typed into.** Emptying `B4:
+  { value: 0.085, format: "0.0%" }` leaves `{ format: "0.0%" }` — still a cell
+  (`docs/spec.md` §3), and typing `0.01` into it was refused as *mediated* and
+  offered an override, which is the wrong answer to an edit with one place to
+  go. The `value:` key is now written into the cell that has not got one, above
+  whatever is there, which is the order the spec's own examples use. `empty`
+  origins carry the node they were not written at, so the badge and the write
+  agree: a cell there is `direct`, and no cell at all still asks.
 - **A flow collection's span had stopped at its last member**, leaving the
   bracket that closes it outside the node it closes. Correct for a block
   collection, where the span deliberately stops short of the comments that

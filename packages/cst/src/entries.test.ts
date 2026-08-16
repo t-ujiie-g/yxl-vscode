@@ -56,6 +56,24 @@ describe('entries of a collection', () => {
       expect(diagnostics[0]?.code).toBe(CODE.cannotRemoveRoot);
     });
 
+    it('writes an entry into a flow mapping, above the one it names', () => {
+      const source = 'cells:\n  B4: { format: "0.0%" }\n';
+      const op: Op = {
+        op: 'add',
+        path: ['cells', 'B4'],
+        key: 'value',
+        value: 0.01,
+        before: 'format',
+      };
+      expect(text(source, op)).toBe('cells:\n  B4: { value: 0.01, format: "0.0%" }\n');
+    });
+
+    it('writes it last in a flow mapping where it names nothing', () => {
+      const source = 'cells:\n  B4: { format: "0.0%" }\n';
+      const op: Op = { op: 'add', path: ['cells', 'B4'], key: 'value', value: 0.01, before: null };
+      expect(text(source, op)).toBe('cells:\n  B4: { format: "0.0%", value: 0.01 }\n');
+    });
+
     it('cuts an entry out of a flow collection, separator and all', () => {
       const source = 'cells:\n  B4: { value: 0.085, format: "0.0%" }\n';
       expect(text(source, { op: 'remove', path: ['cells', 'B4', 'value'] })).toBe(

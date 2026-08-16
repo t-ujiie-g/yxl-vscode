@@ -301,7 +301,8 @@ describe('a cell that is only a number format', () => {
     // in it says what the cell holds.
     const cell = at(`${SALES}    cells:\n      A1: { format: "0.0%" }\n`, 'A1');
     expect(cell?.value).toBeNull();
-    expect(cell?.provenance.value).toEqual({ kind: 'empty' });
+    expect(cell?.provenance.value).toMatchObject({ kind: 'empty' });
+    expect(cell?.provenance.value.kind === 'empty' && cell.provenance.value.node).not.toBeNull();
     expect(cell?.format).toBe('0.0%');
   });
 });

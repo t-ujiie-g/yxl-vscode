@@ -4,7 +4,7 @@ import {
   cellAt,
   type FacetOrigin,
 } from '@yxl-vscode/compile';
-import { type Node, nodeAt, type Path, parse } from '@yxl-vscode/cst';
+import { type Node, nodeAt, type Op, type Path, parse, type Value } from '@yxl-vscode/cst';
 import { pathOf } from '@yxl-vscode/loader';
 import type { Patch } from '@yxl-vscode/patch';
 import {
@@ -63,8 +63,31 @@ export function setValue(
   return {
     kind: 'edit',
     file: found.file,
-    patch: { ops: [{ op: 'set', path: found.path, value }] },
+    patch: { ops: [written(found, value)] },
     expects: { cells: new Set([qualified(where.sheet, where.at)]), beyond: 'ask' },
+  };
+}
+
+/**
+ * The op that puts the value in: over the node that holds it, or as the `value`
+ * key of a cell that has none.
+ *
+ * A cell can be written for a reason other than what it holds — `B4: { format:
+ * "0.0%" }` is a number format and nothing else (`docs/spec.md` §3) — and
+ * typing into one is still one change in one place. The key goes above whatever
+ * is there, which is the order the spec's own examples write.
+ */
+function written(found: Found & { kind: 'found' }, value: Value): Op {
+  if (!found.add) return { op: 'set', path: found.path, value };
+
+  const first = found.node.kind === 'map' ? found.node.entries[0] : undefined;
+
+  return {
+    op: 'add',
+    path: found.path,
+    key: 'value',
+    value,
+    before: first === undefined ? null : String(first.key.value),
   };
 }
 
@@ -105,7 +128,7 @@ export function setFormula(
 }
 
 export type Found =
-  | { kind: 'found'; file: FilePath; path: Path; node: Node }
+  | { kind: 'found'; file: FilePath; path: Path; node: Node; add?: boolean }
   | { kind: 'refused'; why: string };
 
 /** Where a value is written, for the origins one node can be edited through. */
@@ -140,7 +163,10 @@ function valuePath(origin: FacetOrigin, sheet: CompiledSheet, at: A1Addr, text: 
   }
 
   if (holds('value')) return { ...written, path: [...written.path, 'value'] };
-  return refused(`\`${at}\` is not written as a value this can change`);
+
+  // A cell with no `value:` key of its own — written for its number format, or
+  // its style, and nothing else. The value goes in as the key it has not got.
+  return { ...written, add: true };
 }
 
 /** The node that wrote a cell, where one node did. */
@@ -170,6 +196,11 @@ function literalPath(origin: FacetOrigin, sheet: CompiledSheet, at: A1Addr, text
 
     case 'inline':
       return located(origin.node, text);
+
+    case 'empty':
+      return origin.node === null
+        ? refused(`nothing writes \`${at}\` yet`)
+        : located(origin.node, text);
 
     default:
       return refused(`\`${at}\` on \`${sheet.name}\` holds nothing to change yet`);

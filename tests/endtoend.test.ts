@@ -175,6 +175,22 @@ describe('the loop, closed', () => {
     expect(cell(grid, 'Sales', 'B4')?.format).toBe('0.0%');
   });
 
+  it('writes a value back into a cell that was left holding only its format', async () => {
+    if (!QUICKSTART) return;
+    const { dir, root, port, spec, refusals } = opened(QUICKSTART);
+    const at = typed({ row: 4, col: 2, text: '' });
+
+    // Emptied and written again: the cell is still a cell while it holds only
+    // its number format, so typing into it is one change in one place.
+    await write(spec(), at, port);
+    await write(spec(), { ...at, text: '0.01' }, port);
+    expect(refusals).toEqual([]);
+
+    const grid = built(dir, root);
+    expect(cell(grid, 'Sales', 'B4')?.value).toBe(0.01);
+    expect(cell(grid, 'Sales', 'B4')?.format).toBe('0.0%');
+  });
+
   it('takes a cell back out of the workbook when it is emptied', async () => {
     if (!QUICKSTART) return;
     const { dir, root, port, spec, refusals } = opened(QUICKSTART);

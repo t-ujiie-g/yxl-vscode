@@ -20,9 +20,12 @@ export type Editability = 'direct' | 'mediated' | 'external' | 'readonly';
 /**
  * How editable a value or a format is.
  *
- * `empty` is `mediated` rather than refused: a cell nothing wrote can be
- * written, and that gesture has two candidates — a new `cells:` entry, or
- * extending the `data:` rectangle next to it — which is what asking is for.
+ * `empty` answers by where the cell is: a spec that wrote the cell for some
+ * other reason — a number format of its own — has one place a value would go,
+ * and one place is `direct`. With no cell there at all the gesture has two
+ * candidates — a new `cells:` entry, or extending the `data:` rectangle next to
+ * it — which is what asking is for.
+ *
  * Nothing is `readonly` yet: that answer belongs to a sealed region and to an
  * evaluated result, and both arrive with the work that introduces them.
  */
@@ -32,6 +35,8 @@ export function editabilityOf(origin: FacetOrigin): Editability {
     case 'inline':
     case 'override':
       return 'direct';
+    case 'empty':
+      return origin.node === null ? 'mediated' : 'direct';
     case 'external':
       return 'external';
     default:
