@@ -402,7 +402,7 @@ not a date.
 | `Cmd`+arrow to the edge of a block, `Home` / `End` | ✅ |
 | Delete, copy or cut a range | ✅ |
 | Copy, cut and paste inside the grid | ✅ — values and formulas, whose references move; looks are Phase 9 (ADR-032) |
-| Copy out into Excel or Sheets | ✅ — the values as text and the look as a table (ADR-028) |
+| Copy out into Excel or Sheets | ✅ — the whole look into Sheets; Excel takes everything but the fill (ADR-033) |
 | Paste from Excel or Sheets, values and looks | **Phase 8** |
 | A box to type an address into | **Phase 8** |
 | Find something in the sheet | **Phase 8** |
@@ -939,6 +939,9 @@ work.
       way a page can put two flavours on the clipboard without a permission.
       A rectangle reaching past the drawn window is said rather than half
       copied, and a merge is copied as its values rather than as a merge.
+      **Sheets takes all of it. Excel takes everything but the fill**, and that
+      is where it is left (ADR-033, §8 Q15): this editor's job is the workbook
+      the compiler builds, and that carries every style there is.
 - [ ] **Paste in** from Excel or Sheets: values from the TSV, look from the
       HTML, landing as *one* resolution — a `data:` rectangle where the shape
       says so, `cells:` where it does not (§4.4, §8 Q1, Q11)
@@ -1698,6 +1701,31 @@ the cells it is taking is refused rather than ordered. Rich text is refused. And
 a cell that cannot take the paste refuses the whole rectangle, with the same
 *the ones that can* answer `Delete` already offers.
 
+### ADR-033 — The look on the clipboard reaches Sheets; Excel takes everything but the fill, and we stop there
+**Accepted.** Measured, 2026-08-16, pasting a styled rectangle out of the
+preview: **Google Sheets takes all of it** — the fill, the white bold heading,
+the number formats. **Excel takes the values, the bold, the font colour and the
+number formats, and passes over the fill**, which for a white-on-dark heading
+leaves a cell that looks empty with its text still in it. Three forms were tried
+in one pass and none of them moved it: `background-color`, the shorthand
+`background` Excel's own exported HTML writes, and the `bgcolor` attribute its
+importer is supposed to read. Hex rather than the CSSOM's `rgb()` was fixed
+along the way and was not the cause on its own.
+
+*The decision is to stop there*, and it is a judgement about what this project
+is for: **yxl makes Excel files**. A reader who wants the workbook builds it —
+that path carries every style the spec declares, through the compiler, and is
+the one this editor exists to serve. Copying out to Excel is a convenience next
+to it, and one that already carries the values, the bold and the formats.
+
+*What this does not change:* ADR-028 stands as the shape of the thing — both
+flavours, values in the text and the look in the table. What it promised about
+*Excel receiving the look* is narrowed by measurement rather than by argument,
+and §8 Q15 keeps the leads for anyone who wants to pick it up.
+
+*What it costs:* a reader pasting a heading into Excel restyles it by hand.
+Said plainly in the README rather than discovered.
+
 ## 8. Open questions
 
 - **Q1 — `cells:` A1 keys and row insertion.** Inserting a row rewrites every
@@ -1827,6 +1855,18 @@ a cell that cannot take the paste refuses the whole rectangle, with the same
   question is where to stop: values and a handful of look properties, or
   everything we can recognise. Answer by measuring against real clipboards from
   both applications, not by reading a blog post.
+- **Q15 — Why does Excel's clipboard reader pass over a `<td>` fill?** Bold,
+  font colour, number format and the values all arrive; the fill does not, in
+  any of the three forms a reader would expect (ADR-033). Deprioritised, not
+  closed. The leads worth trying next, in order of what Excel's own clipboard
+  HTML actually contains: a `<style>` block with generated classes and
+  `class=` on each cell rather than inline declarations; the `mso-` properties
+  beside them; and the full `<html xmlns:x="urn:schemas-microsoft-com:office:excel">`
+  wrapper Excel writes around its own fragment. Whoever picks it up should
+  paste *out of* Excel first and read what it puts on the clipboard, rather
+  than guessing at the reader from the outside — which is what this pass did,
+  and why it got one of three things right.
+
 - **Q13 — What draws a chart's sketch?** ADR-029 needs an outline, a title, a
   legend box and a series list — which is hand-written SVG, not a chart library,
   unless the sketch turns out to want axes. No runtime dependency without an ADR
@@ -2153,6 +2193,27 @@ this at a phase boundary rather than at the end.
   two serials either side of it, so the next reader knows it is deliberate.
 - A cell's own format — written, or the one its type takes — now wins over a
   band's. Both are requests about *that* cell; a band is something reaching it.
+
+### 2026-08-16 — What the look on the clipboard actually reaches
+Measured rather than assumed, by pasting a styled rectangle out of the preview.
+
+- **Google Sheets takes all of it** — the dark fill, the white bold heading, the
+  number formats, the values. Nothing was left behind.
+- **Excel takes everything but the fill.** Values, bold, font colour and number
+  format all arrive; the fill does not, which for a white-on-dark-blue heading
+  leaves a cell that looks empty with its text still in it. Three forms were
+  tried in one pass and none of them moved it: `background-color`, the
+  shorthand `background` that Excel's *own* exported HTML writes, and the
+  `bgcolor` attribute its importer is supposed to read. Hex instead of the
+  CSSOM's `rgb()` was a real bug and was fixed, and was not the cause on its own.
+- **It is left there, on purpose** (ADR-033). yxl makes Excel files: a reader
+  who wants the workbook builds it, and that path carries every style the spec
+  declares. Copying out to Excel is a convenience beside it, and one that
+  already carries the values, the bold and the formats.
+- **The leads are kept rather than the disappointment** (§8 Q15), and the first
+  of them is to paste *out of* Excel and read what it puts on the clipboard,
+  instead of guessing at its reader from the outside — which is what this pass
+  did, and why it got one of three things right.
 
 ### 2026-08-16 — Copy out, in both the flavours the other spreadsheets speak
 A rectangle copied in the grid now lands on the **system** clipboard as well,

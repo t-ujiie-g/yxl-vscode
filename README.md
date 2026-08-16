@@ -48,9 +48,11 @@ the file that changed is still the YAML.
 
 `ROADMAP.md` §6 opens with the list that answers *can I work in this yet?*: every
 everyday gesture, with a ✅ or the phase it lands in. Typing, the arrows, `Tab`,
-`Delete`, range selection, undo, and copy/cut/paste inside the grid are in. The
-system clipboard, a formatting toolbar, inserting rows, and seeing the charts a
-spec declares are not, and are the next four phases in that order.
+`Delete`, range selection, undo, and copy/cut/paste inside the grid are in, and
+so is copying out — Google Sheets receives the whole look, Excel everything but
+the cell fill (`ROADMAP.md` ADR-033). Pasting *in* from another spreadsheet, a
+formatting toolbar, inserting rows, and seeing the charts a spec declares are
+not, and are the next four phases in that order.
 
 ## Where it is going
 
