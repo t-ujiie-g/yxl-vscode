@@ -13,13 +13,15 @@ export type Path = readonly (string | number)[];
  *
  * They come in pairs, because an edit that cannot be undone is one this editor
  * will not make (ADR-010): `set` against `write` or `clear`, `insert` and `add`
- * against `remove`, `renameKey` against itself. `add` names the key it goes
- * *before* rather than an index, so an entry put back lands where it was.
+ * against `remove`, `remove` against `restore`, `renameKey` against itself.
+ * `add` names the key it goes *before* rather than an index, so an entry put
+ * back lands where it was.
  *
- * `write` puts back the *text* a scalar was written as, where `set` writes a
- * value and lets the renderer choose how. That difference is what makes an undo
- * byte-exact: a tab written raw inside quotes, or a number written `1.50`, is
- * the same value and not the same file.
+ * `write` and `restore` put back the *text* that was there, where `set` and
+ * `add` write a value and let the renderer choose how. That difference is what
+ * makes an undo byte-exact: a tab written raw inside quotes, or a number
+ * written `1.50`, is the same value and not the same file — and an entry
+ * holding a whole mapping has no value to write at all (ADR-027).
  */
 export type Op =
   | { readonly op: 'set'; readonly path: Path; readonly value: Value }
@@ -45,6 +47,13 @@ export type Op =
       readonly op: 'addSource';
       readonly path: Path;
       readonly key: string;
+      readonly source: string;
+    }
+  | {
+      readonly op: 'restore';
+      readonly path: Path;
+      readonly key: string | number;
+      readonly before: string | null;
       readonly source: string;
     };
 

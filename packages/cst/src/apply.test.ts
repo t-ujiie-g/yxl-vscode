@@ -152,6 +152,145 @@ describe('apply', () => {
       expect(diagnostics[0]?.code).toBe(CODE.flowNotSupported);
       expect(text).toBe(SPEC);
     });
+
+    it('refuses the entry that carries the dash, which would take the item apart', () => {
+      const source = 'sheets:\n  - name: Sales\n    cells:\n      A1: 1\n';
+      const { diagnostics, text } = edit(source, { op: 'remove', path: ['sheets', 0, 'name'] });
+
+      expect(diagnostics[0]?.code).toBe(CODE.itemMarker);
+      expect(text).toBe(source);
+    });
+
+    it('stops at the end of a block scalar rather than taking the key after it', () => {
+      const source = 'notes:\n  first: |\n    one\n    two\n  second: 2\n';
+      expect(text(source, { op: 'remove', path: ['notes', 'first'] })).toBe(
+        'notes:\n  second: 2\n',
+      );
+    });
+
+    it('takes the comment block that introduces the entry with it', () => {
+      const source = 'cells:\n  A1: 1\n  # the total\n  # of the two above\n  B1: 2\n  C1: 3\n';
+      expect(text(source, { op: 'remove', path: ['cells', 'B1'] })).toBe(
+        'cells:\n  A1: 1\n  C1: 3\n',
+      );
+    });
+
+    it('leaves a comment a blank line detached from the entry', () => {
+      const source = 'cells:\n  # about this sheet\n\n  A1: 1\n  B1: 2\n';
+      expect(text(source, { op: 'remove', path: ['cells', 'A1'] })).toBe(
+        'cells:\n  # about this sheet\n\n  B1: 2\n',
+      );
+    });
+
+    it('takes the blank line under the entry, leaving one gap and not two', () => {
+      const source = 'cells:\n  A1: 1\n\n  B1: 2\n\n  C1: 3\n';
+      expect(text(source, { op: 'remove', path: ['cells', 'B1'] })).toBe(
+        'cells:\n  A1: 1\n\n  C1: 3\n',
+      );
+    });
+
+    it('leaves the blank line under the last entry, which is not the entry’s', () => {
+      const source = 'cells:\n  A1: 1\n  B1: 2\n\nother: 1\n';
+      expect(text(source, { op: 'remove', path: ['cells', 'B1'] })).toBe(
+        'cells:\n  A1: 1\n\nother: 1\n',
+      );
+    });
+  });
+
+  describe('restore', () => {
+    const cells = 'cells:\n  A1: 1\n  C1: 3\n';
+
+    it('puts lines back above the entry that followed them', () => {
+      const put: Op = {
+        op: 'restore',
+        path: ['cells'],
+        key: 'B1',
+        before: 'C1',
+        source: '  B1: 2\n',
+      };
+      expect(text(cells, put)).toBe('cells:\n  A1: 1\n  B1: 2\n  C1: 3\n');
+    });
+
+    it('puts them back last when nothing followed them', () => {
+      const put: Op = {
+        op: 'restore',
+        path: ['cells'],
+        key: 'D1',
+        before: null,
+        source: '  D1: 4\n',
+      };
+      expect(text(cells, put)).toBe('cells:\n  A1: 1\n  C1: 3\n  D1: 4\n');
+    });
+
+    it('writes the lines exactly as they are, indentation and all', () => {
+      const put: Op = {
+        op: 'restore',
+        path: ['cells'],
+        key: 'B1',
+        before: 'C1',
+        source: '  B1:\n    value: 2\n    style: header\n',
+      };
+      expect(text(cells, put)).toBe(
+        'cells:\n  A1: 1\n  B1:\n    value: 2\n    style: header\n  C1: 3\n',
+      );
+    });
+
+    it('goes above the comment block belonging to the entry it precedes', () => {
+      const source = 'cells:\n  A1: 1\n  # the total\n  C1: 3\n';
+      const put: Op = {
+        op: 'restore',
+        path: ['cells'],
+        key: 'B1',
+        before: 'C1',
+        source: '  B1: 2\n',
+      };
+      expect(text(source, put)).toBe('cells:\n  A1: 1\n  B1: 2\n  # the total\n  C1: 3\n');
+    });
+
+    it('puts a sequence item back at the index it was taken from', () => {
+      const source = 'sheets:\n  - Sales\n  - Summary\n';
+      const put: Op = {
+        op: 'restore',
+        path: ['sheets'],
+        key: 1,
+        before: null,
+        source: '  - Costs\n',
+      };
+      expect(text(source, put)).toBe('sheets:\n  - Sales\n  - Costs\n  - Summary\n');
+    });
+
+    it('refuses a key that is already there rather than writing it twice', () => {
+      const put: Op = {
+        op: 'restore',
+        path: ['cells'],
+        key: 'A1',
+        before: 'C1',
+        source: '  A1: 9\n',
+      };
+      expect(edit(cells, put).diagnostics[0]?.code).toBe(CODE.keyExists);
+    });
+
+    it('refuses when the entry it goes before is no longer there', () => {
+      const put: Op = {
+        op: 'restore',
+        path: ['cells'],
+        key: 'B1',
+        before: 'Z9',
+        source: '  B1: 2\n',
+      };
+      expect(edit(cells, put).diagnostics[0]?.code).toBe(CODE.noSuchKey);
+    });
+
+    it('refuses inside a flow collection', () => {
+      const put: Op = {
+        op: 'restore',
+        path: ['defs', 'styles', 'header'],
+        key: 'italic',
+        before: null,
+        source: '  italic: true\n',
+      };
+      expect(edit(SPEC, put).diagnostics[0]?.code).toBe(CODE.flowNotSupported);
+    });
   });
 
   describe('insert', () => {

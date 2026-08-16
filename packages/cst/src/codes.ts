@@ -23,6 +23,7 @@ export const CODE = {
   flowNotSupported: 'cst.flow-not-supported',
   blockScalarNotSupported: 'cst.block-scalar-not-supported',
   emptySequence: 'cst.empty-sequence',
+  itemMarker: 'cst.item-marker',
   overlappingEdits: 'cst.overlapping-edits',
 } as const;
 

@@ -158,8 +158,9 @@ describe('an edit that cannot be made at all', () => {
 
   it('is refused when it could not be undone', () => {
     const done = edit(SPEC, about('Sales!B3'), {
-      op: 'remove',
-      path: ['sheets', 0, 'cells', 'B3'],
+      op: 'set',
+      path: ['sheets', 0, 'cells'],
+      value: 1,
     });
 
     expect(done.ok).toBe(false);

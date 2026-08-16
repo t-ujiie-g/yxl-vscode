@@ -65,6 +65,28 @@ describe('applying a patch', () => {
     expect(roundTrip(SPEC, { op: 'remove', path })).toBe(SPEC);
   });
 
+  it('undoes an entry that holds a mapping, subtree and all', () => {
+    const source = 'cells:\n  A1:\n    value: 1\n    style: header\n  B1: 2\n';
+    expect(roundTrip(source, { op: 'remove', path: ['cells', 'A1'] })).toBe(source);
+  });
+
+  it('undoes an entry back into the quoting it was written with', () => {
+    // `add` would have put back the *value*, and `'007'` and `007` are one
+    // value and two files.
+    const source = "cells:\n  A1: '007'\n  B1: 2\n";
+    expect(roundTrip(source, { op: 'remove', path: ['cells', 'A1'] })).toBe(source);
+  });
+
+  it('undoes a removed entry back under the comment that introduces it', () => {
+    const source = 'cells:\n  A1: 1\n  # the total\n  B1: 2\n  C1: 3\n';
+    expect(roundTrip(source, { op: 'remove', path: ['cells', 'B1'] })).toBe(source);
+  });
+
+  it('undoes a removed sequence item, comments and all', () => {
+    const source = 'sheets:\n  - Sales\n  # the derived one\n  - Costs\n  - Summary\n';
+    expect(roundTrip(source, { op: 'remove', path: ['sheets', 1] })).toBe(source);
+  });
+
   it('undoes an added entry by taking it away again', () => {
     const add = {
       op: 'add',
@@ -98,15 +120,23 @@ describe('applying a patch', () => {
 });
 
 describe('what will not be applied', () => {
-  it('refuses an edit it could not undo, and leaves the file alone', () => {
-    // Removing a cell written in its expanded form: there is no op yet that
-    // puts a mapping back, so the edit does not happen.
-    const source = 'cells:\n  A1: { value: 1, style: header }\n  B1: 2\n';
+  it('refuses to remove the only entry, which would have nothing to come back to', () => {
+    const source = 'cells:\n  A1: 1\n';
     const done = changed(source, { op: 'remove', path: ['cells', 'A1'] });
 
     expect(done.text).toBe(source);
     expect(done.diagnostics[0]?.code).toBe(CODE.noInverse);
     expect(done.back).toBeNull();
+  });
+
+  it('refuses a removal whose lines could not go back where they were', () => {
+    // The blank line stays behind, and a last entry goes back after the one
+    // before it — which would put it above the gap it used to be under.
+    const source = 'cells:\n  A1: 1\n\n  B1: 2\n';
+    const done = changed(source, { op: 'remove', path: ['cells', 'B1'] });
+
+    expect(done.text).toBe(source);
+    expect(done.diagnostics[0]?.code).toBe(CODE.noInverse);
   });
 
   it('refuses an edit to a path that is not there', () => {
@@ -153,7 +183,7 @@ describe('the inverse itself', () => {
     const patch: Patch = { ops: [{ op: 'remove', path: ['cells', 'A2'] }] };
 
     expect(invert(source, patch, { file: FILE }).patch?.ops).toEqual([
-      { op: 'add', path: ['cells'], key: 'A2', value: 2, before: 'A3' },
+      { op: 'restore', path: ['cells'], key: 'A2', before: 'A3', source: '  A2: 2\n' },
     ]);
   });
 
@@ -162,7 +192,37 @@ describe('the inverse itself', () => {
     const patch: Patch = { ops: [{ op: 'remove', path: ['cells', 'A2'] }] };
 
     expect(invert(source, patch, { file: FILE }).patch?.ops).toEqual([
-      { op: 'add', path: ['cells'], key: 'A2', value: 2, before: null },
+      { op: 'restore', path: ['cells'], key: 'A2', before: null, source: '  A2: 2\n' },
+    ]);
+  });
+
+  it('puts back the lines a removal took, subtree and all', () => {
+    const source = 'cells:\n  A1:\n    value: 1\n    style: header\n  B1: 2\n';
+    const patch: Patch = { ops: [{ op: 'remove', path: ['cells', 'A1'] }] };
+
+    expect(invert(source, patch, { file: FILE }).patch?.ops).toEqual([
+      {
+        op: 'restore',
+        path: ['cells'],
+        key: 'A1',
+        before: 'B1',
+        source: '  A1:\n    value: 1\n    style: header\n',
+      },
+    ]);
+  });
+
+  it('undoes a restore by taking the entry away again', () => {
+    const source = 'cells:\n  A1: 1\n  B1: 2\n';
+    const put = {
+      op: 'restore',
+      path: ['cells'],
+      key: 'A2',
+      before: 'B1',
+      source: '  A2: 2\n',
+    } as const;
+
+    expect(invert(source, { ops: [put] }, { file: FILE }).patch?.ops).toEqual([
+      { op: 'remove', path: ['cells', 'A2'] },
     ]);
   });
 

@@ -720,9 +720,15 @@ the inverse is unique, so no dialog is needed yet.
       rewritten, and the new text is indented to where the body already sits.
       The Tier 2 round trip covers block scalars again, which is where the
       byte-for-byte undo is proved.
-- [ ] Put back an entry that holds more than a scalar. `remove` of
+- [x] Put back an entry that holds more than a scalar. `remove` of
       `A1: { value: 1, style: header }` has no inverse in this algebra, so it is
       refused (ADR-026); a structural edit needs one that can carry a subtree.
+      **Shipped** as `restore`, which puts back the lines a removal took rather
+      than a value (**ADR-027**) — so a subtree comes back, and so does the
+      quoting `add` used to re-render away. The removal takes the comment block
+      that introduces the entry with it, since the two belong together. Proved
+      over the corpus: every entry of every spec, removed one at a time, comes
+      back byte for byte or is not removed at all.
 - [ ] Tier 4 end-to-end green
 
 ### Phase 7 — `mediated` write-back
@@ -1289,6 +1295,37 @@ written `\t` are the same string and not the same file. An undo that reformatted
 either would be an edit nobody asked for, so the CST now carries the bytes a
 scalar was written as, and the `write` op puts exactly those back.
 
+### ADR-027 — A removed entry is put back as the lines it was, and takes its comment block with it
+**Accepted.** The inverse of `remove` is `restore`, which writes back the exact
+text the removal took out, at the place a sibling names. A removal takes the
+comment block directly above the entry and the blank line directly under it;
+`restore` puts all of it back.
+
+*Why:* ADR-026 said the inverse puts back text rather than a value, and `remove`
+was the one op still inverting to a value — `add` re-rendered what it put back,
+so `'007'` came back as `007`, and an entry holding a mapping had no value to
+re-render at all. One op that carries lines answers both, and is what a
+structural edit needs anyway.
+
+*Why the comment goes too:* a comment above an entry describes that entry. Left
+behind, it lands on whatever follows and now says something false about it —
+and there would be no way to say "under that comment" when putting the entry
+back. Taking the pair keeps the removal honest and the inverse expressible. The
+same rule already decided where an `insert` lands, so there is one rule about
+comments in this layer, not two.
+
+*What it costs:* two layouts are refused rather than reversed, both of them
+about lines that stay behind — an entry with a blank line between it and the
+one before it, when it is the last entry; and an entry that is the only one in
+its collection. Refused, per ADR-026, rather than put back somewhere close.
+
+*What it found:* two defects the round trip over the corpus surfaced at once.
+Removing the entry written on a `- ` line took the dash with it and left the
+rest of the mapping dangling — now refused, because moving the dash to the next
+entry is a structural edit. And a removal whose value was a block scalar took
+the *following* entry's line as well, because a block body ends where the next
+line begins.
+
 ## 8. Open questions
 
 - **Q1 — `cells:` A1 keys and row insertion.** Inserting a row rewrites every
@@ -1684,6 +1721,28 @@ this at a phase boundary rather than at the end.
   two serials either side of it, so the next reader knows it is deliberate.
 - A cell's own format — written, or the one its type takes — now wins over a
   band's. Both are requests about *that* cell; a band is something reaching it.
+
+### 2026-08-16 — Phase 6: an entry taken out comes back as it was
+
+- **A removal now has an inverse whatever the entry held** (**ADR-027**). The
+  new op puts back the *lines* rather than a value, so a cell written in its
+  expanded form — a mapping under the key — comes back whole, and so does a
+  quoting that `add` used to re-render away: `'007'` was coming back as `007`.
+- **A removal takes the comment block above it with it.** A comment describes
+  the entry under it; left behind, it lands on whatever follows and now says
+  something false. The blank line under the entry goes too, so removing one
+  leaves one gap and not two.
+- **Two layouts are refused rather than reversed**, both about lines that stay
+  behind: a last entry with a blank line above it, and the only entry of a
+  collection, which would have nothing left to be put back beside.
+- **Two defects the corpus found while proving it.** Removing the entry written
+  on a `- ` line took the dash with it and left the rest of the mapping
+  dangling — now refused, since moving the dash is a structural edit. And a
+  removal whose value was a block scalar swallowed the *next* entry's line,
+  because a block body ends where the next line begins.
+- Tier 2 grew the test that found them: every entry of every corpus spec,
+  removed one at a time, either comes back byte for byte or is never removed —
+  525 removals undone across the corpus. 46 new tests, 1020 in total.
 
 ### 2026-08-16 — Phase 6: writing into a folded formula
 
