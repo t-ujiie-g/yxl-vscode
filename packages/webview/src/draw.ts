@@ -1,6 +1,6 @@
-import { columnLabel, type Rect } from '@yxl-vscode/units';
+import { columnLabel } from '@yxl-vscode/units';
 import { drawCell, typeInto } from './cell';
-import { type At, between, going, takingAll, within } from './keys';
+import { type At, going, takingAll, undoing, within } from './keys';
 import {
   inspector,
   note,
@@ -59,7 +59,8 @@ export interface Asks {
   readonly setParam: (name: string, value: string) => void;
   readonly showWindow: (row: number, col: number) => void;
   readonly edit: (row: number, col: number, text: string) => void;
-  readonly empty: (rect: Rect) => void;
+  readonly empty: (row: number, col: number) => void;
+  readonly undo: (redo: boolean) => void;
   readonly resolveWith: (typed: Typed, choice: string) => void;
   readonly overrideWith: (typed: Typed, reason: string) => void;
 }
@@ -104,10 +105,15 @@ export function draw(into: HTMLElement, showing: Showing, asks: Asks): void {
   into.append(under);
   say(under, showing, asks);
 
-  if (held && showing.selected !== null) {
-    const at = cellKey(showing.selected.col, showing.selected.row);
-    into.querySelector<HTMLElement>(`td[data-at="${at}"]`)?.focus({ preventScroll: true });
-  }
+  if (held) focusCell(into, showing);
+}
+
+/** The keyboard on the cell the reader has selected, where there is one. */
+export function focusCell(into: HTMLElement, showing: Showing): void {
+  if (showing.selected === null) return;
+
+  const at = cellKey(showing.selected.col, showing.selected.row);
+  into.querySelector<HTMLElement>(`td[data-at="${at}"]`)?.focus({ preventScroll: true });
 }
 
 /** What the view holds of its own, shown without rebuilding what the host sent. */
@@ -231,15 +237,6 @@ function goTo(
 
   next.focus({ preventScroll: true });
   next.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
-}
-
-/** The rectangle the reader has selected, or `null` where the selection is one cell. */
-function spanned(showing: Showing): Rect | null {
-  const { selected, anchor } = showing;
-  if (selected === null || anchor === null) return null;
-  if (selected.row === anchor.row && selected.col === anchor.col) return null;
-
-  return between(selected, anchor);
 }
 
 /** Whether this cell is inside the rectangle the reader has selected. */
@@ -393,6 +390,12 @@ function line(
       // The edit box is a child of the cell, so its keys bubble here.
       if (event.target !== drawn) return;
 
+      if (undoing(event)) {
+        event.preventDefault();
+        asks.undo(event.shiftKey);
+        return;
+      }
+
       if (takingAll(event)) {
         event.preventDefault();
         asks.select(1, 1);
@@ -415,9 +418,7 @@ function line(
 
       if (event.key === 'Delete' || event.key === 'Backspace') {
         event.preventDefault();
-        const rect = spanned(showing);
-        if (rect === null) asks.edit(row, col, '');
-        else asks.empty(rect);
+        asks.empty(row, col);
         return;
       }
 

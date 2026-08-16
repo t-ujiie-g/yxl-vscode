@@ -162,8 +162,13 @@ export interface Said {
   readonly text: string;
 }
 
+/** The keyboard back in the grid, after the host had to put it somewhere else. */
+export interface Focus {
+  readonly kind: 'focus';
+}
+
 /** Everything the host sends the view. */
-export type ToView = Drawing | Inspected | Highlighted | Refused | Said;
+export type ToView = Drawing | Inspected | Highlighted | Refused | Said | Focus;
 
 /**
  * Everything the view sends back. `edit`, `resolve` and `override` carry what
@@ -181,6 +186,7 @@ export type FromView =
   | { readonly kind: 'setParam'; readonly name: string; readonly value: string }
   | ({ readonly kind: 'edit' } & Typed)
   | ({ readonly kind: 'empty' } & Ranged)
+  | { readonly kind: 'undo'; readonly redo: boolean }
   | ({ readonly kind: 'resolve'; readonly choice: string } & Typed)
   | ({ readonly kind: 'override'; readonly reason: string } & Typed)
   | {

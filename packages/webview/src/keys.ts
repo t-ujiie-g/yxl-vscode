@@ -102,6 +102,11 @@ function lastIn(sheet: DrawnSheet, held: ReadonlyMap<string, DrawnCell>, row: nu
   return last;
 }
 
+/** Whether this is the key that takes an edit back, or with `Shift` puts it again. */
+export function undoing(event: KeyboardEvent): boolean {
+  return (event.key === 'z' || event.key === 'Z') && (event.metaKey || event.ctrlKey);
+}
+
 /** Whether this is the key that takes the whole sheet. */
 export function takingAll(event: KeyboardEvent): boolean {
   return event.key === 'a' && (event.metaKey || event.ctrlKey) && !event.altKey;

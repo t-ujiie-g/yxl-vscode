@@ -202,6 +202,11 @@ export class Preview {
       return;
     }
 
+    if (asked.kind === 'undo') {
+      this.tried(this.takeBack(asked.redo));
+      return;
+    }
+
     if (asked.kind === 'empty') {
       this.tried(this.emptyRange(asked));
       return;
@@ -251,6 +256,16 @@ export class Preview {
     }
 
     await write(spec, typed, this.port());
+  }
+
+  /** The editor's own undo: the command reaches the stack only where the text has the keyboard. */
+  private async takeBack(redo: boolean): Promise<void> {
+    const beside = this.panel.viewColumn;
+    await vscode.window.showTextDocument(this.document, { preview: false });
+    await vscode.commands.executeCommand(redo ? 'redo' : 'undo');
+
+    this.panel.reveal(beside, false);
+    void this.panel.webview.postMessage({ kind: 'focus' });
   }
 
   /** Every cell of a rectangle emptied, as one edit. */

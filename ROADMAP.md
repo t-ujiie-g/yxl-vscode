@@ -395,7 +395,7 @@ not a date.
 | `Enter` commits and moves down; `Esc` abandons | ✅ |
 | Arrows, `Tab`, `PageUp` / `PageDown` | ✅ |
 | `Delete` empties a cell | ✅ |
-| Undo and redo | ✅ — VS Code's own, over the file |
+| Undo and redo | ✅ — VS Code's own, over the file, from the grid as well as the text |
 | The answers a refused edit has, with what each would change | ✅ for a range's formula and a blank cell; the rest is Phase 7 |
 | `Cmd`+arrow to the edge of a block, `Cmd`+`A`, a box to type an address into | **Phase 8** |
 | Select a range — drag, `Shift`+click, `Shift`+arrows | **Phase 8** |
@@ -889,6 +889,8 @@ work.
       and is the first thing in the next slice with `find`.
 - [x] **Delete over a range** — one intent for the rectangle, and the same rule
       about what a cell may hold (`docs/spec.md` §3) applied to each of them
+- [x] `Cmd`/`Ctrl`+`Z` and `Cmd`+`Shift`+`Z` **from the grid**, which run the
+      editor's own undo over the file — the stack a `WorkspaceEdit` lands on
 - [ ] **Empty the ones that can be**, offered where a rectangle holds cells that
       cannot: one summary and one answer, which is the same machinery the
       oversized paste below needs
@@ -2015,6 +2017,28 @@ this at a phase boundary rather than at the end.
   two serials either side of it, so the next reader knows it is deliberate.
 - A cell's own format — written, or the one its type takes — now wins over a
   band's. Both are requests about *that* cell; a band is something reaching it.
+
+### 2026-08-16 — The selection a gesture acts on is the live one; undo from the grid
+Two things the first real use of `Delete` over a range turned up.
+
+- **The rectangle was read from a stale snapshot.** Selecting a range
+  *restates* the grid — the cells keep their handlers so that a click can be
+  followed by a double-click — and only an edit redraws it. The `Delete`
+  handler read the selection out of the `Showing` it was drawn with, so a
+  rectangle selected after the last redraw was invisible to it and the
+  *previous* selection was emptied instead. The view now asks for the cell the
+  key was pressed on and `wire` reads the live selection, which is the only
+  place it lives. The grid holds no selection state of its own — the one thing
+  ADR-001 says it must not do — and this was that rule bending back.
+- **`Cmd`+`Z` did nothing from the grid.** An edit is applied as a
+  `WorkspaceEdit`, so the stack that holds it is the text document's, and the
+  command reaches that stack only where the text has the keyboard: with the
+  panel focused, VS Code hands `undo` to the webview, which has nothing to
+  undo. The grid now sends the gesture to the host, which shows the document,
+  runs the editor's own undo or redo, and gives the keyboard back to the cell
+  the reader was on. One stack, still the file's (ADR-010) — this is where a
+  custom editor would use `CustomDocumentEditEvent`, which a panel beside the
+  text does not have (ADR-020).
 
 ### 2026-08-16 — Delete over a range
 `Delete` over a selection of more than one cell now empties every cell in the

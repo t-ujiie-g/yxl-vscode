@@ -1,5 +1,7 @@
+import type { Rect } from '@yxl-vscode/units';
 import { sheetAgain } from './again';
-import { type Asks, cellKey, draw, type Reached, restate, type Showing } from './draw';
+import { type Asks, cellKey, draw, focusCell, type Reached, restate, type Showing } from './draw';
+import { between } from './keys';
 import type { Drawing, Editable, FromView, Refused, Source, ToView } from './protocol';
 
 export { type Kept, sheetAgain } from './again';
@@ -51,28 +53,37 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
   /** Where the last edit was typed, so a refusal can put the reader back at it. */
   let typedAt: { row: number; col: number } | null = null;
 
+  /** Everything the view is showing, read at the moment it is asked for. */
+  const showing = (of: Drawing): Showing => ({
+    drawing: of,
+    sheet,
+    selected,
+    anchor,
+    sources,
+    reached,
+    refused,
+    said,
+    editable: editable(),
+  });
+
   const redraw = (): void => {
-    if (drawing !== null) {
-      draw(
-        into,
-        { drawing, sheet, selected, anchor, sources, reached, refused, said, editable: editable() },
-        asks,
-      );
-    }
+    if (drawing !== null) draw(into, showing(drawing), asks);
   };
 
   /** The same, for what the view holds of its own: the grid stays as it is. */
   const restated = (): void => {
-    if (drawing !== null) {
-      restate(
-        into,
-        { drawing, sheet, selected, anchor, sources, reached, refused, said, editable: editable() },
-        asks,
-      );
-    }
+    if (drawing !== null) restate(into, showing(drawing), asks);
   };
 
   const named = (): string => drawing?.sheets[sheet]?.name ?? '';
+
+  /** The rectangle selected, read live: the grid restates rather than redraws on a selection. */
+  const spanned = (): Rect | null => {
+    if (selected === null || anchor === null) return null;
+    if (selected.row === anchor.row && selected.col === anchor.col) return null;
+
+    return between(selected, anchor);
+  };
 
   /** Whether the cell the reader has selected is one they can type into. */
   const editable = (): Editable | null => {
@@ -121,11 +132,22 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       typedAt = { row, col };
       host.postMessage({ kind: 'edit', sheet: named(), row, col, text });
     },
-    empty: (rect) => {
+    empty: (row, col) => {
       refused = null;
       said = null;
+
+      const rect = spanned();
+      if (rect === null) {
+        typedAt = { row, col };
+        host.postMessage({ kind: 'edit', sheet: named(), row, col, text: '' });
+        return;
+      }
+
       typedAt = { row: rect.top, col: rect.left };
       host.postMessage({ kind: 'empty', sheet: named(), ...rect });
+    },
+    undo: (redo) => {
+      host.postMessage({ kind: 'undo', redo });
     },
     resolveWith: (typed, choice) => {
       host.postMessage({ ...typed, choice, kind: 'resolve' });
@@ -146,6 +168,11 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
         anchor = typedAt;
       }
       restated();
+      return;
+    }
+
+    if (sent.kind === 'focus') {
+      if (drawing !== null) focusCell(into, showing(drawing));
       return;
     }
 
