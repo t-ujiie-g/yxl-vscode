@@ -1,5 +1,5 @@
 import { type CompiledGrid, cellAt, sheetOf } from '@yxl-vscode/compile';
-import { type Node, nodeAt, type Op, type Path } from '@yxl-vscode/cst';
+import { marked, type Node, nodeAt, type Op, type Path } from '@yxl-vscode/cst';
 import {
   type A1Addr,
   addrAt,
@@ -137,7 +137,7 @@ function whole(
   const root = read.parsed(file)?.root ?? null;
   if (root === null) return [...ops];
 
-  const going = new Set(ops.filter((one) => one.op === 'remove').map((one) => mark(one.path)));
+  const going = new Set(ops.filter((one) => one.op === 'remove').map((one) => marked(one.path)));
   const emptied = new Set<string>();
   const done: Op[] = [];
 
@@ -147,9 +147,9 @@ function whole(
       done.push(op);
       continue;
     }
-    if (emptied.has(mark(parent))) continue;
+    if (emptied.has(marked(parent))) continue;
 
-    emptied.add(mark(parent));
+    emptied.add(marked(parent));
     done.push({ op: 'remove', path: parent });
   }
 
@@ -167,18 +167,13 @@ function leftEmpty(
   if (holder === null || holder.kind !== 'map' || holder.entries.length === 0) return false;
   if (fills(path, adding)) return false;
 
-  return holder.entries.every((entry) => going.has(mark([...path, String(entry.key.value)])));
+  return holder.entries.every((entry) => going.has(marked([...path, String(entry.key.value)])));
 }
 
 /** Whether the patch puts something into the mapping at `path`, which is what keeps it. */
 function fills(path: Path, adding: readonly Op[]): boolean {
-  const here = mark(path);
+  const here = marked(path);
   const inside = `${here.slice(0, -1)},`;
 
-  return adding.some((one) => mark(one.path) === here || mark(one.path).startsWith(inside));
-}
-
-/** A path as one comparable string, so a removal can be asked what else is going. */
-function mark(path: Path): string {
-  return JSON.stringify(path);
+  return adding.some((one) => marked(one.path) === here || marked(one.path).startsWith(inside));
 }

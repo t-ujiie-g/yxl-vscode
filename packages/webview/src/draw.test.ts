@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 
 import { describe, expect, it, vi } from 'vitest';
-import { type Asks, draw, restate, type Showing } from './draw';
+import { draw, restate } from './draw';
 import type { Drawing, DrawnCell, DrawnSheet } from './protocol';
+import type { Asks, Showing } from './showing';
 
 function asks(): Asks {
   return {

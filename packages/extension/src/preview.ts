@@ -2,7 +2,7 @@ import { finds, reaches } from '@yxl-vscode/compile';
 import { type Engine, univerEngine } from '@yxl-vscode/evaluate';
 import { did, type History, nothing } from '@yxl-vscode/patch';
 import { addrAt, cellOf, filePath } from '@yxl-vscode/units';
-import type { FromView, Typed } from '@yxl-vscode/webview/protocol';
+import type { FromView, PastedAt } from '@yxl-vscode/webview/protocol';
 import * as vscode from 'vscode';
 import { paste, pastedWith, pasteFrom, whose } from './clipboard';
 import { asOpen, put, reveal, textOf } from './documents';
@@ -221,7 +221,7 @@ export class Preview {
 
     if (asked.kind === 'edit') {
       const { kind, ...typed } = asked;
-      this.tried(this.write(typed));
+      this.writing((spec, port) => write(spec, typed, port));
       return;
     }
 
@@ -231,42 +231,52 @@ export class Preview {
     }
 
     if (asked.kind === 'empty') {
-      this.tried(this.emptyRange(asked));
+      const { kind, ...ranged } = asked;
+      this.writing((spec, port) => empty(spec, ranged, port));
       return;
     }
 
     if (asked.kind === 'emptied') {
-      this.tried(this.emptiedWith(asked));
+      const { kind, choice, ...ranged } = asked;
+      this.writing((spec, port) => emptied(spec, ranged, choice, port));
       return;
     }
 
     if (asked.kind === 'paste') {
-      this.tried(this.pasteRect(asked));
+      const { kind, ...pasted } = asked;
+      this.writing((spec, port) => paste(spec, pasted, port));
       return;
     }
 
     if (asked.kind === 'pasted') {
-      this.tried(this.pastedRect(asked));
+      const { kind, choice, ...pasted } = asked;
+      this.writing((spec, port) => pastedWith(spec, pasted, choice, port));
       return;
     }
 
     if (asked.kind === 'pasteAt') {
-      this.tried(this.pasteHere(asked));
+      const { kind, ...where } = asked;
+      this.writing((spec, port) => this.pasteHere(spec, where, port));
       return;
     }
 
     if (asked.kind === 'pastedText') {
-      this.tried(this.pasteOutside(asked));
+      const { kind, choice, ...text } = asked;
+      this.writing((spec, port) => pasteFrom(spec, text, port, choice));
       return;
     }
 
     if (asked.kind === 'resolve') {
-      this.tried(this.resolveWith(asked));
+      const { kind, choice, ...typed } = asked;
+      this.writing((spec, port) => resolve(spec, typed, choice, port));
       return;
     }
 
     if (asked.kind === 'override') {
-      this.tried(this.overrideWith(asked));
+      const { kind, reason, ...typed } = asked;
+      this.writing((spec, port) =>
+        writeOverride(spec, typed, reason === '' ? undefined : reason, port),
+      );
       return;
     }
 
@@ -300,15 +310,22 @@ export class Preview {
     });
   }
 
-  /** What a reader typed, handed to the write path with the world it needs. */
-  private async write(typed: Typed): Promise<void> {
+  /** A write, with the spec and port it needs; a spec still loading and a failure are both said rather than dropped. */
+  private writing(make: (spec: Spec, port: Port) => Promise<void>): void {
     const spec = this.spec();
     if (spec === null) {
       this.refuse('this spec has not finished loading', null);
       return;
     }
 
-    await write(spec, typed, this.port());
+    this.tried(make(spec, this.port()));
+  }
+
+  /** `Cmd`+`V` in the grid; the clipboard is read here because a webview is never given one (ADR-035). */
+  private async pasteHere(spec: Spec, where: PastedAt, port: Port): Promise<void> {
+    const taken = whose(where, await vscode.env.clipboard.readText());
+    if (taken.is === 'grid') await paste(spec, taken.pasted, port);
+    if (taken.is === 'clipboard') await pasteFrom(spec, taken.text, port);
   }
 
   /** The last edit taken back in place, or the editor's own undo where this one no longer holds the file (ADR-030). */
@@ -330,104 +347,6 @@ export class Preview {
 
     this.panel.reveal(beside, false);
     void this.panel.webview.postMessage({ kind: 'focus' });
-  }
-
-  /** Every cell of a rectangle emptied, as one edit. */
-  private async emptyRange(asked: Extract<FromView, { kind: 'empty' }>): Promise<void> {
-    const spec = this.spec();
-    if (spec === null) {
-      this.refuse('this spec has not finished loading', null);
-      return;
-    }
-
-    const { kind, ...ranged } = asked;
-    await empty(spec, ranged, this.port());
-  }
-
-  /** The rectangle again, emptied of only the cells that can be. */
-  private async emptiedWith(asked: Extract<FromView, { kind: 'emptied' }>): Promise<void> {
-    const spec = this.spec();
-    if (spec === null) {
-      this.refuse('this spec has not finished loading', null);
-      return;
-    }
-
-    const { kind, choice, ...ranged } = asked;
-    await emptied(spec, ranged, choice, this.port());
-  }
-
-  /** A rectangle put down somewhere else, as one edit. */
-  private async pasteRect(asked: Extract<FromView, { kind: 'paste' }>): Promise<void> {
-    const spec = this.spec();
-    if (spec === null) {
-      this.refuse('this spec has not finished loading', null);
-      return;
-    }
-
-    const { kind, ...pasted } = asked;
-    await paste(spec, pasted, this.port());
-  }
-
-  /** The same rectangle again, into only the cells that can take it. */
-  private async pastedRect(asked: Extract<FromView, { kind: 'pasted' }>): Promise<void> {
-    const spec = this.spec();
-    if (spec === null) {
-      this.refuse('this spec has not finished loading', null);
-      return;
-    }
-
-    const { kind, choice, ...pasted } = asked;
-    await pastedWith(spec, pasted, choice, this.port());
-  }
-
-  /** `Cmd`+`V` in the grid; the clipboard is read here because a webview is never given one (ADR-035). */
-  private async pasteHere(asked: Extract<FromView, { kind: 'pasteAt' }>): Promise<void> {
-    const spec = this.spec();
-    if (spec === null) {
-      this.refuse('this spec has not finished loading', null);
-      return;
-    }
-
-    const { kind, ...where } = asked;
-    const taken = whose(where, await vscode.env.clipboard.readText());
-    if (taken.is === 'grid') await paste(spec, taken.pasted, this.port());
-    if (taken.is === 'clipboard') await pasteFrom(spec, taken.text, this.port());
-  }
-
-  /** The same rectangle again, in the shape the reader picked for it. */
-  private async pasteOutside(asked: Extract<FromView, { kind: 'pastedText' }>): Promise<void> {
-    const spec = this.spec();
-    if (spec === null) {
-      this.refuse('this spec has not finished loading', null);
-      return;
-    }
-
-    const { kind, choice, ...text } = asked;
-    await pasteFrom(spec, text, this.port(), choice);
-  }
-
-  /** The edit again, made the way the reader chose from the answers it had. */
-  private async resolveWith(asked: Extract<FromView, { kind: 'resolve' }>): Promise<void> {
-    const spec = this.spec();
-    if (spec === null) {
-      this.refuse('this spec has not finished loading', null);
-      return;
-    }
-
-    const { kind, choice, ...typed } = asked;
-    await resolve(spec, typed, choice, this.port());
-  }
-
-  /** The same edit, written as an override, with the reason the reader gave (`docs/spec.md` §23). */
-  private async overrideWith(asked: Extract<FromView, { kind: 'override' }>): Promise<void> {
-    const spec = this.spec();
-    if (spec === null) {
-      this.refuse('this spec has not finished loading', null);
-      return;
-    }
-
-    const { kind, reason, ...typed } = asked;
-    await writeOverride(spec, typed, reason === '' ? undefined : reason, this.port());
   }
 
   /** Work that may fail, with the failure said: a rejected promise from a message handler goes nowhere. */

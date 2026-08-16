@@ -1,6 +1,6 @@
 import { columnLabel } from '@yxl-vscode/units';
-import type { Asks, Reached, Showing } from './draw';
 import type { About, Choice, Drawing, Refused, Uncomputed } from './protocol';
+import type { Asks, Reached, Showing } from './showing';
 
 /** The parameters as boxes to turn (`docs/spec.md` §7); emptying one gives the default back. */
 export function parameters(drawing: Drawing, asks: Asks): HTMLElement {
