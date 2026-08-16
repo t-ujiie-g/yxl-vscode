@@ -10,26 +10,13 @@ import { type Color, type NodeId, parseColor, type StyleName } from '@yxl-vscode
 import { CODE } from './codes';
 import { type Ctx, reject, text } from './ctx';
 
-/**
- * How a look reaches a cell: which construct applies it, not which one holds it.
- *
- * A column band that names `header` gives `definition` layers reached
- * `through: 'column'`, because the two answers a resolver has to offer are
- * different — edit the definition, or edit the band.
- */
+/** How a look reaches a cell — which construct applies it, which is a different edit from which one holds it. */
 export type StyleSource = 'column' | 'row' | 'cell' | 'override';
 
 /**
- * One construct's contribution to how a cell looks, holding only the leaves it
- * set (ADR-005).
- *
- * Kept as a list rather than a resolved blob because the list *is* the candidate
- * generator: "bold because `defs.styles.header` says so, blue because column B
- * says so" is the same fact the resolution dialog needs to offer a choice.
- *
- * `name` is set when the layer is a `defs.styles` entry, which is what makes an
- * `extends:` chain readable — the base's layer comes first, under the style that
- * extends it.
+ * One construct's contribution to how a cell looks, only the leaves it set
+ * (ADR-005). `name` is set for a `defs.styles` entry; a base's layer comes
+ * before the style that extends it.
  */
 export interface StyleLayer {
   readonly through: StyleSource;
@@ -45,14 +32,7 @@ export function resolve(layers: readonly StyleLayer[]): StyleValues {
   return looks;
 }
 
-/**
- * The layers one construct contributes: what its `style:` says, and then its own
- * `format:` over that.
- *
- * A `format:` written beside a style reference layers over the style's own
- * (`docs/spec.md` §6), which is why it is a layer of its own rather than part of
- * the one before it.
- */
+/** The layers one construct contributes: its `style:`, then its own `format:` over that (`docs/spec.md` §6). */
 export function layersOf(
   ctx: Ctx,
   node: SpecNode,

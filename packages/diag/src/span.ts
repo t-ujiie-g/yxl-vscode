@@ -1,10 +1,4 @@
-/**
- * A half-open range of UTF-16 code units in one source file.
- *
- * Offsets rather than line/column, because that is what every producer here
- * naturally has and what every consumer needs to slice text. Line and column
- * are derived on demand, at the edge that displays them.
- */
+/** A half-open range of UTF-16 code units in one source file. */
 export interface Span {
   readonly start: number;
   readonly end: number;

@@ -11,14 +11,7 @@ import {
 import { type Diagnostic, error, type Span, span } from '@yxl-vscode/diag';
 import { CODE } from './codes';
 
-/**
- * One edit to a spec, as the ops that carry it out.
- *
- * A patch is the unit that is applied, undone, and — from the phase that adds
- * the verification loop on — checked before either. Its ops are the syntax
- * layer's, because a `direct` edit *is* one YAML node changing; the spec-level
- * algebra a resolution dialog needs arrives with the phase that needs it.
- */
+/** One edit to a spec, as the ops that carry it out: the unit that is applied, undone, and checked. */
 export interface Patch {
   readonly ops: readonly Op[];
 }
@@ -33,13 +26,9 @@ export interface Change extends Applied {
 }
 
 /**
- * Apply a patch, and say how to undo it.
- *
- * **A patch that cannot be undone is not applied.** The inverse is worked out
- * against the file as it stands *before* the edit — the only moment the old
- * value is still there to read — and a patch whose inverse this algebra cannot
- * express leaves the file alone, with a diagnostic saying so. It costs an edit
- * the editor cannot yet undo; it buys a history that is never a lie (ADR-010).
+ * Apply a patch and say how to undo it. A patch that cannot be undone is not
+ * applied (ADR-026): the inverse is worked out first, against the file as it
+ * stands before the edit.
  */
 export function applyPatch(source: string, patch: Patch, options: Options): Change {
   const inverse = invert(source, patch, options);
@@ -60,14 +49,8 @@ export interface Inverted {
 }
 
 /**
- * The patch that puts back what this one is about to change.
- *
- * Read against the document as it is now, and in reverse order: the last thing
- * done is the first thing undone, so ops that touch each other come apart the
- * way they went together.
- *
- * Some edits still have no inverse: a removal that could not be put back where
- * it was, to the byte, is refused rather than applied and regretted (ADR-026).
+ * The patch that puts back what this one is about to change, read against the
+ * document as it is now and in reverse order.
  */
 export function invert(source: string, patch: Patch, options: Options): Inverted {
   const { root, diagnostics: read } = parse(source, options);
@@ -103,8 +86,6 @@ function inverseOf(
     case 'write': {
       if (found === null) return refuse('nothing is there to write over');
 
-      // Whatever it covers: the bytes that were there are what puts them back,
-      // and a collection written over as text is put back the same way.
       return { op: 'write', path: op.path, source: slice(source, found) };
     }
 
@@ -114,9 +95,7 @@ function inverseOf(
         return refuse('only a scalar can be written over and put back');
       }
 
-      // The text, not the value: a tab written raw inside quotes and a number
-      // written `1.50` are the same value and not the same file, and an undo
-      // that reformatted either would be an edit of its own.
+      // The bytes, not the value: `1.50` and `1.5` are one value and two files.
       return found.source === ''
         ? { op: 'clear', path: op.path }
         : { op: 'write', path: op.path, source: found.source };
@@ -146,8 +125,6 @@ function inverseOf(
       const taken = removalOf(source, root, op.path);
       if (taken === null) return refuse('nothing is there to put back');
 
-      // A flow collection is one line with no room to put a line back into, so
-      // what goes back is the collection as it was written.
       if (taken.of === 'flow') {
         return { op: 'write', path: taken.path, source: taken.source };
       }

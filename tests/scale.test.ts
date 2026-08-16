@@ -5,14 +5,7 @@ import { addrAt, columnLabel } from '@yxl-vscode/units';
 import { describe, expect, it } from 'vitest';
 import { largeSpec } from './scale';
 
-/**
- * The projection measured against a spec larger than anyone would write, so
- * that the question of what to draw a grid with was answered with a number.
- *
- * The ceilings below are ten times the measured cost, not a target. They are
- * here to catch the day something turns linear work quadratic — the failure a
- * grid library would be bought to avoid — and not to fail a slow machine.
- */
+/** The projection over a spec larger than anyone would write; ceilings are ten times the measured cost, to catch quadratic work, not slow machines. */
 const ROWS = 5000;
 const COLUMNS = 20;
 const CEILING = 10_000;

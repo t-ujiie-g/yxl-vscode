@@ -15,18 +15,9 @@ export interface Says {
 }
 
 /**
- * A cell written as an override — the exception said out loud
- * (`docs/spec.md` §23).
- *
- * This is the answer to every refusal `direct` editing gives: the value comes
- * from a parameter, a CSV, a definition, a range covering five hundred cells,
- * and *this one cell* has to differ. Every other way out damages the spec —
- * inline the parameter, split the range, stop reading the column from the file
- * — by turning one exception into a change of structure.
- *
- * Never offered by itself, only when a reader asks for it after being told why
- * an ordinary edit was refused (ADR-007): an escape hatch that opens on its own
- * is not an escape hatch, it is the door.
+ * A cell written as an override — the exception said out loud (`docs/spec.md`
+ * §23, ADR-007). Never taken on its own, only when a reader asks after being
+ * told why the ordinary edit was refused.
  */
 export function override(
   doc: SpecDoc,
@@ -78,9 +69,7 @@ export function override(
           ],
         };
 
-  // An override for a cell that already has one would be two answers to one
-  // question, and the compiler takes the last. Changing the one that is there
-  // is an edit to a cell like any other, which is the phase that resolves.
+  // Two overrides for one cell would be two answers, and the compiler takes the last.
   if (already !== -1) {
     return {
       kind: 'refused',
@@ -115,13 +104,7 @@ function indented(written: string): string {
   return written.split('\n').join('\n  ');
 }
 
-/**
- * Where an override lands, as it is written.
- *
- * A `${param}` in the address is left as the spec spelled it: it is not this
- * cell's address until the parameter is set, and an override that *might* be
- * about this cell is not one to write a second beside.
- */
+/** Where an override lands, as written; a `${param}` in it is not this cell's address until it is set. */
 function spelled(at: Templated<QualifiedAddr>): string {
   return 'text' in at ? at.text : qualified(at.sheet, at.at);
 }

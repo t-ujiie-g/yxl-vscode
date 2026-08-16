@@ -22,19 +22,10 @@ import { beside, type Found, type Intent, located, type Text } from './direct';
 import { meaning } from './typed';
 
 /**
- * One of the answers an edit has, where it has more than one.
- *
- * A cell whose value no single node of the spec wrote is not a cell that cannot
- * be edited — it is one where the editor must not pick (ADR-001). So each way
- * through is enumerated with what it would do and every cell it would move, and
- * the reader chooses. `overrides:` is the answer that is always available and is
- * offered separately, because it is the exception rather than a resolution
- * (ADR-007).
- *
- * `alone` says this answer is the *whole* answer — nothing is being chosen
- * between, so a caller may take it without asking. That is ADR-001's other
- * half: an edit with one meaning applies, and only an edit with several is a
- * question.
+ * One answer an edit has, with what it would do and every cell it would move,
+ * for the reader to choose between (ADR-001). `alone` says it is the *whole*
+ * answer, so a caller may take it without asking. `overrides:` is offered
+ * beside the list, not in it (ADR-007).
  */
 export interface Candidate {
   readonly id: string;
@@ -44,13 +35,7 @@ export interface Candidate {
   readonly intent: Intent;
 }
 
-/**
- * Every way of making an edit the direct path refused, in the order a reader
- * should consider them: the one that keeps the spec's shape first.
- *
- * Empty where there is nothing to offer, which is not the same as nothing being
- * possible — the override is offered beside this list, not in it.
- */
+/** Every way of making an edit the direct path refused — `ROADMAP.md` §4.4, a row per origin. */
 export function candidates(
   spec: Resolving,
   where: { sheet: SheetName; at: A1Addr },
@@ -76,12 +61,8 @@ export function candidates(
 }
 
 /**
- * What resolving an edit needs of the spec: what it draws, what it is written
- * as, and what the reader is *looking* at it as.
- *
- * The last one matters because a parameter set in the preview changes what the
- * grid shows without changing a byte (ADR-001), and an answer that would be
- * invisible under that setting is not an answer.
+ * What resolving needs of the spec: the grid, the text, and the parameters the
+ * reader has set in the preview — an answer invisible under those is no answer.
  */
 export interface Resolving {
   readonly grid: CompiledGrid;
@@ -90,16 +71,9 @@ export interface Resolving {
 }
 
 /**
- * A cell whose value comes from a parameter's default (`docs/spec.md` §7).
- *
- * One answer: change the default, which every cell reading that parameter
- * follows. `overrides:` is the other, and is offered beside this list rather
- * than in it (§4.4).
- *
- * Offered only where the cell is **exactly one placeholder**. `"${quarter}
- * ${region}"` typed over with `Q4 EMEA` would have to be split back across two
- * parameters, and which half went where is precisely what this editor does not
- * guess (ADR-001).
+ * The `param` row: change the default every cell reading it follows. Only where
+ * the cell is exactly one placeholder — `"${quarter} ${region}"` typed over
+ * would have to be split back across two, and which half went where is a guess.
  */
 function parameter(
   spec: Resolving,
@@ -112,8 +86,7 @@ function parameter(
   if (meant.is !== 'value' || name === undefined || declared === undefined) return [];
   if (origin.template.trim() !== `\${${name}}` || origin.params.length !== 1) return [];
 
-  // Set in the preview, so the default is not what the reader is looking at:
-  // changing it would leave the grid exactly as it is (§4.4's `param` row).
+  // Set in the preview: changing the default would leave the grid as it is.
   if (spec.params.has(name)) return [];
 
   const found = located(declared, spec.text);
@@ -140,15 +113,7 @@ function parameter(
   ];
 }
 
-/**
- * A cell that reads a `defs.values` entry (`docs/spec.md` §6), and the two
- * answers typing into one has.
- *
- * They are the shape of the whole phase: change the thing many cells share, or
- * take this one cell out of the sharing. Neither is the obvious answer — which
- * is why a definition is `mediated` and always asks — and the difference
- * between them is the count beside each.
- */
+/** The `defRef` row: change the definition every cell shares, or take this one cell out of the sharing. */
 function definition(
   grid: CompiledGrid,
   origin: Extract<FacetOrigin, { kind: 'defRef' }>,
@@ -191,8 +156,7 @@ function definition(
       intent: {
         kind: 'edit',
         file: holder.file,
-        // Text rather than a value: what is written over is a mapping, and the
-        // bytes it was are what puts it back (ADR-026).
+        // Written over is a mapping, so text, whose bytes put it back (ADR-026).
         patch: { ops: [{ op: 'write', path: holder.path, source: renderScalar(meant.value) }] },
         expects: { cells: new Set([qualified(where.sheet, where.at)]), beyond: 'refuse' },
       },
@@ -202,10 +166,7 @@ function definition(
   return offered;
 }
 
-/**
- * The node that holds the `$ref`, which is the cell itself where the spec wrote
- * `A1: { $ref: name }` and its `value:` where the cell says more than that.
- */
+/** The node holding the `$ref`: the cell itself, or its `value:` where the cell says more. */
 function reference(found: Found): { file: FilePath; path: Path } | null {
   if (found.kind === 'refused' || found.node.kind !== 'map') return null;
 
@@ -221,12 +182,9 @@ function reference(found: Found): { file: FilePath; path: Path } | null {
 }
 
 /**
- * Whether a `data:` rectangle sits where this cell would extend it.
- *
- * Above or to the left, which is where a rectangle grown from its own corner
- * reaches this address from. Extending it is the `empty` row's second answer,
- * and where there are two the reader picks (ADR-001) — so this is the question
- * of whether writing a new entry is a choice or the only thing to do.
+ * Whether a `data:` rectangle sits above or to the left, where extending it
+ * would reach this address — the `empty` row's second answer, which makes the
+ * first a choice.
  */
 function nextToData(sheet: CompiledSheet, at: A1Addr): boolean {
   const cell = cellOf(at);
@@ -243,12 +201,9 @@ function nextToData(sheet: CompiledSheet, at: A1Addr): boolean {
 }
 
 /**
- * The entry going in, in the shape the file it lands in needs.
- *
- * A formula is a key under the address and a value is the address's own scalar
- * (`docs/spec.md` §3) — two lines against one, which is the difference between
- * the two ops that write into a mapping. Where the sheet has no `cells:` at
- * all, the key goes in with the entry under it.
+ * The entry going in: a formula is a key under the address, a value its own
+ * scalar (`docs/spec.md` §3), and where the sheet has no `cells:` the key goes
+ * in too.
  */
 function entryOp(path: Path, holds: boolean, at: A1Addr, typed: string): Op {
   const meant = meaning(typed);
@@ -267,18 +222,7 @@ function entryOp(path: Path, holds: boolean, at: A1Addr, typed: string): Op {
     : { op: 'addSource', path, key: at, source: formula };
 }
 
-/**
- * Write a cell the spec has not written before, as a new `cells:` entry.
- *
- * The one answer an address nothing reaches has — and it is still an answer
- * rather than an edit, because a blank cell beside a `data:` rectangle has a
- * second one waiting: extending the rectangle. Offering the first silently
- * would be picking between them (ADR-001).
- *
- * It goes at the end of the mapping. Where a key that was never there *belongs*
- * is a question about how the spec is read, and the end is where a reader looks
- * for what was added.
- */
+/** The `empty` row: a new `cells:` entry, at the end of the mapping. */
 function newCell(
   sheet: CompiledSheet,
   where: { sheet: SheetName; at: A1Addr },
@@ -308,17 +252,9 @@ function newCell(
 }
 
 /**
- * A cell whose value is a field of a CSV beside the spec (`docs/spec.md` §9).
- *
- * One answer: write that field. The file is not the spec and not YAML, so what
- * this carries is the whole file as it should be — the field's own bytes
- * replaced and nothing else, which is the same promise the CST keeps for a
- * spec.
- *
- * A JSON block is not offered: the same edit there is a value inside a document
- * whose bytes this editor cannot yet put back the way it found them, and
- * reformatting somebody's data file to change one number is not a trade this
- * project makes (ADR-003's rule, one file over).
+ * The `external` row: write the CSV field, and no other byte of the file. JSON
+ * is not offered — a value cannot yet be put back into one without reformatting
+ * the rest, and reformatting somebody's data file is not a trade this makes.
  */
 function external(
   origin: Extract<FacetOrigin, { kind: 'external' }>,
@@ -355,14 +291,9 @@ function external(
 }
 
 /**
- * Change the formula a `formulas:` range writes, from the cell it is anchored
- * at (`docs/spec.md` §9).
- *
- * Offered at the anchor only. What a reader types into any other cell of the
- * range is written *for that cell* — `=B3*0.1` typed one row down means
- * `B2*0.1` to the range — and shifting it back is reference translation this
- * editor does not do yet. Offering it there would be the editor guessing at an
- * answer that is off by a row.
+ * The `formulaRange` row: change the range's formula, at its anchor only.
+ * `=B3*0.1` typed one row down means `B2*0.1` to the range, and shifting it
+ * back is reference translation (`ROADMAP.md` §8 Q2).
  */
 function rangeFormula(
   grid: CompiledGrid,

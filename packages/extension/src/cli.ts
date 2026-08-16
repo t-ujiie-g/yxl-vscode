@@ -9,15 +9,7 @@ interface Ran {
   readonly said: string;
 }
 
-/**
- * Run `yxl`, or `null` when there is no `yxl` to run.
- *
- * The compiler is required rather than bundled: shipping a binary per
- * platform would mean owning its update cadence and its size, and every user of
- * this preview is already a user of `yxl` — the thing being previewed is its
- * input. A missing one is a message with the install instructions, not a
- * mystery.
- */
+/** Run `yxl`, or `null` where there is none to run; the compiler is required, not bundled (`ROADMAP.md` §8 Q6). */
 export async function run(binary: string, args: readonly string[]): Promise<Ran | null> {
   try {
     const { stdout, stderr } = await spawn(binary, [...args]);
@@ -39,14 +31,7 @@ export function versionOf(said: string): string | null {
   return /(\d+\.\d+\.\d+)/.exec(said)?.[1] ?? null;
 }
 
-/**
- * What to say about a compiler that is not the one this editor targets.
- *
- * Neither direction refuses anything. A newer compiler builds what this writes,
- * because what this writes is ordinary yxl; an older one may not have a
- * construct this editor understands. `yxl build` failing is the honest signal
- * either way, and it has a better error than anything guessed here.
- */
+/** What to say about a compiler that is not the targeted version; neither direction refuses anything. */
 export function versionWarning(found: string | null, target: string): string | null {
   if (found === null) return `\`yxl version\` did not say which version it is.`;
   if (found === target) return null;

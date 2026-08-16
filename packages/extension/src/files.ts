@@ -6,18 +6,9 @@ import { type FilePath, filePath } from '@yxl-vscode/units';
 
 /**
  * The half of reading a spec that belongs to the host (ADR-004): resolve a path
- * the spec wrote, and read it.
- *
- * Synchronous, and `node:fs` rather than VS Code's own filesystem API, because
- * the core is synchronous all the way down — a loader that returned promises
- * would put them in every reader in the project for the sake of a file read
- * that takes microseconds. The price is that this extension is a desktop one;
- * it invokes `yxl` as a binary anyway, so it was never going to be otherwise.
- *
- * The two constructs resolve differently, and that is `docs/spec.md`'s rule:
- * an `$include` against the file that wrote it, a `data:` path against the spec
- * that was opened (`docs/spec.md` §8, §9). Both arrive here as `from`, so one function serves
- * both — the caller decides which `from` it means.
+ * against `from` and read it. Synchronous `node:fs`, because the core is; an
+ * `$include` resolves against its file and a `data:` path against the opened
+ * spec (`docs/spec.md` §8, §9), which is the caller's `from` to choose.
  */
 export const readBeside: IncludeReader & DataReader = (from, path) => {
   const found = resolve(dirname(from), path.replace(/\\/g, '/'));
@@ -31,15 +22,7 @@ export const readBeside: IncludeReader & DataReader = (from, path) => {
   }
 };
 
-/**
- * The same reader, answering with what the *editor* holds where it holds
- * anything.
- *
- * A `$include`d sheet or a `defs.yaml` that has been edited and not saved is
- * the spec the reader is looking at. Reading the disk's copy would draw them a
- * workbook they no longer have — and, worse, would verify their next edit
- * against it.
- */
+/** The same reader, answering with what the editor holds where it holds anything: an unsaved buffer is the spec. */
 export function openFirst(
   beside: IncludeReader & DataReader,
   opened: (file: FilePath) => string | null,

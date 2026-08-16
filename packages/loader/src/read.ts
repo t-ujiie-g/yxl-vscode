@@ -5,11 +5,8 @@ import { type Ctx, keyOf, reject, type Site } from './ctx';
 import { follow } from './include';
 
 /**
- * A mapping, wherever it turned out to be, or `null` with the reason reported.
- *
- * Following the `$include` here is what makes one work everywhere the schema
- * allows it to stand: what comes back carries the file and the path the reader
- * must go on with, and they are not always the ones it asked about.
+ * A mapping, wherever an `$include` turned out to put it, or `null` with the
+ * reason reported. What comes back carries the file and path to go on with.
  */
 function openMap(ctx: Ctx, node: Node, path: Path, what: string): Site<Mapping> | null {
   const here = follow(ctx, node, path);
@@ -39,21 +36,13 @@ export interface Opened extends Site<Mapping> {
   readonly entries: readonly Entry[];
 }
 
-/**
- * How every construct that is a mapping starts: follow an `$include` to
- * wherever the mapping really is, then take its entries with no key read twice.
- */
+/** Follow an `$include` to where the mapping is, then its entries with no key read twice. */
 export function openEntries(ctx: Ctx, node: Node, path: Path, what: string): Opened | null {
   const opened = openMap(ctx, node, path, what);
   return opened === null ? null : { ...opened, entries: entriesOf(opened.ctx, opened.node) };
 }
 
-/**
- * Each item of a sequence, as a site of its own.
- *
- * An item may be an `$include` in its own right — one sheet of a workbook kept
- * in its own file — so following happens per item as well as for the sequence.
- */
+/** Each item of a sequence as a site of its own; an item may itself be an `$include`. */
 function itemsOf(ctx: Ctx, node: Node, path: Path, what: string): Site[] {
   const opened = openSeq(ctx, node, path, what);
   if (opened === null) return [];
@@ -110,11 +99,9 @@ export function expectNumber(ctx: Ctx, node: Node, what: string): number | null 
 }
 
 /**
- * A value a cell or a definition can hold.
- *
- * `null` is refused rather than read as a blank: a key written with nothing
- * after it is unfinished, and yxl refuses it too. Inline `data:` rows are the
- * one place a `null` means something, and they read their fields themselves.
+ * A value a cell or a definition can hold. `null` is refused, as yxl refuses
+ * it; inline `data:` rows are the one place it means something and read their
+ * own fields.
  */
 export function expectValue(ctx: Ctx, node: Node, what: string): ScalarValue | null {
   const here = follow(ctx, node, []);
@@ -144,12 +131,7 @@ export function expectSpelling<T extends string>(
   return null;
 }
 
-/**
- * A mapping's entries, in the order written and without a repeated key.
- *
- * A repeat is reported and dropped rather than layered, which is what yxl does
- * with one and what keeps two nodes from deriving the same identity.
- */
+/** A mapping's entries as written, a repeated key reported and dropped as yxl drops it. */
 function entriesOf(ctx: Ctx, map: Mapping): Entry[] {
   const seen = new Set<string>();
   const kept: Entry[] = [];
@@ -167,12 +149,7 @@ function entriesOf(ctx: Ctx, map: Mapping): Entry[] {
   return kept;
 }
 
-/**
- * Report a key the construct does not have, naming the ones it does.
- *
- * The list comes from `MODELED_KEYS` rather than from the message, so what a
- * reader accepts and what it says it accepts cannot drift apart.
- */
+/** Report a key the construct does not have, naming the ones it does. */
 export function rejectUnknownKey(
   ctx: Ctx,
   entry: Entry,
@@ -188,10 +165,7 @@ export function findEntry(entries: readonly Entry[], key: string): Entry | undef
   return entries.find((entry) => keyOf(entry) === key);
 }
 
-/**
- * The text of a scalar that may have been written as a number — a row band's
- * `at: 1` is the row `"1"`, and a column's is a label.
- */
+/** The text of a scalar that may have been written as a number: a row band's `at: 1`. */
 export function scalarText(node: Node): string | null {
   if (node.kind !== 'scalar') return null;
   if (typeof node.value === 'string') return node.value;

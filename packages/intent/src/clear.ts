@@ -4,19 +4,10 @@ import { type A1Addr, qualified, type SheetName } from '@yxl-vscode/units';
 import { type Intent, located, setValue, type Text } from './direct';
 
 /**
- * Emptying a cell — the Delete key, and an edit box left with nothing in it.
- *
- * Not a value of its own: a cell with nothing in it is not something this
- * format can say. `A1:` with no value is refused by the compiler, because a
- * cell needs at least one of `value`, `formula`, `rich`, `style`, or `format`
- * (`docs/spec.md` §3). So emptying one *takes the entry out*, and what stays
- * behind is what a spreadsheet leaves behind: the look. A cell written
- * `{ value: 1, style: header }` keeps its style and loses its value; one
- * written `A1: 1` goes altogether.
- *
- * A field of a `data:` block is the exception, and the format's own: `null` in
- * a row is a blank cell (`docs/spec.md` §9), so there the ordinary write says
- * it.
+ * Emptying a cell. A cell with nothing in it is not something the format can
+ * say (`docs/spec.md` §3), so the entry is taken out and what it *wears* stays:
+ * `{ value: 1, style: header }` keeps its style. A `data:` field is the
+ * exception — `null` in a row is a blank cell (§9) — and takes the ordinary write.
  */
 export function clearCell(
   grid: CompiledGrid,
@@ -47,10 +38,7 @@ export function clearCell(
 const HOLDS = new Set(['value', 'formula', 'rich', 'type']);
 const WEARS = new Set(['format', 'style']);
 
-/**
- * The ops that empty the cell: the keys it holds something in, or the whole
- * entry where emptying it would leave nothing behind.
- */
+/** The keys the cell holds something in, or the whole entry where nothing else would be left. */
 function emptying(node: Node, path: Path): Op[] {
   if (node.kind !== 'map') return [{ op: 'remove', path }];
 

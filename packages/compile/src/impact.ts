@@ -10,19 +10,10 @@ export interface FullAddr {
 }
 
 /**
- * Every cell one node of the spec reaches — a definition, a band, a `data:`
- * block, a cell of its own.
- *
- * This is what a resolution dialog counts ("ripples to 40 cells") and what
- * `verify` takes as the expected diff of a definition edit: a change
- * that touches a cell this did not name is the surprise that gate exists for.
- *
- * It answers for the cells the projection **holds**, and for the cells a
- * `formulas:` range covers — those are held as a range rather than as cells
- * (ADR-019), and a range that reached nothing would be the one construct whose
- * reach a reader most wants to see. A band still reaches every empty address in
- * its span and cannot say so: no diff of two projections could show it, because
- * neither side has a cell there.
+ * Every cell one node of the spec reaches — what a resolution counts and what
+ * `verify` takes as an edit's claim. Answers over the cells the projection
+ * holds and the ones a `formulas:` range covers; a band's reach into empty
+ * addresses cannot be said, since no cell is there to name.
  */
 export function reaches(grid: CompiledGrid, node: NodeId): readonly FullAddr[] {
   const found: FullAddr[] = [];
@@ -41,19 +32,11 @@ export function reaches(grid: CompiledGrid, node: NodeId): readonly FullAddr[] {
   return found;
 }
 
-/**
- * The addresses of a range, as far as the projection would draw them.
- *
- * `at: D2:D1048576` is two words in a spec; the count a reader is shown has to
- * be a number they can act on rather than the height of a sheet.
- */
+/** The addresses of a range, down to where the sheet writes something: `D2:D1048576` is not a count. */
 function covered(sheet: CompiledSheet, fill: CompiledFill): A1Addr[] {
   const held: A1Addr[] = [];
   let rows = 0;
 
-  // Down to where the sheet writes something, and across the range's own
-  // columns: a range's columns are what the spec spelled out, and its rows are
-  // where the cells it reads run out.
   for (const cell of sheet.cells.values()) rows = Math.max(rows, cellOf(cell.at).row);
 
   for (let row = fill.rect.top; row <= Math.min(fill.rect.bottom, rows); row += 1) {

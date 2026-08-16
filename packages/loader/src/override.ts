@@ -6,14 +6,7 @@ import { type Ctx, identify, keyOf, reject, type Site } from './ctx';
 import { expectText, findEntry, openEntries, readEach, rejectUnknownKey } from './read';
 import { QUALIFIED, readAs } from './template';
 
-/**
- * The top-level `overrides:` sequence (`docs/spec.md` §23).
- *
- * What an override may land on needs the whole workbook in view — a declared
- * sheet, a cell something else writes, not the anchor of a filled range, and no
- * second override on the same cell — so those are checked where that view
- * exists, not here.
- */
+/** The top-level `overrides:` sequence (`docs/spec.md` §23); where one may land is checked with the whole workbook in view. */
 export function readOverrides(ctx: Ctx, node: Node, path: Path): Override[] {
   return readEach(ctx, node, path, '`overrides`', readOverride);
 }

@@ -7,19 +7,14 @@ export interface At {
 }
 
 /** Where a key would take the selection, and whether it takes the range with it. */
-export interface Going {
+interface Going {
   readonly to: At;
   readonly extend: boolean;
 }
 
 /**
- * Where a key moves the reader, or `null` where it moves them nowhere.
- *
- * The keys a spreadsheet moves by, which is the difference between a grid
- * somebody reads and a grid somebody works in: arrows by one, tab across, page
- * by a window's worth, `Cmd`+arrow to the edge of a block, `Home` and `End`
- * along the row. Holding `Shift` takes the selection with it rather than
- * leaving it behind, exactly as it does in Excel and in Sheets.
+ * Where a key moves the reader, or `null`: arrows, tab, page, `Cmd`+arrow to
+ * the edge of a block, `Home` and `End`. `Shift` takes the selection with it.
  */
 export function going(
   event: KeyboardEvent,
@@ -44,8 +39,7 @@ export function going(
     ? edge(sheet, held, from, step)
     : { row: from.row + step.rows, col: from.col + step.cols };
 
-  // Shift and tab together step *backwards* rather than reaching further: the
-  // shift is what says which way, and a spreadsheet does not extend on it.
+  // Shift+Tab steps back rather than reaching, as in every spreadsheet.
   return { to, extend: event.key === 'Tab' ? false : extend };
 }
 
@@ -75,16 +69,8 @@ function stepping(event: KeyboardEvent, sheet: DrawnSheet): { rows: number; cols
 }
 
 /**
- * The edge of the block, which is what `Cmd`+arrow means in a spreadsheet.
- *
- * From a cell with something beside it, the far end of that run; from a cell
- * with nothing beside it, the next thing there is. Off the end of both, the
- * edge of the sheet — which is where a reader who holds the keys down expects
- * to arrive.
- *
- * Answered over the cells the host has *drawn*, since those are the ones the
- * view has. A window's worth is a long way in either direction, and moving into
- * the next one asks for it.
+ * The edge of the block: the far end of a run, or across a gap to the next
+ * thing, or the edge of the sheet. Over the cells the host has drawn.
  */
 function edge(
   sheet: DrawnSheet,
@@ -100,8 +86,6 @@ function edge(
   let here = from;
   if (!inside(next(here))) return here;
 
-  // Along a run of cells, or across a gap to the next one: whichever of the two
-  // the reader is standing at the start of.
   const running = filled(next(here));
   while (inside(next(here)) && filled(next(here)) === running) here = next(here);
 

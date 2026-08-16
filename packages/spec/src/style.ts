@@ -24,23 +24,15 @@ export const V_ALIGNS = ['top', 'middle', 'bottom', 'justify', 'distributed'] as
 
 export type VAlign = (typeof V_ALIGNS)[number];
 
-/**
- * How a look reaches a cell or a band: by the name of a `defs.styles` entry, or
- * written out where it is used.
- */
+/** How a look reaches a cell or a band: by a `defs.styles` name, or written inline. */
 export type StyleUse =
   | { readonly kind: 'ref'; readonly name: Templated<StyleName> }
   | { readonly kind: 'inline'; readonly style: Style };
 
 /**
- * A look, as a definition declares it or as a cell or band writes it inline.
- *
- * `null` throughout means the key was absent, which is not the same as a key
- * that turns something off: an absent `font.bold` inherits, and `bold: false`
- * overrides an inherited bold. What each key means is `docs/spec.md` §6.
- *
- * A style is a value rather than a node: the node is whatever holds it — a
- * definition, a cell, a band — which is also what an edit addresses.
+ * A look as a spec writes one (`docs/spec.md` §6). `null` throughout is an
+ * absent key, which inherits — not `false`, which overrides. A value rather
+ * than a node: the node is whatever holds it.
  */
 export interface Style {
   readonly extends: Templated<StyleName> | null;
@@ -69,12 +61,8 @@ export const BORDER_SIDES = ['all', 'left', 'right', 'top', 'bottom'] as const;
 export type BorderSideName = (typeof BORDER_SIDES)[number];
 
 /**
- * One side of a border as the spec wrote it. `border: thin` is the shorthand
- * for a single `all` side.
- *
- * A style's sides stay in written order because a later one overwrites what an
- * earlier one set — `all` after `left` replaces that `left`, which is how yxl
- * reads it, and a shape that lost the order would have to guess.
+ * One side of a border as written; `border: thin` is a single `all`. Sides stay
+ * in written order because a later one overwrites an earlier one.
  */
 export interface BorderSide {
   readonly side: BorderSideName;

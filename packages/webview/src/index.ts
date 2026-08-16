@@ -32,17 +32,10 @@ export interface Host {
 }
 
 /**
- * The view, driven by the host's messages.
- *
- * It holds a few things of its own — which sheet is showing, which cell is
- * selected, the answer to the last question it asked, and what the host last
- * said about an edit — and redraws outright for everything else, because a
- * projection has nothing to reconcile (ADR-001). They are named, not numbered,
- * so that a spec read again finds them where the reader left them (ADR-023).
- *
- * Takes the page and the host rather than reaching for them, so that what it
- * *sends* can be tested: a message going out under the wrong `kind` is a bug
- * neither the type checker nor a drawing test can see.
+ * The view, driven by the host's messages. It holds a few things of its own —
+ * named, not numbered, so a spec read again finds them (ADR-023) — and redraws
+ * outright for everything else (ADR-001). Takes the page and the host so that
+ * what it *sends* can be tested.
  */
 export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
   let drawing: Drawing | null = null;
@@ -107,8 +100,6 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       restated();
     },
     reachTo: (row, col) => {
-      // The anchor stays where the selection was started from, so a range grows
-      // and shrinks from the corner the reader put it at.
       anchor ??= selected;
       selected = { row, col };
       sources = null;
@@ -134,8 +125,7 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       host.postMessage({ ...typed, choice, kind: 'resolve' });
     },
     overrideWith: (typed, reason) => {
-      // `kind` last: whatever the host handed back is spread first, and a
-      // message that ends in someone else's `kind` is that other message.
+      // `kind` last, or a spread message carrying its own `kind` is that message.
       host.postMessage({ ...typed, reason, kind: 'override' });
     },
   };
@@ -144,9 +134,7 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
     if (sent.kind === 'refused') {
       refused = sent;
       said = null;
-      // Enter moves down, and an edit that did not happen should not move the
-      // reader away from the cell it was about — nor leave the selection
-      // stretched between where they typed and where Enter took them.
+      // Enter already moved down; an edit that did not happen puts the reader back.
       if (typedAt !== null) {
         selected = typedAt;
         anchor = typedAt;
@@ -186,8 +174,7 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       return;
     }
 
-    // An answer about a cell that is still the selected one: a redraw may have
-    // arrived since it was asked, and then it is no longer the question.
+    // Only while it is still the selected cell: a redraw may have come between.
     if (sent.sheet === named() && sent.row === selected?.row && sent.col === selected.col) {
       sources = sent.sources;
       restated();

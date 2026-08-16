@@ -86,11 +86,7 @@ describe('renderScalar', () => {
 });
 
 describe('what renderScalar writes, parse reads back unchanged', () => {
-  // The writer and the reader are the two halves of one contract. If they ever
-  // disagree, a value the editor wrote reads back as a different type on the
-  // next open — silent, and a workbook away from anyone noticing. Going through
-  // the real parser asserts that directly, whatever quoting decision was made
-  // on the way.
+  // Through the real parser: what the writer writes, the reader must read back as itself.
   function roundTrip(value: Value): Value {
     const written = renderScalar(value);
     const { root, diagnostics } = parse(`key: ${written}\n`, { file: 'written.yaml' });

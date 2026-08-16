@@ -22,12 +22,9 @@ import { cellOf, type SheetName, sheetName } from '@yxl-vscode/units';
 import type { About, Asked, Computed, Engine, Held, HeldSheet } from './engine';
 
 /**
- * The formula engine, as this project uses it (ADR-013, ADR-025).
- *
- * Univer's own entry points expect a live workbook and answer asynchronously.
- * This uses the layer under them — lex, parse, interpret — which needs only the
- * cell values it is handed and answers in the same tick, so the projection
- * stays the synchronous function over text that everything else here is.
+ * The formula engine as this project uses it (ADR-013, ADR-025): the lex-parse-
+ * interpret layer under Univer's own entry points, which answers in the same
+ * tick over the values it is handed.
  */
 export function univerEngine(): Engine {
   engines += 1;
@@ -51,11 +48,8 @@ export function univerEngine(): Engine {
 
   return {
     holds: (book) => {
-      // A new set of ids per load, because the engine caches a materialised
-      // range in a process-wide table keyed by unit, sheet, and position — with
-      // nothing in the key to say which *values* it holds. Reading `A1:A2`
-      // once would otherwise freeze it for every later pass and every later
-      // preview in this process. Fresh ids are fresh keys.
+      // Fresh ids each load: the engine caches ranges process-wide by unit,
+      // sheet and position, with nothing in the key about the values (ADR-025).
       loaded += 1;
       sheets = book.map((sheet) => sheet.name);
       config.registerUnitData({ [BOOK]: sheetData(book, `${born}-${loaded}`) });
@@ -76,13 +70,9 @@ export function univerEngine(): Engine {
 }
 
 /**
- * What a formula names, read off the lexer's own tokens.
- *
- * The lexer has no registry to check a bare name against, so it calls anything
- * that could be called a function: `SUM`, and `target_revenue`, and the
- * `StoreMaster[store_name` of a table reference alike. A name with no executor
- * behind it is therefore exactly the set this cannot compute — a table, a
- * defined name, or a function Excel has and this engine does not.
+ * What a formula names, off the lexer's tokens. The lexer calls any bare name a
+ * function — `SUM`, `target_revenue`, `StoreMaster[store_name` alike — so a
+ * name with no executor is exactly the set this cannot compute.
  */
 function about(asked: Asked, tokens: LexerTreeBuilder, functions: IFunctionService): About {
   const said = tokens.sequenceNodesBuilder(asked.formula) ?? [];
@@ -108,12 +98,7 @@ function about(asked: Asked, tokens: LexerTreeBuilder, functions: IFunctionServi
   return { unknown, reads: [...reads] };
 }
 
-/**
- * A name as the spec wrote it.
- *
- * The lexer hands back a table reference without its closing bracket, because
- * the bracket is a token of its own to it. A reader is owed the name they wrote.
- */
+/** A name as the spec wrote it: the lexer drops a table reference's closing bracket. */
 function whole(token: string): string {
   return token.includes('[') && !token.endsWith(']') ? `${token}]` : token;
 }
@@ -145,9 +130,7 @@ function computed(
     return { kind: 'unsupported', why: 'this formula could not be read' };
   }
 
-  // An async node is a function that would answer later — a web request, a
-  // custom function. Waiting for one would make every projection asynchronous
-  // for the sake of a function no spec here uses yet.
+  // Waiting for one would make every projection asynchronous.
   if (interpreter.checkAsyncNode(node)) {
     return { kind: 'unsupported', why: 'this function answers asynchronously' };
   }
@@ -157,16 +140,9 @@ function computed(
   return read(done);
 }
 
-/**
- * What the engine handed back, as a value or an error.
- *
- * A reference or an array is read at its first cell, which is what Excel shows
- * when a range lands in a cell that wants one value.
- */
+/** What the engine handed back; a range or array is read at its first cell, as Excel shows it. */
 function read(done: ReturnType<Interpreter['execute']>): Computed {
-  // A reference is a range until it is asked for its values; `isReferenceObject`
-  // is the engine's own test for that and not a type guard, so the narrowing is
-  // ours to state.
+  // `isReferenceObject` is the engine's test, not a type guard.
   const single = done.isReferenceObject()
     ? (done as BaseReferenceObject).toArrayValueObject()
     : done;

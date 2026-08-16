@@ -6,14 +6,7 @@ import type { DataReader } from './ctx';
 import type { CompiledCell, CompiledGrid, CompiledSheet } from './grid';
 import type { StyleLayer } from './style';
 
-/**
- * Reading a spec the way this package's tests do: parse, load, compile.
- *
- * Here rather than in each test file because four of them wanted the same five
- * lines, and not in the package's index because nothing outside the tests
- * should reach for it — a caller with a `SpecDoc` calls `compile`, and a caller
- * without one has a loader of its own.
- */
+// Reading a spec the way this package's tests do; not exported from the index.
 const FILE = 'spec.yxl.yaml';
 
 export function grid(source: string, read?: DataReader): CompiledGrid {

@@ -38,11 +38,7 @@ function readDataBlock(site: Site): DataBlock | null {
   return { ...identify(here, opened.path, opened.node.span), at, source };
 }
 
-/**
- * Where the rows come from. Exactly one of `values`, `csv`, or `json`, and
- * `columns` names the fields of an array of JSON objects — the one source whose
- * field order is not its own.
- */
+/** Where the rows come from: exactly one of `values`, `csv`, `json` (`docs/spec.md` §9). */
 function readSource(
   ctx: Ctx,
   entries: readonly Entry[],
@@ -129,13 +125,7 @@ function readRows(ctx: Ctx, node: Node): readonly DataRow[] {
   return rows;
 }
 
-/**
- * One row of fields.
- *
- * A `null` field is a blank the table leaves for something else to fill — a
- * `formulas:` range covering the gap — so it is a value here rather than the
- * unfinished key `expectValue` refuses elsewhere.
- */
+/** One row of fields; `null` is a blank left for something else to fill, so it is a value here. */
 function readRow(ctx: Ctx, node: Node, what: string): DataRow {
   const opened = openSeq(ctx, node, [], what);
   if (opened === null) return [];
@@ -148,8 +138,7 @@ function readRow(ctx: Ctx, node: Node, what: string): DataRow {
     }
     const message = `field ${index + 1} of ${what} must be text, a number, a boolean, or null`;
     reject(opened.ctx, CODE.notAValue, message, item.span);
-    // Blank rather than absent: dropping the field would move every field after
-    // it one column left, which is a worse answer than an empty cell.
+    // Dropping the field would move every field after it one column left.
     fields.push(null);
   }
   return fields;

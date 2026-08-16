@@ -56,10 +56,7 @@ describe('a workbook computed', () => {
   });
 
   it('refuses a formula naming something it was not given, rather than answering anyway', () => {
-    // A table reference and a workbook-defined name are both constructs this
-    // editor does not model yet, and the engine has nothing behind either. It
-    // would answer `#NAME?`, an `IFERROR` around it would answer `""`, and a
-    // `SUM` over that would answer a number the workbook will not show.
+    // The engine would answer `#NAME?`, the `IFERROR` `""`, and a `SUM` over that a wrong number.
     const spec = `${SALES}    cells:\n      A1: { formula: "IFERROR(INDEX(StoreMaster[name], 1), \\"\\")" }\n      A2: { formula: "B1*target_revenue" }\n`;
 
     expect(at(spec, 'A1')?.kind).toBe('unsupported');

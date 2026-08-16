@@ -10,12 +10,9 @@ import {
 import type { Asked, Computed, Engine, Held, HeldSheet } from './engine';
 
 /**
- * What a workbook's formulas came to, display only (ADR-014).
- *
- * `stopped` is a sheet too large to compute inside the limit it was given.
- * Nothing at all is computed then, rather than the part that fit: a total over
- * a range half of which was computed is a *wrong number*, and a wrong number is
- * worse than no number.
+ * What a workbook's formulas came to, display only (ADR-014). `stopped` is a
+ * sheet too large for the limit, and then nothing on it is computed: a half-
+ * computed total is a wrong number.
  */
 export interface Evaluation {
   readonly values: ReadonlyMap<string, Computed>;
@@ -25,14 +22,9 @@ export interface Evaluation {
 }
 
 /**
- * Compute every formula the grid holds, in as many passes as it takes to settle.
- *
- * There is no dependency graph here. A pass computes every formula against what
- * the last pass knew, and a formula that reads another formula's cell gets its
- * answer on the pass after that one settled — so the number of passes a sheet
- * needs is the depth of its deepest chain. What has not settled by `PASSES` is
- * reported as uncomputable rather than as its latest guess, which is what a
- * circular reference looks like from here.
+ * Compute every formula, in as many passes as it takes to settle: no dependency
+ * graph, so passes are the depth of the deepest chain. What has not settled by
+ * `PASSES` — a circular reference — is uncomputable rather than a latest guess.
  */
 export function evaluate(grid: CompiledGrid, engine: Engine, limit = LIMIT): Evaluation {
   const held = new Map<SheetName, Held[]>();
@@ -90,18 +82,10 @@ function flat(computed: ReadonlyMap<SheetName, ReadonlyMap<A1Addr, Computed>>) {
 }
 
 /**
- * Which sheets cannot be computed, and what is missing from them.
- *
- * A formula naming something the engine was not given — a table, a defined
- * name — cannot be computed, and neither can anything that *reads* it: a total
- * over cells that were not computed is a total of blanks, which is a wrong
- * number wearing the look of a right one. Without a dependency graph the line
- * is drawn at the sheet, and doubt crosses a sheet boundary wherever a formula
- * reads across one.
- *
- * Coarse on purpose: a sheet is where a reader looks, and "some of these
- * numbers are computed and some are not" is a worse thing to hand them than a
- * sheet of formulas and a sentence saying why (ADR-025).
+ * Which sheets cannot be computed, and what is missing. A formula naming what
+ * the engine was not given taints everything that reads it; without a
+ * dependency graph the line is the sheet, and doubt crosses wherever a formula
+ * reads across one (ADR-025).
  */
 function doubt(
   asked: readonly Asked[],
@@ -159,11 +143,8 @@ const LIMIT = 20_000;
 const PASSES = 20;
 
 /**
- * The cells one sheet holds and the formulas it asks for.
- *
- * A `formulas:` range is walked only over the box the sheet writes: past that
- * every reference is empty, so Excel's answer there is the answer to a formula
- * over nothing — and `D2:D1048576` is a legal thing to write.
+ * The cells one sheet holds and the formulas it asks for. A `formulas:` range
+ * is walked only over the box the sheet writes: `D2:D1048576` is legal.
  */
 function gather(sheet: CompiledSheet, held: Map<SheetName, Held[]>, asked: Asked[]): void {
   const name = sheetName(sheet.name) ?? (sheet.name as SheetName);
@@ -190,9 +171,7 @@ function gather(sheet: CompiledSheet, held: Map<SheetName, Held[]>, asked: Asked
     columns = Math.max(columns, merge.rect.right);
   }
 
-  // A range's own columns are worth computing wherever they are — the spec
-  // wrote them — while its rows are only worth computing where the cells it
-  // reads exist, which is why the two bounds are not the same.
+  // A range's columns are the spec's; its rows run out where the cells it reads do.
   for (const fill of sheet.fills) columns = Math.max(columns, fill.rect.right);
 
   for (const fill of sheet.fills) {

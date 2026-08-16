@@ -39,9 +39,7 @@ function read(sample: Sample) {
 
 describe('the corpus', () => {
   it('includes yxl own examples', () => {
-    // A sibling yxl checkout is how this tier gets its real specs. Passing
-    // vacuously because the directory is missing would be the worst outcome,
-    // so the count is asserted rather than assumed.
+    // A missing sibling checkout must fail, not pass vacuously.
     expect(examples.length).toBeGreaterThan(0);
   });
 
@@ -55,10 +53,7 @@ const putBack: number[] = [];
 
 describe.each(corpus)('$name', (sample) => {
   it('is retained character for character by the parser library', () => {
-    // ADR-003 rests on this: the CST keeps every byte, so patching it can leave
-    // the untouched regions alone. If it were ever false, minimal patching
-    // would be built on sand — so it is asserted over the whole corpus rather
-    // than taken from the library's documentation.
+    // ADR-003 rests on this, so it is asserted rather than taken from the library's docs.
     const tokens = [...new Parser().parse(sample.source)];
     expect(tokens.map((t) => CST.stringify(t)).join('')).toBe(sample.source);
   });
@@ -138,9 +133,7 @@ describe.each(corpus)('$name', (sample) => {
   });
 
   it('comes back byte for byte when the edit is undone', () => {
-    // The other half of what makes an edit safe to make: the same file, not a
-    // file that parses to the same thing (ADR-010). Over a corpus written to be
-    // hostile to a serializer, an undo that reformatted anything would show.
+    // The same file, not one that parses the same (ADR-010).
     const { root } = read(sample);
     if (!root) return;
 

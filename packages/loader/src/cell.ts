@@ -86,13 +86,7 @@ function readExpandedCell(ctx: Ctx, node: Node, what: string): CellFacets | null
   return holdsSomething(here, body, opened.node, what) ? body : null;
 }
 
-/**
- * The six keys a `cells:` entry and an `overrides:` entry both write
- * (`docs/spec.md` §3).
- *
- * Anything else in `entries` is left alone: which other keys the construct
- * allows is the caller's, and so is saying so.
- */
+/** The six keys a `cells:` entry and an override both write (`docs/spec.md` §3); other keys are the caller's. */
 export function readFacets(ctx: Ctx, entries: readonly Entry[], what: string): CellFacets {
   let value: CellValue | null = null;
   let formula: FormulaBody | null = null;
@@ -130,13 +124,7 @@ export function readFacets(ctx: Ctx, entries: readonly Entry[], what: string): C
   return { value, formula, rich, type, format, style };
 }
 
-/**
- * Whether the cell says anything at all, and whether what it says fits together.
- *
- * A cell with only a look is a spec construct, not a mistake — a shaded box, the
- * ruled edge of a table, the blank half of a merged heading. A cell with nothing
- * is unfinished, and there is nothing to project.
- */
+/** Whether the cell says anything at all, and whether what it says fits together (`docs/spec.md` §3). */
 export function holdsSomething(ctx: Ctx, body: CellFacets, node: Node, what: string): boolean {
   const holdsNothing =
     body.value === null &&
@@ -158,8 +146,7 @@ export function holdsSomething(ctx: Ctx, body: CellFacets, node: Node, what: str
     reject(ctx, CODE.conflictingKeys, `${what} cannot be \`rich\` and hold a value too`, node.span);
   }
 
-  // `type` coerces a written value, so it needs one: a formula's result is
-  // Excel's to type, a `$ref` takes the definition's, and `rich` is text.
+  // `type` coerces a written value; a formula's result is Excel's to type.
   if (body.type !== null && (body.formula !== null || body.rich !== null)) {
     reject(
       ctx,
@@ -205,12 +192,7 @@ export function withoutLeadingEquals(formula: string): string {
   return formula.startsWith('=') ? formula.slice(1) : formula;
 }
 
-/**
- * The name in a `{ $ref: name }`, or `null` if this mapping is not one.
- *
- * A `$ref` beside any other key is not a reference — yxl reads it as an
- * ordinary mapping and then finds a key it does not know, and so do we.
- */
+/** The name in a `{ $ref: name }`, or `null`; a `$ref` beside any other key is not a reference. */
 function refName<T>(ctx: Ctx, node: Node, what: string, kind: Kind<T>): Templated<T> | null {
   if (node.kind !== 'map' || node.entries.length !== 1) return null;
 

@@ -1,27 +1,16 @@
 import { type Span, span } from '@yxl-vscode/diag';
 import type { DataRow, ScalarValue } from '@yxl-vscode/spec';
 
-/**
- * A table read, or the reason it would not read.
- *
- * `null` in a row means no cell at all rather than an empty one — a blank a
- * `formulas:` range may cover, which is the same rule inline rows follow
- * (`docs/spec.md` §9).
- */
+/** A table read, or the reason it would not read; `null` in a row is no cell at all (`docs/spec.md` §9). */
 export type Table = { readonly rows: readonly DataRow[] } | { readonly problem: string };
 
 const NUMBER = /^[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?$/;
 const BOOLEAN = /^(?:true|false)$/;
 
 /**
- * RFC 4180: commas separate fields, newlines separate records, and a quoted
- * field may hold either and doubles an inner quote.
- *
- * A **quoted** field is always text, so a CSV can carry `"007"` verbatim; a
- * **bare** one is read as a number or a boolean when it looks like one, and an
- * empty bare field writes no cell. That reading is narrower than YAML's — no
- * `0x1F`, no `.inf`, no `True` — because a CSV is not a YAML document and this
- * is what Excel does with an imported file.
+ * RFC 4180. A quoted field is always text and a bare one is read as the number
+ * or boolean it looks like — narrower than YAML, as Excel reads an import
+ * (`docs/spec.md` §9).
  */
 export function readCsv(source: string): Table {
   const scanned = scanCsv(source);
@@ -31,32 +20,20 @@ export function readCsv(source: string): Table {
 }
 
 /**
- * Where a field sits in the text, so a writer can replace that field and no
- * other byte of the file.
- *
- * The span covers the quotes where the field has them: what replaces it decides
- * its own quoting, and a field that was `"007"` may become `8`. `null` where the
- * file has no such row or no such field in it — a short row is allowed
- * (`docs/spec.md` §9), so the answer is about this file rather than about the
- * shape of the block.
+ * Where a field sits, quotes included, so a writer can replace it and no other
+ * byte; `null` where the file has no such row or field.
  */
 export function fieldAt(source: string, row: number, col: number): Span | null {
   return scanCsv(source).rows[row]?.[col]?.span ?? null;
 }
 
-/**
- * A value as a CSV field, read back as itself by the reader above.
- *
- * A CSV carries no types, so the quoting *is* the type: text that looks like a
- * number has to be quoted to stay text, and a number must not be. A field
- * holding a comma, a quote or a line break is quoted because RFC 4180 says so.
- */
+/** A value as a CSV field the reader above reads back as itself; the quoting is the type. */
 export function asCsvField(value: ScalarValue): string {
   if (value === null) return '';
   if (typeof value !== 'string') return String(value);
 
-  // A space inside a field needs nothing (RFC 4180), but one at either end is
-  // what half the readers in the world trim, so it is written quoted.
+  // RFC 4180 needs no quotes for a space, but a leading or trailing one is
+  // what most readers trim.
   const quoted =
     /[",\r\n]/.test(value) || /^\s|\s$/.test(value) || NUMBER.test(value) || BOOLEAN.test(value);
 
@@ -69,10 +46,7 @@ interface Field {
   readonly span: Span;
 }
 
-/**
- * The one pass both readings are made of, so the value a field has and the
- * bytes it occupies can never disagree.
- */
+/** The one pass both readings are made of, so a field's value and its bytes cannot disagree. */
 function scanCsv(source: string): { rows: Field[][]; problem: string | null } {
   const rows: Field[][] = [];
   let row: Field[] = [];
@@ -134,12 +108,9 @@ function scanCsv(source: string): { rows: Field[][]; problem: string | null } {
 }
 
 /**
- * A JSON table: an array of rows, each an array of values, or an object whose
- * fields `columns` names and orders.
- *
- * `columns` is required for objects and refused for arrays, because JSON does
- * not promise key order and a layout derived from it would not be
- * deterministic (`docs/spec.md` §9).
+ * A JSON table: an array of rows, or of objects whose fields `columns` names
+ * and orders — required there, since JSON promises no key order (`docs/spec.md`
+ * §9).
  */
 export function readJson(source: string, columns: readonly string[] | null): Table {
   let document: unknown;
@@ -153,7 +124,6 @@ export function readJson(source: string, columns: readonly string[] | null): Tab
 
   const rows: DataRow[] = [];
   for (const [index, item] of document.entries()) {
-    // Rows count from one in a message: the reader is looking at data, not code.
     const at = index + 1;
     const row = jsonRow(item, columns, at);
     if ('problem' in row) return row;
@@ -224,14 +194,8 @@ function csvField(text: string, quoted: boolean): ScalarValue {
 }
 
 /**
- * Text as the scalar it looks like.
- *
- * The reading a bare CSV field gets and the reading a `--set` value gets are
- * the same one (`docs/spec.md` §7, §9), so they are the same function: `--set
- * rate=0.15` stays a number, and so does a `0.15` in a column of them.
- *
- * Narrower than YAML's core schema — no `0x1F`, no `.inf`, no `True` — because
- * neither of these is a YAML document.
+ * Text as the scalar it looks like — one reading for a bare CSV field and a
+ * `--set` value (`docs/spec.md` §7, §9), narrower than YAML's.
  */
 export function infer(text: string): ScalarValue {
   if (text === 'true') return true;

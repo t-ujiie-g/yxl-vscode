@@ -27,39 +27,17 @@ import type {
 } from '@yxl-vscode/webview/protocol';
 import { type Nodes, nodeUnder } from './inspect';
 
-/**
- * A compiled grid as the view is handed it.
- *
- * The projection above this decides *what* the workbook is; this decides what
- * of it a reader is looking at — one window of one sheet, the cells in it that
- * have anything to show, and everything that could not be drawn said once
- * (ADR-019).
- */
+/** A compiled grid as the view is handed it: one window per sheet, the cells with anything to show (ADR-019). */
 /** Where a sheet is being looked at, 1-based, as the view last asked. */
 export type Window = { readonly row: number; readonly col: number };
 
 /** The window each sheet is being looked at through, by the sheet's own name. */
 export type Windows = ReadonlyMap<string, Window>;
 
-/**
- * How much of a sheet is drawn at once, wherever in it the reader is.
- *
- * Measured rather than guessed: a hundred thousand written cells parse,
- * load, compile, and flatten in under half a second, and the cost that does not
- * survive that size is the DOM — a hundred thousand `<td>`s is a page that
- * stops responding. Ten thousand is a screenful many times over with enough
- * either side that scrolling does not wait on this pipeline.
- */
+/** How much of a sheet is drawn at once: the DOM is the cost that does not survive a hundred thousand cells (`ROADMAP.md` §9 R5). */
 const WINDOW = { rows: 200, columns: 50 };
 
-/**
- * How far past what a spec writes a filled range is drawn.
- *
- * `at: D2:D1048576` is a legal thing to write and the whole point of the
- * construct; drawing it out would be a million rows of nothing. The written
- * content is what the reader is looking at, and this is enough beyond it to see
- * that the range continues.
- */
+/** How far past what a spec writes a filled range is drawn: enough to see it continues. */
 const BEYOND = 50;
 
 export function drawn(
@@ -89,14 +67,7 @@ export function drawn(
   };
 }
 
-/**
- * Each diagnostic on the cells it is about, by sheet.
- *
- * A diagnostic names a place in a file; the node at that place is what a reader
- * would call the cause, and the cells it reaches are where the effect shows.
- * One that reaches nothing — a sheet with no name, a band with an unreadable
- * `at` — is left to the list under the grid, which is where it belongs.
- */
+/** Each diagnostic on the cells the node at its place reaches; one reaching nothing stays in the list. */
 function marks(
   grid: CompiledGrid,
   nodes: Nodes,
@@ -118,12 +89,7 @@ function marks(
   return marked;
 }
 
-/**
- * The parameters a reader may turn, with what they are set to now.
- *
- * A default that names another parameter shows as the text the spec wrote,
- * since that is what a reader would edit — the resolved value is on the cells.
- */
+/** The parameters a reader may turn; a default shows as written, since that is what one would edit. */
 function declared(doc: SpecDoc, params: Setting): DrawnParam[] {
   return doc.params.map((param) => ({
     name: param.name,
@@ -132,12 +98,7 @@ function declared(doc: SpecDoc, params: Setting): DrawnParam[] {
   }));
 }
 
-/**
- * Why some cells show a formula rather than a value, for the view to say once.
- *
- * Nothing to say is the ordinary case — a spec with no formulas, and a spec
- * whose formulas all computed, are the same to a reader.
- */
+/** Why some cells show a formula rather than a value, for the view to say once. */
 function uncomputed(evaluation: Evaluation | null): Uncomputed | null {
   if (evaluation === null) return null;
   if (evaluation.stopped) return { kind: 'tooMany', limit: evaluation.limit };
@@ -180,10 +141,7 @@ function drawSheet(
   };
 }
 
-/**
- * How far the sheet is drawn: what it writes, and a look past that at what a
- * filled range continues into.
- */
+/** How far the sheet is drawn: what it writes, and a look past that into a filled range. */
 function extent(sheet: CompiledSheet): { rows: number; columns: number } {
   let rows = 0;
   let columns = 0;
@@ -207,13 +165,7 @@ function extent(sheet: CompiledSheet): { rows: number; columns: number } {
   return { rows, columns };
 }
 
-/**
- * Every address in the window that has anything to show.
- *
- * A band gives an empty cell a look, so this asks about addresses nothing
- * wrote — and skips the ones that come back with nothing, which is most of a
- * grid. Only the window is asked about, however large the sheet is.
- */
+/** Every address in the window with anything to show — a band gives an empty cell a look. */
 function drawCells(
   sheet: CompiledSheet,
   at: Window,
@@ -254,14 +206,7 @@ function drawCells(
   return drawn;
 }
 
-/**
- * Whether this cell can be typed into, said before the reader tries rather
- * than after.
- *
- * The same answer `editabilityOf` gives, which is the same answer the write
- * path gives when it refuses one — a badge that disagreed with the refusal
- * would be worse than no badge.
- */
+/** Whether this cell can be typed into — `editabilityOf`'s answer, so the badge and the refusal agree. */
 function typeable(cell: CompiledCell | null): Editable {
   if (cell === null) return 'mediated';
 
@@ -270,15 +215,9 @@ function typeable(cell: CompiledCell | null): Editable {
 }
 
 /**
- * The number format that actually applies to this cell.
- *
- * `own` is what the cell carries of its own — the `format:` it was written with,
- * or the one its `type:` takes — and it wins, because both are requests about
- * this cell rather than something reaching it.
- *
- * Failing that, Excel's own rule, not yxl's: **an inherited number format does
- * not apply to a text cell** (`docs/spec.md` §4). A code with fewer than four
- * sections says nothing about text, so a band's `#,##0` leaves a heading alone.
+ * The number format that applies: the cell's `own` first, else the inherited
+ * one — which does not reach a text cell unless it has a text section
+ * (`docs/spec.md` §4).
  */
 function applies(
   layers: readonly StyleLayer[],
@@ -294,10 +233,7 @@ function applies(
   return inherited && typeof value === 'string' ? null : (supplying.gives.format ?? null);
 }
 
-/**
- * The anchor of the range a cell was filled from, and `null` at the anchor
- * itself — where the formula is written as it applies.
- */
+/** The anchor of the range a cell was filled from; `null` at the anchor itself. */
 function filledFrom(cell: CompiledCell | null): string | null {
   const origin = cell?.provenance.value;
   if (origin?.kind !== 'formulaRange') return null;

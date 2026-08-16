@@ -2013,6 +2013,45 @@ this at a phase boundary rather than at the end.
 - A cell's own format — written, or the one its type takes — now wins over a
   band's. Both are requests about *that* cell; a band is something reaching it.
 
+### 2026-08-16 — Refactoring pass over the whole tree, comments first (`AGENTS.md` §8)
+A reader said the comments had grown, and had begun to turn up in odd places.
+Both were true, and the second was the symptom of the first: a four-line
+rationale sitting above one field of an object literal, and in one case two doc
+comments stacked on one method. Walked §8.6's rules over every source file in
+every package, and the other lenses behind them.
+
+- **Comments, in numbers.** Doc comments on exports: 1811 lines to 693, the
+  average from 5.8 lines to 2.2. Doc comments on private functions: 719 to 240.
+  Inline comments: 152 lines to 44. Blocks over the length that reads as an
+  essay: 296 to 41, and each of the 41 was read and kept for a reason. Some
+  1,800 lines gone across 97 files, with no line of code changing what it does.
+- **What went, by §8.6's three deletions.** Paraphrases of the line under them
+  (*"Shift takes the selection to here"* over `if (event.shiftKey)`); design
+  rationale that belongs in an ADR and already is (*why* the core is
+  synchronous, *why* the checker is the only door — ADR-004, ADR-009); and
+  narrations of past defects (*"is how an override went out as an edit and came
+  back refused"*), which were true the day they landed and are noise once
+  merged. What stayed is the constraint the code cannot show — `table-layout:
+  fixed` is inert without a width; `isReferenceObject` is not a type guard; a
+  block scalar's body already ends at a line break — in one or two lines, at the
+  line it governs.
+- **Doc comments on exports stay mandatory** and every one is still there,
+  cut to what the API is and one pointer (`docs/spec.md §n`, ADR-nnn) where the
+  rule lives elsewhere. Interface fields carry none of their own, as §8.6 says.
+- **§8.2 while there.** `cst/entries.ts` had two pairs of functions that shared
+  their guard-and-neighbour half — `insertion` with `insertedBlock`,
+  `addition` with `addedBlock` — now `intoSequence` and `mappingFor`, called by
+  both. Four `codes.ts` headers said the same paragraph four ways; one line
+  each. `Going` was exported from `keys.ts` for nobody. `knows` had already gone
+  with the last change.
+- **Tests got the same treatment**: a test's name says what it asserts, and the
+  forty-odd comments that restated it or told the story of a bug are gone;
+  what remains is *why this value and not the obvious one*.
+- Considered and left: `resolve.ts` is 398 lines and now five rows of the
+  resolution table, which is where the last sweep said to look again. It is
+  still one function per row and reads as the table; splitting it per row would
+  scatter the thing it is. Left, and the note stands.
+
 ### 2026-08-16 — Phase 8: a selection that is a rectangle
 
 - **The selection is a range now**, and the gestures that make one are the ones

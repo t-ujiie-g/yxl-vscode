@@ -1,9 +1,4 @@
-/**
- * Every diagnostic this package can raise.
- *
- * One so far, and it is the one that matters: an edit whose inverse this
- * algebra cannot express is refused rather than made (ADR-010).
- */
+/** Every diagnostic this package can raise; a code is stable and greppable, so it is API. */
 export const CODE = {
   noInverse: 'patch.no-inverse',
 } as const;

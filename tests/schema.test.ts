@@ -5,11 +5,7 @@ import type { SpecDoc } from '@yxl-vscode/spec';
 import { describe, expect, it } from 'vitest';
 import { includeReader, type Sample, yxlExamples } from './corpus';
 
-/**
- * A spec, rather than one of the fragments an `$include` pulls into one. A
- * fragment is a `columns:` sequence or a `defs.styles` mapping with no document
- * around it, and reading one as a document would say only that it is not one.
- */
+/** A spec, rather than a fragment an `$include` pulls into one. */
 function isDocument(sample: Sample): boolean {
   const { root } = parse(sample.source, { file: sample.name });
   return root?.kind === 'map' && root.entries.some((entry) => entry.key.value === 'sheets');
@@ -56,10 +52,7 @@ describe.each(documents)('$name', (sample) => {
   });
 
   it('draws with nothing left undrawn', () => {
-    // The same reader serves both halves: the core is I/O-free (ADR-004) and
-    // asks for a file the same way whether an `$include` or a `csv:` block
-    // named it. A diagnostic here means the projection disagrees with a spec
-    // the compiler builds.
+    // A diagnostic here is the projection disagreeing with a spec the compiler builds.
     const { doc } = read(sample);
     if (doc === null) throw new Error('did not load');
 

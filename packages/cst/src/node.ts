@@ -1,24 +1,13 @@
 import type { Diagnostic, Span } from '@yxl-vscode/diag';
 
-/**
- * How a scalar was written. Preserved because it is meaning, not decoration:
- * `007` plain is a number and `"007"` quoted is the text a spec wanted, and a
- * write-back that changes the style changes the compiled workbook.
- */
+/** How a scalar was written. Meaning, not decoration: `007` is a number and `"007"` is text. */
 export type ScalarStyle = 'plain' | 'single' | 'double' | 'literal' | 'folded';
 
 /**
- * A YAML document as this project reads it: the shape a spec can take, with a
- * span on every node and nothing of the parser library showing through.
- *
- * Scalars carry both the resolved `value` and the `source` it was written as, so
- * a consumer that needs the exact text (a large integer, a number whose
- * precision matters) never has to reach back into the file for it.
- *
- * A collection's `flow` distinguishes `{ bold: true }` from the indented block
- * form. It is not decoration: a block edit inserts a line and a flow edit
- * inserts inside brackets, so a writer that cannot tell them apart will corrupt
- * one of them.
+ * A YAML document as this project reads it, with a span on every node and
+ * nothing of the parser library showing through. A scalar carries the `source`
+ * bytes it was written as beside its `value`; a collection's `flow` is
+ * `{ a: 1 }` against the block form, which are edited differently.
  */
 export type Node = Scalar | Mapping | Sequence;
 
@@ -50,13 +39,7 @@ export interface Sequence {
   readonly span: Span;
 }
 
-/**
- * The result of reading one file.
- *
- * `root` is null for an empty document, and may also be present alongside
- * errors — the parser recovers, and a partly-understood document still projects
- * something worth showing.
- */
+/** One file read. `root` is null for an empty document, and may sit beside errors: the parser recovers. */
 export interface Parsed {
   readonly root: Node | null;
   readonly diagnostics: readonly Diagnostic[];

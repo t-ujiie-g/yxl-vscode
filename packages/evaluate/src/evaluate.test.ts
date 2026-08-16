@@ -6,13 +6,7 @@ import { describe, expect, it } from 'vitest';
 import type { Asked, Engine, HeldSheet } from './engine';
 import { evaluate } from './evaluate';
 
-/**
- * An engine that answers `A1` with what `A1` holds, and nothing else.
- *
- * The pass logic is what these tests are about — which cells are asked for, in
- * what order they settle, what happens at the edges — and none of that is the
- * engine's. A real one is tested against `univer.test.ts`.
- */
+/** An engine that answers `A1` with what `A1` holds: the passes are under test here, not the engine. */
 function reader(): Engine & { readonly asked: Asked[] } {
   const asked: Asked[] = [];
   let book: readonly HeldSheet[] = [];

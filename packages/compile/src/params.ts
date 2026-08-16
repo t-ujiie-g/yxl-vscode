@@ -2,13 +2,7 @@ import type { Param, ScalarValue } from '@yxl-vscode/spec';
 import type { ParamName } from '@yxl-vscode/units';
 import { infer } from './table';
 
-/**
- * What a `${...}` came out as (`docs/spec.md` §7).
- *
- * Best effort, like everything else that reads a spec being edited: a
- * placeholder no parameter backs is left standing in the text and named in
- * `missing`, so the grid shows what is unresolved rather than a blank.
- */
+/** What a `${...}` came out as (`docs/spec.md` §7); an unbacked placeholder stays in the text and is named in `missing`. */
 export interface Filled {
   readonly value: ScalarValue;
   readonly params: readonly ParamName[];
@@ -25,12 +19,9 @@ export function asIs(value: ScalarValue): Filled {
 }
 
 /**
- * Substitute the parameters a string names.
- *
- * A string that is **exactly one placeholder** keeps the parameter's type, so
- * `B1: "${rate}"` is a number cell and not the text `0.085`. `$$` is a literal
- * `$`, and a `$` that begins neither escape is itself — which is what keeps
- * Excel's `$A$1` safe.
+ * Substitute the parameters a string names (`docs/spec.md` §7): exactly one
+ * placeholder keeps the parameter's type, `$$` is a literal `$`, and a lone `$`
+ * is itself.
  */
 export function fill(text: string, lookup: Lookup): Filled {
   const params: ParamName[] = [];
@@ -83,16 +74,9 @@ export function fill(text: string, lookup: Lookup): Filled {
 }
 
 /**
- * Every declared parameter, resolved.
- *
- * A default may name another parameter (`title: "${quarter} ${region}"`), so
- * resolution is depth-first with the chain carried along: a cycle stops at the
- * text as written and is named in `cycles` for the caller to report.
- *
- * `set` is what a caller wants the parameters to be — the preview's switcher,
- * and `yxl build --set` on the command line. A name it holds that the spec does
- * not declare comes back in `unknown`, because a typo there should say so
- * rather than quietly do nothing.
+ * Every declared parameter, resolved. A default may name another, so a cycle
+ * is named in `cycles`; a `set` name the spec does not declare comes back in
+ * `unknown`.
  */
 export function resolveParams(
   declared: readonly Param[],
@@ -111,8 +95,7 @@ export function resolveParams(
 
     const given = set.get(param.name);
     if (given !== undefined) {
-      // A given value replaces the default outright: it is what the caller
-      // wants the parameter to be, not a template to fill in.
+      // A given value is not a template to fill in.
       const read = infer(given);
       values.set(param.name, read);
       return read;
@@ -142,16 +125,7 @@ export function resolveParams(
   return { values, cycles, unknown };
 }
 
-/**
- * Every parameter each parameter's default depends on, transitively.
- *
- * A default may be built from other parameters (`title: "${quarter} ${region}"`
- * — `docs/spec.md` §7), so a cell reading `title` follows `quarter` too. That
- * is what makes "which cells does this parameter reach" a question about the
- * whole chain rather than about one name.
- *
- * A cycle stops rather than loops; `resolveParams` is what reports it.
- */
+/** Every parameter each default depends on, transitively (`docs/spec.md` §7); a cycle stops. */
 export function behind(declared: readonly Param[]): ReadonlyMap<string, ReadonlySet<string>> {
   const named = new Map(declared.map((one) => [String(one.name), one]));
   const found = new Map<string, ReadonlySet<string>>();

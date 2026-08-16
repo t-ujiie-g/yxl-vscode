@@ -17,14 +17,7 @@ import { readStyle } from './style';
 
 export const NO_DEFS: Defs = { styles: [], values: [], formulas: [] };
 
-/**
- * The `defs:` block: three namespaces that do not see each other, so the same
- * name may be a style, a value, and a formula at once.
- *
- * A declaration's name is the key as written, placeholders and all. Unlike a
- * reference, a name is not read into anything — a `${...}` in one is text until
- * the compiler substitutes both sides of the lookup.
- */
+/** The `defs:` block, three namespaces that do not see each other; a name is the key as written. */
 export function readDefs(ctx: Ctx, node: Node, path: Path): Defs {
   const opened = openEntries(ctx, node, path, '`defs`');
   if (opened === null) return NO_DEFS;

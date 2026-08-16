@@ -22,13 +22,9 @@ export function address(ctx: Ctx, at: Templated<A1Addr>, node: SpecNode): A1Addr
 }
 
 /**
- * What a cell holds, from the six keys a `cells:` entry and an `overrides:`
- * entry both write.
- *
- * `own` is where the facets came from when the cell itself is the answer — a
- * literal for a cell, an override for an override. A `$ref` or a `${...}` moves
- * the value's origin somewhere else, and that move is the whole point of
- * recording it.
+ * What a cell holds, from the six keys a cell and an override both write. `own`
+ * is the origin when the cell itself is the answer; a `$ref` or a `${...}`
+ * moves it.
  */
 export function compileFacets(
   ctx: Ctx,
@@ -54,13 +50,8 @@ export function compileFacets(
 }
 
 /**
- * A `type: date` or `type: duration` as the number Excel keeps, and the format
- * that number needs to read as what it is.
- *
- * Excel stores both as plain numbers; without the conversion the value cannot
- * wear a format at all, and without the default format the number is what the
- * grid would show. The default only stands where the spec wrote none of its
- * own (`docs/spec.md` §3).
+ * A `type: date` or `type: duration` as the number Excel keeps, and the default
+ * format that number reads under where the spec wrote none (`docs/spec.md` §3).
  */
 function asTyped(
   ctx: Ctx,

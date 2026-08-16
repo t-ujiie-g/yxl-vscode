@@ -3,15 +3,12 @@ import type { Mapping } from './node';
 import type { Op } from './op';
 import { renderScalar } from './write';
 
-/** A collection written between brackets, and the entry being written into it. */
 type Held = Extract<Site, { in: 'map' } | { in: 'seq' }>;
 
 /**
- * A flow mapping with an entry written into it, as text.
- *
- * `before` names the entry it goes above, as it does in the block form, and
- * without one it goes last. Everything but the entry and its separator is the
- * file's own bytes, so nothing else in the collection is reformatted.
+ * A flow mapping with an entry written into it, above the entry `before` names
+ * or last without one. Everything but the entry and its separator is the file's
+ * own bytes.
  */
 export function withEntry(source: string, target: Mapping, op: Extract<Op, { op: 'add' }>): string {
   const whole = target.span;
@@ -41,13 +38,9 @@ export function withEntry(source: string, target: Mapping, op: Extract<Op, { op:
 }
 
 /**
- * A flow collection with one of its entries cut out, as text.
- *
- * `{ value: 0.085, format: "0.0%" }` is one line, so there are no lines to take
- * — what goes is the entry and one separator, and the rest of the collection is
- * the file's own bytes on either side of the cut. Which separator depends on
- * where the entry sits: the comma after it, or, for the last one, the comma
- * before.
+ * A flow collection with one entry cut out: the entry and one separator — the
+ * comma after it, or the comma before for the last — and the file's own bytes
+ * either side.
  */
 export function withoutEntry(source: string, site: Held): string {
   const whole = site.parent.span;
@@ -67,8 +60,5 @@ export function withoutEntry(source: string, site: Held): string {
     );
   }
 
-  // The only one in it: what is left is the collection's own brackets, and
-  // whether an empty one means anything is the compiler's question, not this
-  // layer's.
   return source[whole.start] === '[' ? '[]' : '{}';
 }

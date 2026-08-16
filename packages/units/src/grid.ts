@@ -1,12 +1,7 @@
 import type { A1Addr, A1Range } from './a1';
 import type { ColumnSpan, RowSpan } from './band';
 
-/**
- * A cell as two 1-based numbers, where `A1` is column 1 row 1.
- *
- * Addresses are text in a spec and arithmetic in a grid; this is the second
- * form, and the two conversions below are the only place either is spelled.
- */
+/** A cell as two 1-based numbers: `A1` is column 1, row 1. */
 export interface CellRef {
   readonly col: number;
   readonly row: number;
@@ -73,12 +68,7 @@ export function within(cell: CellRef, rect: Rect): boolean {
   );
 }
 
-/**
- * A selector's two ends, `null` where it named only one.
- *
- * It splits on the *first* `-`, so `B-` has an empty end rather than none —
- * which is what makes `parseColumnSpan` refuse it.
- */
+/** A selector's two ends, `null` where it named only one; `B-` has an empty end, so it is refused. */
 export function endpoints(span: string): [string, string | null] {
   const dash = span.indexOf('-');
   return dash < 0 ? [span, null] : [span.slice(0, dash), span.slice(dash + 1)];

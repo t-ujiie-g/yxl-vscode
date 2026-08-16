@@ -5,12 +5,7 @@ import { Preview } from './preview';
 /** The yxl this preview targets, compiled in from the one place it is pinned. */
 declare const YXL_TARGET: string;
 
-/**
- * What VS Code calls, and all it calls.
- *
- * The preview is a projection beside the text rather than a replacement for it
- * (ADR-020), so the file stays a YAML file in a YAML editor.
- */
+/** What VS Code calls: a preview beside the text, not a replacement for it (ADR-020). */
 export function activate(context: vscode.ExtensionContext): void {
   const compiler = new Compiler(YXL_TARGET);
 
