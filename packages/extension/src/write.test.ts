@@ -53,6 +53,9 @@ const typed = (of: Partial<Typed> = {}): Typed => ({
 
 const SALES = 'sheets:\n  - name: Sales\n';
 
+/** A sheet whose rows come from a `data:` block, with a blank line under it. */
+const BESIDE_DATA = `${SALES}    data:\n      - at: A1\n        values:\n          - [APAC, 1]\n          - [EMEA, 2]\n`;
+
 describe('what a reader typed, all the way to the file', () => {
   it('writes a value where the spec wrote the cell', async () => {
     const spec = { [ROOT]: `${SALES}    cells:\n      A1: APAC\n` };
@@ -121,9 +124,9 @@ describe('the exception, when the ordinary edit is refused', () => {
   });
 
   it('is not offered where there is no cell to make an exception of', async () => {
-    const { spec, port, offers } = editor({ [ROOT]: `${SALES}    cells:\n      A1: 1\n` });
+    const { spec, port, offers } = editor({ [ROOT]: BESIDE_DATA });
 
-    await write(spec, typed({ col: 26, row: 99 }), port);
+    await write(spec, typed({ col: 1, row: 3, text: 'Total' }), port);
     expect(offers[0]).toBeNull();
   });
 
@@ -260,24 +263,35 @@ describe('the answers an edit has, when it has more than one', () => {
 describe('a cell nothing has written yet', () => {
   const at = typed({ row: 5, col: 1, text: 'Total' });
 
-  it('offers to write it, with no override beside it', async () => {
-    // An override must have something to override (`docs/spec.md` §23), and an
-    // empty address has nothing — so the answer is the only offer.
-    const { spec, port, answers, offers } = editor({
+  it('is written where the sheet keeps its cells, without being asked about', async () => {
+    // One answer and nothing to weigh it against, so it applies: a click in
+    // front of typing into a blank cell would be a click too many (ADR-001).
+    const { spec, port, files, refusals } = editor({
       [ROOT]: `${SALES}    cells:\n      A1: APAC\n`,
     });
 
     await write(spec, at, port);
-    expect(answers[0]).toEqual([
-      { id: 'newCell', what: 'Write `A5` as a new cell', moves: 1, sample: ['A5'] },
-    ]);
-    expect(offers[0]).toBeNull();
+    expect(refusals).toEqual([]);
+    expect(files[ROOT]).toBe(`${SALES}    cells:\n      A1: APAC\n      A5: Total\n`);
   });
 
-  it('writes it where the sheet keeps its cells', async () => {
-    const { spec, port, files } = editor({ [ROOT]: `${SALES}    cells:\n      A1: APAC\n` });
+  it('is asked about where a `data:` rectangle could hold it instead', async () => {
+    // Extending the rectangle is the other answer, and where there are two the
+    // reader picks. No override beside them: there is no cell to except yet.
+    const { spec, port, answers, offers, files } = editor({ [ROOT]: BESIDE_DATA });
 
-    await resolve(spec, at, 'newCell', port);
-    expect(files[ROOT]).toBe(`${SALES}    cells:\n      A1: APAC\n      A5: Total\n`);
+    await write(spec, typed({ row: 3, col: 1, text: 'Total' }), port);
+    expect(answers[0]).toEqual([
+      { id: 'newCell', what: 'Write `A3` as a new cell', moves: 1, sample: ['A3'] },
+    ]);
+    expect(offers[0]).toBeNull();
+    expect(files[ROOT]).toBe(BESIDE_DATA);
+  });
+
+  it('is written as the answer says when the reader takes it', async () => {
+    const { spec, port, files } = editor({ [ROOT]: BESIDE_DATA });
+
+    await resolve(spec, typed({ row: 3, col: 1, text: 'Total' }), 'newCell', port);
+    expect(files[ROOT]).toContain('A3: Total');
   });
 });

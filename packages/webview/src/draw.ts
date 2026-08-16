@@ -74,6 +74,10 @@ export interface Asks {
  */
 export function draw(into: HTMLElement, showing: Showing, asks: Asks): void {
   const { drawing } = showing;
+  // A reader who was on the grid is still on the grid after it is rebuilt, and
+  // the keys that move the selection only arrive at a cell that has the focus.
+  // Only if they *were*: taking it would take it from the text editor beside.
+  const held = into.contains(document.activeElement);
   const was = into.querySelector('.scroller');
   const same = was?.getAttribute('data-of') === looking(showing);
   const kept: Where =
@@ -104,6 +108,11 @@ export function draw(into: HTMLElement, showing: Showing, asks: Asks): void {
   under.className = 'under';
   into.append(under);
   say(under, showing, asks);
+
+  if (held && showing.selected !== null) {
+    const at = cellKey(showing.selected.col, showing.selected.row);
+    into.querySelector<HTMLElement>(`td[data-at="${at}"]`)?.focus({ preventScroll: true });
+  }
 }
 
 /**
@@ -207,6 +216,66 @@ function grid(sheet: DrawnSheet, showing: Showing, asks: Asks): HTMLElement {
 
   table.append(body);
   return table;
+}
+
+/**
+ * How far a key moves the selection, or `null` where it moves nothing.
+ *
+ * The keys a spreadsheet moves by, and the reason the grid is worth using
+ * without a mouse: arrows by one, tab across, page by a window's worth of rows.
+ */
+function stepping(event: KeyboardEvent, sheet: DrawnSheet): { rows: number; cols: number } | null {
+  if (event.ctrlKey || event.metaKey || event.altKey) return null;
+  const page = Math.max(1, sheet.rows - 1);
+
+  switch (event.key) {
+    case 'ArrowUp':
+      return { rows: -1, cols: 0 };
+    case 'ArrowDown':
+      return { rows: 1, cols: 0 };
+    case 'ArrowLeft':
+      return { rows: 0, cols: -1 };
+    case 'ArrowRight':
+      return { rows: 0, cols: 1 };
+    case 'Tab':
+      return { rows: 0, cols: event.shiftKey ? -1 : 1 };
+    case 'PageUp':
+      return { rows: -page, cols: 0 };
+    case 'PageDown':
+      return { rows: page, cols: 0 };
+    default:
+      return null;
+  }
+}
+
+/**
+ * The selection moved, and the reader's focus with it.
+ *
+ * A cell outside the drawn window is not in the page at all, so the host is
+ * asked for a window around it and the redraw puts the focus back where the
+ * reader was.
+ */
+function goTo(
+  from: HTMLElement,
+  sheet: DrawnSheet,
+  to: { row: number; col: number },
+  asks: Asks,
+): void {
+  const at = {
+    row: Math.min(Math.max(to.row, 1), sheet.of.rows),
+    col: Math.min(Math.max(to.col, 1), sheet.of.columns),
+  };
+  asks.select(at.row, at.col);
+
+  const grid = from.closest('.grid');
+  const next = grid?.querySelector<HTMLElement>(`td[data-at="${cellKey(at.col, at.row)}"]`);
+  if (next == null) {
+    asks.showWindow(at.row, at.col);
+    return;
+  }
+
+  next.focus({ preventScroll: true });
+  next.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
 }
 
 /** A key that is a character the reader meant to put in the cell. */
@@ -360,9 +429,24 @@ function line(
       // of the cell — so its keys arrive here too unless this says otherwise.
       if (event.target !== drawn) return;
 
+      const step = stepping(event, sheet);
+      if (step !== null) {
+        event.preventDefault();
+        goTo(drawn, sheet, { row: row + step.rows, col: col + step.cols }, asks);
+        return;
+      }
+
       if (event.key === 'Enter' || event.key === 'F2') {
         event.preventDefault();
         type();
+        return;
+      }
+
+      // Emptying a cell is typing nothing into it, which the write path already
+      // reads as a cell that holds nothing.
+      if (event.key === 'Delete' || event.key === 'Backspace') {
+        event.preventDefault();
+        asks.edit(row, col, '');
         return;
       }
 

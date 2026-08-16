@@ -75,6 +75,18 @@ export async function write(spec: Spec, typed: Typed, port: Port): Promise<void>
     : setValue(spec.grid, where, meant(typed.text), port.text);
 
   if (intent.kind === 'refused') {
+    const answers = candidates(spec.grid, where, typed.text, port.text);
+
+    // One answer, and nothing being chosen between: an edit with one meaning
+    // applies, and only an edit with several is a question (ADR-001). Asking
+    // anyway would put a click in front of the most ordinary thing anyone does
+    // with a spreadsheet — typing into a blank cell.
+    const sole = answers.length === 1 ? answers[0] : undefined;
+    if (sole?.alone === true) {
+      await applied(spec, sole.intent, port);
+      return;
+    }
+
     port.refuse(intent.why, {
       // Built rather than passed through: what arrives here is the *message*
       // that asked for the edit, and a message carries its own `kind`. Handing
@@ -82,7 +94,7 @@ export async function write(spec: Spec, typed: Typed, port: Port): Promise<void>
       // edit and came back refused by the rule it was the exception to.
       typed: { sheet: typed.sheet, row: typed.row, col: typed.col, text: typed.text },
       canOverride: excepts(spec, where),
-      choices: candidates(spec.grid, where, typed.text, port.text).map(shown),
+      choices: answers.map(shown),
     });
     return;
   }

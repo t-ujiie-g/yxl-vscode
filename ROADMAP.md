@@ -1768,6 +1768,23 @@ this at a phase boundary rather than at the end.
 
 ### 2026-08-16 — Phase 7: typing into an empty cell, and one place for both offers
 
+*Amended the same day, after a reader asked whether every edit would now cost a
+click. It should not, and ADR-001 always said so: an edit with **one** meaning
+applies, and only an edit with several is a question.*
+
+- **A sole answer is taken rather than offered.** Typing into a blank cell just
+  writes it, as in any spreadsheet. The question comes back the moment there is
+  something to weigh it against — a `data:` rectangle directly above or to the
+  left, whose second answer is to extend it — and a range's formula is always a
+  question, because changing five hundred cells is not a thing to do quietly.
+  `Candidate.alone` is where a row says which it is.
+- **The grid moves under the keys**: arrows, tab and shift-tab, page up and
+  down, all clamped to the sheet. Off the edge of the drawn window the host is
+  asked for a window around where the reader went, and the redraw puts the focus
+  back — but only if the grid had it, so the text editor beside is never robbed.
+- **Delete empties a cell**, which is the write path already there: typing
+  nothing into a cell is a cell that holds nothing.
+
 - **An address nothing reaches can be written now.** Typing into a blank cell
   offers it as a new `cells:` entry — the `empty` row's first answer — with the
   `cells:` key written too where the sheet has none. A formula goes in as
