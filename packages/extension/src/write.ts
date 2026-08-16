@@ -3,6 +3,7 @@ import {
   type Candidate,
   candidates,
   type Intent,
+  meant,
   override,
   type Says,
   setFormula,
@@ -25,8 +26,19 @@ import type { Choice, Typed } from '@yxl-vscode/webview/protocol';
 export interface Port {
   readonly text: (file: FilePath) => string | null;
   readonly put: (file: FilePath, text: string) => void | Promise<void>;
-  readonly refuse: (why: string, override: Typed | null, choices: readonly Choice[]) => void;
+  readonly refuse: (why: string, offer: Offer | null) => void;
   readonly said: (what: string) => void;
+}
+
+/**
+ * What a reader can do about a refusal: take one of the answers the edit has,
+ * or write it as the exception (ADR-007). Both are about the text they typed,
+ * and `null` is a refusal there is nothing to be done about.
+ */
+export interface Offer {
+  readonly typed: Typed;
+  readonly canOverride: boolean;
+  readonly choices: readonly Choice[];
 }
 
 export interface Spec {
@@ -49,7 +61,7 @@ export interface Spec {
 export async function write(spec: Spec, typed: Typed, port: Port): Promise<void> {
   const sheet = sheetName(typed.sheet);
   if (sheet === null) {
-    port.refuse(`\`${typed.sheet}\` is not a name a sheet can have`, null, []);
+    port.refuse(`\`${typed.sheet}\` is not a name a sheet can have`, null);
     return;
   }
 
@@ -63,8 +75,15 @@ export async function write(spec: Spec, typed: Typed, port: Port): Promise<void>
     : setValue(spec.grid, where, meant(typed.text), port.text);
 
   if (intent.kind === 'refused') {
-    const answers = candidates(spec.grid, where, typed.text, port.text);
-    port.refuse(intent.why, exception(spec, where, typed), answers.map(shown));
+    port.refuse(intent.why, {
+      // Built rather than passed through: what arrives here is the *message*
+      // that asked for the edit, and a message carries its own `kind`. Handing
+      // that back for the view to send again is how an override went out as an
+      // edit and came back refused by the rule it was the exception to.
+      typed: { sheet: typed.sheet, row: typed.row, col: typed.col, text: typed.text },
+      canOverride: excepts(spec, where),
+      choices: candidates(spec.grid, where, typed.text, port.text).map(shown),
+    });
     return;
   }
 
@@ -82,7 +101,7 @@ export async function write(spec: Spec, typed: Typed, port: Port): Promise<void>
 export async function resolve(spec: Spec, typed: Typed, choice: string, port: Port): Promise<void> {
   const sheet = sheetName(typed.sheet);
   if (sheet === null) {
-    port.refuse(`\`${typed.sheet}\` is not a name a sheet can have`, null, []);
+    port.refuse(`\`${typed.sheet}\` is not a name a sheet can have`, null);
     return;
   }
 
@@ -91,7 +110,7 @@ export async function resolve(spec: Spec, typed: Typed, choice: string, port: Po
   const taken = answers.find((one) => one.id === choice);
 
   if (taken === undefined) {
-    port.refuse('that answer is no longer one of the ways this edit could be made', null, []);
+    port.refuse('that answer is no longer one of the ways this edit could be made', null);
     return;
   }
 
@@ -125,7 +144,7 @@ export async function writeOverride(
 ): Promise<void> {
   const sheet = sheetName(typed.sheet);
   if (sheet === null) {
-    port.refuse(`\`${typed.sheet}\` is not a name a sheet can have`, null, []);
+    port.refuse(`\`${typed.sheet}\` is not a name a sheet can have`, null);
     return;
   }
 
@@ -145,13 +164,13 @@ export async function writeOverride(
 /** The half of a write that is the same whichever intent produced it. */
 async function applied(spec: Spec, intent: Intent, port: Port): Promise<boolean> {
   if (intent.kind === 'refused') {
-    port.refuse(intent.why, null, []);
+    port.refuse(intent.why, null);
     return false;
   }
 
   const source = port.text(intent.file);
   if (source === null) {
-    port.refuse(`${intent.file} could not be read`, null, []);
+    port.refuse(`${intent.file} could not be read`, null);
     return false;
   }
 
@@ -163,11 +182,11 @@ async function applied(spec: Spec, intent: Intent, port: Port): Promise<boolean>
   });
 
   if (done.ok === false) {
-    port.refuse(done.diagnostics[0]?.message ?? surprising(done.surprises), null, []);
+    port.refuse(done.diagnostics[0]?.message ?? surprising(done.surprises), null);
     return false;
   }
   if (done.ok === 'ask') {
-    port.refuse(surprising(done.surprises), null, []);
+    port.refuse(surprising(done.surprises), null);
     return false;
   }
 
@@ -176,39 +195,15 @@ async function applied(spec: Spec, intent: Intent, port: Port): Promise<boolean>
 }
 
 /**
- * The gesture, offered back as an override — where there is a cell to name.
+ * Whether this gesture could be written as an override.
  *
- * An address nothing is written at has nothing to except; the offer would be
- * the editor inventing a cell for a reader who mistyped.
+ * An address nothing is written at has nothing to except, and the offer would
+ * be the editor inventing a cell for a reader who mistyped (`docs/spec.md`
+ * §23).
  */
-function exception(
-  spec: Spec,
-  where: { sheet: SheetName; at: A1Addr },
-  typed: Typed,
-): Typed | null {
+function excepts(spec: Spec, where: { sheet: SheetName; at: A1Addr }): boolean {
   const sheet = spec.grid.sheets.find((one) => one.name === where.sheet);
-  if (sheet === undefined || cellAt(sheet, where.at) === null) return null;
-
-  // Built rather than passed through: what arrives here is the *message* that
-  // asked for the edit, and a message carries its own `kind`. Handing that back
-  // for the view to send again is how an override went out as an edit and came
-  // back refused by the rule it was the exception to.
-  return { sheet: typed.sheet, row: typed.row, col: typed.col, text: typed.text };
-}
-
-/**
- * What the reader meant by what they typed.
- *
- * YAML's own reading of a bare scalar, which is what the spec would give the
- * same text: `42` is a number, `true` is a boolean, and an empty box is a cell
- * with nothing in it.
- */
-function meant(typed: string): string | number | boolean | null {
-  if (typed === '') return null;
-  if (typed === 'true' || typed === 'false') return typed === 'true';
-
-  const number = Number(typed);
-  return typed.trim() !== '' && Number.isFinite(number) ? number : typed;
+  return sheet !== undefined && cellAt(sheet, where.at) !== null;
 }
 
 function surprising(surprises: readonly Change[]): string {

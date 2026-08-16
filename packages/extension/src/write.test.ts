@@ -30,10 +30,10 @@ function editor(sources: Record<string, string>) {
     put: (file, text) => {
       files[file] = text;
     },
-    refuse: (why, override, choices) => {
+    refuse: (why, offer) => {
       refusals.push(why);
-      offers.push(override);
-      answers.push([...choices]);
+      offers.push(offer?.canOverride === true ? offer.typed : null);
+      answers.push([...(offer?.choices ?? [])]);
     },
     said: (what) => {
       told.push(what);
@@ -254,5 +254,30 @@ describe('the answers an edit has, when it has more than one', () => {
 
     await write(spec, typed({ text: '=A2' }), port);
     expect(answers[0]).toEqual([]);
+  });
+});
+
+describe('a cell nothing has written yet', () => {
+  const at = typed({ row: 5, col: 1, text: 'Total' });
+
+  it('offers to write it, with no override beside it', async () => {
+    // An override must have something to override (`docs/spec.md` §23), and an
+    // empty address has nothing — so the answer is the only offer.
+    const { spec, port, answers, offers } = editor({
+      [ROOT]: `${SALES}    cells:\n      A1: APAC\n`,
+    });
+
+    await write(spec, at, port);
+    expect(answers[0]).toEqual([
+      { id: 'newCell', what: 'Write `A5` as a new cell', moves: 1, sample: ['A5'] },
+    ]);
+    expect(offers[0]).toBeNull();
+  });
+
+  it('writes it where the sheet keeps its cells', async () => {
+    const { spec, port, files } = editor({ [ROOT]: `${SALES}    cells:\n      A1: APAC\n` });
+
+    await resolve(spec, at, 'newCell', port);
+    expect(files[ROOT]).toBe(`${SALES}    cells:\n      A1: APAC\n      A5: Total\n`);
   });
 });

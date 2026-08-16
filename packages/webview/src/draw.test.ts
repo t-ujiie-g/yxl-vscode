@@ -515,7 +515,8 @@ describe('what the view says about a spec', () => {
     const refused = {
       kind: 'refused',
       why: 'B5 holds a formula',
-      override: null,
+      typed: null,
+      canOverride: false,
       choices: [],
     } as const;
     expect(shown({ refused }).querySelector('.refused')?.textContent).toContain('holds a formula');
@@ -526,7 +527,8 @@ describe('what the view says about a spec', () => {
     const refused = {
       kind: 'refused',
       why: 'B5 is filled by a range',
-      override: typed,
+      typed,
+      canOverride: true,
       choices: [
         {
           id: 'rangeFormula',
@@ -551,7 +553,8 @@ describe('what the view says about a spec', () => {
     const refused = {
       kind: 'refused',
       why: 'B5 is filled by a range',
-      override: typed,
+      typed,
+      canOverride: true,
       choices: [],
     } as const;
     const on = asks();
@@ -566,7 +569,8 @@ describe('what the view says about a spec', () => {
     const refused = {
       kind: 'refused',
       why: 'B5 is filled by a range',
-      override: typed,
+      typed,
+      canOverride: true,
       choices: [],
     } as const;
     const on = asks();
@@ -586,7 +590,8 @@ describe('what the view says about a spec', () => {
     const refused = {
       kind: 'refused',
       why: 'B5 is filled by a range',
-      override: typed,
+      typed,
+      canOverride: true,
       choices: [],
     } as const;
     const on = asks();
@@ -605,7 +610,8 @@ describe('what the view says about a spec', () => {
     const refused = {
       kind: 'refused',
       why: 'nothing is written there',
-      override: null,
+      typed: null,
+      canOverride: false,
       choices: [],
     } as const;
     expect(shown({ refused }).querySelector('.refused .go')).toBeNull();

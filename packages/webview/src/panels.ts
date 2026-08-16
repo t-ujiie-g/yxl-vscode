@@ -83,7 +83,7 @@ export function refusal(refused: Refused, asks: Asks): HTMLElement {
   said.className = 'refused';
   said.append(refused.why);
 
-  const typed = refused.override;
+  const typed = refused.typed;
   if (typed === null) return said;
 
   for (const choice of refused.choices) {
@@ -94,6 +94,8 @@ export function refusal(refused: Refused, asks: Asks): HTMLElement {
     pick.addEventListener('click', () => asks.resolveWith(typed, choice.id));
     said.append(' ', pick);
   }
+
+  if (!refused.canOverride) return said;
 
   // The reason is asked for here rather than in a box of the editor's, because
   // the reader is looking at this sentence and because an override with no

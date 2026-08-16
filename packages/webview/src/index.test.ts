@@ -96,7 +96,8 @@ describe('what the view sends', () => {
     const refused: Refused = {
       kind: 'refused',
       why: 'filled by a range',
-      override: offer,
+      typed: offer,
+      canOverride: true,
       choices: [],
     };
 
@@ -112,7 +113,7 @@ describe('what the view sends', () => {
     const { into, sent, told } = view();
     const choices = [{ id: 'rangeFormula', what: 'Change the range', moves: 2, sample: ['C2'] }];
 
-    told({ kind: 'refused', why: 'filled by a range', override: typed, choices });
+    told({ kind: 'refused', why: 'filled by a range', typed, canOverride: true, choices });
     into.querySelector<HTMLElement>('.refused .choice')?.click();
 
     expect(sent.filter((one) => one.kind === 'resolve')).toEqual([
@@ -122,7 +123,7 @@ describe('what the view sends', () => {
 
   it('sends the reason typed beside the offer', () => {
     const { into, sent, told } = view();
-    told({ kind: 'refused', why: 'filled by a range', override: typed, choices: [] });
+    told({ kind: 'refused', why: 'filled by a range', typed, canOverride: true, choices: [] });
 
     const why = into.querySelector('.refused .reason');
     if (!(why instanceof HTMLInputElement)) throw new Error('nowhere to say why');
@@ -152,7 +153,13 @@ describe('what the view does with what it is told', () => {
     if (!(box instanceof HTMLInputElement)) throw new Error('nothing to type into');
     box.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
 
-    told({ kind: 'refused', why: 'filled by a range', override: null, choices: [] });
+    told({
+      kind: 'refused',
+      why: 'filled by a range',
+      typed: null,
+      canOverride: false,
+      choices: [],
+    });
     expect(at(into, 1, 1)?.classList.contains('selected')).toBe(true);
   });
 
@@ -165,7 +172,13 @@ describe('what the view does with what it is told', () => {
 
   it('forgets a refusal once the spec has been read again', () => {
     const { into, told } = view();
-    told({ kind: 'refused', why: 'filled by a range', override: null, choices: [] });
+    told({
+      kind: 'refused',
+      why: 'filled by a range',
+      typed: null,
+      canOverride: false,
+      choices: [],
+    });
     told(drawing);
 
     expect(into.querySelector('.refused')).toBeNull();

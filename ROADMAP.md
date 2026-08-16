@@ -762,7 +762,13 @@ Where it starts to feel like a spreadsheet.
       range is anchored at is offered as *the range's* formula, and taking it
       changes every cell the range fills. ② (split the range) and ① away from
       the anchor wait on §8 Q2, and the refusal points the reader at the anchor
-      meanwhile. The other rows are next.
+      meanwhile.
+      **`empty` ①** is in: typing into an address nothing reaches offers it as a
+      new `cells:` entry, written where the sheet keeps its cells — and the
+      `cells:` key itself where the sheet has none. ② (extend the `data:`
+      rectangle next to it) is the half that decides whether a spec grows a
+      hundred `cells:` entries or a table, and it lands with the rectangle work
+      Phase 8 needs anyway.
 - [x] Resolution dialog: candidates, each with a pre-computed impact summary and
       a sample of affected cells
       **Shipped**, as answers under the grid rather than a modal over it: each
@@ -1759,6 +1765,26 @@ this at a phase boundary rather than at the end.
   two serials either side of it, so the next reader knows it is deliberate.
 - A cell's own format — written, or the one its type takes — now wins over a
   band's. Both are requests about *that* cell; a band is something reaching it.
+
+### 2026-08-16 — Phase 7: typing into an empty cell, and one place for both offers
+
+- **An address nothing reaches can be written now.** Typing into a blank cell
+  offers it as a new `cells:` entry — the `empty` row's first answer — with the
+  `cells:` key written too where the sheet has none. A formula goes in as
+  `A5:\n  formula: …` and a value as `A5: …`, which is the shape each has in the
+  spec (`docs/spec.md` §3).
+- **It is offered rather than taken**, even though it is the only answer today:
+  a blank cell beside a `data:` rectangle has a second one waiting — extending
+  the rectangle — and doing the first silently would be picking between them.
+- **No override beside it**, because an override must have something to override
+  (`docs/spec.md` §23), and an empty address has nothing. The refusal now says
+  `nothing writes A5 yet` rather than sounding like a mistake.
+- **A refusal's two offers came apart.** The answers used to ride on the
+  override's presence — a refusal with no cell to except carried no answer
+  either, which is exactly the empty cell's case. `Refused` now carries what was
+  typed once, with `choices` and `canOverride` beside it.
+- `meant` — what a reader's text means as a YAML scalar — moved down into
+  `intent`, where the direct path and the resolutions both read one rule.
 
 ### 2026-08-16 — Phase 7: the first row of the resolution table, and the way to choose
 

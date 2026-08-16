@@ -148,4 +148,18 @@ describe('the loop, closed', () => {
       'B2*0.1',
     ]);
   });
+
+  it('carries a cell nothing had written into the workbook', async () => {
+    if (!QUICKSTART) return;
+    const { dir, root, port, spec, refusals } = opened(QUICKSTART);
+    const at = typed({ row: 7, col: 1, text: 'Footnote' });
+
+    await write(spec(), at, port);
+    expect(refusals).toHaveLength(1);
+
+    await resolve(spec(), at, 'newCell', port);
+    expect(refusals).toHaveLength(1);
+
+    expect(cell(built(dir, root), 'Sales', 'A7')?.value).toBe('Footnote');
+  });
 });

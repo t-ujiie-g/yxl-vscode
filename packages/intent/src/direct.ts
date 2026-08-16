@@ -55,7 +55,7 @@ export function setValue(
   if (sheet === undefined) return refused(`there is no sheet named \`${where.sheet}\``);
 
   const cell = cellAt(sheet, where.at);
-  if (cell === null) return refused(`nothing is written at \`${where.at}\``);
+  if (cell === null) return refused(`nothing writes \`${where.at}\` yet`);
 
   const found = valuePath(cell.provenance.value, sheet, where.at, text);
   if (found.kind === 'refused') return found;
@@ -85,9 +85,8 @@ export function setFormula(
   if (sheet === undefined) return refused(`there is no sheet named \`${where.sheet}\``);
 
   const cell = cellAt(sheet, where.at);
-  if (cell === null || cell.formula === null) {
-    return refused(`\`${where.at}\` holds no formula to change`);
-  }
+  if (cell === null) return refused(`nothing writes \`${where.at}\` yet`);
+  if (cell.formula === null) return refused(`\`${where.at}\` holds no formula to change`);
 
   const written = literalPath(cell.provenance.value, sheet, where.at, text);
   if (written.kind === 'refused') return written;

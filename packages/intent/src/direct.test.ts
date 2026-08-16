@@ -125,7 +125,7 @@ describe('what typing into a cell will not do', () => {
   });
 
   it('refuses an address nothing is written at', () => {
-    expect(why({ [ROOT]: `${SALES}    cells:\n      A1: 1\n` }, 'Z9')).toContain('nothing is');
+    expect(why({ [ROOT]: `${SALES}    cells:\n      A1: 1\n` }, 'Z9')).toContain('nothing writes');
   });
 });
 
