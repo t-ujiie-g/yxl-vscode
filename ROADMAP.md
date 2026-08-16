@@ -1989,6 +1989,13 @@ this at a phase boundary rather than at the end.
   is what a spec assembled from `$include` needs.
 - The workbook keeps the sharing: `target_revenue` comes back as a defined name
   Excel holds, with `B17` reading it. 8 new tests, 1097 in total.
+- **The preview was watching one file and drawing several.** It redrew on a
+  change to the document that was *opened*, and on a *save* of anything else —
+  so an edit landing in `defs.yaml` changed the file and left the grid showing
+  the old number, because a `WorkspaceEdit` leaves the buffer dirty and no save
+  ever came. It now redraws for a change to any file the spec is made of, which
+  is what `knows` already answered for the cursor. A preview that waits for a
+  save is showing a spec the reader no longer has.
 
 ### 2026-08-16 — The roadmap re-cut around the day's work, not the architecture's
 

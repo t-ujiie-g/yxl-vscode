@@ -66,12 +66,17 @@ export class Preview {
     this.panel.webview.html = this.page(extension);
 
     this.listeners.push(
+      // Any file this spec is *made of*, not only the one that was opened: an
+      // edit to a `$include`d sheet or to `defs.yaml` is an edit to this
+      // drawing, and it arrives unsaved — a preview that waited for the save
+      // would show the reader the spec they no longer have.
       vscode.workspace.onDidChangeTextDocument((change) => {
-        if (change.document.uri.toString() === document.uri.toString()) this.later();
+        if (this.reads(change.document)) this.later();
       }),
       vscode.workspace.onDidSaveTextDocument((saved) => {
-        // A `$include` or a `csv:` this spec reads may have been what changed.
-        if (saved.uri.toString() !== document.uri.toString()) this.later();
+        // A `csv:` or a file changed outside this editor, which no change event
+        // spoke for.
+        if (!this.reads(saved)) this.later();
       }),
       vscode.window.onDidChangeTextEditorSelection((moved) => this.follow(moved.textEditor)),
     );
