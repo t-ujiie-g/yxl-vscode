@@ -318,11 +318,12 @@ What a patch is *allowed* to change is not part of the patch: it is an `Expects`
 passed beside it to §4.6's checker, so the same ops can be applied under a
 stricter or looser claim.
 
-Undo is expressed at this level and **run at the shell's**: the extension
-applies an edit as a VS Code `WorkspaceEdit`, so the editor's own undo takes it
-back and a hand edit and a grid edit share one stack. `patch`'s `History` is the
-same algebra for a shell that has no such stack of its own (Phase 14) and is
-not wired to anything today.
+Undo is expressed at this level and **run at whichever level still describes
+the file** (ADR-030): an edit is applied as a VS Code `WorkspaceEdit`, so a hand
+edit and a grid edit share the editor's stack, and `patch`'s `History` takes the
+last edit back in place while the file is byte-for-byte what this editor left it
+at. The history keeps the record and applies nothing — a step's patch goes
+through §4.6's checker like every other write.
 
 ### 4.6 The verification loop
 
@@ -395,7 +396,7 @@ not a date.
 | `Enter` commits and moves down; `Esc` abandons | ✅ |
 | Arrows, `Tab`, `PageUp` / `PageDown` | ✅ |
 | `Delete` empties a cell | ✅ |
-| Undo and redo | ✅ — VS Code's own, over the file, from the grid as well as the text |
+| Undo and redo | ✅ — from the grid without leaving it, and VS Code's own where the file has moved since (ADR-030) |
 | The answers a refused edit has, with what each would change | ✅ for a range's formula and a blank cell; the rest is Phase 7 |
 | `Cmd`+arrow to the edge of a block, `Cmd`+`A`, a box to type an address into | **Phase 8** |
 | Select a range — drag, `Shift`+click, `Shift`+arrows | **Phase 8** |
@@ -894,12 +895,17 @@ work.
 - [x] **Empty the ones that can be**, offered where a rectangle holds cells that
       cannot: one summary and one answer, which is the same machinery the
       oversized paste below needs
-- [ ] `Cmd`+`Z` **without the focus round trip** — today the host shows the text,
+- [x] `Cmd`+`Z` **without the focus round trip** — today the host shows the text,
       runs the editor's undo and gives the keyboard back, which flickers. The
       alternative is `patch`'s own `History` applied as a `WorkspaceEdit`, which
       needs the guard that makes two stacks safe: the file must be exactly as
       this editor left it, or the editor's own undo is the only honest one
       (ADR-010)
+      **In**, with the guard as written and one thing it forced (ADR-030): once
+      this editor's own history has taken the file back, the shell's stack
+      holds those undos as edits, so reaching for it would put the edit on
+      again. The grid says there is nothing left to take back instead, and the
+      text editor's own `Cmd`+`Z` is where the rest of the file's history is.
 - [ ] **One parse per rectangle**, not per cell — `clearCell` reads the file
       through `located` for every address, so a large selection parses it as
       many times
@@ -1572,6 +1578,32 @@ accurately, and all of which is impossible while the region is invisible.
 itself. The preview says so, in the same voice it says a formula was not
 computed.
 
+### ADR-030 — The grid's undo is this editor's own while it still holds the file, and the shell's the moment it does not
+**Accepted.** `Cmd`+`Z` in the grid takes the last edit back *in the file* —
+the step's inverse patch, through the verification loop, applied as a
+`WorkspaceEdit` — on one condition: the file is byte-for-byte what this editor
+left it at. Where it is not, the gesture goes to the editor's own `undo`
+command, as it did before, focus round trip and all.
+
+*Why the guard:* a `WorkspaceEdit` lands on the text document's undo stack, so
+there are two stacks over one file and only one of them can be right at a time.
+"This editor wrote the bytes that are there now" is the condition under which
+its history describes the file, and it is cheap to check exactly. Anything
+weaker — undoing an AST step against text somebody else has moved — is the
+editor guessing which of two histories the reader meant.
+
+*What it forced:* once the grid's own undos have unwound this editor's history,
+the *shell's* stack holds those undos as edits of their own, so falling back to
+it would put the edit on again rather than reach past it. The grid says there is
+nothing left to take back and stops. What came before this editor's first edit
+is still undoable — from the text editor, where it was typed.
+
+*What it costs, and does not:* one gesture is answered by two mechanisms, which
+is a thing to explain. It costs no authority: the undo is a write like any
+other, gated by ADR-009's loop against the cells the forward edit moved, which
+is why `patch`'s history now records those cells and applies nothing itself —
+a history that applied its own patches would be the one path around the loop.
+
 ## 8. Open questions
 
 - **Q1 — `cells:` A1 keys and row insertion.** Inserting a row rewrites every
@@ -2026,6 +2058,44 @@ this at a phase boundary rather than at the end.
   two serials either side of it, so the next reader knows it is deliberate.
 - A cell's own format — written, or the one its type takes — now wins over a
   band's. Both are requests about *that* cell; a band is something reaching it.
+
+### 2026-08-16 — Undo in place, and the guard that lets two stacks share a file
+`Cmd`+`Z` in the grid no longer shows the text, runs the editor's undo and hands
+the keyboard back. It takes the last edit back **in the file**, and the grid
+never loses focus. The old path is still there and still right — it is what
+answers the moment this editor is not the last thing to have touched the file
+(ADR-030).
+
+- **The history is recorded where the edit is made.** Every write already knew
+  the patch that takes it back — `verify` works the inverse out before applying
+  anything (ADR-026) and hands it back — and the write path was dropping it on
+  the floor. It now goes into `patch`'s `History`, with the file it landed in
+  and the cells it moved.
+- **The guard is byte equality, and nothing cleverer.** The preview remembers
+  what it left each file at; the undo runs only where the file still says
+  exactly that. A hand edit in the text, a save from elsewhere, a preview that
+  has not written yet — all of them go to the editor's own stack, which is the
+  one that describes the file in those cases.
+- **The undo is a write, so it goes through the loop.** Compile, apply,
+  compile, diff — against the cells the forward edit moved, which is why the
+  step carries them. That is also why `patch`'s history stopped applying
+  patches: its `undo`/`redo` called `applyPatch` directly, and a history that
+  writes without the checker is precisely the bypass ADR-009 forbids. It now
+  keeps the record (`did`, `took`, `redid`) and `verify` does the writing.
+- **What the two stacks forced.** A `WorkspaceEdit` goes on the text document's
+  undo stack, including the ones this editor makes to undo itself. So once the
+  grid has unwound its own history, the shell's next undo would *redo* the edit
+  rather than reach past it. The grid says `nothing left to take back.` and
+  stops there; the text editor still has everything from before.
+- **The one write it cannot take back ends the history it has.** A cell whose
+  value is a field in a companion CSV is written as text, and text has no
+  inverse patch. Rather than leave a history that skips it — an undo that took
+  back the edit *before* the CSV write and left the CSV alone — that write
+  clears the history, and the gesture goes back to the editor's stack.
+- 10 new tests, 1183 in total, and the seven over `patch`'s history rewritten
+  to the shape it has now. Comment shape held: exports 332 blocks / 734
+  lines (avg 2.2), private 183 / 258 (1.4), inline 36 / 44 (1.2), 39 over the
+  limit — the same 39 as the last pass.
 
 ### 2026-08-16 — Empty the ones that can be
 A rectangle holding cells that cannot be emptied refused the whole and left the

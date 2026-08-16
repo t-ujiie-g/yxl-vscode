@@ -147,6 +147,8 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       host.postMessage({ kind: 'empty', sheet: named(), ...rect });
     },
     undo: (redo) => {
+      refused = null;
+      said = null;
       host.postMessage({ kind: 'undo', redo });
     },
     resolveWith: (typed, choice) => {

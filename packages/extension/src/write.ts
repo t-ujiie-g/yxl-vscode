@@ -20,17 +20,32 @@ import {
   setValue,
 } from '@yxl-vscode/intent';
 import type { IncludeReader } from '@yxl-vscode/loader';
+import { type History, redid, type Step, took } from '@yxl-vscode/patch';
 import type { SpecDoc } from '@yxl-vscode/spec';
-import { type A1Addr, addrAt, type FilePath, type SheetName, sheetName } from '@yxl-vscode/units';
+import {
+  type A1Addr,
+  addrAt,
+  type FilePath,
+  filePath,
+  qualified,
+  type SheetName,
+  sheetName,
+} from '@yxl-vscode/units';
 import { type Change, checked, checkedText } from '@yxl-vscode/verify';
 import type { Choice, Ranged, Typed } from '@yxl-vscode/webview/protocol';
 
-/** What the write needs of the world outside it, injected so it is testable without an editor (ADR-004). */
+/**
+ * What the write needs of the world outside it, injected so it is testable
+ * without an editor (ADR-004). `kept` is told of every edit — `null` for one
+ * this editor cannot take back — and `left` says what it left a file at (ADR-030).
+ */
 export interface Port {
   readonly text: (file: FilePath) => string | null;
   readonly put: (file: FilePath, text: string) => void | Promise<void>;
   readonly refuse: (why: string, offer: Offer | null) => void;
   readonly said: (what: string) => void;
+  readonly kept: (step: Step | null) => void;
+  readonly left: (file: FilePath) => string | null;
 }
 
 /**
@@ -306,7 +321,72 @@ async function applied(spec: Spec, intent: Intent, port: Port, asked: Asked): Pr
   }
 
   await port.put(intent.file, done.text);
+  port.kept(
+    intent.kind === 'edit' && done.back !== null
+      ? { file: intent.file, patch: intent.patch, back: done.back, moved: moved(done.changed) }
+      : null,
+  );
   return true;
+}
+
+/** The cells an edit moved, named as an undo of it may name them (ADR-009). */
+function moved(changed: readonly Change[]): string[] {
+  return changed.filter((one) => one.kind === 'cell').map((one) => qualified(one.sheet, one.at));
+}
+
+/** Where the grid's undo landed, and the history it left behind. */
+export interface Taken {
+  readonly at: 'here' | 'shell' | 'nowhere';
+  readonly history: History;
+}
+
+/**
+ * The last edit taken back, or put on again, in the file itself — while this
+ * editor is still the last thing to have touched it. Where it is not, the
+ * editor's own undo is the only honest one and this says so (ADR-030).
+ */
+export async function goBack(
+  spec: Spec,
+  history: History,
+  redoing: boolean,
+  port: Port,
+): Promise<Taken> {
+  const step = (redoing ? history.undone : history.done).at(-1);
+  if (step === undefined) {
+    return { at: owns(history, redoing, port) ? 'nowhere' : 'shell', history };
+  }
+
+  const file = filePath(step.file);
+  if (file === null) return { at: 'shell', history };
+
+  const source = port.text(file);
+  if (source === null || source !== port.left(file)) return { at: 'shell', history };
+
+  const done = checked(
+    source,
+    redoing ? step.patch : step.back,
+    { cells: new Set(step.moved), beyond: 'refuse' },
+    { root: spec.root, file, read: spec.read, params: spec.params },
+  );
+  if (done.ok === false || done.back === null) return { at: 'shell', history };
+
+  await port.put(file, done.text);
+  return {
+    at: 'here',
+    history: redoing
+      ? redid(history, { ...step, back: done.back, moved: moved(done.changed) })
+      : took(history),
+  };
+}
+
+/** Whether this editor still holds the file its history ends at, with nothing on this side left to take. */
+function owns(history: History, redoing: boolean, port: Port): boolean {
+  const step = (redoing ? history.done : history.undone).at(-1);
+  const file = step === undefined ? null : filePath(step.file);
+  if (file === null) return false;
+
+  const now = port.text(file);
+  return now !== null && now === port.left(file);
 }
 
 /** Whether an override could be written here: an address nothing writes has nothing to except (`docs/spec.md` §23). */

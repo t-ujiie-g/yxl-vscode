@@ -48,7 +48,7 @@ the file that changed is still the YAML.
 
 `ROADMAP.md` §6 opens with the list that answers *can I work in this yet?*: every
 everyday gesture, with a ✅ or the phase it lands in. Typing, the arrows, `Tab`,
-`Delete` and undo are in. Range selection, the clipboard, a formatting toolbar,
+`Delete`, range selection and undo are in. The clipboard, a formatting toolbar,
 inserting rows, and seeing the charts a spec declares are not, and are the next
 four phases in that order.
 

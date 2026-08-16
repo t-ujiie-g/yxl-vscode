@@ -1,5 +1,6 @@
 import { reaches } from '@yxl-vscode/compile';
 import { type Engine, univerEngine } from '@yxl-vscode/evaluate';
+import { did, type History, nothing } from '@yxl-vscode/patch';
 import { addrAt, cellOf, filePath } from '@yxl-vscode/units';
 import type { FromView, Typed } from '@yxl-vscode/webview/protocol';
 import * as vscode from 'vscode';
@@ -9,6 +10,7 @@ import { type Projected, project, redraw, type Window } from './project';
 import {
   emptied,
   empty,
+  goBack,
   type Offer,
   type Port,
   resolve,
@@ -39,6 +41,9 @@ export class Preview {
   private read = -1;
   private readonly params = new Map<string, string>();
   private readonly windows = new Map<string, Window>();
+  private history: History = nothing;
+  /** What this editor left each file at, which is what says whether its own undo is the honest one (ADR-030). */
+  private readonly left = new Map<string, string>();
 
   /** One engine for the life of the panel: standing one up registers five hundred functions. */
   private readonly engine: Engine = univerEngine();
@@ -272,8 +277,19 @@ export class Preview {
     await write(spec, typed, this.port());
   }
 
-  /** The editor's own undo: the command reaches the stack only where the text has the keyboard. */
+  /** The last edit taken back in place, or the editor's own undo where this one no longer holds the file (ADR-030). */
   private async takeBack(redo: boolean): Promise<void> {
+    const spec = this.spec();
+    const port = this.port();
+    const taken = spec === null ? null : await goBack(spec, this.history, redo, port);
+    if (taken !== null) this.history = taken.history;
+
+    if (taken?.at === 'here') return;
+    if (taken?.at === 'nowhere') {
+      port.said(redo ? 'nothing to put on again.' : 'nothing left to take back.');
+      return;
+    }
+
     const beside = this.panel.viewColumn;
     await vscode.window.showTextDocument(this.document, { preview: false });
     await vscode.commands.executeCommand(redo ? 'redo' : 'undo');
@@ -349,11 +365,24 @@ export class Preview {
   private port(): Port {
     return {
       text: (file) => textOf(this.document, file),
-      put: (file, text) => put(file, text),
+      put: async (file, text) => {
+        this.left.set(file, text);
+        await put(file, text);
+      },
       refuse: (why, offer) => this.refuse(why, offer),
       said: (what) => {
         void this.panel.webview.postMessage({ kind: 'said', text: what });
       },
+      kept: (step) => {
+        if (step !== null) {
+          this.history = did(this.history, step);
+          return;
+        }
+
+        this.history = nothing;
+        this.left.clear();
+      },
+      left: (file) => this.left.get(file) ?? null,
     };
   }
 
