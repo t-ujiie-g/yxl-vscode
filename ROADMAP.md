@@ -48,6 +48,26 @@ That discipline is what earns the real goal:
 - **Excel remains the renderer of record.** The grid is for authoring and
   review; `yxl build` still produces the `.xlsx`, and Excel still computes.
 
+### What "good enough to work in" means
+
+Reading a spec in a grid is worth shipping, and it is not the goal. The goal is
+that on an ordinary day — somebody opens a workbook, pastes a column out of a
+report, fixes three numbers, bolds a heading, and sends it on — **this is where
+that happens**, and the file that changed is still the YAML.
+
+That sets a bar the projection stance does not set by itself. Every gesture a
+person already has in their hands — select a range, `Cmd`+arrow to the edge of a
+block, copy, paste from Excel, delete, insert a row, drag a column wider — has to
+**work**, or say in one sentence why it cannot yet. A gesture that silently does
+nothing is the worst answer available; a gesture that asks a question about
+something with only one answer is the second worst.
+
+It softens nothing above it. The grid is still a projection, an edit with one
+meaning still applies and one with several still asks, and the spec still gets
+no worse. What grows is the *vocabulary* those rules have to cover — from one
+cell at a time to what a person actually does — and §6 is ordered by how often
+an ordinary day needs the gesture, not by how interesting it is to build.
+
 ### Who this is for
 
 The person who adopted `yxl`, likes what Git now does for their workbooks, and
@@ -130,6 +150,14 @@ New to this project:
 10. **Parity with yxl is measured, not promised.** We reimplement part of yxl's
     loader in TypeScript; the only honest way to hold that is to test both
     against each other on every commit. (ADR-012)
+11. **The gestures are the ones already in the reader's hands.** Keys, selection
+    and the clipboard behave as Excel and Sheets behave; where those two differ,
+    Sheets decides how it *behaves* and Excel decides how it *looks*. A gesture
+    this editor cannot carry out is refused in a sentence — never ignored, and
+    never quietly approximated.
+12. **Asking costs a click, so ask only where there is something to choose.** An
+    edit with one meaning applies; the question is for the edits with several.
+    And a question about five hundred cells is *one* question. (ADR-001)
 
 ## 4. Architecture
 
@@ -293,7 +321,7 @@ stricter or looser claim.
 Undo is expressed at this level and **run at the shell's**: the extension
 applies an edit as a VS Code `WorkspaceEdit`, so the editor's own undo takes it
 back and a hand edit and a grid edit share one stack. `patch`'s `History` is the
-same algebra for a shell that has no such stack of its own — Phase 11 — and is
+same algebra for a shell that has no such stack of its own (Phase 14) and is
 not wired to anything today.
 
 ### 4.6 The verification loop
@@ -355,6 +383,37 @@ rule that is not mechanically checked is a suggestion.
 Phases land in order. Each is releasable or explicitly marked otherwise. The
 **first release is Phase 4** — read-only, and worth shipping alone.
 
+### The everyday gestures, and where they land
+
+The list a reader would use to answer *can I work in this?*, which is also the
+list §6's order comes from. ✅ is in; a phase number is a promise about order,
+not a date.
+
+| | |
+|---|---|
+| Type a value or a formula; `Enter`, `F2`, or just start typing | ✅ |
+| `Enter` commits and moves down; `Esc` abandons | ✅ |
+| Arrows, `Tab`, `PageUp` / `PageDown` | ✅ |
+| `Delete` empties a cell | ✅ |
+| Undo and redo | ✅ — VS Code's own, over the file |
+| The answers a refused edit has, with what each would change | ✅ for a range's formula and a blank cell; the rest is Phase 7 |
+| `Cmd`+arrow to the edge of a block, `Cmd`+`A`, a box to type an address into | **Phase 8** |
+| Select a range — drag, `Shift`+click, `Shift`+arrows | **Phase 8** |
+| Delete, copy or cut a range | **Phase 8** |
+| Paste from Excel or Sheets, values and looks | **Phase 8** |
+| Copy out into Excel or Sheets | **Phase 8** |
+| Find something in the sheet | **Phase 8** |
+| Bold, fill, borders, alignment, number format | **Phase 9** |
+| Drag a column wider, a row taller | **Phase 9** |
+| Freeze the heading rows | **Phase 9** |
+| Insert or delete a row or column | **Phase 10** |
+| Merge cells | **Phase 10** |
+| Fill down, and the drag handle | **Phase 10** (needs §8 Q2) |
+| Sort a block of rows | **Phase 10** |
+| See a chart, an image, a sparkline that the spec declares | **Phase 11** |
+| Insert a chart over a selection, place an image | **Phase 11** |
+| Edit a cell whose value comes from a CSV, a parameter, a definition | Phase 7 |
+
 ### Phase 0 — Bootstrap
 - [x] pnpm workspace, TypeScript strict, the §4.2 package skeleton (empty but
       wired, so the dependency graph is real from day one).
@@ -408,8 +467,8 @@ anything is built on it.
       quotes a value that would otherwise read back as another type.
       Not done, deliberately: inserting a whole collection (a scalar is all the
       syntax layer needs asked of it so far), `rekeyMap` (a composition, and
-      Phase 8's), and structural edits inside flow collections (refused with a
-      diagnostic — ADR-017).
+      the structural phase's), and structural edits inside flow collections
+      (which Phase 7 taught it, for the flow form a cell is written in).
 - [x] Tier 2 byte-identity harness (§5) green over `examples/` + the awkward
       fixtures. **Shipped** as `tests/`, a workspace package holding corpus
       harnesses and no product code — the same shape as yxl's `src/examples`.
@@ -782,17 +841,67 @@ Where it starts to feel like a spreadsheet.
 - [ ] `external` origins: edit the companion CSV/JSON, or divert to `overrides:`
 - [ ] Surprise-diff confirmation UI for the `ok: 'confirm'` verdict
 
-### Phase 8 — Structural edits
+### Phase 8 — The grid as a spreadsheet
+Selection, the keys, and the clipboard: the gestures a reader has in their hands
+before they have an opinion about this editor. Nothing here is new *authority* —
+every one of them lands as an edit the resolver and the checker already gate —
+and all of them are what makes the difference between a viewer and a place to
+work.
+- [ ] A selection that is a **range**: drag, `Shift`+click, `Shift`+arrows,
+      `Cmd`+`A`, and the row and column headers as selectors
+- [ ] `Cmd`/`Ctrl`+arrow to the edge of a block, `Home` / `End`, and a box that
+      takes an address and goes there
+- [ ] **Delete over a range** — one intent for the rectangle, and the same rule
+      about what a cell may hold (`docs/spec.md` §3) applied to each of them
+- [ ] Copy, cut and paste **inside** the grid, as intents rather than as a
+      buffer of cells
+- [ ] **Copy out**: TSV *and* HTML on the clipboard, so Excel and Sheets receive
+      the values and the look they were shown (**ADR-028**)
+- [ ] **Paste in** from Excel or Sheets: values from the TSV, look from the
+      HTML, landing as *one* resolution — a `data:` rectangle where the shape
+      says so, `cells:` where it does not (§4.4, §8 Q1, Q11)
+- [ ] A paste too big to ask about cell by cell: one summary, one answer, and
+      the size of the diff it would make said before it is made
+- [ ] Find in the sheet, and go to what it found
+
+### Phase 9 — Look you can apply
+The other half of what a person does with a sheet, and the half that decides
+whether the spec survives contact with a GUI (ADR-008).
+- [ ] A toolbar of what a reader reaches for: bold, italic, fill, text colour,
+      borders, alignment, number format
+- [ ] Every style write through the **normalizer** and through §4.4's `setStyle`
+      table — change the definition, or fork it for this range, with the ripple
+      count shown *before* the choice
+- [ ] The same over a range whose cells have different origins: "apply to all"
+      and "split by origin", never a silent pick
+- [ ] Column width and row height by dragging, written as `columns:` / `rows:`
+      bands rather than as forty cells
+- [ ] `freeze:` (`docs/spec.md` §2) honoured in the preview, and set from it
+
+### Phase 10 — Structural edits
 - [ ] `insertRow` / `insertCol` / `deleteRow` / `deleteCol`, with the
       consequence enumeration and the expected-diff-size preview (§4.4)
 - [ ] `rekeyMap` for bulk A1 shifts in `cells:`
-- [ ] `merge` / `unmerge`, column and row resize, band creation
+- [ ] `merge` / `unmerge`, and band creation
 - [ ] The "convert this rectangle to `data:`" offer, at the moment a `cells:`
       block proves it needs it
-- [ ] Cut / copy / paste as intents — including paste from Excel, which is the
-      gesture most likely to produce a mess and most needs the normalizer
+- [ ] Fill down and fill right, and the drag handle — which is reference
+      translation, and waits on §8 Q2
+- [ ] Sorting a `data:` rectangle: its rows rewritten, and nothing else touched
 
-### Phase 9 — Deterministic refactors
+### Phase 11 — What sits on the sheet
+Charts, images, sparklines and shapes — all four are in the spec already
+(`docs/spec.md` §12, §13, §18, §19). This editor carries them through untouched
+(ADR-011) and draws nothing of them, which is the largest hole in the preview.
+- [ ] Each of them **drawn** where it sits and at the size it takes, with enough
+      of the thing to recognise — never Excel's rendering of it (**ADR-029**)
+- [ ] Inserting one: a chart over the selected range, an image from a file
+      beside the spec
+- [ ] Moving and resizing what is there, as an edit to the construct's own
+      anchor rather than to a picture
+- [ ] What is still unmodelled stays opaque and byte-identical while it waits
+
+### Phase 12 — Deterministic refactors
 Everything here is detectable by analysis. **No model involved** — which is the
 point, and is why it precedes Phase 10.
 - [ ] Identical resolved styles at N sites → extract to `defs.styles`
@@ -803,7 +912,7 @@ point, and is why it precedes Phase 10.
       changes one rendered cell is rejected, automatically (ADR-009)
 - [ ] Presented as reviewable proposals with a diff, never applied silently
 
-### Phase 10 — Assistant
+### Phase 13 — Assistant
 - [ ] Proposal-only interface: output is a `Patch`, constrained to its JSON
       schema, and passes §4.6 like anything else
 - [ ] Naming: `style_7` → a role name, from the evidence of where it is used
@@ -815,12 +924,12 @@ point, and is why it precedes Phase 10.
 - [ ] Provider behind a seam; works with a local model, since correctness comes
       from §4.6 rather than from the model
 
-### Phase 11 — Beyond VS Code
+### Phase 14 — Beyond VS Code
 - [ ] Tauri shell reusing `webview` unchanged; only `extension` is replaced
 - [ ] Standalone `.yxl.yaml` file association for people who do not use VS Code
 
 ### v1.0 — Stability gate
-- [ ] Schema coverage stated honestly: which of `docs/spec.md`'s 22 sections are
+- [ ] Schema coverage stated honestly: which of `docs/spec.md`'s 23 sections are
       editable, which are preview-only, which are opaque — as a table in the
       README, generated from the code so it cannot lie
 - [ ] Tiers 1–4 green in CI; Tier 5 performed
@@ -904,7 +1013,7 @@ would erase the user's comments and formatting on the first keystroke.
 **Accepted.** `cst`, `spec`, `loader`, `compile`, `intent`, `normalize`,
 `verify`, `patch`, `evaluate` import neither `vscode`, nor `node:fs`, nor the
 DOM. Files arrive through injected readers; the shell supplies them. Mirrors yxl
-ADR-003, and is what makes Phase 11 a packaging change instead of a rewrite. CI
+ADR-003, and is what makes another shell a packaging change instead of a rewrite. CI
 enforces it (§5).
 
 ### ADR-005 — Provenance is per-facet, with style as an ordered layer list
@@ -933,8 +1042,8 @@ breaking apart the structure that made the edit ambiguous — inlining a
 definition, splitting a formula range — which silently destroys the DRY
 properties yxl exists to provide. An override keeps the structure intact and
 puts the mess in one place where it can be counted; twenty overrides is a
-legible signal that the spec's shape is wrong, and Phase 9 can propose folding
-them back in.
+legible signal that the spec's shape is wrong, and the refactor phase can
+propose folding them back in.
 
 *Status:* ✅ **it exists.** Requested upstream as
 [yxl#66](https://github.com/t-ujiie-g/yxl/issues/66) rather than invented here —
@@ -975,7 +1084,7 @@ patch's own `expectedDiff`. No path — GUI, refactor, assistant — bypasses it
 
 *The consequence worth naming:* with `expectedDiff: empty`, a structural change
 that provably alters no rendered cell can be auto-approved no matter what
-produced it. That is what makes Phase 10 safe with a small local model: the model
+produced it. That is what makes the assistant safe with a small local model: the model
 affects the *acceptance rate* of proposals, never their correctness.
 
 ### ADR-010 — Patches are invertible; undo is AST-level
@@ -1367,15 +1476,62 @@ entry is a structural edit. And a removal whose value was a block scalar took
 the *following* entry's line as well, because a block body ends where the next
 line begins.
 
+### ADR-028 — The clipboard is a spec edit, in the formats the other spreadsheets speak
+**Accepted.** Copying out puts **both** `text/plain` (tab-separated) and
+`text/html` on the clipboard. Pasting in reads both — values from the TSV, look
+from the HTML — and lands as **one** resolution over the whole rectangle rather
+than an edit per cell.
+
+*Why both:* Excel and Sheets each put both on the clipboard and each read both.
+TSV alone arrives as text with every number format and every colour gone; HTML
+alone is a table whose numbers have already been formatted into strings. The
+pair is what the two applications use to talk to each other, and it is the only
+way a paste can carry `1234.5` *and* the fact that it was shown as `1,234.50`.
+
+*Why one resolution:* a paste is the biggest edit anyone makes, and asking about
+each of six hundred cells is not a dialog, it is a wall. The rectangle has one
+shape question — a `data:` block, or `cells:` entries — and it is asked once,
+with the size of the diff each answer would make (§4.4, §8 Q11).
+
+*What does not change:* the paste is a write like any other. It passes the
+normalizer, it passes the verification loop, and its inverse is the patch that
+takes it back. A paste that would change a cell it did not name is refused, the
+same as a keystroke that would.
+
+*What it costs:* a fidelity ceiling. What the HTML flavour does not say, we do
+not know — and what we do read of it, we read the same way for both
+applications rather than sniffing which one wrote it (§8 Q11).
+
+### ADR-029 — What the preview draws of a chart is a sketch, and never a source
+**Accepted.** For a chart, an image, a sparkline or a shape, the preview draws
+**where it sits and what it is** — the anchor, the extent, the type, the series
+it names — from the spec's own words. It does not render what Excel will render,
+and nothing about the drawing is ever read back into the spec.
+
+*Why:* two renderers of the same chart differ, and a picture that looks
+authoritative while being wrong is worse than an outline that is honest about
+being one. This is the computed value's rule (ADR-014) applied to pixels: what
+we produce for the eye never becomes what the file says.
+
+*What it buys:* the largest hole in the preview closes cheaply. A reader who
+sees a labelled rectangle where the chart is knows the sheet's layout, can move
+it, can put another one beside it — none of which needs the chart to be drawn
+accurately, and all of which is impossible while the region is invisible.
+
+*What it costs:* the reader must open the built workbook to see the chart
+itself. The preview says so, in the same voice it says a formula was not
+computed.
+
 ## 8. Open questions
 
 - **Q1 — `cells:` A1 keys and row insertion.** Inserting a row rewrites every
   key below it; `rekeyMap` handles it mechanically but the diff is still total.
   yxl's Phase 11 answered this for tabular regions with inline `data:` `values:`,
-  which is the right answer for most cases — so Phase 8 should *steer* toward
-  conversion rather than optimize the shift. Remaining question: is
-  anchor-relative addressing in `cells:` worth proposing upstream for the
-  scattered case? Decide before Phase 8.
+  which is the right answer for most cases — so the structural phase should
+  *steer* toward conversion rather than optimize the shift. Remaining question:
+  is anchor-relative addressing in `cells:` worth proposing upstream for the
+  scattered case? Decide before Phase 10, and note that a paste of two hundred
+  rows (Phase 8) asks the same question first.
 - **Q2 — How much formula translation do we do?** Splitting or extending a
   `formulas:` range requires translating relative references. Needs a formula
   parser (the Phase 5 evaluation engine has one). **Now the blocker for the rest
@@ -1449,7 +1605,7 @@ line begins.
   loader directly. Worth building **upstream in yxl** rather than here, and worth
   offering to do — it is one artifact serving both, and generating it there keeps
   it honest against the reference.
-- **Q8 — Tauri.** Phase 11. Nothing in the architecture blocks it (ADR-004); the
+- **Q8 — Tauri.** Phase 14. Nothing in the architecture blocks it (ADR-004); the
   question is whether the demand exists.
 - **Q9 — `overrides:` must exist upstream.** ✅ **Answered: it does.** Filed as
   [yxl#66](https://github.com/t-ujiie-g/yxl/issues/66) (2026-08-14) and shipped
@@ -1467,6 +1623,29 @@ line begins.
   Q6 asks "native binary only, or also a wasm CLI?" — and the answer here is that
   the whole pipeline, `emit` included, already passes its tests on the JS target.
   That is directly useful to yxl and costs us nothing to report.
+- **Q11 — What shape does a paste land in?** Two hundred rows pasted from a
+  report can be two hundred `cells:` entries or one `data:` rectangle with
+  inline `values:`. The rectangle is almost always right — it diffs well and
+  survives a row insertion (Q1) — but it holds no per-cell styling, so a paste
+  that carries looks may have to be both. Decide before Phase 8 writes its first
+  paste, and reuse the answer for §4.4's `empty` row (which asks the same thing
+  about one cell).
+- **Q12 — How much of the clipboard's HTML do we read?** Excel and Sheets both
+  write `text/html`, and neither documents it. Number formats arrive as already
+  formatted text, colours as inline styles that differ by version. The open
+  question is where to stop: values and a handful of look properties, or
+  everything we can recognise. Answer by measuring against real clipboards from
+  both applications, not by reading a blog post.
+- **Q13 — What draws a chart's sketch?** ADR-029 needs an outline, a title, a
+  legend box and a series list — which is hand-written SVG, not a chart library,
+  unless the sketch turns out to want axes. No runtime dependency without an ADR
+  (ADR-013); decide when Phase 11 starts, with a spike over `charts.yxl.yaml`
+  and `sparklines.yxl.yaml`, which are already in the corpus.
+- **Q14 — What does one question about a rectangle look like?** Five hundred
+  cells whose values come from three different constructs have to become *one*
+  dialog: the origins grouped, a count against each, and answers that apply per
+  group. The single-cell dialog (Phase 7) does not scale to it by itself, and
+  the shape of the grouped one is undecided.
 
 ## 9. Risks
 
@@ -1492,6 +1671,23 @@ line begins.
   (which is why Phase 6 exists as its own phase), a remembered choice per
   origin-kind, and honest measurement of the ask rate during Phase 7. If it
   cannot get low, that is a finding about the design, not a UX tweak.
+  *Sharpened 2026-08-16 by a reader asking whether every edit would now cost a
+  click:* the rule that answers it is `Candidate.alone` — an answer that is the
+  whole answer is taken, not offered — and the ask rate is now a number the
+  gesture table (§6) can be read against. A gesture that asks where a reader
+  can see only one possible outcome is a bug, not a policy.
+- **R8 — A paste is the largest edit anyone will make.** Six hundred cells
+  through the loader, the compiler, the verification loop and the patcher, twice
+  (before and after), while somebody waits. The Phase 4 measurements say the
+  core is fast enough (R5) and say nothing about a write that size. Measure at
+  the start of Phase 8, on a real paste out of Excel, before the UI is built
+  around an assumption.
+- **R9 — "It replaces Excel" is a sentence people will hear as a promise.** The
+  gesture table in §6 exists so the answer is a list rather than an adjective,
+  and the README says the same list. The failure mode is not over-promising in
+  the README; it is a demo where four gestures work and the fifth does nothing.
+  Which is why §3's eleventh principle is *refused in a sentence, never
+  ignored*.
 - **R4 — Scope.** `docs/spec.md` is 1451 lines across 23 sections. ADR-011 makes
   coverage incremental, but "editable in the GUI" will lag "expressible in yxl"
   for a long time, and the README must say so plainly rather than imply parity.
@@ -1766,6 +1962,43 @@ this at a phase boundary rather than at the end.
   two serials either side of it, so the next reader knows it is deliberate.
 - A cell's own format — written, or the one its type takes — now wins over a
   band's. Both are requests about *that* cell; a band is something reaching it.
+
+### 2026-08-16 — The roadmap re-cut around the day's work, not the architecture's
+
+The direction was stated as a projection with edits on top. It is now stated as
+what it has to be able to *do*, because a reader asked the only question that
+matters — whether their ordinary day fits in it — and the answer was spread over
+seven phases in the order the engineering wanted rather than the order a day
+needs.
+
+- **§1 says what "good enough to work in" means.** Every gesture already in a
+  reader's hands has to work or say why not; a gesture that silently does
+  nothing is the worst answer available, and one that asks about something with
+  a single answer is the second worst. Nothing above it softens: the grid is
+  still a projection, an edit with one meaning still applies, and the spec still
+  gets no worse. What grows is the vocabulary those rules cover.
+- **§6 opens with the everyday gestures as a table**, ✅ or a phase against each,
+  which is the list to read when the question is "can I work in this?" — and is
+  the list the phase order is now derived from.
+- **Two new phases, and three renumbered.** Phase 8 is the grid as a spreadsheet
+  (range selection, `Cmd`+arrow, copy, paste from Excel, delete a range, find);
+  Phase 9 is a look you can apply (the toolbar, through the normalizer, plus
+  widths and `freeze:`); structural edits move to 10; Phase 11 is what sits on
+  the sheet — charts, images, sparklines — which the preview draws nothing of
+  today and which is its largest hole. Refactors, the assistant and the Tauri
+  shell keep their content and become 12, 13 and 14.
+- **ADR-028** — the clipboard is a spec edit, in TSV *and* HTML, because that is
+  the pair Excel and Sheets use to talk to each other; and a paste is one
+  resolution over a rectangle, never six hundred questions.
+- **ADR-029** — what the preview draws of a chart is a sketch: where it sits and
+  what it is, never Excel's rendering of it, and nothing drawn is ever read
+  back. ADR-014's rule, applied to pixels.
+- **Four questions and two risks** the ambition creates: what shape a paste
+  lands in, how much of the clipboard's HTML is readable, what draws a chart's
+  outline without a new dependency, and what *one* question about a mixed
+  rectangle looks like. The risks are the size of a paste, and the word
+  "replaces" being heard as a promise — which the gesture table exists to
+  answer with a list instead of an adjective.
 
 ### 2026-08-16 — Refactoring pass after the write gestures (`AGENTS.md` §8)
 Walked the lenses in order over what the last three changes left. Nothing was
