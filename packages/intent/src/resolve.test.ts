@@ -47,11 +47,13 @@ function offered(
 
 /** The chosen candidate, taken all the way to the file it would leave behind. */
 function taken(source: string, candidate: Candidate): string {
-  if (candidate.intent.kind !== 'edit') throw new Error(`refused: ${candidate.intent.why}`);
+  const { intent } = candidate;
+  if (intent.kind === 'refused') throw new Error(`refused: ${intent.why}`);
+  if (intent.kind !== 'edit') throw new Error('a file was written, not a spec');
 
   const { read } = files({ [ROOT]: source });
-  const ctx: Ctx = { root: ROOT, file: candidate.intent.file, read };
-  const done = checked(source, candidate.intent.patch, candidate.intent.expects, ctx);
+  const ctx: Ctx = { root: ROOT, file: intent.file, read };
+  const done = checked(source, intent.patch, intent.expects, ctx);
   if (done.ok === false) throw new Error(`the checker refused it: ${done.diagnostics[0]?.message}`);
   if (done.ok === 'ask') throw new Error('the checker was surprised by it');
 
@@ -247,6 +249,78 @@ sheets:
 
   it('says nothing about a formula typed into one', () => {
     expect(offered(PARAMS, 'A1', '=A2')).toEqual([]);
+  });
+});
+
+describe('a cell whose value is a field of a CSV', () => {
+  const READS = `sheets:
+  - name: Sales
+    data:
+      - at: A1
+        csv: rows.csv
+`;
+  const CSV = 'APAC,2400000\nEMEA,1750000\n';
+
+  /** The candidate for a cell of the block, against a spec that reads the file. */
+  const into = (at: string, typed: string) => {
+    const sources = { [ROOT]: READS, 'rows.csv': CSV };
+    const { grid, text } = files(sources);
+    return candidates(
+      { grid, text, params: new Map() },
+      { sheet: 'Sales' as SheetName, at: at as A1Addr },
+      typed,
+    );
+  };
+
+  it('offers the file the value comes from, naming it', () => {
+    const [write, ...rest] = into('A2', 'LATAM');
+
+    expect(rest).toEqual([]);
+    expect(write?.id).toBe('dataFile');
+    expect(write?.what).toContain('rows.csv');
+    expect(write?.moves).toEqual([{ sheet: 'Sales', at: 'A2' }]);
+  });
+
+  it('writes the field and not one byte more', () => {
+    const [write] = into('A2', 'LATAM');
+    const intent = write?.intent;
+    if (intent?.kind !== 'wrote') throw new Error('nothing was offered for the file');
+
+    expect(intent.file).toBe('rows.csv');
+    expect(intent.text).toBe('APAC,2400000\nLATAM,1750000\n');
+  });
+
+  it('quotes what has to be quoted to read back as itself', () => {
+    // What the reader typed means what it would mean in a cell — `007` is the
+    // number seven, here as in the spec — and the field is written so that the
+    // CSV reader reads that back.
+    const [comma] = into('A2', 'EMEA, north');
+    const [number] = into('B2', '007');
+
+    expect(comma?.intent.kind === 'wrote' && comma.intent.text).toBe(
+      'APAC,2400000\n"EMEA, north",1750000\n',
+    );
+    expect(number?.intent.kind === 'wrote' && number.intent.text).toBe('APAC,2400000\nEMEA,7\n');
+  });
+
+  it('says nothing about a formula, which a CSV cannot hold', () => {
+    expect(into('A2', '=A1')).toEqual([]);
+  });
+
+  it('says nothing about a JSON block, whose bytes it cannot yet put back', () => {
+    const sources = {
+      [ROOT]: READS.replace('csv: rows.csv', 'json: rows.json'),
+      'rows.json': '[["APAC", 1]]',
+    };
+    const { grid, text } = files(sources);
+
+    expect(
+      candidates(
+        { grid, text, params: new Map() },
+        { sheet: 'Sales' as SheetName, at: 'A1' as A1Addr },
+        'LATAM',
+      ),
+    ).toEqual([]);
   });
 });
 

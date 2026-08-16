@@ -30,7 +30,8 @@ function emptied(source: string, at: string): Intent {
 /** The gesture taken all the way through the checker, which is the only way in. */
 function after(source: string, at: string): string {
   const intent = emptied(source, at);
-  if (intent.kind !== 'edit') throw new Error(`refused: ${intent.why}`);
+  if (intent.kind === 'refused') throw new Error(`refused: ${intent.why}`);
+  if (intent.kind !== 'edit') throw new Error('a file was written, not a spec');
 
   const { read } = files({ [ROOT]: source });
   const ctx: Ctx = { root: ROOT, file: intent.file, read };

@@ -4,7 +4,7 @@ import { addrAt, cellOf, filePath } from '@yxl-vscode/units';
 import type { FromView, Typed } from '@yxl-vscode/webview/protocol';
 import * as vscode from 'vscode';
 import { asOpen, put, reveal, textOf } from './documents';
-import { inspect, knows, type Nodes, nodeUnder } from './inspect';
+import { inspect, type Nodes, nodeUnder } from './inspect';
 import { type Projected, project, redraw, type Window } from './project';
 import { type Offer, type Port, resolve, type Spec, write, writeOverride } from './write';
 
@@ -31,6 +31,8 @@ export class Preview {
   private following: ReturnType<typeof setTimeout> | undefined;
   private drawn: Projected | undefined;
   private nodes: Nodes = new Map();
+  /** Every file the last drawing was read from, which is what a redraw watches. */
+  private sources = new Set<string>();
   private read = -1;
   private readonly params = new Map<string, string>();
   private readonly windows = new Map<string, Window>();
@@ -106,10 +108,17 @@ export class Preview {
   }
 
   /** Whether a cursor in this document is a cursor in the spec being previewed. */
+  /**
+   * Whether this document is one the drawing was made of.
+   *
+   * Every file the last redraw actually *read* — the spec, what it `$include`s,
+   * and the CSV a `data:` block points at, which is a file the spec is made of
+   * and has no node in it to be found by.
+   */
   private reads(document: vscode.TextDocument): boolean {
     return (
       document.uri.toString() === this.document.uri.toString() ||
-      knows(this.nodes, document.uri.fsPath)
+      this.sources.has(document.uri.fsPath)
     );
   }
 
@@ -155,10 +164,16 @@ export class Preview {
   private redraw(): void {
     const file = this.document.uri.fsPath;
     this.read = this.document.version;
+
+    const sources = new Set<string>();
     const drawn = project(
       this.document.getText(),
       file,
-      asOpen,
+      (from, path) => {
+        const found = asOpen(from, path);
+        if (found !== null) sources.add(found.file);
+        return found;
+      },
       this.params,
       this.windows,
       this.engine,
@@ -166,6 +181,7 @@ export class Preview {
     const { drawing, diagnostics } = drawn;
     this.drawn = drawn;
     this.nodes = drawn.nodes;
+    this.sources = sources;
 
     void this.panel.webview.postMessage(drawing);
     this.problems.set(

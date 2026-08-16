@@ -1,9 +1,11 @@
 import {
+  asCsvField,
   type CompiledGrid,
   type CompiledSheet,
   cellAt,
   type FacetOrigin,
   type FullAddr,
+  fieldAt,
   reaches,
   sheetOf,
 } from '@yxl-vscode/compile';
@@ -16,7 +18,7 @@ import {
   qualified,
   type SheetName,
 } from '@yxl-vscode/units';
-import { type Found, type Intent, located, type Text } from './direct';
+import { beside, type Found, type Intent, located, type Text } from './direct';
 import { meaning } from './typed';
 
 /**
@@ -66,6 +68,7 @@ export function candidates(
   const origin = cell.provenance.value;
   if (origin.kind === 'defRef') return definition(spec.grid, origin, where, typed, spec.text);
   if (origin.kind === 'param') return parameter(spec, origin, typed);
+  if (origin.kind === 'external') return external(origin, where, typed, spec.text);
   if (origin.kind !== 'formulaRange') return [];
 
   const written = rangeFormula(spec.grid, origin, typed, spec.text);
@@ -225,7 +228,7 @@ function reference(found: Found): { file: FilePath; path: Path } | null {
  * and where there are two the reader picks (ADR-001) — so this is the question
  * of whether writing a new entry is a choice or the only thing to do.
  */
-function beside(sheet: CompiledSheet, at: A1Addr): boolean {
+function nextToData(sheet: CompiledSheet, at: A1Addr): boolean {
   const cell = cellOf(at);
   const neighbours = [
     { col: cell.col, row: cell.row - 1 },
@@ -294,7 +297,7 @@ function newCell(
     id: 'newCell',
     what: `Write \`${where.at}\` as a new cell`,
     moves: [{ sheet: where.sheet, at: where.at }],
-    alone: !beside(sheet, where.at),
+    alone: !nextToData(sheet, where.at),
     intent: {
       kind: 'edit',
       file: found.file,
@@ -302,6 +305,53 @@ function newCell(
       expects: { cells: new Set([qualified(where.sheet, where.at)]), beyond: 'refuse' },
     },
   };
+}
+
+/**
+ * A cell whose value is a field of a CSV beside the spec (`docs/spec.md` §9).
+ *
+ * One answer: write that field. The file is not the spec and not YAML, so what
+ * this carries is the whole file as it should be — the field's own bytes
+ * replaced and nothing else, which is the same promise the CST keeps for a
+ * spec.
+ *
+ * A JSON block is not offered: the same edit there is a value inside a document
+ * whose bytes this editor cannot yet put back the way it found them, and
+ * reformatting somebody's data file to change one number is not a trade this
+ * project makes (ADR-003's rule, one file over).
+ */
+function external(
+  origin: Extract<FacetOrigin, { kind: 'external' }>,
+  where: { sheet: SheetName; at: A1Addr },
+  typed: string,
+  text: Text,
+): readonly Candidate[] {
+  const meant = meaning(typed);
+  if (meant.is === 'formula') return [];
+  if (!origin.file.endsWith('.csv')) return [];
+
+  const source = text(origin.file);
+  if (source === null) return [];
+
+  const at = fieldAt(source, origin.row, origin.col);
+  if (at === null) return [];
+
+  const written = asCsvField(meant.is === 'value' ? meant.value : null);
+
+  return [
+    {
+      id: 'dataFile',
+      what: `Write it into \`${beside(origin.file)}\`, where the value comes from`,
+      moves: [{ sheet: where.sheet, at: where.at }],
+      alone: false,
+      intent: {
+        kind: 'wrote',
+        file: origin.file,
+        text: source.slice(0, at.start) + written + source.slice(at.end),
+        expects: { cells: new Set([qualified(where.sheet, where.at)]), beyond: 'ask' },
+      },
+    },
+  ];
 }
 
 /**

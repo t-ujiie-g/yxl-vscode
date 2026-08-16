@@ -23,12 +23,22 @@ import type { Expects } from '@yxl-vscode/verify';
  * Either an edit to make — which file it is in, what it does, and what it says
  * it will change — or a refusal in words a reader can act on. There is no third
  * answer where the editor guesses (ADR-001).
+ *
+ * `edit` is a patch over a spec; `wrote` is a companion file the spec *reads* —
+ * a CSV beside it — which is not YAML and has no patch algebra, so what it
+ * carries is the file as it should be.
  */
 export type Intent =
   | {
       readonly kind: 'edit';
       readonly file: FilePath;
       readonly patch: Patch;
+      readonly expects: Expects;
+    }
+  | {
+      readonly kind: 'wrote';
+      readonly file: FilePath;
+      readonly text: string;
       readonly expects: Expects;
     }
   | { readonly kind: 'refused'; readonly why: string };
@@ -229,7 +239,7 @@ export function located(id: NodeId, text: Text): Found {
 }
 
 /** A file as a reader would name it, which is not the whole way there. */
-function beside(file: string): string {
+export function beside(file: string): string {
   return file.split('/').slice(-2).join('/');
 }
 

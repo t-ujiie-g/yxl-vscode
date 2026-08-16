@@ -40,22 +40,26 @@ export interface Ctx {
 /**
  * A patch checked, and — where the answer is yes — applied.
  *
- * `text` and `back` are present whenever the edit *can* be made, including when
- * it needs asking about: the caller that asks is the one holding the answer, and
+ * `text` is present whenever the edit *can* be made, including when it needs
+ * asking about: the caller that asks is the one holding the answer, and
  * recomputing the edit after the reader says yes would be the same work twice
  * over a file that may have moved.
+ *
+ * `back` is the patch that takes it off again, and is `null` for a file this
+ * algebra does not address — a CSV beside the spec, whose undo is the text it
+ * was and belongs to whatever wrote it.
  */
 export type Checked =
   | {
       readonly ok: true;
       readonly text: string;
-      readonly back: Patch;
+      readonly back: Patch | null;
       readonly changed: readonly Change[];
     }
   | {
       readonly ok: 'ask';
       readonly text: string;
-      readonly back: Patch;
+      readonly back: Patch | null;
       readonly changed: readonly Change[];
       readonly surprises: readonly Change[];
     }
@@ -85,20 +89,46 @@ export function checked(source: string, patch: Patch, expects: Expects, ctx: Ctx
     return { ok: false, diagnostics: change.diagnostics, surprises: [] };
   }
 
-  const after = compiled(ctx, change.text);
-  if (after === null) {
-    return { ok: false, diagnostics: unreadable(ctx, change.text), surprises: [] };
+  return against(before, change.text, change.back, expects, ctx);
+}
+
+/**
+ * The same check for a file the spec *reads* rather than one it is written in.
+ *
+ * A CSV beside the spec is not YAML and has no patch algebra, so what arrives
+ * is the file as it should be. Everything after that is the same: compile the
+ * spec with this file overlaid, and compare what moved against what the edit
+ * said it would move (ADR-009). The undo is the shell's, since the text it was
+ * is the whole of it.
+ */
+export function checkedText(source: string, text: string, expects: Expects, ctx: Ctx): Checked {
+  const before = compiled(ctx, source);
+  if (before === null) {
+    return { ok: false, diagnostics: unreadable(ctx, source), surprises: [] };
   }
+
+  return against(before, text, null, expects, ctx);
+}
+
+function against(
+  before: Read,
+  text: string,
+  back: Patch | null,
+  expects: Expects,
+  ctx: Ctx,
+): Checked {
+  const after = compiled(ctx, text);
+  if (after === null) return { ok: false, diagnostics: unreadable(ctx, text), surprises: [] };
 
   const broke = errorsBeyond(before.diagnostics, after.diagnostics);
   if (broke.length > 0) return { ok: false, diagnostics: broke, surprises: [] };
 
   const changed = diff(before.grid, after.grid);
   const surprises = changed.filter((one) => !covers(expects, one));
-  if (surprises.length === 0) return { ok: true, text: change.text, back: change.back, changed };
+  if (surprises.length === 0) return { ok: true, text, back, changed };
 
   if (expects.beyond === 'refuse') return { ok: false, diagnostics: [], surprises };
-  return { ok: 'ask', text: change.text, back: change.back, changed, surprises };
+  return { ok: 'ask', text, back, changed, surprises };
 }
 
 function covers(expects: Expects, change: Change): boolean {

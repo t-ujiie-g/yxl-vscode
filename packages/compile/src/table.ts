@@ -1,3 +1,4 @@
+import { type Span, span } from '@yxl-vscode/diag';
 import type { DataRow, ScalarValue } from '@yxl-vscode/spec';
 
 /**
@@ -10,6 +11,7 @@ import type { DataRow, ScalarValue } from '@yxl-vscode/spec';
 export type Table = { readonly rows: readonly DataRow[] } | { readonly problem: string };
 
 const NUMBER = /^[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?$/;
+const BOOLEAN = /^(?:true|false)$/;
 
 /**
  * RFC 4180: commas separate fields, newlines separate records, and a quoted
@@ -22,17 +24,69 @@ const NUMBER = /^[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?$/;
  * is what Excel does with an imported file.
  */
 export function readCsv(source: string): Table {
-  const rows: DataRow[] = [];
-  let row: ScalarValue[] = [];
+  const scanned = scanCsv(source);
+  if (scanned.problem !== null) return { problem: scanned.problem };
+
+  return { rows: scanned.rows.map((row) => row.map((field) => field.value)) };
+}
+
+/**
+ * Where a field sits in the text, so a writer can replace that field and no
+ * other byte of the file.
+ *
+ * The span covers the quotes where the field has them: what replaces it decides
+ * its own quoting, and a field that was `"007"` may become `8`. `null` where the
+ * file has no such row or no such field in it — a short row is allowed
+ * (`docs/spec.md` §9), so the answer is about this file rather than about the
+ * shape of the block.
+ */
+export function fieldAt(source: string, row: number, col: number): Span | null {
+  return scanCsv(source).rows[row]?.[col]?.span ?? null;
+}
+
+/**
+ * A value as a CSV field, read back as itself by the reader above.
+ *
+ * A CSV carries no types, so the quoting *is* the type: text that looks like a
+ * number has to be quoted to stay text, and a number must not be. A field
+ * holding a comma, a quote or a line break is quoted because RFC 4180 says so.
+ */
+export function asCsvField(value: ScalarValue): string {
+  if (value === null) return '';
+  if (typeof value !== 'string') return String(value);
+
+  // A space inside a field needs nothing (RFC 4180), but one at either end is
+  // what half the readers in the world trim, so it is written quoted.
+  const quoted =
+    /[",\r\n]/.test(value) || /^\s|\s$/.test(value) || NUMBER.test(value) || BOOLEAN.test(value);
+
+  return quoted ? `"${value.replace(/"/g, '""')}"` : value;
+}
+
+/** One field of a CSV: what it says, and where it says it. */
+interface Field {
+  readonly value: ScalarValue;
+  readonly span: Span;
+}
+
+/**
+ * The one pass both readings are made of, so the value a field has and the
+ * bytes it occupies can never disagree.
+ */
+function scanCsv(source: string): { rows: Field[][]; problem: string | null } {
+  const rows: Field[][] = [];
+  let row: Field[] = [];
   let field = '';
   let quoting = false;
   let quoted = false;
   let started = false;
+  let from = 0;
 
-  const endField = (): void => {
-    row.push(csvField(field, quoted));
+  const endField = (at: number): void => {
+    row.push({ value: csvField(field, quoted), span: span(from, at) });
     field = '';
     quoted = false;
+    from = at + 1;
   };
 
   for (let index = 0; index < source.length; index += 1) {
@@ -55,27 +109,28 @@ export function readCsv(source: string): Table {
       quoted = true;
       started = true;
     } else if (here === ',') {
-      endField();
+      endField(index);
       started = true;
     } else if (here === '\n') {
       if (started) {
-        endField();
+        endField(source.charAt(index - 1) === '\r' ? index - 1 : index);
         rows.push(row);
         row = [];
         started = false;
       }
+      from = index + 1;
     } else if (here !== '\r') {
       field += here;
       started = true;
     }
   }
 
-  if (quoting) return { problem: 'the CSV ends inside a quoted field' };
+  if (quoting) return { rows: [], problem: 'the CSV ends inside a quoted field' };
   if (started) {
-    endField();
+    endField(source.length);
     rows.push(row);
   }
-  return { rows };
+  return { rows, problem: null };
 }
 
 /**

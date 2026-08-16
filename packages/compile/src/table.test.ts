@@ -1,6 +1,6 @@
 import type { DataRow } from '@yxl-vscode/spec';
 import { describe, expect, it } from 'vitest';
-import { readCsv, readJson, type Table } from './table';
+import { asCsvField, fieldAt, readCsv, readJson, type Table } from './table';
 
 function rows(table: Table): readonly DataRow[] {
   if ('problem' in table) throw new Error(table.problem);
@@ -101,5 +101,62 @@ describe('a JSON table', () => {
   it('says so when the file is not JSON, or not a table', () => {
     expect(problem(readJson('{oops', null))).toContain('invalid JSON');
     expect(problem(readJson('{ "a": 1 }', null))).toContain('must be an array of rows');
+  });
+});
+
+describe('a field of a CSV, as a writer needs it', () => {
+  const CSV = 'APAC,2400000\n"EMEA, north",1750000\n';
+
+  const sliced = (source: string, row: number, col: number): string | null => {
+    const at = fieldAt(source, row, col);
+    return at === null ? null : source.slice(at.start, at.end);
+  };
+
+  it('spans the field, quotes and all, so what replaces it decides its own', () => {
+    expect(sliced(CSV, 1, 0)).toBe('"EMEA, north"');
+    expect(sliced(CSV, 0, 1)).toBe('2400000');
+  });
+
+  it('spans an empty field where the row leaves one', () => {
+    expect(sliced('APAC,,1\n', 0, 1)).toBe('');
+  });
+
+  it('stops at the line ending rather than eating it', () => {
+    expect(sliced('APAC,1\r\nEMEA,2\r\n', 0, 1)).toBe('1');
+  });
+
+  it('says nothing about a row or a field the file has not got', () => {
+    expect([fieldAt(CSV, 9, 0), fieldAt(CSV, 0, 9)]).toEqual([null, null]);
+  });
+
+  it('writes a value back as the field the reader reads as that value', () => {
+    // The quoting is the type: a CSV carries none of its own.
+    expect([asCsvField(42), asCsvField('APAC'), asCsvField('007')]).toEqual([
+      '42',
+      'APAC',
+      '"007"',
+    ]);
+    expect([asCsvField('north, south'), asCsvField(true), asCsvField(null)]).toEqual([
+      '"north, south"',
+      'true',
+      '',
+    ]);
+  });
+
+  it('leaves a space inside a field alone and quotes one at either end', () => {
+    // RFC 4180 asks for neither, but a leading or trailing space is what half
+    // the readers in the world trim — so it is written where it cannot be lost.
+    expect([asCsvField('Shinjuku West'), asCsvField(' West'), asCsvField('West ')]).toEqual([
+      'Shinjuku West',
+      '" West"',
+      '"West "',
+    ]);
+  });
+
+  it('round-trips what it writes through the reader that reads it', () => {
+    const values = ['007', 'north, south', 'say "hi"', ' padded ', 'Shinjuku West', 42, true];
+    const written = values.map(asCsvField).join(',');
+
+    expect(rows(readCsv(`${written}\n`))).toEqual([values]);
   });
 });

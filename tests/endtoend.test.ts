@@ -242,6 +242,23 @@ describe('the loop, closed', () => {
     expect(cell(grid, 'APAC', 'A1')?.value).toBe('Q4 APAC summary');
   });
 
+  it('carries a value into the CSV the cell reads, and into the workbook', async () => {
+    if (!WORKBOOK) return;
+    const { dir, root, port, spec, refusals } = opened(WORKBOOK);
+    // `Masters!B2` is the second field of the first row of `stores.csv`.
+    const at = typed({ sheet: 'Masters', row: 2, col: 2, text: 'Shinjuku West' });
+
+    await write(spec(), at, port);
+    expect(refusals).toHaveLength(1);
+
+    await resolve(spec(), at, 'dataFile', port);
+    expect(refusals).toHaveLength(1);
+
+    const csv = readFileSync(join(dir, 'workbook', 'masters', 'stores.csv'), 'utf8');
+    expect(csv.split('\n')[0]).toBe('S001,Shinjuku West,East');
+    expect(cell(built(dir, root).grid, 'Masters', 'B2')?.value).toBe('Shinjuku West');
+  });
+
   it('takes a cell back out of the workbook when it is emptied', async () => {
     if (!QUICKSTART) return;
     const { dir, root, port, spec, refusals } = opened(QUICKSTART);

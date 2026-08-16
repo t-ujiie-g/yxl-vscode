@@ -21,7 +21,7 @@ import {
 import type { IncludeReader } from '@yxl-vscode/loader';
 import type { SpecDoc } from '@yxl-vscode/spec';
 import { type A1Addr, addrAt, type FilePath, type SheetName, sheetName } from '@yxl-vscode/units';
-import { type Change, checked } from '@yxl-vscode/verify';
+import { type Change, checked, checkedText } from '@yxl-vscode/verify';
 import type { Choice, Typed } from '@yxl-vscode/webview/protocol';
 
 /**
@@ -207,12 +207,19 @@ async function applied(spec: Spec, intent: Intent, port: Port): Promise<boolean>
     return false;
   }
 
-  const done = checked(source, intent.patch, intent.expects, {
+  const where = {
     root: spec.root,
     file: intent.file,
     read: spec.read,
     params: spec.params,
-  });
+  };
+
+  // A companion file is not a spec: what arrives is the file as it should be,
+  // and the check is the same one with it overlaid.
+  const done =
+    intent.kind === 'wrote'
+      ? checkedText(source, intent.text, intent.expects, where)
+      : checked(source, intent.patch, intent.expects, where);
 
   if (done.ok === false) {
     port.refuse(done.diagnostics[0]?.message ?? surprising(done.surprises), null);

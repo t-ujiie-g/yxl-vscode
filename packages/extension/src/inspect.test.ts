@@ -1,11 +1,11 @@
 import { type CompiledSheet, compile } from '@yxl-vscode/compile';
 import { parse } from '@yxl-vscode/cst';
-import { type IncludeReader, load } from '@yxl-vscode/loader';
+import { load } from '@yxl-vscode/loader';
 import type { SpecDoc } from '@yxl-vscode/spec';
 import { type A1Addr, filePath } from '@yxl-vscode/units';
 import type { Source } from '@yxl-vscode/webview/protocol';
 import { describe, expect, it } from 'vitest';
-import { inspect, knows, nodesOf, nodeUnder } from './inspect';
+import { inspect, nodesOf, nodeUnder } from './inspect';
 
 const FILE = 'spec.yxl.yaml';
 
@@ -131,22 +131,6 @@ describe('the node under a cursor', () => {
   it('is nothing where no node reaches', () => {
     const { doc } = read(spec);
     expect(nodeUnder(nodesOf(doc), 'another.yaml', 0)).toBeNull();
-  });
-
-  it('knows which files the spec was read from, includes and all', () => {
-    // A modular workbook writes almost everything in `$include`d files, and a
-    // cursor there is a cursor in the spec.
-    const main = 'sheets:\n  - $include: sales.yaml\n';
-    const beside: IncludeReader = (_from, path) => {
-      const file = filePath(`/${path}`);
-      return file === null ? null : { file, source: 'name: Sales\ncells:\n  A1: Region\n' };
-    };
-    const { doc } = load(parse(main, { file: FILE }), beside);
-    if (doc === null) throw new Error('did not load');
-    const nodes = nodesOf(doc);
-
-    expect(knows(nodes, '/sales.yaml')).toBe(true);
-    expect(knows(nodes, '/elsewhere.yaml')).toBe(false);
   });
 });
 
