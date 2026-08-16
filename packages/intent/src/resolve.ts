@@ -9,7 +9,7 @@ import {
   reaches,
   sheetOf,
 } from '@yxl-vscode/compile';
-import { type Node, type Op, type Path, renderScalar } from '@yxl-vscode/cst';
+import { type Node, type Path, renderScalar } from '@yxl-vscode/cst';
 import {
   type A1Addr,
   addrAt,
@@ -18,7 +18,16 @@ import {
   qualified,
   type SheetName,
 } from '@yxl-vscode/units';
-import { beside, type Found, type Intent, located, type Reading, type Text } from './direct';
+import {
+  beside,
+  entryOp,
+  type Found,
+  type Holds,
+  type Intent,
+  located,
+  type Reading,
+  type Text,
+} from './direct';
 import { meaning } from './typed';
 
 /**
@@ -200,28 +209,6 @@ function nextToData(sheet: CompiledSheet, at: A1Addr): boolean {
   });
 }
 
-/**
- * The entry going in: a formula is a key under the address, a value its own
- * scalar (`docs/spec.md` §3), and where the sheet has no `cells:` the key goes
- * in too.
- */
-function entryOp(path: Path, holds: boolean, at: A1Addr, typed: string): Op {
-  const meant = meaning(typed);
-  const formula = meant.is === 'formula' ? `formula: ${renderScalar(meant.body, 'double')}` : null;
-
-  if (!holds) {
-    const source =
-      formula === null
-        ? `${at}: ${renderScalar(meant.is === 'value' ? meant.value : null)}`
-        : `${at}:\n  ${formula}`;
-    return { op: 'addSource', path, key: 'cells', source };
-  }
-
-  return formula === null
-    ? { op: 'add', path, key: at, value: meant.is === 'value' ? meant.value : null, before: null }
-    : { op: 'addSource', path, key: at, source: formula };
-}
-
 /** The `empty` row: a new `cells:` entry, at the end of the mapping. */
 function newCell(
   sheet: CompiledSheet,
@@ -235,7 +222,7 @@ function newCell(
   if (found.kind === 'refused' || found.node.kind !== 'map') return null;
 
   const holds = found.node.entries.some((entry) => entry.key.value === 'cells');
-  const op = entryOp(holds ? [...found.path, 'cells'] : found.path, holds, where.at, typed);
+  const op = entryOp(holds ? [...found.path, 'cells'] : found.path, holds, where.at, held(typed));
 
   return {
     id: 'newCell',
@@ -326,4 +313,12 @@ function rangeFormula(
       },
     },
   };
+}
+
+/** What a typed edit would have a cell hold, a formula that is not one taken as nothing. */
+function held(typed: string): Holds {
+  const meant = meaning(typed);
+  if (meant.is === 'formula') return { formula: meant.body };
+
+  return { value: meant.is === 'value' ? meant.value : null };
 }

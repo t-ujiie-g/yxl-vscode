@@ -10,6 +10,8 @@ import {
   empty,
   goBack,
   type Port,
+  paste,
+  pastedWith,
   resolve,
   type Spec,
   write,
@@ -568,5 +570,92 @@ describe('an undo this editor has already spent', () => {
     await write(editing.spec, typed(), editing.port);
 
     expect(await back(editing, true)).toBe('nowhere');
+  });
+});
+
+describe('a rectangle put down somewhere else', () => {
+  const GRID = `${SALES}    cells:\n      A1: 1\n      A2: 2\n      C1: keep\n`;
+  const from = { sheet: 'Sales', top: 1, left: 1, bottom: 2, right: 1 };
+
+  it('writes every cell of it in one edit, and says how many', async () => {
+    const { spec, port, files, told } = editor({ [ROOT]: GRID });
+
+    await paste(spec, { from, sheet: 'Sales', row: 1, col: 2, cut: false }, port);
+    expect(files[ROOT]).toBe(
+      `${SALES}    cells:\n      A1: 1\n      A2: 2\n      C1: keep\n      B1: 1\n      B2: 2\n`,
+    );
+    expect(told).toEqual(['2 cells pasted.']);
+  });
+
+  it('empties what a cut took, and says the cells moved', async () => {
+    const { spec, port, files, told } = editor({ [ROOT]: GRID });
+
+    await paste(spec, { from, sheet: 'Sales', row: 1, col: 2, cut: true }, port);
+    expect(files[ROOT]).toBe(`${SALES}    cells:\n      C1: keep\n      B1: 1\n      B2: 2\n`);
+    expect(told).toEqual(['4 cells moved.']);
+  });
+
+  it('takes a formula with it, with the references it holds moved', async () => {
+    const spec = `${SALES}    cells:\n      A1: 2\n      A2: 3\n      B1: { formula: "A1*10" }\n`;
+    const { spec: read, port, files } = editor({ [ROOT]: spec });
+
+    await paste(
+      read,
+      {
+        from: { ...from, top: 1, bottom: 1, left: 2, right: 2 },
+        sheet: 'Sales',
+        row: 2,
+        col: 2,
+        cut: false,
+      },
+      port,
+    );
+    expect(files[ROOT]).toContain('B2:\n        formula: "A2*10"');
+  });
+
+  it('offers to paste into the ones that can take it', async () => {
+    const spec = `${SALES}    cells:\n      A1: 1\n      A2: 2\n      B2: 0\n    formulas:\n      - at: B1:B1\n        formula: "A1"\n`;
+    const { spec: read, port, answers } = editor({ [ROOT]: spec });
+
+    await paste(read, { from, sheet: 'Sales', row: 1, col: 2, cut: false }, port);
+    expect(answers[0]).toEqual([
+      { id: 'only', what: 'Paste into the ones that can take it', moves: 1, sample: ['Sales!B2'] },
+    ]);
+  });
+
+  it('pastes into those and leaves the rest where the reader takes that answer', async () => {
+    const spec = `${SALES}    cells:\n      A1: 1\n      A2: 2\n      B2: 0\n    formulas:\n      - at: B1:B1\n        formula: "A1"\n`;
+    const { spec: read, port, files, refusals } = editor({ [ROOT]: spec });
+
+    await pastedWith(read, { from, sheet: 'Sales', row: 1, col: 2, cut: false }, 'only', port);
+    expect(refusals).toEqual([]);
+    expect(files[ROOT]).toContain('B2: 2');
+  });
+
+  it('takes no answer it did not offer', async () => {
+    const { spec, port, files, refusals } = editor({ [ROOT]: GRID });
+
+    await pastedWith(spec, { from, sheet: 'Sales', row: 1, col: 2, cut: false }, 'anything', port);
+    expect(files[ROOT]).toBe(GRID);
+    expect(refusals[0]).toContain('no longer one of the ways');
+  });
+
+  it('refuses a sheet name no sheet can have', async () => {
+    const { spec, port, refusals } = editor({ [ROOT]: GRID });
+
+    await paste(
+      spec,
+      { from: { ...from, sheet: '' }, sheet: 'Sales', row: 1, col: 2, cut: false },
+      port,
+    );
+    expect(refusals[0]).toContain('is not a name a sheet can have');
+  });
+
+  it('can be taken back in place, like every other edit', async () => {
+    const editing = editor({ [ROOT]: GRID });
+
+    await paste(editing.spec, { from, sheet: 'Sales', row: 1, col: 2, cut: true }, editing.port);
+    expect(await back(editing)).toBe('here');
+    expect(editing.files[ROOT]).toBe(GRID);
   });
 });

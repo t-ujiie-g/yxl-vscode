@@ -137,8 +137,18 @@ export interface Refused {
   readonly why: string;
   readonly typed: Typed | null;
   readonly ranged: Ranged | null;
+  readonly pasted: Pasted | null;
   readonly canOverride: boolean;
   readonly choices: readonly Choice[];
+}
+
+/** A rectangle copied in the grid, and the cell its top-left corner is going down on. */
+export interface Pasted {
+  readonly from: Ranged;
+  readonly sheet: string;
+  readonly row: number;
+  readonly col: number;
+  readonly cut: boolean;
 }
 
 /** One way of making a refused edit: what it does, how many cells it `moves`, and a `sample` of them. */
@@ -189,6 +199,8 @@ export type FromView =
   | ({ readonly kind: 'empty' } & Ranged)
   | ({ readonly kind: 'emptied'; readonly choice: string } & Ranged)
   | { readonly kind: 'undo'; readonly redo: boolean }
+  | ({ readonly kind: 'paste' } & Pasted)
+  | ({ readonly kind: 'pasted'; readonly choice: string } & Pasted)
   | ({ readonly kind: 'resolve'; readonly choice: string } & Typed)
   | ({ readonly kind: 'override'; readonly reason: string } & Typed)
   | {

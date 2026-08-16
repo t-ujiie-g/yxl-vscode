@@ -396,6 +396,7 @@ not a date.
 | `Enter` commits and moves down; `Esc` abandons | ✅ |
 | Arrows, `Tab`, `PageUp` / `PageDown` | ✅ |
 | `Delete` empties a cell | ✅ |
+| Copy, cut and paste inside the grid | ✅ — values and formulas, whose references move; looks are Phase 9 (ADR-032) |
 | Undo and redo | ✅ — from the grid without leaving it, and VS Code's own where the file has moved since (ADR-030) |
 | The answers a refused edit has, with what each would change | ✅ for a range's formula and a blank cell; the rest is Phase 7 |
 | `Cmd`+arrow to the edge of a block, `Cmd`+`A`, a box to type an address into | **Phase 8** |
@@ -914,8 +915,14 @@ work.
       in `write.ts`, so a rectangle, a candidate list and an override each parse
       what they read once. 800 cells over an 11.7 KB spec went from 6.6s to
       124ms.
-- [ ] Copy, cut and paste **inside** the grid, as intents rather than as a
+- [x] Copy, cut and paste **inside** the grid, as intents rather than as a
       buffer of cells
+      **In.** What `Cmd`+`C` holds is a *place* — a sheet and a rectangle — not
+      the cells in it, so the paste is worked out from the file as it stands
+      when it lands (ADR-032). A formula takes its references with it
+      (ADR-031); what the cell it lands on *wears* stays; a cell that cannot
+      take it offers the same "the ones that can" answer `Delete` does. The
+      system clipboard is the next two items.
 - [ ] **Copy out**: TSV *and* HTML on the clipboard, so Excel and Sheets receive
       the values and the look they were shown (**ADR-028**)
 - [ ] **Paste in** from Excel or Sheets: values from the TSV, look from the
@@ -1644,6 +1651,37 @@ is Excel's behaviour, and the substitute for the oracle is the case list: the
 upper — which is what Excel stores, and the only byte a move changes that the
 reader did not ask it to.
 
+### ADR-032 — What is copied is a place, not the cells in it; a paste inside the grid lands as `cells:` entries
+**Accepted.** `Cmd`+`C` remembers a sheet and a rectangle. It does not read the
+cells, and it holds no values. `Cmd`+`V` sends both places to the host, which
+works the whole paste out from the file **as it stands at that moment** — one
+`EditIntent`, through the same checker as a keystroke.
+
+*Why a place:* a buffer of cells is a copy of the spec that goes stale the
+instant anything else edits the file, and the grid is not allowed to hold spec
+state (ADR-001). A place cannot go stale — it can only stop being a place, which
+the resolver says out loud. It also means a copy survives a redraw, an
+`$include` being edited under it, and an undo, for free.
+
+*What lands:* what each cell **holds** — its value, or its formula with the
+references moved (ADR-031). What the cell it lands on **wears** stays: `style:`
+and `format:` are untouched, which is the mirror of the rule emptying a cell
+already follows. A paste therefore carries no looks at all; the toolbar that
+would make that meaningful is Phase 9, and doing it before the normalizer exists
+(ADR-008) would scatter anonymous styles through the spec.
+
+*Where nothing is written yet:* `cells:` entries, which is §4.4's `empty` row
+answered for a rectangle rather than a cell (§8 Q11). The `data:` rectangle is
+the better shape for two hundred rows from a report, and that is the paste that
+should decide it, against a real clipboard.
+
+*What it refuses:* a hole in the source stays a hole — an empty cell pastes
+nothing rather than emptying what it lands on, because destroying a cell nobody
+named is the one thing this editor does not do quietly. A cut that would land on
+the cells it is taking is refused rather than ordered. Rich text is refused. And
+a cell that cannot take the paste refuses the whole rectangle, with the same
+*the ones that can* answer `Delete` already offers.
+
 ## 8. Open questions
 
 - **Q1 — `cells:` A1 keys and row insertion.** Inserting a row rewrites every
@@ -1759,13 +1797,14 @@ reader did not ask it to.
   Q6 asks "native binary only, or also a wasm CLI?" — and the answer here is that
   the whole pipeline, `emit` included, already passes its tests on the JS target.
   That is directly useful to yxl and costs us nothing to report.
-- **Q11 — What shape does a paste land in?** Two hundred rows pasted from a
-  report can be two hundred `cells:` entries or one `data:` rectangle with
-  inline `values:`. The rectangle is almost always right — it diffs well and
-  survives a row insertion (Q1) — but it holds no per-cell styling, so a paste
-  that carries looks may have to be both. Decide before Phase 8 writes its first
-  paste, and reuse the answer for §4.4's `empty` row (which asks the same thing
-  about one cell).
+- **Q11 — What shape does a paste land in?** ✅ *Answered for a paste inside the
+  grid, 2026-08-16 (ADR-032):* `cells:` entries, which is §4.4's `empty` row
+  scaled up — the same answer, for a rectangle instead of one cell. **Still open
+  for a paste from outside**, which is where the question really bites: two
+  hundred rows from a report want the `data:` rectangle, it diffs well and
+  survives a row insertion (Q1), and it holds no per-cell styling so a paste
+  that carries looks may have to be both. Decide that half with the paste that
+  needs it, against a real clipboard rather than in the abstract.
 - **Q12 — How much of the clipboard's HTML do we read?** Excel and Sheets both
   write `text/html`, and neither documents it. Number formats arrive as already
   formatted text, colours as inline styles that differ by version. The open
@@ -2098,6 +2137,43 @@ this at a phase boundary rather than at the end.
   two serials either side of it, so the next reader knows it is deliberate.
 - A cell's own format — written, or the one its type takes — now wins over a
   band's. Both are requests about *that* cell; a band is something reaching it.
+
+### 2026-08-16 — Copy, cut and paste, as a place rather than a buffer
+`Cmd`+`C`, `Cmd`+`X` and `Cmd`+`V` work inside the grid. What a copy holds is a
+**sheet and a rectangle** — never the cells in it — so the paste is worked out
+from the file as it stands when it lands (ADR-032), through the same checker as
+a keystroke. §8 **Q11 answered** for a paste inside the grid.
+
+- **A place cannot go stale.** A buffer of cells would be a copy of the spec,
+  which the grid is not allowed to hold (ADR-001), and would be wrong the moment
+  anything else edited the file. A place can only stop *being* a place, and the
+  resolver says so. A copy survives a redraw, an edit to an `$include` under it,
+  and an undo, without any of them being thought about.
+- **A formula takes its references with it**, which is what the last change was
+  for. A cell a `formulas:` range fills moves by where *that cell* sits, not
+  where the range is anchored — its offset from the anchor is added to the
+  paste's, so `C3` of a range anchored at `C2` lands meaning what it meant.
+- **What it lands on keeps what it wears.** `style:` and `format:` are not
+  touched; only `value`, `formula`, `rich` and `type` are, which is the mirror
+  of the rule `Delete` already follows. So a paste carries no looks yet — the
+  toolbar that would make that meaningful is Phase 9, and writing styles before
+  the normalizer (ADR-008) would scatter anonymous ones through the spec.
+- **Where nothing is written yet, `cells:` entries** — §4.4's `empty` row
+  answered for a rectangle. Written as one `addSource` where the sheet has no
+  `cells:` key at all, because that key can only be added once; and back to
+  front where it has one, since entries added at one place are spliced from the
+  end of the file.
+- **A hole in the source stays a hole.** An empty cell pastes nothing rather
+  than emptying what it lands on: Excel clears it, and this editor does not
+  destroy a cell nobody named. A cut that would land on the cells it is taking
+  is refused rather than ordered, and rich text is refused.
+- **A cell that cannot take it refuses the whole**, offering *Paste into the
+  ones that can take it* — the same machinery `Delete` uses, which is now the
+  third caller of it.
+- **The cut and the paste are one patch**, so one undo takes both back. The
+  `cells:` mapping a cut empties is kept when the same patch fills it again,
+  which needed the collapse in `clear` to know what its patch is adding.
+- 36 new tests, 1247 in total; comment shape held at 39 over the limit.
 
 ### 2026-08-16 — A formula that knows where it is
 `units.moved(formula, by)` gives a formula as it applies a number of columns and

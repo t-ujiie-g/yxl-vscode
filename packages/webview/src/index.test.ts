@@ -110,6 +110,7 @@ describe('what the view sends', () => {
       why: 'filled by a range',
       typed: offer,
       ranged: null,
+      pasted: null,
       canOverride: true,
       choices: [],
     };
@@ -131,6 +132,7 @@ describe('what the view sends', () => {
       why: 'filled by a range',
       typed,
       ranged: null,
+      pasted: null,
       canOverride: true,
       choices,
     });
@@ -148,6 +150,7 @@ describe('what the view sends', () => {
       why: 'filled by a range',
       typed,
       ranged: null,
+      pasted: null,
       canOverride: true,
       choices: [],
     });
@@ -185,6 +188,7 @@ describe('what the view does with what it is told', () => {
       why: 'filled by a range',
       typed: null,
       ranged: null,
+      pasted: null,
       canOverride: false,
       choices: [],
     });
@@ -206,6 +210,7 @@ describe('what the view does with what it is told', () => {
       why: 'filled by a range',
       typed: null,
       ranged: null,
+      pasted: null,
       canOverride: false,
       choices: [],
     });
@@ -228,6 +233,7 @@ describe('what the view does with what it is told', () => {
       why: 'filled by a range',
       typed: null,
       ranged: null,
+      pasted: null,
       canOverride: false,
       choices: [],
     });
@@ -317,6 +323,7 @@ describe('an answer offered about a rectangle', () => {
     kind: 'refused',
     why: '2 of the 4 cells here cannot be emptied, so none were',
     typed: null,
+    pasted: null,
     ranged: { sheet: 'Sales', top: 1, left: 1, bottom: 2, right: 2 },
     canOverride: false,
     choices: [{ id: 'only', what: 'Empty the ones that can be', moves: 2, sample: ['Sales!A1'] }],
@@ -338,5 +345,85 @@ describe('an answer offered about a rectangle', () => {
     told(held);
 
     expect(into.querySelector('.refused .go')).toBeNull();
+  });
+});
+
+describe('a rectangle copied in the grid', () => {
+  /** Press a key on the cell the reader is on, as the grid receives one. */
+  const press = (into: HTMLElement, row: number, col: number, key: string) => {
+    at(into, row, col)?.dispatchEvent(
+      new KeyboardEvent('keydown', { key, metaKey: true, bubbles: true }),
+    );
+  };
+
+  it('sends nothing until it is put down', () => {
+    const { into, sent } = view();
+
+    reachFrom(into, { row: 1, col: 1 }, { row: 2, col: 2 });
+    press(into, 2, 2, 'c');
+
+    expect(sent.filter((one) => one.kind === 'paste')).toEqual([]);
+  });
+
+  it('marks the cells it holds, on the sheet they are on', () => {
+    const { into } = view();
+
+    reachFrom(into, { row: 1, col: 1 }, { row: 2, col: 2 });
+    press(into, 2, 2, 'c');
+
+    expect(into.querySelectorAll('td.copied')).toHaveLength(4);
+  });
+
+  it('names the rectangle and where it is going', () => {
+    const { into, sent } = view();
+
+    reachFrom(into, { row: 1, col: 1 }, { row: 2, col: 2 });
+    press(into, 2, 2, 'c');
+    press(into, 1, 2, 'v');
+
+    expect(sent.filter((one) => one.kind === 'paste')).toEqual([
+      {
+        kind: 'paste',
+        from: { sheet: 'Sales', top: 1, left: 1, bottom: 2, right: 2 },
+        sheet: 'Sales',
+        row: 1,
+        col: 2,
+        cut: false,
+      },
+    ]);
+  });
+
+  it('takes one cell as a rectangle of one', () => {
+    const { into, sent } = view();
+
+    at(into, 1, 1)?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    press(into, 1, 1, 'c');
+    press(into, 2, 2, 'v');
+
+    expect(sent.filter((one) => one.kind === 'paste')[0]).toMatchObject({
+      from: { sheet: 'Sales', top: 1, left: 1, bottom: 1, right: 1 },
+      row: 2,
+      col: 2,
+    });
+  });
+
+  it('says a cut is a cut, and puts nothing down until it is asked to', () => {
+    const { into, sent } = view();
+
+    reachFrom(into, { row: 1, col: 1 }, { row: 1, col: 2 });
+    press(into, 1, 2, 'x');
+    expect(sent.filter((one) => one.kind === 'paste')).toEqual([]);
+
+    press(into, 2, 1, 'v');
+    expect(sent.filter((one) => one.kind === 'paste')[0]).toMatchObject({ cut: true });
+  });
+
+  it('puts nothing down where nothing was copied', () => {
+    const { into, sent } = view();
+
+    at(into, 1, 1)?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    press(into, 1, 1, 'v');
+
+    expect(sent.filter((one) => one.kind === 'paste')).toEqual([]);
   });
 });

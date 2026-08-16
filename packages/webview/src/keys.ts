@@ -107,6 +107,19 @@ export function undoing(event: KeyboardEvent): boolean {
   return (event.key === 'z' || event.key === 'Z') && (event.metaKey || event.ctrlKey);
 }
 
+/** Whether this is the key that copies the selection, and whether it takes the cells with it. */
+export function copying(event: KeyboardEvent): 'copy' | 'cut' | null {
+  if (!(event.metaKey || event.ctrlKey) || event.altKey) return null;
+  if (event.key === 'c' || event.key === 'C') return 'copy';
+
+  return event.key === 'x' || event.key === 'X' ? 'cut' : null;
+}
+
+/** Whether this is the key that puts a copied rectangle down. */
+export function pasting(event: KeyboardEvent): boolean {
+  return (event.key === 'v' || event.key === 'V') && (event.metaKey || event.ctrlKey);
+}
+
 /** Whether this is the key that takes the whole sheet. */
 export function takingAll(event: KeyboardEvent): boolean {
   return event.key === 'a' && (event.metaKey || event.ctrlKey) && !event.altKey;

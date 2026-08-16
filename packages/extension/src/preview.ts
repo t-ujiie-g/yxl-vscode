@@ -13,6 +13,8 @@ import {
   goBack,
   type Offer,
   type Port,
+  paste,
+  pastedWith,
   resolve,
   type Spec,
   write,
@@ -231,6 +233,16 @@ export class Preview {
       return;
     }
 
+    if (asked.kind === 'paste') {
+      this.tried(this.pasteRect(asked));
+      return;
+    }
+
+    if (asked.kind === 'pasted') {
+      this.tried(this.pastedRect(asked));
+      return;
+    }
+
     if (asked.kind === 'resolve') {
       this.tried(this.resolveWith(asked));
       return;
@@ -322,6 +334,30 @@ export class Preview {
     await emptied(spec, ranged, choice, this.port());
   }
 
+  /** A rectangle put down somewhere else, as one edit. */
+  private async pasteRect(asked: Extract<FromView, { kind: 'paste' }>): Promise<void> {
+    const spec = this.spec();
+    if (spec === null) {
+      this.refuse('this spec has not finished loading', null);
+      return;
+    }
+
+    const { kind, ...pasted } = asked;
+    await paste(spec, pasted, this.port());
+  }
+
+  /** The same rectangle again, into only the cells that can take it. */
+  private async pastedRect(asked: Extract<FromView, { kind: 'pasted' }>): Promise<void> {
+    const spec = this.spec();
+    if (spec === null) {
+      this.refuse('this spec has not finished loading', null);
+      return;
+    }
+
+    const { kind, choice, ...pasted } = asked;
+    await pastedWith(spec, pasted, choice, this.port());
+  }
+
   /** The edit again, made the way the reader chose from the answers it had. */
   private async resolveWith(asked: Extract<FromView, { kind: 'resolve' }>): Promise<void> {
     const spec = this.spec();
@@ -393,6 +429,7 @@ export class Preview {
       why: why.replace(/`/g, ''),
       typed: offer?.typed ?? null,
       ranged: offer?.ranged ?? null,
+      pasted: offer?.pasted ?? null,
       canOverride: offer?.canOverride ?? false,
       choices: (offer?.choices ?? []).map((one) => ({
         ...one,
