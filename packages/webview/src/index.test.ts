@@ -163,6 +163,28 @@ describe('what the view does with what it is told', () => {
     expect(at(into, 1, 1)?.classList.contains('selected')).toBe(true);
   });
 
+  it('puts the selection back as one cell, not stretched to where Enter went', () => {
+    // Enter moves down before the answer arrives, so a refusal that puts the
+    // reader back has to take the other corner of the range with it.
+    const { into, told } = view();
+
+    at(into, 1, 1)?.dispatchEvent(new MouseEvent('dblclick'));
+    const box = into.querySelector('.typing');
+    if (!(box instanceof HTMLInputElement)) throw new Error('nothing to type into');
+    box.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+
+    told({
+      kind: 'refused',
+      why: 'filled by a range',
+      typed: null,
+      canOverride: false,
+      choices: [],
+    });
+
+    expect(at(into, 1, 1)?.classList.contains('selected')).toBe(true);
+    expect(into.querySelector('td.ranged')).toBeNull();
+  });
+
   it('says nothing about a cursor that reaches nothing at all', () => {
     const { into, told } = view();
     told({ kind: 'highlighted', says: '', cells: [] });

@@ -875,10 +875,18 @@ before they have an opinion about this editor. Nothing here is new *authority* �
 every one of them lands as an edit the resolver and the checker already gate —
 and all of them are what makes the difference between a viewer and a place to
 work.
-- [ ] A selection that is a **range**: drag, `Shift`+click, `Shift`+arrows,
+- [x] A selection that is a **range**: drag, `Shift`+click, `Shift`+arrows,
       `Cmd`+`A`, and the row and column headers as selectors
-- [ ] `Cmd`/`Ctrl`+arrow to the edge of a block, `Home` / `End`, and a box that
+      **In**, apart from the headers: the view holds an anchor beside the cell
+      it has selected, and every gesture that reaches moves one and leaves the
+      other. Nothing else changed — the inspector still asks about the cell the
+      reader is *on*, which is what a spreadsheet answers about too.
+- [x] `Cmd`/`Ctrl`+arrow to the edge of a block, `Home` / `End`, and a box that
       takes an address and goes there
+      **The keys are in**, over the cells the host has drawn: along a run to its
+      far end, or across a gap to the next thing there is, which is what
+      `Cmd`+arrow means to anyone who has held it down. The address box is not,
+      and is the first thing in the next slice with `find`.
 - [ ] **Delete over a range** — one intent for the rectangle, and the same rule
       about what a cell may hold (`docs/spec.md` §3) applied to each of them
 - [ ] Copy, cut and paste **inside** the grid, as intents rather than as a
@@ -2004,6 +2012,36 @@ this at a phase boundary rather than at the end.
   two serials either side of it, so the next reader knows it is deliberate.
 - A cell's own format — written, or the one its type takes — now wins over a
   band's. Both are requests about *that* cell; a band is something reaching it.
+
+### 2026-08-16 — Phase 8: a selection that is a rectangle
+
+- **The selection is a range now**, and the gestures that make one are the ones
+  in a reader's hands: drag across, `Shift`+click the far corner, `Shift`+arrow,
+  `Cmd`+`A`. The view holds an *anchor* beside the cell it has selected — one
+  moves, the other stays — which is the whole of the model, and what makes a
+  range shrink back the way it grew.
+- **`Cmd`+arrow goes to the edge of the block**, along a run to its far end or
+  across a gap to the next thing there is; `Home` and `End` run along the row,
+  and `Cmd`+`Home` goes to the first cell. Answered over the cells the host has
+  *drawn*, because those are the ones the view has — a window's worth is a long
+  way in either direction, and going past it asks for the next.
+- **`Shift`+`Tab` steps back rather than reaching**, which is the one place
+  `Shift` does not mean *extend*. Excel and Sheets agree, and it is exactly the
+  sort of thing that is only wrong once somebody's hands are on it.
+- The keys moved out of `draw.ts` into `keys.ts` as they arrived: where a key
+  takes the reader is a question about a sheet and a set of cells, which is
+  answerable — and answered — without a DOM.
+- Nothing here writes anything yet. Deleting, copying and pasting a rectangle
+  are the next three, and each is one intent for the whole of it.
+- **Two things a reader found the moment they had hands on it.** Committing an
+  edit moved the selection down and left the *focus* behind with the box that
+  had just been removed, so the arrow keys did nothing until something was
+  clicked — true since Enter first moved down, and only findable by typing and
+  then reaching for an arrow. And a refusal put the reader back at the cell they
+  typed into without taking the anchor with it, so the selection was stretched
+  between there and where Enter had gone. Both are one line; the second is the
+  cost of a second corner, and the first is what happens when a thing is moved
+  without being taken along.
 
 ### 2026-08-16 — The JSON Schema exists upstream (§8 Q7 answered)
 

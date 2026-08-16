@@ -12,6 +12,7 @@ function asks(): Asks {
     setParam: vi.fn(),
     showWindow: vi.fn(),
     edit: vi.fn(),
+    reachTo: vi.fn(),
     resolveWith: vi.fn(),
     overrideWith: vi.fn(),
   };
@@ -70,6 +71,7 @@ function shown(of: Partial<Showing> = {}, on: Asks = asks()): HTMLElement {
       drawing: drawing(),
       sheet: 0,
       selected: null,
+      anchor: null,
       sources: null,
       reached: null,
       refused: null,
@@ -192,6 +194,7 @@ describe('a sheet larger than the window drawn of it', () => {
       drawing: drawing({ sheets: [of] }),
       sheet: 0,
       selected: null,
+      anchor: null,
       sources: null,
       reached: null,
       refused: null,
@@ -214,6 +217,7 @@ describe('a sheet larger than the window drawn of it', () => {
       drawing: two,
       sheet: index,
       selected: null,
+      anchor: null,
       sources: null,
       reached: null,
       refused: null,
@@ -233,7 +237,7 @@ describe('what the view asks for', () => {
   it('asks to select the cell that was clicked', () => {
     const on = asks();
     const into = shown({}, on);
-    at(into, 2, 1)?.click();
+    at(into, 2, 1)?.dispatchEvent(new MouseEvent('mousedown'));
 
     expect(on.select).toHaveBeenCalledWith(2, 1);
   });
@@ -457,6 +461,93 @@ describe('moving about the grid with the keys', () => {
     expect(on.showWindow).toHaveBeenCalledWith(3, 1);
   });
 
+  it('lands the reader on the cell below, with the keys still theirs', () => {
+    // The box is gone by then, and a cell that does not hold the focus is a
+    // grid whose arrow keys do nothing.
+    const on = asks();
+    const into = shown({ drawing: room() }, on);
+    document.body.append(into);
+
+    at(into, 2, 2)?.dispatchEvent(new MouseEvent('dblclick'));
+    const box = into.querySelector('.typing');
+    if (!(box instanceof HTMLInputElement)) throw new Error('nothing to type into');
+
+    box.value = 'EMEA';
+    box.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+
+    expect(on.edit).toHaveBeenCalledWith(2, 2, 'EMEA');
+    expect(on.select).toHaveBeenCalledWith(3, 2);
+    expect(document.activeElement).toBe(at(into, 3, 2));
+    into.remove();
+  });
+
+  it('reaches to a cell shift-clicked, keeping where it started', () => {
+    const on = asks();
+    const into = shown({ drawing: room() }, on);
+
+    at(into, 2, 2)?.dispatchEvent(new MouseEvent('mousedown'));
+    at(into, 4, 3)?.dispatchEvent(new MouseEvent('mousedown', { shiftKey: true }));
+
+    expect(on.select).toHaveBeenCalledWith(2, 2);
+    expect(on.reachTo).toHaveBeenCalledWith(4, 3);
+  });
+
+  it('reaches to a cell dragged over, and not to one merely passed under', () => {
+    const on = asks();
+    const into = shown({ drawing: room() }, on);
+
+    at(into, 3, 3)?.dispatchEvent(new MouseEvent('mouseenter', { buttons: 1 }));
+    at(into, 4, 4)?.dispatchEvent(new MouseEvent('mouseenter', { buttons: 0 }));
+
+    expect(on.reachTo).toHaveBeenCalledTimes(1);
+    expect(on.reachTo).toHaveBeenCalledWith(3, 3);
+  });
+
+  it('takes the range with it on shift-arrow, and leaves it behind on arrow', () => {
+    const on = asks();
+    const into = shown({ drawing: room() }, on);
+
+    press(into, 2, 2, 'ArrowDown', true);
+    expect(on.reachTo).toHaveBeenCalledWith(3, 2);
+
+    press(into, 2, 2, 'ArrowDown');
+    expect(on.select).toHaveBeenCalledWith(3, 2);
+  });
+
+  it('steps back on shift-tab rather than reaching', () => {
+    const on = asks();
+    const into = shown({ drawing: room() }, on);
+
+    press(into, 2, 2, 'Tab', true);
+    expect(on.select).toHaveBeenCalledWith(2, 1);
+    expect(on.reachTo).not.toHaveBeenCalled();
+  });
+
+  it('takes the whole sheet on cmd-A, from its first cell to its last', () => {
+    const on = asks();
+    const into = shown({ drawing: room() }, on);
+
+    at(into, 2, 2)?.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', metaKey: true }));
+
+    expect(on.select).toHaveBeenCalledWith(1, 1);
+    expect(on.reachTo).toHaveBeenCalledWith(4, 4);
+  });
+
+  it('draws the rectangle between the two corners, and only that', () => {
+    const showing = { drawing: room(), selected: { row: 3, col: 3 }, anchor: { row: 2, col: 2 } };
+    const into = shown(showing);
+
+    const ranged = [...into.querySelectorAll('td.ranged')].map((cell) =>
+      cell.getAttribute('data-at'),
+    );
+    expect(ranged.sort()).toEqual(['2:2', '2:3', '3:2', '3:3']);
+  });
+
+  it('draws no rectangle for a selection of one cell', () => {
+    const showing = { drawing: room(), selected: { row: 2, col: 2 }, anchor: { row: 2, col: 2 } };
+    expect(shown(showing).querySelector('td.ranged')).toBeNull();
+  });
+
   it('empties a cell on delete, which is typing nothing into it', () => {
     const on = asks();
     const into = shown({ drawing: room() }, on);
@@ -480,6 +571,7 @@ describe('what changes without redrawing the grid', () => {
       drawing: drawing(),
       sheet: 0,
       selected: null,
+      anchor: null,
       sources: null,
       reached: null,
       refused: null,
