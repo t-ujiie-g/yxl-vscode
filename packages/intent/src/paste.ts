@@ -25,12 +25,14 @@ import {
   entryOp,
   entryText,
   type Found,
+  type Held,
   type Holds,
   type Intent,
   literalPath,
   located,
   type Reading,
   standing,
+  stood,
 } from './direct';
 import { meaning } from './typed';
 
@@ -68,7 +70,7 @@ export function pasteRange(
   }
 
   const going: Entry[] = [];
-  const held: string[] = [];
+  const held: Held[] = [];
 
   for (let row = where.from.rect.top; row <= where.from.rect.bottom; row += 1) {
     for (let col = where.from.rect.left; col <= where.from.rect.right; col += 1) {
@@ -76,8 +78,12 @@ export function pasteRange(
       if (cell === null) continue;
 
       const holds = taking(cell, by);
-      if (typeof holds === 'string') held.push(holds);
-      else going.push({ at: addrAt({ col: col + by.cols, row: row + by.rows }), holds });
+      if (typeof holds !== 'string') {
+        going.push({ at: addrAt({ col: col + by.cols, row: row + by.rows }), holds });
+        continue;
+      }
+
+      held.push({ at: cell.at, why: holds, by: cell.rich === null ? 'formula' : 'rich' });
     }
   }
 
@@ -105,7 +111,7 @@ function landed(
   sheet: SheetName,
   going: readonly Entry[],
   read: Reading,
-  refusals: readonly string[],
+  refusals: readonly Held[],
   only: boolean,
 ): Put | string {
   const ops = new Map<FilePath, Op[]>();
@@ -123,7 +129,7 @@ function landed(
 
     const landing = into(to, already.provenance.value, one, read);
     if (typeof landing === 'string') {
-      held.push(landing);
+      held.push({ at: one.at, why: landing, by: stood(already.provenance.value) });
       continue;
     }
 

@@ -270,16 +270,90 @@ export function located(id: NodeId, read: Reading): Found {
 }
 
 /**
- * Why a rectangle was not done: how many of how many, then the first cell's own
- * reason. `doing` is the verb in the past — `emptied`, `pasted`.
+ * One cell that stood in the way of a rectangle, and what stood there — the
+ * construct, so that five hundred of them group into a sentence (§8 Q14).
  */
-export function standing(done: number, held: readonly string[], doing: string): string {
-  const total = done + held.length;
-  const others = held.length - 1;
-  const rest = others === 0 ? '' : ` (and ${others} other${others === 1 ? '' : 's'} here)`;
-
-  return `${held.length} of the ${total} cells here cannot be ${doing}, so none were: ${held[0]}${rest}`;
+export interface Held {
+  readonly at: A1Addr;
+  readonly why: string;
+  readonly by: Stood;
 }
+
+/** What can stand between a cell and an edit, as a rectangle counts them up. */
+export type Stood =
+  | 'range'
+  | 'definition'
+  | 'parameter'
+  | 'file'
+  | 'data'
+  | 'formula'
+  | 'rich'
+  | 'other';
+
+/** What a cell's origin means to a rectangle that cannot write it. */
+export function stood(origin: FacetOrigin): Stood {
+  switch (origin.kind) {
+    case 'formulaRange':
+      return 'range';
+    case 'defRef':
+      return 'definition';
+    case 'param':
+      return 'parameter';
+    case 'external':
+      return 'file';
+    case 'inline':
+      return 'data';
+    default:
+      return 'other';
+  }
+}
+
+/**
+ * Why a rectangle was not done: how many of how many, and what stood in the way
+ * grouped and counted. `doing` is the verb in the past — `emptied`, `pasted`.
+ */
+export function standing(done: number, held: readonly Held[], doing: string): string {
+  const total = done + held.length;
+  const sole = held.length === 1 ? held[0] : undefined;
+  const what = sole === undefined ? grouped(held) : sole.why;
+
+  return `${held.length} of the ${total} cells here cannot be ${doing}, so none were: ${what}`;
+}
+
+/** What stood in the way of several, counted by kind: one cell's own reason does not scale to five hundred. */
+function grouped(held: readonly Held[]): string {
+  const kinds = [...new Set(held.map((one) => one.by))];
+
+  return kinds
+    .map((by) => {
+      const many = held.filter((one) => one.by === by);
+      return many.length === 1 ? `\`${many[0]?.at}\` ${THE[by]}` : `${many.length} ${THEY[by]}`;
+    })
+    .join(', ');
+}
+
+/** What one such cell is, and what several of them are; the same list, said singly and in a crowd. */
+const THE: Record<Stood, string> = {
+  range: 'is filled by a range',
+  definition: 'reads a definition',
+  parameter: 'reads a parameter',
+  file: 'is read from a file beside the spec',
+  data: 'is a field of a `data:` block',
+  formula: 'holds a formula that cannot be moved here',
+  rich: 'holds rich text',
+  other: 'cannot be written',
+};
+
+const THEY: Record<Stood, string> = {
+  range: 'are filled by a range',
+  definition: 'read a definition',
+  parameter: 'read a parameter',
+  file: 'are read from a file beside the spec',
+  data: 'are fields of a `data:` block',
+  formula: 'hold formulas that cannot be moved here',
+  rich: 'hold rich text',
+  other: 'cannot be written',
+};
 
 /** A file as a reader would name it, which is not the whole way there. */
 export function beside(file: string): string {

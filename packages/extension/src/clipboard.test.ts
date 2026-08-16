@@ -169,9 +169,9 @@ describe('a rectangle from another spreadsheet', () => {
     const { spec, port, answers, refusals, files } = editor({ [ROOT]: SHEET });
 
     await pasteFrom(spec, { ...at(1, 2), text: 'APAC\t1\nEMEA\t2' }, port);
-    expect(refusals[0]).toBe('4 cells from the clipboard: how should they be written?');
+    expect(refusals[0]).toBe('4 cells from the clipboard, into specs/report.yxl.yaml.');
     expect(answers[0]).toEqual([
-      { id: 'data', what: 'As one `data:` block — 4 lines', moves: 4, sample: [] },
+      { id: 'data', what: 'As one `data:` block — 5 lines', moves: 4, sample: [] },
       { id: 'cells', what: 'As `cells:` entries — 4 lines', moves: 4, sample: [] },
     ]);
     expect(files[ROOT]).toBe(SHEET);
@@ -268,5 +268,53 @@ describe('whose paste `Cmd`+`V` is', () => {
     expect(whose({ ...asked, cut: true }, '')).toMatchObject({
       pasted: { cut: true },
     });
+  });
+});
+
+describe('a paste too big to take in at a glance', () => {
+  const SHEET = `${SALES}    cells:\n      A1: keep\n`;
+  const wide = (cells: number) => Array.from({ length: cells }, (_, at) => at + 1).join('\t');
+
+  it('says how many cells and how many lines before writing any of them', async () => {
+    const { spec, port, refusals, answers, files } = editor({ [ROOT]: SHEET });
+
+    await pasteFrom(spec, { sheet: 'Sales', row: 5, col: 1, text: wide(50) }, port);
+    expect(refusals[0]).toBe('50 cells from the clipboard, into specs/report.yxl.yaml.');
+    expect(answers[0]?.map((one) => one.what)).toEqual([
+      'As one `data:` block — 4 lines',
+      'As `cells:` entries — 50 lines',
+    ]);
+    expect(files[ROOT]).toBe(SHEET);
+  });
+
+  it('waits for the one answer, and then writes it', async () => {
+    const { spec, port, files, told } = editor({ [ROOT]: SHEET });
+
+    await pasteFrom(spec, { sheet: 'Sales', row: 5, col: 1, text: wide(50) }, port, 'data');
+    expect(told).toEqual(['50 cells pasted.']);
+    expect(files[ROOT]).toContain('- at: A5');
+  });
+
+  it('asks about a rectangle it cannot offer a `data:` block for, rather than writing it unasked', async () => {
+    const held = `${SALES}    cells:\n${wide(50)
+      .split('\t')
+      .map(
+        (one, at) =>
+          `      ${String.fromCharCode(65 + (at % 26))}${Math.floor(at / 26) + 5}: ${one}`,
+      )
+      .join('\n')}\n`;
+    const { spec, port, refusals, answers } = editor({ [ROOT]: held });
+
+    await pasteFrom(spec, { sheet: 'Sales', row: 5, col: 1, text: wide(50) }, port);
+    expect(refusals).toHaveLength(1);
+    expect(answers[0]).toHaveLength(1);
+  });
+
+  it('writes a rectangle small enough to see without asking', async () => {
+    const { spec, port, files, refusals } = editor({ [ROOT]: SHEET });
+
+    await pasteFrom(spec, { sheet: 'Sales', row: 1, col: 1, text: 'LATAM' }, port);
+    expect(refusals).toEqual([]);
+    expect(files[ROOT]).toContain('A1: LATAM');
   });
 });
