@@ -1,11 +1,5 @@
 import { columnLabel } from '@yxl-vscode/units';
-/**
- * A spec as large as anyone would plausibly write, built rather than stored.
- *
- * Storing a five-thousand-row fixture would put a megabyte of generated YAML in
- * the repository for a number that changes with the code; building it keeps the
- * shape of the spec readable and the size a parameter.
- */
+/** A spec as large as anyone would plausibly write, built rather than stored as a megabyte of YAML. */
 export function largeSpec(rows: number, columns: number): string {
   const bands = Array.from(
     { length: columns },

@@ -2051,6 +2051,15 @@ every package, and the other lenses behind them.
   resolution table, which is where the last sweep said to look again. It is
   still one function per row and reads as the table; splitting it per row would
   scatter the thing it is. Left, and the note stands.
+- **So that it does not grow back**: `AGENTS.md` §4 now carries the rules in the
+  short form for the moment of writing, §8.6 states a *shape* — one to three
+  lines on an export, one on anything private, two inline, above the statement
+  and never inside a literal — and names the channel that produced most of the
+  excess: PR prose landing in the source. `scripts/comment-shape.mjs` lists
+  every block over the limit and gives the totals, which §8.8 now records per
+  pass. **This pass ends at: exports 324 blocks / 702 lines (avg 2.2), private
+  167 / 242 (1.4), inline 36 / 44 (1.2), 39 over the limit** — the number the
+  next pass holds to.
 
 ### 2026-08-16 — Phase 8: a selection that is a rectangle
 

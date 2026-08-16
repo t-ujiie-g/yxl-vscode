@@ -8,13 +8,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 
 export const REPO_ROOT = resolve(here, '..');
 
-/**
- * The half of `$include` that belongs to the shell (ADR-004): resolve the path
- * against the file that wrote it, and read it.
- *
- * The core is I/O-free, so this is what a test has to bring; the extension will
- * bring the same thing over VS Code's filesystem API.
- */
+/** The half of `$include` that belongs to the shell (ADR-004): resolve against the writing file, and read. */
 export const includeReader: IncludeReader = (from, path) => {
   const resolved = resolve(dirname(from), path);
   const file = filePath(resolved);
@@ -33,23 +27,12 @@ export interface Sample {
   readonly source: string;
 }
 
-/**
- * The awkward-YAML fixtures: comments in every position, flow style, block
- * scalars, CRLF, a BOM, odd indentation, an anchor, a tab inside a string.
- * Written to be hostile to a serializer that re-prints rather than patches.
- */
+/** The awkward-YAML fixtures, written to be hostile to a serializer that re-prints. */
 export function awkward(): Sample[] {
   return read(join(here, 'fixtures', 'awkward'));
 }
 
-/**
- * Every spec in yxl's own cookbook, when a checkout is next door.
- *
- * These are the real thing — the corpus CI compiles upstream — which is why
- * they are worth more than anything written here. They are optional so the
- * suite still runs without the sibling checkout; `pnpm test` reports how many
- * were found, and CI fails when the count is zero (`corpus.test.ts`).
- */
+/** Every spec in yxl's own cookbook, when a checkout is next door; `corpus.test.ts` fails on zero. */
 export function yxlExamples(): Sample[] {
   const dir = join(REPO_ROOT, '..', 'yxl', 'examples');
   try {

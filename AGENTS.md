@@ -116,6 +116,25 @@ gh pr create --fill
   runtime dependency.
 - Edit existing files; don't create new files unless a `ROADMAP.md` task or the
   user asks.
+- **Comments are written to §8.6's rules, not cleaned up to them later.** The
+  short form, for the moment of writing:
+  - **Default: none.** Before writing one, try a better name or a smaller
+    function first. If the code then says it, there is nothing to write.
+  - **An export gets a doc comment** — what it *is*, in one to three lines, plus
+    at most one pointer to where the rule lives (`docs/spec.md §n`, `ADR-nnn`).
+    Not why it exists, not how it came to be, not what it used to do.
+  - **Everything else gets one line or nothing.** A private function whose name
+    says it gets nothing. An inline comment is one or two lines, only for a
+    constraint the code cannot show, and sits **above the statement** — never
+    inside an object literal, an argument list, or between the halves of an
+    expression, and never twice on one declaration.
+  - **The story goes in the commit and the PR**, where it belongs and is read
+    once. Rationale, the bug that led here, the trade-off you weighed: PR body.
+    A comment that starts "because" or "which is why" is a paragraph of PR prose
+    that has landed in the source, and it will still be there when the reason
+    is gone.
+  - Before committing, `node scripts/comment-shape.mjs --totals` should not have
+    moved up. If it did, read the new entries in the full report.
 
 ### Before reporting complete — validation loop
 ```bash
@@ -136,6 +155,7 @@ pnpm build            # the extension actually bundles
 | Lint (includes the layer check) | `pnpm lint` |
 | Format and apply safe fixes | `pnpm format` |
 | Layer check alone | `node scripts/check-layers.mjs` |
+| Comment shape report (§8.6) | `node scripts/comment-shape.mjs` — every comment over the limit, longest first; `--totals` for the counts |
 | Build | `pnpm build` |
 | Get the conformance oracle | install the **pinned** `yxl` release, or point `YXL_BIN` at it (`ROADMAP.md` ADR-018) |
 | Run the extension | **F5** in VS Code — *Run the preview*, which builds first |
@@ -269,6 +289,32 @@ Apply these in order — the first three delete, the last one keeps:
   *thing* instead ("the style normalizer", "the trailing-comment workaround").
   ADR-nnn and issue #N references are fine — they're stable and findable.
 
+**Shape.** The rules above say *what*; these say *how much*, so that a pass can
+be measured rather than felt. A doc comment on an export is **one to three lines
+of text**: what it is, and at most one pointer to where the rule lives. A doc
+comment on anything private is **one line**, or absent where the name already
+says it. An inline comment is **one or two lines**. Longer is not forbidden — a
+`Removal` type with two variants may need four — but every block over the limit
+is a line in `node scripts/comment-shape.mjs`, and a refactoring pass reads
+that list first and either keeps each entry for a reason or cuts it. The
+`--totals` line is the number to watch across a phase: the averages should not
+climb.
+
+**Placement.** A comment sits above the statement it governs, at that
+statement's indentation. Never inside an object literal above one field, never
+inside an argument list, never between the halves of a ternary or a chained
+condition — a reader scanning the shape of a call must not have to step over
+prose to see its arguments. Never two doc comments on one declaration; if the
+second says something the first does not, fold it in. Never a floating comment
+attached to nothing.
+
+**The channel that produces most of the excess** is worth naming: writing PR
+prose into the source. The rationale, the trade-off, the bug that led here are
+all worth writing — in the commit message and the PR body, where they are read
+once by the people deciding, and stay findable by `git blame`. A comment that
+opens "because", "which is why", "so that", or "rather than" is usually that
+paragraph having landed in the wrong place. Move it, do not shorten it.
+
 **Interface fields carry no doc comment of their own.** Annotating some fields
 and not others is the worst case: the reader can no longer scan the type at all.
 Say what a field needs said in the **type's own doc**, in one place, and leave
@@ -281,7 +327,9 @@ it comes from earns its place. Two lines does not.
 
 Tests are code and get the same treatment. A test's name says what it asserts; a
 comment restating that is noise. Keep only the surprising *why* — why this value
-and not the obvious one, which past defect the case pins down.
+and not the obvious one, which past defect the case pins down — in one line.
+Test-file header essays go the way of source-file ones: the `describe` names are
+the table of contents.
 
 ### 8.7 Layer discipline
 The lens this project has that yxl does not. Check that the refactor did not blur
@@ -296,12 +344,14 @@ The lens this project has that yxl does not. Check that the refactor did not blu
 
 ### 8.8 Validation loop after refactoring
 ```bash
+node scripts/comment-shape.mjs --totals   # not up on the last pass (§8.6)
 pnpm typecheck
 pnpm test
 pnpm lint
 pnpm build
 ```
-Push only when all are clean.
+Push only when all are clean, and record the comment-shape totals in the
+`ROADMAP.md §11` entry for the pass, so the next pass has a number to hold to.
 
 ### 8.9 Dependency and toolchain currency
 - **Clear deprecation warnings** rather than suppressing them.
