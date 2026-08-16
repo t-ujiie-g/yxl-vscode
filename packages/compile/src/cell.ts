@@ -123,6 +123,7 @@ function compileValue(
       node: node.id,
       template: String(node.value.value),
       params: done.params,
+      declared: [...new Set(done.params.flatMap((name) => ctx.declared.get(name) ?? []))],
     },
   };
 }

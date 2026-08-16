@@ -222,6 +222,26 @@ describe('the loop, closed', () => {
     expect(cell(after.grid, 'Summary', 'B17')?.formula).toBe('target_revenue');
   });
 
+  it('carries a changed parameter default into the workbook it builds', async () => {
+    const sample = yxlExamples().find((one) => one.name === 'parameters.yxl.yaml');
+    if (!sample) return;
+
+    const { dir, root, port, spec, refusals } = opened(sample);
+    // `B4: "${quarter}"` on the sheet `"${region}"`, which is drawn as APAC.
+    const at = typed({ sheet: 'APAC', row: 4, col: 2, text: 'Q4' });
+
+    await write(spec(), at, port);
+    expect(refusals).toHaveLength(1);
+
+    await resolve(spec(), at, 'parameter', port);
+    expect(refusals).toHaveLength(1);
+
+    const { grid } = built(dir, root);
+    expect(cell(grid, 'APAC', 'B4')?.value).toBe('Q4');
+    // The title reads the same parameter, so the workbook follows it there too.
+    expect(cell(grid, 'APAC', 'A1')?.value).toBe('Q4 APAC summary');
+  });
+
   it('takes a cell back out of the workbook when it is emptied', async () => {
     if (!QUICKSTART) return;
     const { dir, root, port, spec, refusals } = opened(QUICKSTART);

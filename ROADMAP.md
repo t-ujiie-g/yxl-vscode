@@ -829,6 +829,12 @@ Where it starts to feel like a spreadsheet.
       rectangle next to it) is the half that decides whether a spec grows a
       hundred `cells:` entries or a table, and it lands with the rectangle work
       Phase 10 needs anyway.
+      **`param` ①** is in: a cell that is exactly one placeholder offers the
+      parameter's default, with every cell that follows it. Not offered where
+      the cell is a *sentence* (`"${quarter} ${region}"` typed over would have
+      to be split back across two parameters), and not while the preview is
+      showing that parameter as something else — changing the default then
+      would leave the grid exactly as it was.
       **`defRef` ① and ②** are in, which is the row this phase is *about*:
       change the definition every cell reading it follows, or write this one
       cell as a value of its own. Both are offered, always — one moves forty
@@ -1968,6 +1974,30 @@ this at a phase boundary rather than at the end.
   two serials either side of it, so the next reader knows it is deliberate.
 - A cell's own format — written, or the one its type takes — now wins over a
   band's. Both are requests about *that* cell; a band is something reaching it.
+
+### 2026-08-16 — Phase 7: the parameter row, and what a parameter reaches
+
+- **A cell that is exactly one placeholder can change the parameter behind it**,
+  with the count of every cell that follows. `"${quarter} ${region}"` is not
+  offered: typing `Q4 EMEA` over it would have to be split back across two
+  parameters, and which half went where is the guess this editor does not make
+  (ADR-001).
+- **Nor is it offered while the preview is showing that parameter as something
+  else.** The panel's setting changes what is drawn without changing a byte, so
+  changing the default underneath it would leave the grid exactly as it was —
+  an edit that appears to do nothing, which is the worst answer available (§1).
+- **A parameter now reaches what it actually reaches.** `reaches` knew about
+  cells and definitions and answered *nothing* for a parameter declaration, so
+  the count would have been wrong and the inspector lit nothing up. A `param`
+  origin carries where each of its parameters is declared — **and everything
+  those defaults are built from**: `title: "${quarter} ${region}"` means a cell
+  reading `title` follows `quarter`, transitively, which is the rule the spec
+  states (`docs/spec.md` §7) and the one the verification loop needs to agree
+  with. Tier 4 found this: the checker refused the edit because the title moved
+  and the claim had not named it.
+- The resolver takes one context now rather than four arguments, because this
+  row needed a fifth — what the reader is *looking* at, which is not what the
+  file says.
 
 ### 2026-08-16 — Phase 7: the definition row, which is what the phase is for
 

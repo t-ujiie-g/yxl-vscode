@@ -31,9 +31,18 @@ function files(sources: Record<string, string>) {
   return { doc, grid: compile(doc, { read }), text, read };
 }
 
-function offered(source: string, at: string, typed: string): readonly Candidate[] {
+function offered(
+  source: string,
+  at: string,
+  typed: string,
+  params: Map<string, string> = new Map(),
+): readonly Candidate[] {
   const { grid, text } = files({ [ROOT]: source });
-  return candidates(grid, { sheet: 'Sales' as SheetName, at: at as A1Addr }, typed, text);
+  return candidates(
+    { grid, text, params },
+    { sheet: 'Sales' as SheetName, at: at as A1Addr },
+    typed,
+  );
 }
 
 /** The chosen candidate, taken all the way to the file it would leave behind. */
@@ -191,6 +200,56 @@ sheets:
   });
 });
 
+describe('a cell that reads a parameter', () => {
+  const PARAMS = `params:
+  region: APAC
+  quarter: Q3
+sheets:
+  - name: Sales
+    cells:
+      A1: "\${region}"
+      A2: "\${region}"
+      B1: "\${quarter} \${region}"
+`;
+
+  it('offers the default, with every cell that follows it', () => {
+    const [change, ...rest] = offered(PARAMS, 'A1', 'EMEA');
+
+    expect(rest).toEqual([]);
+    expect(change?.id).toBe('parameter');
+    expect(change?.what).toContain('region');
+    expect(change?.moves).toEqual([
+      { sheet: 'Sales', at: 'A1' },
+      { sheet: 'Sales', at: 'A2' },
+      { sheet: 'Sales', at: 'B1' },
+    ]);
+  });
+
+  it('writes the default where the spec declares it', () => {
+    const [change] = offered(PARAMS, 'A1', 'EMEA');
+    if (change === undefined) throw new Error('nothing was offered');
+
+    expect(taken(PARAMS, change)).toContain('region: EMEA');
+  });
+
+  it('says nothing where the cell is a sentence and not a placeholder', () => {
+    // `"${quarter} ${region}"` typed over with `Q4 EMEA` would have to be split
+    // back across two parameters, and which half went where is the guess this
+    // editor does not make.
+    expect(offered(PARAMS, 'B1', 'Q4 EMEA')).toEqual([]);
+  });
+
+  it('says nothing while the preview is showing that parameter as something else', () => {
+    // The default is not what the reader is looking at, so changing it would
+    // leave the grid exactly as it is.
+    expect(offered(PARAMS, 'A1', 'EMEA', new Map([['region', 'LATAM']]))).toEqual([]);
+  });
+
+  it('says nothing about a formula typed into one', () => {
+    expect(offered(PARAMS, 'A1', '=A2')).toEqual([]);
+  });
+});
+
 describe('what it will not offer', () => {
   it('says nothing away from the anchor, where the formula would be off by a row', () => {
     // `=B2*0.1` typed into C2 means `B1*0.1` to a range anchored at C1, and
@@ -208,8 +267,10 @@ describe('what it will not offer', () => {
 
   it('says nothing about a sheet that is not there', () => {
     const { grid, text } = files({ [ROOT]: SPEC });
-    expect(
-      candidates(grid, { sheet: 'Nowhere' as SheetName, at: 'C1' as A1Addr }, '=1', text),
-    ).toEqual([]);
+    const spec = { grid, text, params: new Map<string, string>() };
+
+    expect(candidates(spec, { sheet: 'Nowhere' as SheetName, at: 'C1' as A1Addr }, '=1')).toEqual(
+      [],
+    );
   });
 });
