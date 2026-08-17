@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { describe, expect, it } from 'vitest';
-import { between, going, takingAll, within } from './keys';
+import { between, copying, going, looking, pasting, takingAll, undoing, within } from './keys';
 import type { DrawnCell, DrawnSheet } from './protocol';
 
 const sheet = (of: Partial<DrawnSheet> = {}): DrawnSheet => ({
@@ -112,5 +112,43 @@ describe('the key that takes everything', () => {
     expect(takingAll(key({ key: 'a', ctrlKey: true }))).toBe(true);
     expect(takingAll(key({ key: 'a' }))).toBe(false);
     expect(takingAll(key({ key: 'a', metaKey: true, altKey: true }))).toBe(false);
+  });
+});
+
+/** A key as the grid receives one, with only the modifiers named held down. */
+const pressed = (key: string, held: Partial<KeyboardEventInit> = {}): KeyboardEvent =>
+  new KeyboardEvent('keydown', { key, ...held });
+
+describe('the keys a gesture is asked for by', () => {
+  it('takes an edit back on cmd-Z, and puts it on again with shift', () => {
+    expect(undoing(pressed('z', { metaKey: true }))).toBe(true);
+    expect(undoing(pressed('Z', { ctrlKey: true, shiftKey: true }))).toBe(true);
+    expect(undoing(pressed('z'))).toBe(false);
+  });
+
+  it('copies on cmd-C and cuts on cmd-X, and says which', () => {
+    expect(copying(pressed('c', { metaKey: true }))).toBe('copy');
+    expect(copying(pressed('X', { ctrlKey: true }))).toBe('cut');
+    expect(copying(pressed('v', { metaKey: true }))).toBeNull();
+    expect(copying(pressed('c'))).toBeNull();
+  });
+
+  it('leaves cmd-alt-C alone, which is a shortcut of somebody else’s', () => {
+    expect(copying(pressed('c', { metaKey: true, altKey: true }))).toBeNull();
+  });
+
+  it('pastes on cmd-V and nothing else', () => {
+    expect(pasting(pressed('v', { metaKey: true }))).toBe(true);
+    expect(pasting(pressed('V', { ctrlKey: true }))).toBe(true);
+    expect(pasting(pressed('v'))).toBe(false);
+    expect(pasting(pressed('c', { metaKey: true }))).toBe(false);
+  });
+
+  it('opens the search on cmd-F, and goes through it on cmd-G', () => {
+    expect(looking(pressed('f', { metaKey: true }))).toBe('open');
+    expect(looking(pressed('g', { metaKey: true }))).toBe('on');
+    expect(looking(pressed('G', { metaKey: true, shiftKey: true }))).toBe('back');
+    expect(looking(pressed('g'))).toBeNull();
+    expect(looking(pressed('h', { metaKey: true }))).toBeNull();
   });
 });

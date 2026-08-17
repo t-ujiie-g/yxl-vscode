@@ -49,6 +49,11 @@ export function nodeAt(root: Node, path: Path): Node | null {
 }
 
 /** `sheets[0].name` — how a path reads in a diagnostic. */
+/** A path as one comparable string, so two of them can be asked whether they name the same place. */
+export function marked(path: Path): string {
+  return JSON.stringify(path);
+}
+
 export function formatPath(path: Path): string {
   return path.reduce<string>((text, step) => {
     if (typeof step === 'number') return `${text}[${step}]`;

@@ -2265,6 +2265,41 @@ this at a phase boundary rather than at the end.
 - A cell's own format — written, or the one its type takes — now wins over a
   band's. Both are requests about *that* cell; a band is something reaching it.
 
+### 2026-08-17 — Refactoring pass over the whole tree (`AGENTS.md` §8)
+The first pass over everything since the Phase 2 boundary. Four findings, taken
+in the order the lenses come in; the same 1322 tests pass through all of them,
+and 5 more hold the gap the fourth one found.
+
+- **§8.2 — `preview.ts` said the same five lines nine times.** Every message
+  that writes began by fetching the spec, refusing where it had not finished
+  loading, and stripping `kind` off what arrived. One `writing(make)` holds the
+  guard now and the dispatch calls the write path directly, which puts each
+  message in *one* place rather than two. 514 lines to 436, and the split §8.3
+  would otherwise have wanted is no longer worth making.
+- **§8.2 — `marked(path)` was written twice**, in `patch` and in `intent`, both
+  spelling a path as JSON so two could be compared. It belongs to whoever owns
+  a `Path`, which is `cst`.
+- **§8.3 — `draw.ts` was 612 lines and three subjects.** The vocabulary — what
+  the view is *showing* and what it can *ask* — is now `showing.ts`, which the
+  drawing, the panels and the boxes all read from rather than from each other;
+  and the two boxes that are not cells, the address box and the find bar, are
+  `boxes.ts`. 612 to 443, and a type cycle that was about to form did not.
+- **§8.4 — the four key predicates had no direct test.** `undoing`, `copying`,
+  `pasting` and `looking` decide which modifiers count, and `Cmd`+`G` not
+  working was exactly that layer. They are pinned now, `alt`-disqualification
+  and all.
+- **§8.5 — where the work goes next was read wrong**, by me, in the last change:
+  §1's rule is *the first phase with an unchecked box*, and Phase 8 finishing
+  does not make that Phase 9. **Phase 7 has three rows still open** — §4.4's
+  table, the style normalizer, and range edits with mixed origins — and the
+  normalizer is what ADR-034 is waiting on anyway.
+- **Considered and left**: `packages/normalize` is an empty `export {}`. §8.2
+  would delete scaffolding that holds no API, but its position is declared in
+  `layers.json` and §4.2 and Phase 7 is about to fill it. Left, with the note.
+- **This pass ends at: exports 383 blocks / 856 lines (avg 2.2), private 226 /
+  296 (1.3), inline 46 / 63 (1.4), 38 over the limit** — the same 38 it started
+  at, across two more files.
+
 ### 2026-08-17 — Find in the sheet, and the box that says where you are
 `Cmd`+`F` looks through the sheet and `Cmd`+`G` goes on through what it found;
 the corner above the row numbers is an address box, which is where every

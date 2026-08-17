@@ -2,6 +2,7 @@ import {
   type Applied,
   apply,
   type Edit,
+  marked,
   type Node,
   nodeAt,
   type Op,
@@ -82,7 +83,7 @@ export function invert(source: string, patch: Patch, options: Options): Inverted
   const diagnostics: Diagnostic[] = [];
   const ops: Op[] = [];
   const going = new Set(
-    patch.ops.filter((one) => one.op === 'remove').map((one) => mark(one.path)),
+    patch.ops.filter((one) => one.op === 'remove').map((one) => marked(one.path)),
   );
 
   for (const op of [...patch.ops].reverse()) {
@@ -92,11 +93,6 @@ export function invert(source: string, patch: Patch, options: Options): Inverted
   }
 
   return { patch: { ops }, diagnostics };
-}
-
-/** A path as one comparable string, so a patch can be asked what else it removes. */
-function mark(path: Path): string {
-  return JSON.stringify(path);
 }
 
 /** The entry a restore goes above: the next sibling this patch is not also removing (ADR-026). */
@@ -112,7 +108,7 @@ function anchor(
   const keys = holder.entries.map((entry) => String(entry.key.value));
   for (let index = keys.indexOf(before); index >= 0 && index < keys.length; index += 1) {
     const key = keys[index] as string;
-    if (!going.has(mark([...path.slice(0, -1), key]))) return key;
+    if (!going.has(marked([...path.slice(0, -1), key]))) return key;
   }
 
   return null;

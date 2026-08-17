@@ -1,30 +1,20 @@
 import { cellOf, parseA1Addr, type Rect } from '@yxl-vscode/units';
 import { sheetAgain } from './again';
 import { flavours, onto } from './clipboard';
+import { draw, focusCell, restate } from './draw';
+import { between } from './keys';
+import type { Drawing, DrawnSheet, Editable, FromView, Refused, Source, ToView } from './protocol';
 import {
   type Asks,
   type Copied,
   cellKey,
-  draw,
-  focusCell,
   type Looking,
   type Reached,
-  restate,
   type Showing,
-} from './draw';
-import { between } from './keys';
-import type { Drawing, DrawnSheet, Editable, FromView, Refused, Source, ToView } from './protocol';
+} from './showing';
 
 export { type Kept, sheetAgain } from './again';
-export {
-  type Asks,
-  type Copied,
-  draw,
-  type Looking,
-  type Reached,
-  restate,
-  type Showing,
-} from './draw';
+export { draw, restate } from './draw';
 export type {
   Drawing,
   DrawnCell,
@@ -44,6 +34,13 @@ export type {
   Typed,
   Uncomputed,
 } from './protocol';
+export type {
+  Asks,
+  Copied,
+  Looking,
+  Reached,
+  Showing,
+} from './showing';
 
 /** The bridge VS Code puts in a webview, and the only way out of one. */
 declare function acquireVsCodeApi(): { postMessage: (message: FromView) => void };
