@@ -397,7 +397,7 @@ not a date.
 | Arrows, `Tab`, `PageUp` / `PageDown` | ✅ |
 | `Delete` empties a cell | ✅ |
 | Undo and redo | ✅ — from the grid without leaving it, and VS Code's own where the file has moved since (ADR-030) |
-| The answers a refused edit has, with what each would change | ✅ — the range, the definition, the parameter, the CSV, the blank cell; a selection whose cells came from different places is the rest of Phase 7 |
+| The answers a refused edit has, with what each would change | ✅ — the range, the definition, the parameter, the CSV, the blank cell, and a rectangle whose cells came from several of those, answered a group at a time |
 | Select a range — drag, `Shift`+click, `Shift`+arrows, `Cmd`+`A` | ✅ |
 | `Cmd`+arrow to the edge of a block, `Home` / `End` | ✅ |
 | Delete, copy or cut a range | ✅ |
@@ -820,7 +820,7 @@ the inverse is unique, so no dialog is needed yet.
 
 ### Phase 7 — `mediated` write-back
 Where it starts to feel like a spreadsheet.
-- [ ] The §4.4 resolution table, row by row
+- [x] The §4.4 resolution table, row by row
       **`formulaRange` ① and ②** are in: a formula typed anywhere in a
       `formulas:` range is offered as *the range's* own — shifted back to the
       anchor, which is where the one formula is written (ADR-031) — and as a
@@ -831,9 +831,11 @@ Where it starts to feel like a spreadsheet.
       **`empty` ①** is in: typing into an address nothing reaches offers it as a
       new `cells:` entry, written where the sheet keeps its cells — and the
       `cells:` key itself where the sheet has none. ② (extend the `data:`
-      rectangle next to it) is the half that decides whether a spec grows a
-      hundred `cells:` entries or a table, and it lands with the rectangle work
-      Phase 10 needs anyway.
+      rectangle next to it) **is now a Phase 10 item**: it decides whether a
+      spec grows a hundred `cells:` entries or a table, which is the same
+      judgement Phase 10's `data:` conversion offer has to make, and a row left
+      half-ticked here would keep §10 pointing at a phase with nothing in it to
+      do.
       **`external` ①** is in for CSV, which is the row that reaches out of the
       spec altogether: what it carries is the companion file as it should be,
       checked by compiling the spec with that file overlaid and diffing, exactly
@@ -865,7 +867,17 @@ Where it starts to feel like a spreadsheet.
       third step on the evidence of what `yxl extract` writes). The writing is
       Phase 9's, and it has one rule to obey: nothing reaches a spec's styles
       except through this answer.
-- [ ] Range edits with mixed origins
+- [x] Range edits with mixed origins
+      **Shipped for the paste**, which is the rectangle gesture that has answers
+      to give: a rectangle landing on cells of several origins is refused with
+      the origins counted, and then offered one answer *per origin* — write the
+      ones a range fills as overrides, or the ones reading a definition as
+      values of their own, and paste the rest either way (§8 Q14). An answer
+      carries the group it resolves rather than the whole rectangle, which is
+      the machinery that half of Q14 was waiting on. `Delete` keeps its one
+      answer: a cell a range fills has nothing that would empty it, and an
+      override that says a cell is blank is not something `docs/spec.md` §23
+      offers.
 - [x] `external` origins: edit the companion CSV/JSON, or divert to `overrides:`
       **CSV is in**: a cell whose value is a field of a CSV beside the spec
       offers to write *that field*, and nothing else in the file moves. JSON is
@@ -999,7 +1011,11 @@ whether the spec survives contact with a GUI (ADR-008).
 - [ ] `rekeyMap` for bulk A1 shifts in `cells:`
 - [ ] `merge` / `unmerge`, and band creation
 - [ ] The "convert this rectangle to `data:`" offer, at the moment a `cells:`
-      block proves it needs it
+      block proves it needs it — and with it **§4.4's `empty` ②**, the answer
+      that extends the `data:` rectangle next to an address rather than writing
+      a `cells:` entry beside it. Carried here from Phase 7 (2026-08-19): it is
+      the same judgement about when a spec wants a table, asked from the other
+      end, and answering it twice in two phases would answer it twice
 - [ ] Fill down and fill right, and the drag handle — which is reference
       translation, and waits on §8 Q2
 - [ ] Sorting a `data:` rectangle: its rows rewritten, and nothing else touched
@@ -2022,14 +2038,18 @@ the cell.
   unless the sketch turns out to want axes. No runtime dependency without an ADR
   (ADR-013); decide when Phase 11 starts, with a spike over `charts.yxl.yaml`
   and `sparklines.yxl.yaml`, which are already in the corpus.
-- **Q14 — What does one question about a rectangle look like?** Half answered,
-  2026-08-17. *The origins grouped, a count against each* is in: a rectangle
-  that cannot be written says `2 are filled by a range, 1 reads a definition`,
-  and a single cell still says its own reason, which no count improves on. The
-  size of the diff is measured and said before the edit lands. **Still open:
-  answers that apply per group** — *take the range ones out of the paste* beside
-  *take them all out* — which needs the answer machinery to carry a subset of
-  the rectangle rather than the whole of it.
+- **Q14 — What does one question about a rectangle look like?** ✅ *Answered
+  2026-08-19.* *The origins grouped, a count against each* came first: a
+  rectangle that cannot be written says `2 are filled by a range, 1 reads a
+  definition`, and a single cell still says its own reason, which no count
+  improves on. The size of the diff is measured and said before the edit lands.
+  The other half is **one answer per group**, and what it took was noticing that
+  *excluding* a group cannot be the shape: with two groups in the way, dropping
+  one leaves the other still refusing, and with one group it is the answer that
+  was already there. So a group answer **resolves** its group — the exception
+  that origin allows — and leaves the others out. The answer carries the group
+  it names rather than the whole rectangle, which is the machinery the question
+  was really about.
 
 ## 9. Risks
 
@@ -2346,6 +2366,42 @@ this at a phase boundary rather than at the end.
   two serials either side of it, so the next reader knows it is deliberate.
 - A cell's own format — written, or the one its type takes — now wins over a
   band's. Both are requests about *that* cell; a band is something reaching it.
+
+### 2026-08-19 — One answer per origin, and Phase 7 is complete
+A rectangle landing on cells that came from different places used to have one
+answer: paste into the ones that can take it. It now has one *per group* of the
+ones that cannot — **§8 Q14 is closed, and with it Phase 7**.
+
+- **The shape of the answer changed on the way in.** Q14 asked for *take the
+  range ones out of the paste* beside *take them all out*, and excluding a group
+  turns out not to be an answer at all: with two groups in the way, dropping one
+  leaves the other still refusing, and with one group it is the answer that was
+  already there. So a group answer **resolves** its group and leaves the others
+  out — *Write the one that is filled by a range as an override, and paste the
+  rest*.
+- **The exception each origin allows is the one the row already had**: a cell a
+  range fills, a parameter, or a CSV field becomes an override, which is what
+  `docs/spec.md` §23 is for; a cell reading a definition is written as a value
+  of its own, which is the `detach` answer a single cell is offered. Nothing new
+  was invented for the rectangle — the answers a cell has, applied to a group of
+  them.
+- **`overrides:` learned to take several entries as one edit**, with the key
+  written once however many go in; the single-cell `override` is now one of
+  those. An override still opens only when a reader asks for it (ADR-007) — here
+  the asking is choosing the answer that says so.
+- **A group still has its answer where nothing else can be done.** Landing on a
+  range's anchor as well as its filled rows leaves the paste with no cell it can
+  write at all — and the cell reading a definition still has its own answer, so
+  that is what is offered, without the *and paste the rest* it has not got.
+- **`Delete` keeps its one answer.** A cell a range fills has nothing that would
+  empty it, and an override that says a cell is blank is not something §23
+  offers. Said out loud rather than left as a gap.
+- **§4.4's `empty` ② moved to Phase 10**, where the `data:` conversion offer is:
+  it is the same judgement about when a spec wants a table, and a row left
+  half-ticked would have kept §10 pointing at a phase with nothing to do in it.
+  That is what made this the last Phase 7 item rather than the second-to-last.
+- **This pass ends at: exports 398 blocks / 886 lines (avg 2.2), private 240 /
+  303 (1.3), inline 47 / 64 (1.4), 37 over the limit.**
 
 ### 2026-08-19 — The style normalizer, and what the compiler's own writer does
 `packages/normalize` was an empty `export {}` with a position in `layers.json`.

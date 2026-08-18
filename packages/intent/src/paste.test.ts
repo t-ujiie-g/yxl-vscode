@@ -6,7 +6,7 @@ import { type A1Addr, type FilePath, filePath, type Rect, type SheetName } from 
 import { type Ctx, checked } from '@yxl-vscode/verify';
 import { describe, expect, it } from 'vitest';
 import { type Intent, reading } from './direct';
-import { couldBlock, pasteRange, pasteText, type Shape } from './paste';
+import { couldBlock, pasteRange, pasteText, type Shape, type Standing } from './paste';
 import { tabular } from './tabular';
 
 const ROOT = filePath('spec.yxl.yaml') ?? ('' as FilePath);
@@ -20,6 +20,7 @@ function files(sources: Record<string, string>) {
   if (doc === null) throw new Error('did not load');
 
   return {
+    doc,
     grid: compile(doc, { read: includes }),
     read: reading((file) => sources[file] ?? null),
     includes,
@@ -38,19 +39,19 @@ function pasted(
   source: string,
   from: Rect,
   at: string,
-  options: { cut?: boolean; only?: boolean; sheet?: string } = {},
+  options: { cut?: boolean; only?: boolean; doing?: Standing; sheet?: string } = {},
 ): Intent {
-  const { grid, read } = files({ [ROOT]: source });
+  const { doc, grid, read } = files({ [ROOT]: source });
 
   return pasteRange(
-    grid,
+    { doc, grid },
     {
       from: { sheet: 'Sales' as SheetName, rect: from },
       to: { sheet: (options.sheet ?? 'Sales') as SheetName, at: at as A1Addr },
       cut: options.cut ?? false,
     },
     read,
-    options.only ?? false,
+    options.doing ?? (options.only === true ? 'skip' : 'refuse'),
   );
 }
 
@@ -240,15 +241,15 @@ describe('a rectangle from another spreadsheet', () => {
 
   /** A clipboard rectangle put down at `at`, as the intent it comes to. */
   const from = (source: string, text: string, at: string, shape: Shape = 'cells', only = false) => {
-    const { grid, read } = files({ [ROOT]: source });
+    const { doc, grid, read } = files({ [ROOT]: source });
 
     return pasteText(
-      grid,
+      { doc, grid },
       { sheet: 'Sales' as SheetName, at: at as A1Addr },
       tabular(text),
       read,
       shape,
-      only,
+      only ? 'skip' : 'refuse',
     );
   };
 
@@ -311,5 +312,68 @@ describe('a rectangle from another spreadsheet', () => {
     const done = applyPatch(SHEET, intent.patch, { file: ROOT });
     if (done.back === null) throw new Error('no way back');
     expect(applyPatch(done.text, done.back, { file: ROOT }).text).toBe(SHEET);
+  });
+});
+
+describe('a rectangle landing on cells of more than one origin', () => {
+  const MIXED = `defs:
+  values:
+    tax: 0.1
+sheets:
+  - name: Sales
+    cells:
+      A1: 1
+      A2: 2
+      A3: 3
+      B4: { $ref: tax }
+    formulas:
+      - at: B2:B3
+        formula: "A1*2"
+`;
+
+  const HERE = rect(1, 1, 3, 1);
+
+  it('refuses the whole, naming what stood in the way by what it was', () => {
+    expect(why(MIXED, HERE, 'B3')).toBe(
+      '2 of the 2 cells here cannot be pasted, so none were: `B3` is filled by a range, `B4` reads a definition',
+    );
+  });
+
+  it('pastes only the cells nothing stood in front of, where that is the answer taken', () => {
+    const done = pasted(MIXED, HERE, 'B3', { doing: 'skip' });
+    expect(done.kind === 'edit' && [...done.expects.cells]).toEqual(['Sales!B5']);
+  });
+
+  it('writes the range one as an override and leaves the definition one alone', () => {
+    const done = pasted(MIXED, HERE, 'B3', { doing: 'range' });
+    expect(done.kind === 'edit' && [...done.expects.cells].sort()).toEqual([
+      'Sales!B3',
+      'Sales!B5',
+    ]);
+  });
+
+  it('puts that override where the spec keeps its exceptions, saying what the cell holds', () => {
+    expect(after(MIXED, HERE, 'B3', { doing: 'range' })).toBe(
+      `${MIXED.replace('    formulas:', '      B5: 3\n    formulas:')}overrides:\n  - at: Sales!B3\n    value: 1\n`,
+    );
+  });
+
+  it('writes the definition one as a value of its own and leaves the range one alone', () => {
+    const done = pasted(MIXED, HERE, 'B3', { doing: 'definition' });
+    expect(done.kind === 'edit' && [...done.expects.cells].sort()).toEqual([
+      'Sales!B4',
+      'Sales!B5',
+    ]);
+  });
+
+  it('writes it over the reference itself, leaving the definition where it is', () => {
+    const after_ = after(MIXED, HERE, 'B3', { doing: 'definition' });
+    expect(after_).toContain('      B4: 2\n');
+    expect(after_).toContain('    tax: 0.1\n');
+  });
+
+  it('refuses a group answer where one of the cells is a range anchor', () => {
+    const done = pasted(MIXED, rect(1, 1, 2, 1), 'B2', { doing: 'range' });
+    expect(done.kind === 'refused' && done.why).toContain('where a range keeps its one formula');
   });
 });
