@@ -217,7 +217,7 @@ export function literalPath(
       return refused(
         origin.anchor === at
           ? `\`${at}\` is where this range's one formula is written, and changing it changes every cell the range fills`
-          : `\`${at}\` is filled by the range anchored at \`${origin.anchor}\`, which writes one formula for every cell it covers — change it at \`${origin.anchor}\` to change them all`,
+          : `\`${at}\` is filled by the range anchored at \`${origin.anchor}\`, which writes one formula for every cell it covers`,
       );
 
     case 'inline':

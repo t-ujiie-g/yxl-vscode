@@ -1,5 +1,6 @@
 import {
   asCsvField,
+  type CompiledFill,
   type CompiledGrid,
   type CompiledSheet,
   cellAt,
@@ -9,13 +10,16 @@ import {
   reaches,
   sheetOf,
 } from '@yxl-vscode/compile';
-import { type Node, type Path, renderScalar } from '@yxl-vscode/cst';
+import { type Node, type Op, type Path, renderScalar } from '@yxl-vscode/cst';
 import {
   type A1Addr,
   addrAt,
+  type CellRef,
   cellOf,
   type FilePath,
+  moved,
   qualified,
+  type Rect,
   type SheetName,
 } from '@yxl-vscode/units';
 import {
@@ -65,8 +69,7 @@ export function candidates(
   if (origin.kind === 'external') return external(origin, where, typed, spec.read.text);
   if (origin.kind !== 'formulaRange') return [];
 
-  const written = rangeFormula(spec.grid, origin, typed, spec.read);
-  return written === null ? [] : [written];
+  return filledRange(spec.grid, sheet, origin, where, typed, spec.read);
 }
 
 /**
@@ -277,42 +280,150 @@ function external(
   ];
 }
 
-/**
- * The `formulaRange` row: change the range's formula, at its anchor only.
- * `=B3*0.1` typed one row down means `B2*0.1` to the range, and shifting it
- * back is reference translation (`ROADMAP.md` §8 Q2).
- */
-function rangeFormula(
+/** The `formulaRange` row: change the range's one formula, or split it so this cell holds its own. */
+function filledRange(
   grid: CompiledGrid,
+  sheet: CompiledSheet,
   origin: Extract<FacetOrigin, { kind: 'formulaRange' }>,
+  where: { sheet: SheetName; at: A1Addr },
   typed: string,
   read: Reading,
-): Candidate | null {
-  if (meaning(typed).is !== 'formula') return null;
-  if (origin.offset[0] !== 0 || origin.offset[1] !== 0) return null;
+): readonly Candidate[] {
+  const meant = meaning(typed);
+  if (meant.is !== 'formula') return [];
 
   const found = located(origin.node, read);
-  if (found.kind === 'refused') return null;
-  if (found.node.kind !== 'map') return null;
-  if (!found.node.entries.some((entry) => entry.key.value === 'formula')) return null;
+  if (found.kind === 'refused' || found.node.kind !== 'map') return [];
+  if (!found.node.entries.some((entry) => entry.key.value === 'formula')) return [];
 
+  const fill = sheet.fills.find((one) => one.node === origin.node);
+  if (fill === undefined) return [];
+
+  const offered: Candidate[] = [];
+  const [cols, rows] = origin.offset;
+  const anchored = moved(meant.body, { cols: -cols, rows: -rows });
+
+  if (anchored.ok) offered.push(wholeRange(grid, origin, found, anchored.formula));
+
+  const apart = split(fill, where, found, meant.body);
+  if (apart !== null) offered.push(apart);
+
+  return offered;
+}
+
+/** Change the range's own formula, which is what the typed one says at the anchor (ADR-031). */
+function wholeRange(
+  grid: CompiledGrid,
+  origin: Extract<FacetOrigin, { kind: 'formulaRange' }>,
+  found: Found & { kind: 'found' },
+  formula: string,
+): Candidate {
   const moves = reaches(grid, origin.node);
+  const away = origin.offset[0] !== 0 || origin.offset[1] !== 0;
+  const there = away ? `, which reads \`=${formula}\` there` : '';
 
   return {
     id: 'rangeFormula',
-    what: `Change the formula of the range at \`${origin.anchor}\``,
+    what: `Change the formula of the range at \`${origin.anchor}\`${there}`,
     moves,
     alone: false,
     intent: {
       kind: 'edit',
       file: found.file,
-      patch: { ops: [{ op: 'set', path: [...found.path, 'formula'], value: typed.slice(1) }] },
+      patch: { ops: [{ op: 'set', path: [...found.path, 'formula'], value: formula }] },
       expects: {
         cells: new Set(moves.map((one) => qualified(one.sheet as SheetName, one.at))),
         beyond: 'refuse',
       },
     },
   };
+}
+
+/** The range cut around this cell, every piece re-anchored; not at the anchor, where the formula is kept. */
+function split(
+  fill: CompiledFill,
+  where: { sheet: SheetName; at: A1Addr },
+  found: Found & { kind: 'found' },
+  typed: string,
+): Candidate | null {
+  const index = found.path[found.path.length - 1];
+  if (typeof index !== 'number' || fill.anchor === where.at) return null;
+
+  // Rewritten are the two keys as written: a `${...}` in either would be
+  // written over with whatever it resolved to.
+  if (spelt(found.node, 'at') !== spanning(fill.rect)) return null;
+  if (spelt(found.node, 'formula') !== fill.formula) return null;
+
+  const cell = cellOf(where.at);
+  const anchor = cellOf(fill.anchor);
+  const pieces: { at: string; formula: string }[] = [];
+
+  for (const rect of around(fill.rect, cell)) {
+    const own = rect.top === cell.row && rect.left === cell.col;
+    const done = own
+      ? { ok: true as const, formula: typed }
+      : moved(fill.formula, { cols: rect.left - anchor.col, rows: rect.top - anchor.row });
+    if (!done.ok) return null;
+
+    pieces.push({ at: spanning(rect), formula: done.formula });
+  }
+
+  const [first, ...rest] = pieces;
+  if (first === undefined) return null;
+
+  // Items added at one place are spliced from the end, so the last laid down reads first.
+  const ops: Op[] = [
+    { op: 'set', path: [...found.path, 'at'], value: first.at },
+    ...rest.reverse().map(
+      (piece): Op => ({
+        op: 'insertSource',
+        path: found.path.slice(0, -1),
+        index: index + 1,
+        source: `at: ${piece.at}\nformula: ${renderScalar(piece.formula, 'double')}`,
+      }),
+    ),
+  ];
+
+  return {
+    id: 'splitRange',
+    what: `Split the range at \`${fill.anchor}\` so \`${where.at}\` holds its own formula`,
+    moves: [{ sheet: where.sheet, at: where.at }],
+    alone: false,
+    intent: {
+      kind: 'edit',
+      file: found.file,
+      patch: { ops },
+      expects: { cells: new Set([qualified(where.sheet, where.at)]), beyond: 'refuse' },
+    },
+  };
+}
+
+/** What a key of the entry says, where it says it plainly. */
+function spelt(node: Node, key: string): string | null {
+  if (node.kind !== 'map') return null;
+
+  const held = node.entries.find((entry) => entry.key.value === key)?.value;
+  return held?.kind === 'scalar' ? String(held.value) : null;
+}
+
+/** A rectangle as a range, however few cells it holds. */
+function spanning(rect: Rect): string {
+  return `${addrAt({ col: rect.left, row: rect.top })}:${addrAt({ col: rect.right, row: rect.bottom })}`;
+}
+
+/** The rectangle cut into the pieces a cell leaves of it, in reading order, the cell among them. */
+function around(rect: Rect, cell: CellRef): readonly Rect[] {
+  const pieces: Rect[] = [];
+
+  if (cell.row > rect.top) pieces.push({ ...rect, bottom: cell.row - 1 });
+  if (cell.col > rect.left)
+    pieces.push({ top: cell.row, bottom: cell.row, left: rect.left, right: cell.col - 1 });
+  pieces.push({ top: cell.row, bottom: cell.row, left: cell.col, right: cell.col });
+  if (cell.col < rect.right)
+    pieces.push({ top: cell.row, bottom: cell.row, left: cell.col + 1, right: rect.right });
+  if (cell.row < rect.bottom) pieces.push({ ...rect, top: cell.row + 1 });
+
+  return pieces;
 }
 
 /** What a typed edit would have a cell hold, a formula that is not one taken as nothing. */

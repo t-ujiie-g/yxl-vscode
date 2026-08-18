@@ -1,4 +1,4 @@
-import { type CompiledGrid, sheetOf } from '@yxl-vscode/compile';
+import { type CompiledGrid, type CompiledSheet, cellAt, sheetOf } from '@yxl-vscode/compile';
 import { nodeAt, renderScalar, type Value } from '@yxl-vscode/cst';
 import type { SpecDoc, Templated } from '@yxl-vscode/spec';
 import { type A1Addr, type QualifiedAddr, qualified, type SheetName } from '@yxl-vscode/units';
@@ -12,6 +12,18 @@ export interface Says {
   readonly value?: Value;
   readonly formula?: string;
   readonly reason?: string;
+}
+
+/**
+ * Whether a cell can be excepted at all: something has to write it, and it may
+ * not be a range's top-left, where the one shared formula is stored
+ * (`docs/spec.md` §23).
+ */
+export function overridable(grid: CompiledGrid, where: { sheet: SheetName; at: A1Addr }): boolean {
+  const sheet = sheetOf(grid, where.sheet);
+  if (sheet === null || cellAt(sheet, where.at) === null) return false;
+
+  return !sheet.fills.some((fill) => fill.anchor === where.at);
 }
 
 /**
@@ -30,6 +42,8 @@ export function override(
   if (sheet === null) {
     return { kind: 'refused', why: `there is no sheet named \`${where.sheet}\`` };
   }
+
+  if (!overridable(grid, where)) return { kind: 'refused', why: whyNot(sheet, where) };
 
   const file = doc.file;
   const tree = read.parsed(file);
@@ -83,6 +97,13 @@ export function override(
     patch,
     expects: { cells: new Set([qualified(where.sheet, where.at)]), beyond: 'ask' },
   };
+}
+
+/** Which of the two rules stood in the way, said as the reader would ask it. */
+function whyNot(sheet: CompiledSheet, where: { sheet: SheetName; at: A1Addr }): string {
+  return sheet.fills.some((fill) => fill.anchor === where.at)
+    ? `\`${where.at}\` is where a range keeps its one formula, and an override here would take it from every cell the range fills — split the range instead`
+    : `\`${where.at}\` is not written by anything, so there is nothing here to make an exception to`;
 }
 
 /** The override as a spec writes one: `at:` first, then what it says. */

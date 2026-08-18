@@ -1,10 +1,4 @@
-import {
-  type CompiledGrid,
-  cellAt,
-  type DataReader,
-  type Setting,
-  sheetOf,
-} from '@yxl-vscode/compile';
+import type { CompiledGrid, DataReader, Setting } from '@yxl-vscode/compile';
 import {
   type Candidate,
   candidates,
@@ -13,6 +7,7 @@ import {
   type Intent,
   type Meaning,
   meaning,
+  overridable,
   override,
   type Reading,
   type Resolving,
@@ -24,14 +19,7 @@ import {
 import type { IncludeReader } from '@yxl-vscode/loader';
 import type { Step } from '@yxl-vscode/patch';
 import type { SpecDoc } from '@yxl-vscode/spec';
-import {
-  type A1Addr,
-  addrAt,
-  type FilePath,
-  qualified,
-  type SheetName,
-  sheetName,
-} from '@yxl-vscode/units';
+import { addrAt, type FilePath, qualified, sheetName } from '@yxl-vscode/units';
 import { type Change, checked, checkedText } from '@yxl-vscode/verify';
 import type { About, Choice, Ranged, Typed } from '@yxl-vscode/webview/protocol';
 
@@ -105,7 +93,7 @@ export async function write(spec: Spec, typed: Typed, port: Port, anyway = false
     const offer = { sheet: typed.sheet, row: typed.row, col: typed.col, text: typed.text };
     port.refuse(intent.why, {
       about: { is: 'typed', typed: offer },
-      canOverride: excepts(spec, where),
+      canOverride: overridable(spec.grid, where),
       choices: answers.map(shown),
     });
     return;
@@ -340,12 +328,6 @@ export async function applied(
 /** The cells an edit moved, named as an undo of it may name them (ADR-009). */
 export function moved(changed: readonly Change[]): string[] {
   return changed.filter((one) => one.kind === 'cell').map((one) => qualified(one.sheet, one.at));
-}
-
-/** Whether an override could be written here: an address nothing writes has nothing to except (`docs/spec.md` §23). */
-function excepts(spec: Spec, where: { sheet: SheetName; at: A1Addr }): boolean {
-  const sheet = sheetOf(spec.grid, where.sheet);
-  return sheet !== null && cellAt(sheet, where.at) !== null;
 }
 
 /** The offer that says yes to the surprises, naming the cells it would move. */

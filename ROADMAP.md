@@ -397,7 +397,7 @@ not a date.
 | Arrows, `Tab`, `PageUp` / `PageDown` | ✅ |
 | `Delete` empties a cell | ✅ |
 | Undo and redo | ✅ — from the grid without leaving it, and VS Code's own where the file has moved since (ADR-030) |
-| The answers a refused edit has, with what each would change | ✅ for a range's formula and a blank cell; the rest is Phase 7 |
+| The answers a refused edit has, with what each would change | ✅ — the range, the definition, the parameter, the CSV, the blank cell; a selection whose cells came from different places is the rest of Phase 7 |
 | Select a range — drag, `Shift`+click, `Shift`+arrows, `Cmd`+`A` | ✅ |
 | `Cmd`+arrow to the edge of a block, `Home` / `End` | ✅ |
 | Delete, copy or cut a range | ✅ |
@@ -821,11 +821,13 @@ the inverse is unique, so no dialog is needed yet.
 ### Phase 7 — `mediated` write-back
 Where it starts to feel like a spreadsheet.
 - [ ] The §4.4 resolution table, row by row
-      **`formulaRange` ①** is in: a formula typed into the cell a `formulas:`
-      range is anchored at is offered as *the range's* formula, and taking it
-      changes every cell the range fills. ② (split the range) and ① away from
-      the anchor wait on §8 Q2, and the refusal points the reader at the anchor
-      meanwhile.
+      **`formulaRange` ① and ②** are in: a formula typed anywhere in a
+      `formulas:` range is offered as *the range's* own — shifted back to the
+      anchor, which is where the one formula is written (ADR-031) — and as a
+      split of the range around that cell, every piece re-anchored, which moves
+      that one cell and nothing else. Neither the split nor an override is
+      offered *at* the anchor, where the shared formula is kept
+      (`docs/spec.md` §23).
       **`empty` ①** is in: typing into an address nothing reaches offers it as a
       new `cells:` entry, written where the sheet keeps its cells — and the
       `cells:` key itself where the sheet has none. ② (extend the `data:`
@@ -2264,6 +2266,39 @@ this at a phase boundary rather than at the end.
   two serials either side of it, so the next reader knows it is deliberate.
 - A cell's own format — written, or the one its type takes — now wins over a
   band's. Both are requests about *that* cell; a band is something reaching it.
+
+### 2026-08-19 — A formula anywhere in a range, and the range split around it
+Typing a formula into a cell a `formulas:` range fills now has both of §4.4's
+answers, wherever in the range the cell sits. **The `formulaRange` row is
+complete.**
+
+- **The typed formula is shifted back to the anchor.** `=B3*0.1` typed one row
+  down means `B1*0.1` to a range anchored a row up, and the answer says which —
+  *Change the formula of the range at `C1`, which reads `=B1*0.1` there* — so
+  what lands in the file is never a surprise. That is `units.moved`, the scanner
+  §8 Q2 answered with (ADR-031); a formula it cannot move with certainty is not
+  offered as the range's.
+- **The split is the other answer**: the range cut into the pieces the cell
+  leaves of it, each re-anchored with the same formula as it applies where it
+  now starts, and the cell a one-cell range of its own. Three ranges where there
+  was one, which is what `docs/spec.md` §3 writes for the exception that is a
+  change of rule — the exception that is a *one-off* is the override beside it.
+  It claims to move one cell, and the checker holds it to that.
+- **The checker could not have held it to that before.** `diff` compared the
+  formula a range *stores*, so re-anchoring a piece read as a change to every
+  cell in it, and moving a range's `at` while keeping its text read as no change
+  at all — wrong in both directions. It now compares the formula as it applies
+  at each cell, which is what the workbook would hold.
+- **An override at the anchor is refused**, and no longer offered: `docs/spec.md`
+  §23 allows one on any cell of a filled range *except* its top-left, where
+  Excel keeps the shared formula. `overridable` is the one rule both the offer
+  and the write path ask, so they cannot disagree.
+- **The split is not offered where the entry's own keys hold a `${...}`** — its
+  `at` and its `formula` are rewritten, and writing what a placeholder resolved
+  to would spend the parameter.
+- **This pass ends at: exports 384 blocks / 861 lines (avg 2.2), private 232 /
+  295 (1.3), inline 48 / 66 (1.4), 37 over the limit** — one below the 38 it
+  started at.
 
 ### 2026-08-17 — Refactoring pass over the whole tree (`AGENTS.md` §8)
 The first pass over everything since the Phase 2 boundary. Four findings, taken

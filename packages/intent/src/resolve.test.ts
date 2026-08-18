@@ -20,6 +20,18 @@ const SPEC = `sheets:
         formula: "B1*0.05"
 `;
 
+const DOWN = `sheets:
+  - name: Sales
+    cells:
+      A1: Region
+      B1: 100
+      B2: 200
+      B3: 300
+    formulas:
+      - at: C1:C3
+        formula: "B1*0.05"
+`;
+
 function files(sources: Record<string, string>) {
   const text: Text = (file) => sources[file] ?? null;
   const includes: IncludeReader = (_from, path) =>
@@ -82,6 +94,61 @@ describe('what a cell filled by a range can be edited into', () => {
     if (candidate === undefined) throw new Error('nothing was offered');
 
     expect(taken(SPEC, candidate)).toContain('formula: "B1*0.1"');
+  });
+
+  it('offers the range its formula as it reads at the anchor, from a cell below it', () => {
+    const [candidate] = offered(DOWN, 'C2', '=B2*0.1');
+
+    expect(candidate?.id).toBe('rangeFormula');
+    expect(candidate?.what).toContain('`=B1*0.1` there');
+  });
+
+  it('writes the typed formula shifted back to the anchor', () => {
+    const [candidate] = offered(DOWN, 'C2', '=B2*0.1');
+    if (candidate === undefined) throw new Error('nothing was offered');
+
+    expect(taken(DOWN, candidate)).toContain('formula: "B1*0.1"');
+  });
+
+  it('leaves the range alone where the typed formula cannot be shifted back to the anchor', () => {
+    const offers = offered(DOWN, 'C2', '=B2*[unclosed');
+    expect(offers.map((one) => one.id)).toEqual(['splitRange']);
+  });
+
+  it('offers to split the range around the cell, moving that cell alone', () => {
+    const [, candidate] = offered(DOWN, 'C2', '=B2*0.1');
+
+    expect(candidate?.id).toBe('splitRange');
+    expect(candidate?.moves).toEqual([{ sheet: 'Sales', at: 'C2' }]);
+  });
+
+  it('splits it into the piece above, the cell, and the piece below, each re-anchored', () => {
+    const [, candidate] = offered(DOWN, 'C2', '=B2*0.1');
+    if (candidate === undefined) throw new Error('nothing was offered');
+
+    expect(taken(DOWN, candidate)).toBe(
+      DOWN.replace(
+        '      - at: C1:C3\n        formula: "B1*0.05"\n',
+        '      - at: C1:C1\n        formula: "B1*0.05"\n' +
+          '      - at: C2:C2\n        formula: "B2*0.1"\n' +
+          '      - at: C3:C3\n        formula: "B3*0.05"\n',
+      ),
+    );
+  });
+
+  it('does not offer to split a range whose own keys hold a `${...}`', () => {
+    const spec = DOWN.replace('at: C1:C3', 'at: "C1:C${last}"').replace(
+      'sheets:',
+      'params:\n  last: 3\nsheets:',
+    );
+    const offers = offered(spec, 'C2', '=B2*0.1');
+
+    expect(offers.map((one) => one.id)).toEqual(['rangeFormula']);
+  });
+
+  it('does not offer to split at the anchor, where the one formula is stored', () => {
+    const offers = offered(DOWN, 'C1', '=B1*0.1');
+    expect(offers.map((one) => one.id)).toEqual(['rangeFormula']);
   });
 
   it('changes every cell of the range, and the checker agrees that it did', () => {
@@ -325,12 +392,6 @@ describe('a cell whose value is a field of a CSV', () => {
 });
 
 describe('what it will not offer', () => {
-  it('says nothing away from the anchor, where the formula would be off by a row', () => {
-    // `=B2*0.1` typed into C2 means `B1*0.1` to a range anchored at C1, and
-    // translating it back is not something this editor does yet.
-    expect(offered(SPEC, 'C2', '=B2*0.1')).toEqual([]);
-  });
-
   it('says nothing about a plain value, which a range cannot write', () => {
     expect(offered(SPEC, 'C1', '42')).toEqual([]);
   });
