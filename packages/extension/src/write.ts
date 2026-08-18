@@ -4,6 +4,7 @@ import {
   candidates,
   clearCell,
   clearRange,
+  excepting,
   type Intent,
   type Meaning,
   meaning,
@@ -13,6 +14,7 @@ import {
   type Resolving,
   reading,
   type Says,
+  type Stood,
   setFormula,
   setValue,
 } from '@yxl-vscode/intent';
@@ -138,18 +140,62 @@ export async function empty(spec: Spec, ranged: Ranged, port: Port, only = false
 }
 
 /**
- * The one answer a rectangle that cannot be done whole has: leave the cells
- * that stood in the way where they are. The same answer for `Delete` and for
- * either paste, which is why it is named the same on both sides.
+ * The answers a rectangle that cannot be done whole has: leave the cells that
+ * stood in the way where they are, and — for a paste — one per group of them,
+ * each writing that group as the exception its origin allows (§8 Q14).
  */
-export function theseOnly(about: About, what: string, cells: ReadonlySet<string>): Offer {
+export function theseOnly(
+  about: About,
+  what: string,
+  cells: ReadonlySet<string>,
+  apart: readonly Choice[] = [],
+): Offer {
   const named = [...cells];
 
   return {
     about,
     canOverride: false,
-    choices: [{ id: ONLY, what, moves: named.length, sample: named.slice(0, 3) }],
+    choices: [{ id: ONLY, what, moves: named.length, sample: named.slice(0, 3) }, ...apart],
   };
+}
+
+/** Every group of blocked cells that has an answer of its own, as the answers to offer beside the first. */
+export function perOrigin(
+  skipped: ReadonlySet<string>,
+  trying: (by: Stood) => Intent,
+  doing: string,
+): Choice[] {
+  const apart: Choice[] = [];
+
+  for (const by of EXCEPTED) {
+    const one = trying(by);
+    if (one.kind !== 'edit') continue;
+
+    const many = one.expects.cells.size - skipped.size;
+    if (many <= 0) continue;
+
+    const named = [...one.expects.cells];
+    apart.push({
+      id: `${EXCEPT}${by}`,
+      what: `${excepting(by, many)}, and ${doing} the rest`,
+      moves: named.length,
+      sample: named.slice(0, 3),
+    });
+  }
+
+  return apart;
+}
+
+/** The groups an answer can be made for; the rest of `Stood` has nothing that would write the cell. */
+const EXCEPTED: readonly Stood[] = ['range', 'definition', 'parameter', 'file'];
+
+/** The answer that writes one group as an exception, by the group it names. */
+export const EXCEPT = 'except:';
+
+/** Which group an answer names, or `null` where it is not one of those answers. */
+export function excepted(choice: string): Stood | null {
+  const by = choice.startsWith(EXCEPT) ? choice.slice(EXCEPT.length) : '';
+  return EXCEPTED.find((one) => one === by) ?? null;
 }
 
 /** The answer that leaves what could not be done, named the same on both sides. */

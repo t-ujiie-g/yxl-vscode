@@ -1,5 +1,5 @@
 import { type CompiledGrid, type CompiledSheet, cellAt, sheetOf } from '@yxl-vscode/compile';
-import { nodeAt, renderScalar, type Value } from '@yxl-vscode/cst';
+import { nodeAt, type Op, renderScalar, type Value } from '@yxl-vscode/cst';
 import type { SpecDoc, Templated } from '@yxl-vscode/spec';
 import { type A1Addr, type QualifiedAddr, qualified, type SheetName } from '@yxl-vscode/units';
 import type { Intent, Reading } from './direct';
@@ -37,12 +37,29 @@ export function override(
   says: Says,
   read: Reading,
 ): Intent {
-  const sheet = sheetOf(grid, where.sheet);
-  if (sheet === null) {
-    return { kind: 'refused', why: `there is no sheet named \`${where.sheet}\`` };
-  }
+  return overrides(doc, grid, where.sheet, [{ at: where.at, says }], read);
+}
 
-  if (!overridable(grid, where)) return { kind: 'refused', why: whyNot(sheet, where) };
+/** One cell to be excepted, and what its override says. */
+export interface Excepted {
+  readonly at: A1Addr;
+  readonly says: Says;
+}
+
+/**
+ * Several cells excepted as one edit, for a rectangle answered a group at a
+ * time; the `overrides:` key is written once however many entries go in.
+ */
+export function overrides(
+  doc: SpecDoc,
+  grid: CompiledGrid,
+  where: SheetName,
+  these: readonly Excepted[],
+  read: Reading,
+): Intent {
+  const sheet = sheetOf(grid, where);
+  if (sheet === null) return { kind: 'refused', why: `there is no sheet named \`${where}\`` };
+  if (these.length === 0) return { kind: 'refused', why: 'there is nothing here to except' };
 
   const file = doc.file;
   const tree = read.parsed(file);
@@ -53,49 +70,47 @@ export function override(
     return { kind: 'refused', why: 'this spec has no document to write an override into' };
   }
 
-  const wanted = qualified(where.sheet, where.at);
-  const already = doc.overrides.findIndex((one) => spelled(one.at) === wanted);
+  const written: string[] = [];
+  for (const one of these) {
+    const at = { sheet: where, at: one.at };
+    if (!overridable(grid, at)) return { kind: 'refused', why: whyNot(sheet, at) };
 
-  const written = lines(where, says);
-  const held = nodeAt(root, [OVERRIDES]);
+    // Two overrides for one cell would be two answers, and the compiler takes the last.
+    const already = doc.overrides.findIndex(
+      (held) => spelled(held.at) === qualified(where, one.at),
+    );
+    if (already !== -1) {
+      return {
+        kind: 'refused',
+        why: `\`${one.at}\` is already overridden — change that override, at \`overrides\` entry ${already + 1}`,
+      };
+    }
 
-  const patch =
-    held === null
-      ? {
-          ops: [
-            {
-              op: 'addSource' as const,
-              path: [],
-              key: OVERRIDES,
-              source: `- ${indented(written)}`,
-            },
-          ],
-        }
-      : {
-          ops: [
-            {
-              op: 'insertSource' as const,
-              path: [OVERRIDES],
-              index: doc.overrides.length,
-              source: written,
-            },
-          ],
-        };
-
-  // Two overrides for one cell would be two answers, and the compiler takes the last.
-  if (already !== -1) {
-    return {
-      kind: 'refused',
-      why: `\`${where.at}\` is already overridden — change that override, at \`overrides\` entry ${already + 1}`,
-    };
+    written.push(lines(at, one.says));
   }
 
   return {
     kind: 'edit',
     file,
-    patch,
-    expects: { cells: new Set([qualified(where.sheet, where.at)]), beyond: 'ask' },
+    patch: { ops: writing(written, nodeAt(root, [OVERRIDES]) !== null, doc.overrides.length) },
+    expects: {
+      cells: new Set(these.map((one) => qualified(where, one.at))),
+      beyond: 'ask',
+    },
   };
+}
+
+/** The entries going in, under the key where the spec has one and with it where it has none. */
+function writing(written: readonly string[], held: boolean, at: number): Op[] {
+  if (!held) {
+    const source = written.map((one) => `- ${indented(one)}`).join('\n');
+    return [{ op: 'addSource', path: [], key: OVERRIDES, source }];
+  }
+
+  // Entries added at one place are spliced from the end, so the last laid down reads first.
+  return [...written]
+    .reverse()
+    .map((source) => ({ op: 'insertSource', path: [OVERRIDES], index: at, source }));
 }
 
 /** Which of the two rules stood in the way, said as the reader would ask it. */

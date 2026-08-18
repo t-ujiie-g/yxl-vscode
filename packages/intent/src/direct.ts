@@ -355,6 +355,15 @@ const THEY: Record<Stood, string> = {
   other: 'cannot be written',
 };
 
+/** What an answer that excepts one group of a rectangle would do, in the same words the refusal counted them in. */
+export function excepting(by: Stood, many: number): string {
+  const which = many === 1 ? `the one that ${THE[by]}` : `the ${many} that ${THEY[by]}`;
+  const as = by === 'definition' ? 'a value of its own' : 'an override';
+  const plural = by === 'definition' ? 'values of their own' : 'overrides';
+
+  return `Write ${which} as ${many === 1 ? as : plural}`;
+}
+
 /** A file as a reader would name it, which is not the whole way there. */
 export function beside(file: string): string {
   return file.split('/').slice(-2).join('/');

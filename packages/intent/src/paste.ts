@@ -7,7 +7,7 @@ import {
   sheetOf,
 } from '@yxl-vscode/compile';
 import { type Op, type Path, renderScalar, type Value } from '@yxl-vscode/cst';
-import type { ScalarValue } from '@yxl-vscode/spec';
+import type { ScalarValue, SpecDoc } from '@yxl-vscode/spec';
 import {
   type A1Addr,
   addrAt,
@@ -31,10 +31,19 @@ import {
   literalPath,
   located,
   type Reading,
+  type Stood,
   standing,
   stood,
 } from './direct';
+import { type Excepted, overrides } from './override';
+import { detachment } from './resolve';
 import { meaning } from './typed';
+
+/** What writing an exception needs of the spec: the grid it is drawn from, and the document `overrides:` goes in. */
+export interface Excepting {
+  readonly doc: SpecDoc;
+  readonly grid: CompiledGrid;
+}
 
 /** A rectangle of cells copied in the grid, and the cell its top-left corner is going to. */
 export interface Pasting {
@@ -44,17 +53,25 @@ export interface Pasting {
 }
 
 /**
+ * What a rectangle does about the cells that stood in its way (ADR-001):
+ * refuse the whole, leave them where they are, or write the ones of one origin
+ * as the exception that origin allows and leave the others.
+ */
+export type Standing = 'refuse' | 'skip' | Stood;
+
+/**
  * A rectangle put somewhere else, as one edit: what each cell *holds* lands at
  * the offset, a formula with its references moved (ADR-031), and what the cell
  * it lands on *wears* stays. A cell that cannot be pasted refuses the whole
- * unless `only` says to leave it (ADR-001).
+ * unless `doing` says what to do about it (ADR-001).
  */
 export function pasteRange(
-  grid: CompiledGrid,
+  spec: Excepting,
   where: Pasting,
   read: Reading,
-  only = false,
+  doing: Standing = 'refuse',
 ): Intent {
+  const grid = spec.grid;
   const from = sheetOf(grid, where.from.sheet);
   const to = sheetOf(grid, where.to.sheet);
   if (from === null) return refused(`there is no sheet named \`${where.from.sheet}\``);
@@ -87,7 +104,7 @@ export function pasteRange(
     }
   }
 
-  const put = landed(to, where.to.sheet, going, read, held, only);
+  const put = landed(spec, to, where.to.sheet, going, read, held, doing);
   if (typeof put === 'string') return refused(put);
 
   return together(grid, where, put.ops, put.cells, read);
@@ -105,19 +122,22 @@ interface Put {
   readonly cells: Set<string>;
 }
 
-/** Every cell of a paste written where it lands; one that cannot take it refuses the whole unless `only` (ADR-032). */
+/** Every cell of a paste written where it lands; one that cannot take it refuses the whole unless `standing` says otherwise (ADR-032). */
 function landed(
+  spec: Excepting,
   to: CompiledSheet,
   sheet: SheetName,
   going: readonly Entry[],
   read: Reading,
   refusals: readonly Held[],
-  only: boolean,
+  doing: Standing,
 ): Put | string {
   const ops = new Map<FilePath, Op[]>();
   const fresh: Entry[] = [];
   const cells = new Set<string>();
   const held = [...refusals];
+
+  const excepting: Entry[] = [];
 
   for (const one of going) {
     const already = cellAt(to, one.at);
@@ -129,7 +149,9 @@ function landed(
 
     const landing = into(to, already.provenance.value, one, read);
     if (typeof landing === 'string') {
-      held.push({ at: one.at, why: landing, by: stood(already.provenance.value) });
+      const by = stood(already.provenance.value);
+      held.push({ at: one.at, why: landing, by });
+      if (by === doing) excepting.push(one);
       continue;
     }
 
@@ -137,7 +159,18 @@ function landed(
     cells.add(qualified(sheet, one.at));
   }
 
-  if (held.length > 0 && !only) return standing(cells.size - fresh.length, held, 'pasted');
+  if (held.length > 0 && doing === 'refuse') {
+    return standing(cells.size - fresh.length, held, 'pasted');
+  }
+
+  if (excepting.length > 0 && doing !== 'refuse' && doing !== 'skip') {
+    const made = excepted(spec, to, sheet, excepting, doing, read);
+    if (typeof made === 'string') return made;
+
+    ops.set(made.file, [...(ops.get(made.file) ?? []), ...made.ops]);
+    for (const one of excepting) cells.add(qualified(sheet, one.at));
+  }
+
   if (cells.size === 0) return 'nothing in this rectangle can be pasted here';
 
   if (fresh.length > 0) {
@@ -213,6 +246,57 @@ function into(
   }
 
   return { file: found.file, ops: keys(found, holds) };
+}
+
+/** The cells of one origin written as the exception it allows: a value of their own, or an override. */
+function excepted(
+  spec: Excepting,
+  to: CompiledSheet,
+  sheet: SheetName,
+  these: readonly Entry[],
+  by: Stood,
+  read: Reading,
+): Landed | string {
+  if (by === 'definition') return detached(to, these, read);
+
+  const said = overrides(spec.doc, spec.grid, sheet, these.map(saying), read);
+  if (said.kind === 'refused') return said.why;
+  if (said.kind !== 'edit') return 'these cells cannot be written as overrides';
+
+  return { file: said.file, ops: said.patch.ops };
+}
+
+/** What an override says for a pasted cell: what the cell holds, and no reason — the reader gave none. */
+function saying(one: Entry): Excepted {
+  return {
+    at: one.at,
+    says: 'formula' in one.holds ? { formula: one.holds.formula } : { value: one.holds.value },
+  };
+}
+
+/** The cells reading a definition, each written as a value of its own; a formula has no such form. */
+function detached(to: CompiledSheet, these: readonly Entry[], read: Reading): Landed | string {
+  const ops: Op[] = [];
+  let file: FilePath | null = null;
+
+  for (const one of these) {
+    const origin = cellAt(to, one.at)?.provenance.value;
+    if (origin?.kind !== 'defRef') return `\`${one.at}\` no longer reads a definition`;
+    if ('formula' in one.holds) {
+      return `\`${one.at}\` would take a formula, and a cell that reads a definition takes a value in its place`;
+    }
+
+    const taken = detachment(origin, one.holds.value, read);
+    if (taken === null) return `\`${one.at}\` has no reference to write over`;
+    if (file !== null && file !== taken.file) {
+      return `these cells are written across ${beside(file)} and ${beside(taken.file)}, and this editor writes one file at a time`;
+    }
+
+    file = taken.file;
+    ops.push(taken.op);
+  }
+
+  return file === null ? 'there is nothing here to detach' : { file, ops };
 }
 
 /** The ops for one file, where a paste lands in exactly one. */
@@ -309,13 +393,14 @@ export type Shape = 'cells' | 'data';
  * rather than a guess (ADR-028).
  */
 export function pasteText(
-  grid: CompiledGrid,
+  spec: Excepting,
   where: { sheet: SheetName; at: A1Addr },
   rows: readonly (readonly string[])[],
   read: Reading,
   shape: Shape,
-  only = false,
+  doing: Standing = 'refuse',
 ): Intent {
+  const grid = spec.grid;
   const to = sheetOf(grid, where.sheet);
   if (to === null) return refused(`there is no sheet named \`${where.sheet}\``);
   if (rows.length === 0) return refused('there is nothing on the clipboard to put down');
@@ -331,7 +416,7 @@ export function pasteText(
 
   if (shape === 'data') return block(grid, to, where, rows, read);
 
-  const put = landed(to, where.sheet, going, read, [], only);
+  const put = landed(spec, to, where.sheet, going, read, [], doing);
   if (typeof put === 'string') return refused(put);
 
   const written = [...put.ops.keys()];

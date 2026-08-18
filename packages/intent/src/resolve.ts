@@ -11,6 +11,7 @@ import {
   sheetOf,
 } from '@yxl-vscode/compile';
 import { type Node, type Op, type Path, renderScalar } from '@yxl-vscode/cst';
+import type { ScalarValue } from '@yxl-vscode/spec';
 import {
   type A1Addr,
   addrAt,
@@ -158,7 +159,7 @@ function definition(
     });
   }
 
-  const holder = reference(located(origin.node, read));
+  const holder = detachment(origin, meant.value, read);
   if (holder !== null) {
     offered.push({
       id: 'detach',
@@ -168,14 +169,25 @@ function definition(
       intent: {
         kind: 'edit',
         file: holder.file,
-        // Written over is a mapping, so text, whose bytes put it back (ADR-026).
-        patch: { ops: [{ op: 'write', path: holder.path, source: renderScalar(meant.value) }] },
+        patch: { ops: [holder.op] },
         expects: { cells: new Set([qualified(where.sheet, where.at)]), beyond: 'refuse' },
       },
     });
   }
 
   return offered;
+}
+
+/** One cell taken out of the sharing: the `$ref` written over with a value of its own; text, whose bytes put it back (ADR-026). */
+export function detachment(
+  origin: Extract<FacetOrigin, { kind: 'defRef' }>,
+  value: ScalarValue,
+  read: Reading,
+): { file: FilePath; op: Op } | null {
+  const holder = reference(located(origin.node, read));
+  if (holder === null) return null;
+
+  return { file: holder.file, op: { op: 'write', path: holder.path, source: renderScalar(value) } };
 }
 
 /** The node holding the `$ref`: the cell itself, or its `value:` where the cell says more. */

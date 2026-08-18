@@ -74,9 +74,23 @@ async function back(
 
 const SALES = 'sheets:\n  - name: Sales\n';
 
+const MIXED = `defs:
+  values:
+    tax: 0.1
+${SALES}    cells:
+      A1: 1
+      A2: 2
+      A3: 3
+      B4: { $ref: tax }
+    formulas:
+      - at: B2:B3
+        formula: "A1*2"
+`;
+
 describe('a rectangle put down somewhere else', () => {
   const GRID = `${SALES}    cells:\n      A1: 1\n      A2: 2\n      C1: keep\n`;
   const from = { sheet: 'Sales', top: 1, left: 1, bottom: 2, right: 1 };
+  const WHOLE = { sheet: 'Sales', top: 1, left: 1, bottom: 3, right: 1 };
 
   it('writes every cell of it in one edit, and says how many', async () => {
     const { spec, port, files, told } = editor({ [ROOT]: GRID });
@@ -131,6 +145,40 @@ describe('a rectangle put down somewhere else', () => {
     await pastedWith(read, { from, sheet: 'Sales', row: 1, col: 2, cut: false }, 'only', port);
     expect(refusals).toEqual([]);
     expect(files[ROOT]).toContain('B2: 2');
+  });
+
+  it('offers one answer per group of cells that stood in the way', async () => {
+    const { spec: read, port, answers } = editor({ [ROOT]: MIXED });
+
+    await paste(read, { from: WHOLE, sheet: 'Sales', row: 3, col: 2, cut: false }, port);
+    expect(answers[0]?.map((one) => [one.id, one.what, one.moves])).toEqual([
+      ['only', 'Paste into the ones that can take it', 1],
+      [
+        'except:range',
+        'Write the one that is filled by a range as an override, and paste the rest',
+        2,
+      ],
+      [
+        'except:definition',
+        'Write the one that reads a definition as a value of its own, and paste the rest',
+        2,
+      ],
+    ]);
+  });
+
+  it('writes that group as its exception and leaves the other group alone', async () => {
+    const { spec: read, port, files, refusals } = editor({ [ROOT]: MIXED });
+
+    await pastedWith(
+      read,
+      { from: WHOLE, sheet: 'Sales', row: 3, col: 2, cut: false },
+      'except:range',
+      port,
+    );
+
+    expect(refusals).toEqual([]);
+    expect(files[ROOT]).toContain('overrides:\n  - at: Sales!B3\n    value: 1\n');
+    expect(files[ROOT]).toContain('B4: { $ref: tax }');
   });
 
   it('takes no answer it did not offer', async () => {

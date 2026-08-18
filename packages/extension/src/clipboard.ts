@@ -7,19 +7,34 @@ import {
   type Reading,
   reading,
   type Shape,
+  type Standing,
   tabular,
 } from '@yxl-vscode/intent';
 import { applyPatch, rewrites } from '@yxl-vscode/patch';
 import { type A1Addr, addrAt, type FilePath, type SheetName, sheetName } from '@yxl-vscode/units';
 import type { Choice, Pasted, PastedAt, PastedText } from '@yxl-vscode/webview/protocol';
-import { applied, ONLY, PASTED, type Port, type Spec, theseOnly } from './write';
+import {
+  applied,
+  excepted,
+  ONLY,
+  PASTED,
+  type Port,
+  perOrigin,
+  type Spec,
+  theseOnly,
+} from './write';
 
 /**
  * A rectangle put down somewhere else, as one edit. A cell that cannot take it
  * refuses the whole and is offered as an answer instead: the same paste with
  * `only` the cells that can (ADR-001, ADR-032).
  */
-export async function paste(spec: Spec, pasted: Pasted, port: Port, only = false): Promise<void> {
+export async function paste(
+  spec: Spec,
+  pasted: Pasted,
+  port: Port,
+  doing: Standing = 'refuse',
+): Promise<void> {
   const where = pasting(pasted);
   if (where === null) {
     port.refuse(`\`${pasted.from.sheet}\` is not a name a sheet can have`, null);
@@ -27,13 +42,21 @@ export async function paste(spec: Spec, pasted: Pasted, port: Port, only = false
   }
 
   const read = reading(port.text);
-  const intent = pasteRange(spec.grid, where, read, only);
+  const intent = pasteRange(spec, where, read, doing);
 
-  if (intent.kind === 'refused' && !only) {
-    const some = pasteRange(spec.grid, where, read, true);
+  if (intent.kind === 'refused' && doing === 'refuse') {
+    const some = pasteRange(spec, where, read, 'skip');
+    const cells = some.kind === 'edit' ? some.expects.cells : new Set<string>();
     port.refuse(
       intent.why,
-      some.kind === 'edit' ? theseOnly({ is: 'pasted', pasted }, PASTED, some.expects.cells) : null,
+      some.kind === 'edit'
+        ? theseOnly(
+            { is: 'pasted', pasted },
+            PASTED,
+            cells,
+            perOrigin(cells, (by) => pasteRange(spec, where, read, by), 'paste'),
+          )
+        : null,
     );
     return;
   }
@@ -52,12 +75,13 @@ export async function pastedWith(
   choice: string,
   port: Port,
 ): Promise<void> {
-  if (choice !== ONLY) {
+  const doing = choice === ONLY ? 'skip' : excepted(choice);
+  if (doing === null) {
     port.refuse('that answer is no longer one of the ways this edit could be made', null);
     return;
   }
 
-  await paste(spec, pasted, port, true);
+  await paste(spec, pasted, port, doing);
 }
 
 /** What the view named, in the units the resolver works in. */
@@ -120,8 +144,9 @@ export async function pasteFrom(
     return;
   }
 
-  if (choice === ONLY) {
-    await land(spec, where, rows, 'cells', true, asked, port);
+  const apart = choice === undefined ? null : choice === ONLY ? 'skip' : excepted(choice);
+  if (apart !== null) {
+    await land(spec, where, rows, 'cells', apart, asked, port);
     return;
   }
 
@@ -149,7 +174,7 @@ export async function pasteFrom(
     return;
   }
 
-  await land(spec, where, rows, taken.id === 'data' ? 'data' : 'cells', false, asked, port);
+  await land(spec, where, rows, taken.id === 'data' ? 'data' : 'cells', 'refuse', asked, port);
 }
 
 /** The rectangle written in the shape that was picked, with the answer a refusal has. */
@@ -158,19 +183,25 @@ async function land(
   where: { sheet: SheetName; at: A1Addr },
   rows: readonly (readonly string[])[],
   shape: Shape,
-  only: boolean,
+  doing: Standing,
   asked: PastedText,
   port: Port,
 ): Promise<void> {
   const read = reading(port.text);
-  const intent = pasteText(spec.grid, where, rows, read, shape, only);
+  const intent = pasteText(spec, where, rows, read, shape, doing);
 
-  if (intent.kind === 'refused' && shape === 'cells' && !only) {
-    const some = pasteText(spec.grid, where, rows, read, 'cells', true);
+  if (intent.kind === 'refused' && shape === 'cells' && doing === 'refuse') {
+    const some = pasteText(spec, where, rows, read, 'cells', 'skip');
+    const cells = some.kind === 'edit' ? some.expects.cells : new Set<string>();
     port.refuse(
       intent.why,
       some.kind === 'edit'
-        ? theseOnly({ is: 'text', text: asked }, PASTED, some.expects.cells)
+        ? theseOnly(
+            { is: 'text', text: asked },
+            PASTED,
+            cells,
+            perOrigin(cells, (by) => pasteText(spec, where, rows, read, 'cells', by), 'paste'),
+          )
         : null,
     );
     return;
@@ -229,7 +260,7 @@ function rewriting(
   shape: Shape,
   port: Port,
 ): number | null {
-  const intent = pasteText(spec.grid, where, rows, read, shape);
+  const intent = pasteText(spec, where, rows, read, shape);
   if (intent.kind !== 'edit') return null;
 
   const source = port.text(intent.file);
