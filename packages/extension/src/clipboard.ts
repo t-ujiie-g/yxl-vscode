@@ -47,17 +47,9 @@ export async function paste(
   if (intent.kind === 'refused' && doing === 'refuse') {
     const some = pasteRange(spec, where, read, 'skip');
     const cells = some.kind === 'edit' ? some.expects.cells : new Set<string>();
-    port.refuse(
-      intent.why,
-      some.kind === 'edit'
-        ? theseOnly(
-            { is: 'pasted', pasted },
-            PASTED,
-            cells,
-            perOrigin(cells, (by) => pasteRange(spec, where, read, by), 'paste'),
-          )
-        : null,
-    );
+    const apart = perOrigin(cells, (by) => pasteRange(spec, where, read, by), 'paste');
+
+    port.refuse(intent.why, theseOnly({ is: 'pasted', pasted }, PASTED, cells, apart));
     return;
   }
 
@@ -193,17 +185,13 @@ async function land(
   if (intent.kind === 'refused' && shape === 'cells' && doing === 'refuse') {
     const some = pasteText(spec, where, rows, read, 'cells', 'skip');
     const cells = some.kind === 'edit' ? some.expects.cells : new Set<string>();
-    port.refuse(
-      intent.why,
-      some.kind === 'edit'
-        ? theseOnly(
-            { is: 'text', text: asked },
-            PASTED,
-            cells,
-            perOrigin(cells, (by) => pasteText(spec, where, rows, read, 'cells', by), 'paste'),
-          )
-        : null,
+    const apart = perOrigin(
+      cells,
+      (by) => pasteText(spec, where, rows, read, 'cells', by),
+      'paste',
     );
+
+    port.refuse(intent.why, theseOnly({ is: 'text', text: asked }, PASTED, cells, apart));
     return;
   }
 

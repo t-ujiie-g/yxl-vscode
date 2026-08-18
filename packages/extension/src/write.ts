@@ -123,12 +123,9 @@ export async function empty(spec: Spec, ranged: Ranged, port: Port, only = false
 
   if (intent.kind === 'refused' && !only) {
     const some = clearRange(spec.grid, where, read, true);
-    port.refuse(
-      intent.why,
-      some.kind === 'edit'
-        ? theseOnly({ is: 'ranged', ranged }, EMPTIED, some.expects.cells)
-        : null,
-    );
+    const cells = some.kind === 'edit' ? some.expects.cells : null;
+
+    port.refuse(intent.why, theseOnly({ is: 'ranged', ranged }, EMPTIED, cells));
     return;
   }
 
@@ -140,23 +137,22 @@ export async function empty(spec: Spec, ranged: Ranged, port: Port, only = false
 }
 
 /**
- * The answers a rectangle that cannot be done whole has: leave the cells that
- * stood in the way where they are, and — for a paste — one per group of them,
- * each writing that group as the exception its origin allows (§8 Q14).
+ * The answers a rectangle that cannot be done whole has: leave the ones that
+ * stood in the way, and one per group of them (§8 Q14); `null` where it has none.
  */
 export function theseOnly(
   about: About,
   what: string,
-  cells: ReadonlySet<string>,
+  cells: ReadonlySet<string> | null,
   apart: readonly Choice[] = [],
-): Offer {
-  const named = [...cells];
+): Offer | null {
+  const named = cells === null ? [] : [...cells];
+  const choices =
+    named.length === 0
+      ? [...apart]
+      : [{ id: ONLY, what, moves: named.length, sample: named.slice(0, 3) }, ...apart];
 
-  return {
-    about,
-    canOverride: false,
-    choices: [{ id: ONLY, what, moves: named.length, sample: named.slice(0, 3) }, ...apart],
-  };
+  return choices.length === 0 ? null : { about, canOverride: false, choices };
 }
 
 /** Every group of blocked cells that has an answer of its own, as the answers to offer beside the first. */
@@ -175,9 +171,10 @@ export function perOrigin(
     if (many <= 0) continue;
 
     const named = [...one.expects.cells];
+    const rest = skipped.size === 0 ? '' : `, and ${doing} the rest`;
     apart.push({
       id: `${EXCEPT}${by}`,
-      what: `${excepting(by, many)}, and ${doing} the rest`,
+      what: `${excepting(by, many)}${rest}`,
       moves: named.length,
       sample: named.slice(0, 3),
     });

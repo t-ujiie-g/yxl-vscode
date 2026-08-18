@@ -2389,6 +2389,10 @@ ones that cannot — **§8 Q14 is closed, and with it Phase 7**.
   written once however many go in; the single-cell `override` is now one of
   those. An override still opens only when a reader asks for it (ADR-007) — here
   the asking is choosing the answer that says so.
+- **A group still has its answer where nothing else can be done.** Landing on a
+  range's anchor as well as its filled rows leaves the paste with no cell it can
+  write at all — and the cell reading a definition still has its own answer, so
+  that is what is offered, without the *and paste the rest* it has not got.
 - **`Delete` keeps its one answer.** A cell a range fills has nothing that would
   empty it, and an override that says a cell is blank is not something §23
   offers. Said out loud rather than left as a gap.
@@ -2396,7 +2400,7 @@ ones that cannot — **§8 Q14 is closed, and with it Phase 7**.
   it is the same judgement about when a spec wants a table, and a row left
   half-ticked would have kept §10 pointing at a phase with nothing to do in it.
   That is what made this the last Phase 7 item rather than the second-to-last.
-- **This pass ends at: exports 398 blocks / 887 lines (avg 2.2), private 240 /
+- **This pass ends at: exports 398 blocks / 886 lines (avg 2.2), private 240 /
   303 (1.3), inline 47 / 64 (1.4), 37 over the limit.**
 
 ### 2026-08-19 — The style normalizer, and what the compiler's own writer does

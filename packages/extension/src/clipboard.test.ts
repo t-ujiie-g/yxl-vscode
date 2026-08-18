@@ -181,6 +181,18 @@ describe('a rectangle put down somewhere else', () => {
     expect(files[ROOT]).toContain('B4: { $ref: tax }');
   });
 
+  it('answers for a group even where nothing else can be pasted, without the rest it has not got', async () => {
+    // Landing on the range's anchor as well: `overrides:` will not except that
+    // cell (`docs/spec.md` §23), so the range has no answer and the paste has
+    // no other cell it can write.
+    const { spec: read, port, answers } = editor({ [ROOT]: MIXED });
+
+    await paste(read, { from: WHOLE, sheet: 'Sales', row: 2, col: 2, cut: false }, port);
+    expect(answers[0]?.map((one) => [one.id, one.what, one.moves])).toEqual([
+      ['except:definition', 'Write the one that reads a definition as a value of its own', 1],
+    ]);
+  });
+
   it('takes no answer it did not offer', async () => {
     const { spec, port, files, refusals } = editor({ [ROOT]: GRID });
 
