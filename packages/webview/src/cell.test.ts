@@ -2,7 +2,7 @@
 
 import { type Color, parseColor } from '@yxl-vscode/units';
 import { describe, expect, it } from 'vitest';
-import { drawCell } from './cell';
+import { drawCell, typeInto } from './cell';
 import type { DrawnCell } from './protocol';
 
 function cell(of: Partial<DrawnCell> = {}): DrawnCell {
@@ -47,12 +47,12 @@ describe('what a cell says', () => {
     expect([drawn.textContent, drawn.title]).toEqual(['12', '=SUM(A1:A2)']);
   });
 
-  it('says where a filled cell reads from instead of a formula that is wrong there', () => {
-    const drawn = drawCell(cell({ formula: 'B2*0.05', filledFrom: 'C2' }), undefined);
+  it('shows a filled cell its own formula, and says on hover where it is filled from', () => {
+    const drawn = drawCell(cell({ formula: 'B3*0.05', filledFrom: 'C2' }), undefined);
 
-    expect(drawn.textContent).toBe('↧ C2');
+    expect(drawn.textContent).toBe('=B3*0.05');
     expect(drawn.classList.contains('filled')).toBe(true);
-    expect(drawn.title).toContain('Excel shifts');
+    expect(drawn.title).toBe('=B3*0.05 — filled from C2');
   });
 
   it('shows what a formula came to, with the formula a hover away', () => {
@@ -202,5 +202,23 @@ describe('a cell that anchors a merge', () => {
   it('spans nothing when nothing is merged there', () => {
     const drawn = drawCell(cell({ value: 'x' }), undefined);
     expect([drawn.colSpan, drawn.rowSpan]).toEqual([1, 1]);
+  });
+});
+
+describe('the box a reader types in', () => {
+  function box(of: Partial<DrawnCell>): string {
+    const at = document.createElement('td');
+    typeInto(at, cell(of), undefined, () => {});
+    return at.querySelector<HTMLInputElement>('.typing')?.value ?? '';
+  }
+
+  it('holds what the spec holds, formula and value alike', () => {
+    expect([box({ formula: 'SUM(A1:A2)' }), box({ value: 12 })]).toEqual(['=SUM(A1:A2)', '12']);
+  });
+
+  it('holds a filled cell its own formula, not the one the range stores', () => {
+    // Typing `*1.1` onto the end of the anchor's formula would write a formula
+    // for a row this cell is not on.
+    expect(box({ formula: 'C5*D5', filledFrom: 'E2' })).toBe('=C5*D5');
   });
 });

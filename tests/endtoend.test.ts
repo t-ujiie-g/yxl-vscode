@@ -134,10 +134,12 @@ describe('the loop, closed', () => {
     await resolve(spec(), at, 'rangeFormula', port);
     expect(refusals).toHaveLength(1);
 
+    // The range stores one formula and the second cell holds it a row down,
+    // which is Excel's shared formula surviving the build and the extract.
     const { grid } = built(dir, root);
     expect([cell(grid, 'Sales', 'C2')?.formula, cell(grid, 'Sales', 'C3')?.formula]).toEqual([
       'B2*0.1',
-      'B2*0.1',
+      'B3*0.1',
     ]);
   });
 

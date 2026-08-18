@@ -8,7 +8,7 @@ export {
   setValue,
   type Text,
 } from './direct';
-export { override, type Says } from './override';
+export { overridable, override, type Says } from './override';
 export { couldBlock, type Pasting, pasteRange, pasteText, type Shape } from './paste';
 export { type Candidate, candidates, type Resolving } from './resolve';
 export { tabular } from './tabular';

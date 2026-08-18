@@ -2,6 +2,7 @@ import type { Override, SpecDoc } from '@yxl-vscode/spec';
 import {
   type A1Addr,
   cellOf,
+  moved,
   parseQualifiedAddr,
   type QualifiedAddr,
   type SheetName,
@@ -39,7 +40,10 @@ export function sheetOf(grid: CompiledGrid, name: SheetName): CompiledSheet | nu
   return grid.sheets.find((one) => one.name === name) ?? null;
 }
 
-/** The cell at an address, written or filled by a range; a written cell wins (`docs/spec.md` §23). */
+/**
+ * The cell at an address, written or filled by a range; a written cell wins
+ * (`docs/spec.md` §23), and a filled one holds the formula as it applies (ADR-036).
+ */
 export function cellAt(sheet: CompiledSheet, at: A1Addr): CompiledCell | null {
   const written = sheet.cells.get(at);
   if (written !== undefined) return written;
@@ -49,11 +53,14 @@ export function cellAt(sheet: CompiledSheet, at: A1Addr): CompiledCell | null {
   if (fill === undefined) return null;
 
   const anchor = cellOf(fill.anchor);
+  const offset = { cols: cell.col - anchor.col, rows: cell.row - anchor.row };
+  const shifted = moved(fill.formula, offset);
+
   return {
     at,
     value: null,
     type: null,
-    formula: fill.formula,
+    formula: shifted.ok ? shifted.formula : fill.formula,
     format: null,
     rich: null,
     style: [],
@@ -62,7 +69,7 @@ export function cellAt(sheet: CompiledSheet, at: A1Addr): CompiledCell | null {
         kind: 'formulaRange',
         node: fill.node,
         anchor: fill.anchor,
-        offset: [cell.col - anchor.col, cell.row - anchor.row],
+        offset: [offset.cols, offset.rows],
       },
       format: null,
     },

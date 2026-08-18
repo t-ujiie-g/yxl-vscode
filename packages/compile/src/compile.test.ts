@@ -228,9 +228,9 @@ describe('a `formulas:` range', () => {
     expect(drawn.fills).toHaveLength(1);
   });
 
-  it('answers for any cell it covers, with the offset from its anchor', () => {
+  it('answers for any cell it covers with the formula as it applies there', () => {
     const cell = at(spec, 'D37');
-    expect(cell?.formula).toBe('B2*C2');
+    expect(cell?.formula).toBe('B37*C37');
     expect(cell?.provenance.value).toEqual({
       kind: 'formulaRange',
       node: '["spec.yxl.yaml","sheets",0,"formulas",0]',
@@ -396,7 +396,7 @@ describe('an override', () => {
   it('takes one cell out of a filled range, leaving the range whole', () => {
     expect(at(spec, 'E5')?.formula).toBe('D5');
     expect(at(spec, 'E5')?.provenance.value.kind).toBe('override');
-    expect(at(spec, 'E6')?.formula).toBe('C2*D2');
+    expect(at(spec, 'E6')?.formula).toBe('C6*D6');
     expect(sheet(spec).fills).toHaveLength(1);
   });
 

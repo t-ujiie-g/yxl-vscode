@@ -246,13 +246,7 @@ function taking(cell: CompiledCell, by: Offset): Holds | string {
   if (cell.rich !== null) return `\`${cell.at}\` holds rich text, which this editor does not paste`;
   if (cell.formula === null) return { value: cell.value };
 
-  const origin = cell.provenance.value;
-  const away =
-    origin.kind === 'formulaRange'
-      ? { cols: by.cols + origin.offset[0], rows: by.rows + origin.offset[1] }
-      : by;
-
-  const done = moved(cell.formula, away);
+  const done = moved(cell.formula, by);
   return done.ok ? { formula: done.formula } : `\`${cell.at}\` holds a formula that ${done.why}`;
 }
 

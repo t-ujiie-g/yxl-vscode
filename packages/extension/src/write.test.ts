@@ -259,6 +259,27 @@ describe('the answers an edit has, when it has more than one', () => {
     expect(told[0]).toContain('2 cells');
   });
 
+  it("offers both answers below the anchor, the range's formula shifted back to it", async () => {
+    const down = `${SALES}    cells:\n      A1: 1\n      A2: 2\n    formulas:\n      - at: B1:B2\n        formula: "A1*2"\n`;
+    const { spec, port, answers } = editor({ [ROOT]: down });
+
+    await write(spec, typed({ row: 2, col: 2, text: '=A2*3' }), port);
+    expect(answers[0]).toEqual([
+      {
+        id: 'rangeFormula',
+        what: 'Change the formula of the range at `B1`, which reads `=A1*3` there',
+        moves: 2,
+        sample: ['B1', 'B2'],
+      },
+      {
+        id: 'splitRange',
+        what: 'Split the range at `B1` so `B2` holds its own formula',
+        moves: 1,
+        sample: ['B2'],
+      },
+    ]);
+  });
+
   it('refuses an answer that is not one of the ones offered', async () => {
     const { spec, port, refusals, files } = editor({ [ROOT]: RANGE });
 

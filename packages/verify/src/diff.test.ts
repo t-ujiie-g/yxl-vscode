@@ -40,6 +40,24 @@ describe('what two compilations disagree about', () => {
     ]);
   });
 
+  it('says nothing about a range split into pieces that hold the same formulas', () => {
+    const before = `${SALES}    cells:\n      A1: 1\n      A2: 2\n      A3: 3\n    formulas:\n      - at: B1:B3\n        formula: "A1*2"\n`;
+    const after = `${SALES}    cells:\n      A1: 1\n      A2: 2\n      A3: 3\n    formulas:\n      - at: B1:B1\n        formula: "A1*2"\n      - at: B2:B3\n        formula: "A2*2"\n`;
+
+    expect(between(before, after)).toEqual([]);
+  });
+
+  it('names every cell of a range whose formula no longer applies where it sits', () => {
+    const before = `${SALES}    cells:\n      A1: 1\n      A2: 2\n    formulas:\n      - at: B1:B2\n        formula: "A1*2"\n`;
+    const after = before.replace('B1:B2', 'B2:B3');
+
+    expect(between(before, after)).toEqual([
+      { kind: 'cell', sheet: 'Sales', at: 'B1', what: 'formula' },
+      { kind: 'cell', sheet: 'Sales', at: 'B2', what: 'formula' },
+      { kind: 'cell', sheet: 'Sales', at: 'B3', what: 'formula' },
+    ]);
+  });
+
   it('names a look that moved, wherever it was written', () => {
     const before = `${SALES}    columns:\n      - at: A\n        style: money\n    cells:\n      A1: 1\ndefs:\n  styles:\n    money: { format: "#,##0" }\n`;
     const after = before.replace('"#,##0"', '"0.00"');

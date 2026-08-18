@@ -397,7 +397,7 @@ not a date.
 | Arrows, `Tab`, `PageUp` / `PageDown` | ✅ |
 | `Delete` empties a cell | ✅ |
 | Undo and redo | ✅ — from the grid without leaving it, and VS Code's own where the file has moved since (ADR-030) |
-| The answers a refused edit has, with what each would change | ✅ for a range's formula and a blank cell; the rest is Phase 7 |
+| The answers a refused edit has, with what each would change | ✅ — the range, the definition, the parameter, the CSV, the blank cell; a selection whose cells came from different places is the rest of Phase 7 |
 | Select a range — drag, `Shift`+click, `Shift`+arrows, `Cmd`+`A` | ✅ |
 | `Cmd`+arrow to the edge of a block, `Home` / `End` | ✅ |
 | Delete, copy or cut a range | ✅ |
@@ -821,11 +821,13 @@ the inverse is unique, so no dialog is needed yet.
 ### Phase 7 — `mediated` write-back
 Where it starts to feel like a spreadsheet.
 - [ ] The §4.4 resolution table, row by row
-      **`formulaRange` ①** is in: a formula typed into the cell a `formulas:`
-      range is anchored at is offered as *the range's* formula, and taking it
-      changes every cell the range fills. ② (split the range) and ① away from
-      the anchor wait on §8 Q2, and the refusal points the reader at the anchor
-      meanwhile.
+      **`formulaRange` ① and ②** are in: a formula typed anywhere in a
+      `formulas:` range is offered as *the range's* own — shifted back to the
+      anchor, which is where the one formula is written (ADR-031) — and as a
+      split of the range around that cell, every piece re-anchored, which moves
+      that one cell and nothing else. Neither the split nor an override is
+      offered *at* the anchor, where the shared formula is kept
+      (`docs/spec.md` §23).
       **`empty` ①** is in: typing into an address nothing reaches offers it as a
       new `cells:` entry, written where the sheet keeps its cells — and the
       `cells:` key itself where the sheet has none. ② (extend the `data:`
@@ -1794,6 +1796,43 @@ that can see it.
 holding. It says where the paste goes and what it has of its own; which of the
 two pastes this is, is worked out where the clipboard actually is.
 
+### ADR-036 — A cell of a filled range answers with the formula as it applies there
+**Accepted.** `cellAt` shifts a `formulas:` range's formula by the asked-for
+cell's offset before returning it (ADR-031's `units.moved`). `C5` of a range
+anchored at `C2` holding `B2*0.05` answers `B5*0.05`, which is what the workbook
+holds at `C5`. The range itself is untouched — `CompiledFill` still keeps one
+formula for the whole rectangle, and ADR-019's sparseness is unchanged.
+
+*Why:* every consumer was shifting it back for itself, and one of them forgot.
+`evaluate` shifted before computing, `paste` shifted before writing a copy out,
+`diff` had just grown a shift so a re-anchored range would not read as a change
+— and the *view* did not, so the box a reader types into opened with the
+anchor's formula. Adding `*1.1` to `C2*D2` in a cell three rows down produced
+`C2*D2*1.1`, which the resolver could then not offer as the range's own formula
+at all, since `C2` three rows further back is off the sheet. The reader was
+offered one answer where the cell's own formula has two.
+
+*What is deliberately not done:* an answer that does not apply is not offered,
+and does not say why it is missing. What a reader can act on is the list of what
+*can* be done; spelling out every way an edit could fail to have an answer is a
+surface that grows with the table and is read by nobody.
+
+*What it removes:* the compensation in `paste` and in `diff`, and three
+workarounds in the view that existed only because the number was wrong — the
+`↧ C2` a filled cell showed instead of a formula, the hover's *Excel shifts the
+references per cell* hedge, and the empty string a filled cell copied out as.
+A filled cell now shows, tells, copies and seeds its editor with its own
+formula, which is also what Excel would show for it.
+
+*What it costs:* one `moved` scan per `cellAt` on a filled address — a scan of a
+formula's characters, no parse — and it happens where a cell is asked for rather
+than where a range is stored. A formula `moved` refuses comes back as the range
+wrote it, since a wrong-looking formula is better than a missing one.
+
+*The oracle agrees:* Tier 4 builds a spec with the pinned `yxl`, extracts the
+workbook back, and reads `C3` of a two-cell range as `B3*0.1` — the shared
+formula shifting per cell, through the real compiler and the real extractor.
+
 ## 8. Open questions
 
 - **Q1 — `cells:` A1 keys and row insertion.** Inserting a row rewrites every
@@ -2264,6 +2303,49 @@ this at a phase boundary rather than at the end.
   two serials either side of it, so the next reader knows it is deliberate.
 - A cell's own format — written, or the one its type takes — now wins over a
   band's. Both are requests about *that* cell; a band is something reaching it.
+
+### 2026-08-19 — A formula anywhere in a range, and the range split around it
+Typing a formula into a cell a `formulas:` range fills now has both of §4.4's
+answers, wherever in the range the cell sits. **The `formulaRange` row is
+complete.**
+
+- **The typed formula is shifted back to the anchor.** `=B3*0.1` typed one row
+  down means `B1*0.1` to a range anchored a row up, and the answer says which —
+  *Change the formula of the range at `C1`, which reads `=B1*0.1` there* — so
+  what lands in the file is never a surprise. That is `units.moved`, the scanner
+  §8 Q2 answered with (ADR-031); a formula it cannot move with certainty is not
+  offered as the range's.
+- **The split is the other answer**: the range cut into the pieces the cell
+  leaves of it, each re-anchored with the same formula as it applies where it
+  now starts, and the cell a one-cell range of its own. Three ranges where there
+  was one, which is what `docs/spec.md` §3 writes for the exception that is a
+  change of rule — the exception that is a *one-off* is the override beside it.
+  It claims to move one cell, and the checker holds it to that.
+- **The checker could not have held it to that before.** `diff` compared the
+  formula a range *stores*, so re-anchoring a piece read as a change to every
+  cell in it, and moving a range's `at` while keeping its text read as no change
+  at all — wrong in both directions. It now compares the formula as it applies
+  at each cell, which is what the workbook would hold.
+- **An override at the anchor is refused**, and no longer offered: `docs/spec.md`
+  §23 allows one on any cell of a filled range *except* its top-left, where
+  Excel keeps the shared formula. `overridable` is the one rule both the offer
+  and the write path ask, so they cannot disagree.
+- **The split is not offered where the entry's own keys hold a `${...}`** — its
+  `at` and its `formula` are rewritten, and writing what a placeholder resolved
+  to would spend the parameter.
+- **A filled cell now answers with its own formula (ADR-036)**, which is what
+  found the real defect: the box a reader types into opened with the *anchor's*
+  formula, so adding `*1.1` to what it showed wrote a formula for a row the cell
+  is not on — and that one, shifted back, is off the sheet, so the range answer
+  could not be offered at all, leaving one answer where there are two.
+  `cellAt` shifts it now, and `paste`, `diff` and the view stop compensating:
+  the `↧ C2` a filled cell showed instead of a formula, the *Excel shifts the
+  references per cell* hedge on hover, and the empty string it copied out as are
+  all gone. Tier 4 reads `C3` of a range back out of the built workbook as
+  `B3*0.1`, so the real compiler agrees.
+- **This pass ends at: exports 384 blocks / 863 lines (avg 2.2), private 231 /
+  294 (1.3), inline 47 / 64 (1.4), 37 over the limit** — one below the 38 it
+  started at.
 
 ### 2026-08-17 — Refactoring pass over the whole tree (`AGENTS.md` §8)
 The first pass over everything since the Phase 2 boundary. Four findings, taken
