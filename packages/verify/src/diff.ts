@@ -7,7 +7,7 @@ import {
   styleAt,
 } from '@yxl-vscode/compile';
 import type { StyleValues } from '@yxl-vscode/spec';
-import { type A1Addr, addrAt, moved, type SheetName } from '@yxl-vscode/units';
+import { type A1Addr, addrAt, type SheetName } from '@yxl-vscode/units';
 
 /** One thing an edit changed: a cell, by what about it moved, or a sheet. */
 export type Change =
@@ -69,18 +69,9 @@ function inSheet(before: CompiledSheet, after: CompiledSheet): Change[] {
 function held(cell: CompiledCell | null) {
   return {
     value: cell?.value ?? null,
-    formula: cell === null ? null : applying(cell),
+    formula: cell?.formula ?? null,
     format: cell?.format ?? null,
   };
-}
-
-/** The formula as it applies where the cell sits, so re-anchoring a range reads as no change (ADR-031). */
-function applying(cell: CompiledCell): string | null {
-  const origin = cell.provenance.value;
-  if (cell.formula === null || origin.kind !== 'formulaRange') return cell.formula;
-
-  const done = moved(cell.formula, { cols: origin.offset[0], rows: origin.offset[1] });
-  return done.ok ? done.formula : cell.formula;
 }
 
 /** Every address either compilation holds a cell at, each named once. */

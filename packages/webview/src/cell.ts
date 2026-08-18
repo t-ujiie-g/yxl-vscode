@@ -111,7 +111,7 @@ function run(of: DrawnRun): HTMLElement {
 /**
  * What a cell shows: a computed result, else the cached value, else the formula
  * itself — never a number that is not the workbook's (ADR-014). A number wears
- * its format; a filled cell that was not computed says where it is filled from.
+ * its format.
  */
 export function shown(cell: DrawnCell): string {
   const computed = cell.computed;
@@ -119,9 +119,8 @@ export function shown(cell: DrawnCell): string {
   if (computed?.kind === 'value') return formatted(computed.value, cell.format);
 
   if (cell.value !== null) return formatted(cell.value, cell.format);
-  if (cell.formula === null) return '';
 
-  return cell.filledFrom === null ? `=${cell.formula}` : `↧ ${cell.filledFrom}`;
+  return cell.formula === null ? '' : `=${cell.formula}`;
 }
 
 function formatted(value: ScalarValue, format: string | null): string {
@@ -129,13 +128,13 @@ function formatted(value: ScalarValue, format: string | null): string {
   return value === null ? '' : String(value);
 }
 
-/** The formula on hover; a filled cell holds it as it applies at the anchor, so it says so. */
+/** The formula on hover, and where a filled cell is filled from. */
 function told(cell: DrawnCell): string {
   const formula = `=${cell.formula ?? ''}`;
   const why = cell.computed?.kind === 'unsupported' ? ` — not computed: ${cell.computed.why}` : '';
   if (cell.filledFrom === null) return `${formula}${why}`;
 
-  return `${formula} — filled from ${cell.filledFrom}; Excel shifts the references per cell${why}`;
+  return `${formula} — filled from ${cell.filledFrom}${why}`;
 }
 
 /** The look as the inline CSS another spreadsheet reads off the clipboard (ADR-028). */

@@ -15,9 +15,8 @@ export interface Says {
 }
 
 /**
- * Whether a cell can be excepted at all: something has to write it, and it may
- * not be a range's top-left, where the one shared formula is stored
- * (`docs/spec.md` §23).
+ * Whether a cell can be excepted at all: something has to write it, and it may not
+ * be a range's top-left, where the shared formula is stored (`docs/spec.md` §23).
  */
 export function overridable(grid: CompiledGrid, where: { sheet: SheetName; at: A1Addr }): boolean {
   const sheet = sheetOf(grid, where.sheet);

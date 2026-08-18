@@ -115,13 +115,10 @@ describe('a drawn spec', () => {
     expect(diagnostics.map((one) => one.code)).toEqual(['loader.not-a-mapping']);
   });
 
-  it('says where a filled cell reads from, rather than a formula that is wrong there', () => {
-    // The range holds one formula, written as it applies at its anchor, and
-    // Excel shifts the references per cell, and nothing here does. Printing that text in every
-    // cell of the range would print something false in all but one.
+  it('draws a filled cell the formula that applies there, and where it is filled from', () => {
     const source = `${SALES}    formulas:\n      - at: C2:C3\n        formula: "B2*0.05"\n`;
     expect(at(source, 3, 2)).toMatchObject({ formula: 'B2*0.05', filledFrom: null });
-    expect(at(source, 3, 3)).toMatchObject({ formula: 'B2*0.05', filledFrom: 'C2' });
+    expect(at(source, 3, 3)).toMatchObject({ formula: 'B3*0.05', filledFrom: 'C2' });
   });
 
   it('draws the spec as the parameters the reader set, not only as its defaults', () => {

@@ -73,9 +73,7 @@ function plain(cell: DrawnCell | undefined): string {
   if (computed?.kind === 'value') return computed.value === null ? '' : String(computed.value);
   if (cell.value !== null) return String(cell.value);
 
-  // A filled cell holds the range's formula as it applies at the anchor, which
-  // means something else wherever this lands.
-  return cell.formula === null || cell.filledFrom !== null ? '' : `=${cell.formula}`;
+  return cell.formula === null ? '' : `=${cell.formula}`;
 }
 
 /** One cell as the other spreadsheets read one; the fill goes on twice, because Excel reads `bgcolor` and Sheets the CSS. */

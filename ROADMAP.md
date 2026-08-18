@@ -1796,6 +1796,43 @@ that can see it.
 holding. It says where the paste goes and what it has of its own; which of the
 two pastes this is, is worked out where the clipboard actually is.
 
+### ADR-036 — A cell of a filled range answers with the formula as it applies there
+**Accepted.** `cellAt` shifts a `formulas:` range's formula by the asked-for
+cell's offset before returning it (ADR-031's `units.moved`). `C5` of a range
+anchored at `C2` holding `B2*0.05` answers `B5*0.05`, which is what the workbook
+holds at `C5`. The range itself is untouched — `CompiledFill` still keeps one
+formula for the whole rectangle, and ADR-019's sparseness is unchanged.
+
+*Why:* every consumer was shifting it back for itself, and one of them forgot.
+`evaluate` shifted before computing, `paste` shifted before writing a copy out,
+`diff` had just grown a shift so a re-anchored range would not read as a change
+— and the *view* did not, so the box a reader types into opened with the
+anchor's formula. Adding `*1.1` to `C2*D2` in a cell three rows down produced
+`C2*D2*1.1`, which the resolver could then not offer as the range's own formula
+at all, since `C2` three rows further back is off the sheet. The reader was
+offered one answer where the cell's own formula has two.
+
+*What is deliberately not done:* an answer that does not apply is not offered,
+and does not say why it is missing. What a reader can act on is the list of what
+*can* be done; spelling out every way an edit could fail to have an answer is a
+surface that grows with the table and is read by nobody.
+
+*What it removes:* the compensation in `paste` and in `diff`, and three
+workarounds in the view that existed only because the number was wrong — the
+`↧ C2` a filled cell showed instead of a formula, the hover's *Excel shifts the
+references per cell* hedge, and the empty string a filled cell copied out as.
+A filled cell now shows, tells, copies and seeds its editor with its own
+formula, which is also what Excel would show for it.
+
+*What it costs:* one `moved` scan per `cellAt` on a filled address — a scan of a
+formula's characters, no parse — and it happens where a cell is asked for rather
+than where a range is stored. A formula `moved` refuses comes back as the range
+wrote it, since a wrong-looking formula is better than a missing one.
+
+*The oracle agrees:* Tier 4 builds a spec with the pinned `yxl`, extracts the
+workbook back, and reads `C3` of a two-cell range as `B3*0.1` — the shared
+formula shifting per cell, through the real compiler and the real extractor.
+
 ## 8. Open questions
 
 - **Q1 — `cells:` A1 keys and row insertion.** Inserting a row rewrites every
@@ -2296,8 +2333,18 @@ complete.**
 - **The split is not offered where the entry's own keys hold a `${...}`** — its
   `at` and its `formula` are rewritten, and writing what a placeholder resolved
   to would spend the parameter.
-- **This pass ends at: exports 384 blocks / 861 lines (avg 2.2), private 232 /
-  295 (1.3), inline 48 / 66 (1.4), 37 over the limit** — one below the 38 it
+- **A filled cell now answers with its own formula (ADR-036)**, which is what
+  found the real defect: the box a reader types into opened with the *anchor's*
+  formula, so adding `*1.1` to what it showed wrote a formula for a row the cell
+  is not on — and that one, shifted back, is off the sheet, so the range answer
+  could not be offered at all, leaving one answer where there are two.
+  `cellAt` shifts it now, and `paste`, `diff` and the view stop compensating:
+  the `↧ C2` a filled cell showed instead of a formula, the *Excel shifts the
+  references per cell* hedge on hover, and the empty string it copied out as are
+  all gone. Tier 4 reads `C3` of a range back out of the built workbook as
+  `B3*0.1`, so the real compiler agrees.
+- **This pass ends at: exports 384 blocks / 863 lines (avg 2.2), private 231 /
+  294 (1.3), inline 47 / 64 (1.4), 37 over the limit** — one below the 38 it
   started at.
 
 ### 2026-08-17 — Refactoring pass over the whole tree (`AGENTS.md` §8)

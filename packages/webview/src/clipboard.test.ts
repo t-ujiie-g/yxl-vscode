@@ -115,9 +115,9 @@ describe('what a copied rectangle puts on the clipboard', () => {
     expect(flavours(uncomputed, { top: 1, left: 1, bottom: 1, right: 1 })?.text).toBe('=TODAY()');
   });
 
-  it('says nothing for a cell a range fills, whose formula means something else here', () => {
+  it('carries a filled cell its own formula, which is what the workbook holds there', () => {
     const filled = sheet([cell({ row: 1, col: 1, formula: 'A1*2', filledFrom: 'C2' })]);
-    expect(flavours(filled, { top: 1, left: 1, bottom: 1, right: 1 })?.text).toBe('');
+    expect(flavours(filled, { top: 1, left: 1, bottom: 1, right: 1 })?.text).toBe('=A1*2');
   });
 
   it('quotes a field holding what a row or a field ends on', () => {
