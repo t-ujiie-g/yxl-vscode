@@ -3,9 +3,13 @@
   "version": "0.0.0",
   "private": true,
   "license": "Apache-2.0",
-  "description": "The style normalizer: reference, extend, or define — in that order of preference.",
+  "description": "The style normalizer: reference, extend, or define \u2014 in that order of preference.",
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@yxl-vscode/spec": "workspace:*",
+    "@yxl-vscode/units": "workspace:*"
   }
 }

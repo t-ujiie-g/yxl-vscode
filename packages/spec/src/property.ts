@@ -32,7 +32,8 @@ export interface StyleValues {
   readonly format?: string;
 }
 
-const STYLE_PROPERTIES = [
+/** Every leaf a look is made of, in the order a spec writes them. */
+export const STYLE_PROPERTIES = [
   'font.bold',
   'font.italic',
   'font.underline',
