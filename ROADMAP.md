@@ -857,7 +857,14 @@ Where it starts to feel like a spreadsheet.
       and the reader picks. Nothing is picked for them (ADR-001), and the
       candidates are worked out again when one is chosen, because the file may
       have been edited by hand since it was offered.
-- [ ] `normalize`: the style normalizer, ahead of every style write (ADR-008)
+- [x] `normalize`: the style normalizer, ahead of every style write (ADR-008)
+      **Shipped as a decision, which is all a normalizer is**: given the look a
+      construct is to contribute and what the spec already declares, it answers
+      with the name of a declaration that says it, an inline variant of the
+      nearest one, or the look itself (**ADR-037**, which supersedes ADR-008's
+      third step on the evidence of what `yxl extract` writes). The writing is
+      Phase 9's, and it has one rule to obey: nothing reaches a spec's styles
+      except through this answer.
 - [ ] Range edits with mixed origins
 - [x] `external` origins: edit the companion CSV/JSON, or divert to `overrides:`
       **CSV is in**: a cell whose value is a field of a CSV beside the spec
@@ -1833,6 +1840,42 @@ wrote it, since a wrong-looking formula is better than a missing one.
 workbook back, and reads `C3` of a two-cell range as `B3*0.1` — the shared
 formula shifting per cell, through the real compiler and the real extractor.
 
+### ADR-037 — A look nothing declares is written where it is used, not declared
+**Accepted**, superseding **ADR-008**'s third step. The normalizer's order is
+now: (1) an exact match against a declaration → name it; (2) a declaration near
+enough to be a variant → an inline `{ extends: base, …restated }`; (3) otherwise
+the look itself, inline. A new `defs.styles` entry is *not* created for a look
+worn once.
+
+*The evidence:* `yxl extract` is the compiler's own writer of specs, and it was
+run on a workbook built from `examples/styling.yxl.yaml` to see what it writes.
+A look worn by two cells becomes a declaration, named on evidence — `header`
+for bold on a fill, `number` for a lone `#,##0`; a look worn once is written
+inline at the cell. It emits no `extends:` at all: inheritance is a thing a
+person writes, and a base is a claim about kinship that nothing in a workbook
+records. §1's convergence claim is that a spec written by clicking looks like
+one written by hand, and this is the closest thing to a measurement of that.
+
+*What ADR-008 got right and this keeps:* every style write goes through the
+normalizer, exact matches are reused, and the tenth identical fill does not
+become the tenth anonymous look — because the first one, once declared by any
+means, is what the ninth and tenth find in step 1.
+
+*What it leaves open:* repetition among looks written inline. Ten *distinct*
+one-off looks are ten inline mappings and should be; ten *identical* ones are a
+spec that wants a declaration, and folding them into one is Phase 12's first
+refactor proposal — reviewable, `expectedDiff: empty`, and it rewrites the sites
+the reader did not touch, which is exactly why it is a proposal rather than a
+consequence of typing.
+
+*The two rules a variant has to pass*, both in `normalize` and both tested: it
+may restate at most `NEARBY` properties, and it must inherit at least as many as
+it restates. The second is what stops `{ extends: a_style_sharing_one_thing, … }`
+— a line of kinship that buys nothing and misleads. The first is what keeps a
+variant a variant. A declaration that sets a property the look does not is never
+extended: the schema has no way to take a property back, so it would arrive on
+the cell.
+
 ## 8. Open questions
 
 - **Q1 — `cells:` A1 keys and row insertion.** Inserting a row rewrites every
@@ -2303,6 +2346,38 @@ this at a phase boundary rather than at the end.
   two serials either side of it, so the next reader knows it is deliberate.
 - A cell's own format — written, or the one its type takes — now wins over a
   band's. Both are requests about *that* cell; a band is something reaching it.
+
+### 2026-08-19 — The style normalizer, and what the compiler's own writer does
+`packages/normalize` was an empty `export {}` with a position in `layers.json`.
+It now holds the decision every style write will pass through (ADR-008), and one
+of ADR-008's three steps changed on evidence (**ADR-037**).
+
+- **What it is:** `normalize(wanted, declared)` — the look a construct is to
+  contribute, and what the spec already declares, resolved. Out comes the name
+  of a declaration that already says it, an `extends:` variant of the nearest
+  one, or the look itself. `null` where there is nothing to write. No I/O, no
+  document, no patch: a decision on values, which is what makes it testable
+  before anything writes.
+- **The evidence that changed step 3.** A workbook built from yxl's
+  `styling.yxl.yaml` was extracted back with the pinned `yxl extract`, to see
+  what the compiler's own writer does with looks: a look worn twice becomes a
+  declaration, a look worn once is written inline at the cell, and no `extends:`
+  is emitted anywhere. So a GUI that declares `style_2` for one bold cell would
+  not converge on hand-written specs — it would diverge from what yxl itself
+  writes. Step 3 is now inline; the repetition that leaves is Phase 12's
+  extraction proposal, which is where a rewrite of sites the reader never
+  touched belongs.
+- **A variant has to pay for itself**: at most `NEARBY` (2) properties restated,
+  and at least as many inherited as restated. Without the second rule a
+  declaration sharing one property becomes an `extends:` line that buys nothing
+  and claims a kinship that is not there. And a declaration setting a property
+  the look does not is never extended at all — nothing in the schema takes a
+  property back, so it would arrive on the cell.
+- **`STYLE_PROPERTIES` is exported from `spec`** and is what orders the answer,
+  so the same look is the same bytes however the caller built the record.
+- **This pass ends at: exports 389 blocks / 871 lines (avg 2.2), private 235 /
+  298 (1.3), inline 47 / 64 (1.4), 37 over the limit** — five more exports, and
+  the averages where they were.
 
 ### 2026-08-19 — A formula anywhere in a range, and the range split around it
 Typing a formula into a cell a `formulas:` range fills now has both of §4.4's
