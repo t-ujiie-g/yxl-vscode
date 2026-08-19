@@ -244,7 +244,9 @@ describe('a colour, and a look taken off', () => {
   const BANDED = `${SALES}    columns:\n      - { at: A, style: { fill: "1F3864" } }\n    cells:\n      A1: 1\n`;
 
   it('has no answer on the cell where what is asked off comes from under it', () => {
-    expect(offered(BANDED, at(1, 1), { fill: null }).map((one) => one.id)).toEqual(['band']);
+    const answers = offered(BANDED, at(1, 1), { fill: null });
+
+    expect(answers.map((one) => [one.id, one.alone])).toEqual([['band', false]]);
   });
 
   it('takes the mapping it emptied with it, so the band is as it was written', () => {
@@ -321,7 +323,7 @@ describe('a rectangle whose cells take it from different places', () => {
     const [answer, ...rest] = offered(spec, at(1, 1, 2, 1), { 'font.bold': false });
     if (answer === undefined) throw new Error('nothing was offered');
 
-    expect([answer.id, answer.alone, rest]).toEqual(['split', true, []]);
+    expect([answer.id, answer.alone, rest]).toEqual(['split', false, []]);
     expect(taken(spec, answer)).toContain('    style: { font: { bold: false } }');
   });
 

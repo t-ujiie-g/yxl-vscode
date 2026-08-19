@@ -55,6 +55,10 @@ function comes(answers: readonly Candidate[]): string {
     return 'the cells here take that look from different places, so there is more than one way to change it';
   }
 
+  if (answers.length === 1) {
+    return 'nothing written on these cells can say that, so the only answer is to change what gives it — which speaks for more than the cells you picked';
+  }
+
   const shared = answers.find((one) => one.id !== 'onCells');
   const many = shared?.moves.length ?? 0;
 

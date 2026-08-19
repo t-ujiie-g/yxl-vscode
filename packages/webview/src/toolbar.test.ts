@@ -63,6 +63,9 @@ function showing(of: { cells?: DrawnCell[]; selected?: { row: number; col: numbe
 
 const asks = (wear = vi.fn()): Asks => ({ wear }) as unknown as Asks;
 
+/** The rectangle the one selected cell of these fixtures names. */
+const ONE = { top: 1, left: 1, bottom: 1, right: 1 };
+
 describe('the switches a reader reaches for first', () => {
   it('is disabled until a cell is selected, since a look needs somewhere to land', () => {
     const bar = toolbar(showing({}), asks());
@@ -85,7 +88,7 @@ describe('the switches a reader reaches for first', () => {
     const bar = toolbar(showing({ cells, selected: { row: 1, col: 1 } }), asks(wear));
 
     bar.querySelector<HTMLButtonElement>('button')?.click();
-    expect(wear).toHaveBeenCalledWith({ 'font.bold': false });
+    expect(wear).toHaveBeenCalledWith({ 'font.bold': false }, ONE);
   });
 
   it('shows what the cell already wears, so the switch reads as one', () => {
@@ -122,7 +125,7 @@ describe('the colours a reader picks', () => {
     pick.value = '#1f3864';
     pick.dispatchEvent(new Event('change'));
 
-    expect(wear).toHaveBeenCalledWith({ fill: '1F3864' });
+    expect(wear).toHaveBeenCalledWith({ fill: '1F3864' }, ONE);
   });
 
   it('asks for it off, which is a look the schema says by leaving it out', () => {
@@ -131,7 +134,7 @@ describe('the colours a reader picks', () => {
     const bar = toolbar(showing({ cells, selected: { row: 1, col: 1 } }), asks(wear));
 
     bar.querySelector<HTMLButtonElement>('button.off.ink')?.click();
-    expect(wear).toHaveBeenCalledWith({ 'font.color': null });
+    expect(wear).toHaveBeenCalledWith({ 'font.color': null }, ONE);
   });
 
   it('cannot be taken off where the cell has none', () => {

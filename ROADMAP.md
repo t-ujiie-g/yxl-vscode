@@ -1934,6 +1934,15 @@ can say and the honest form of "a header, but not bold". `null` is available for
 a boolean too and means the stronger "stop saying anything about it", which no
 control sends today.
 
+*No answer that reaches past the selection is taken without asking.* "One
+answer is the whole answer, so apply it" was the rule until an ask could have
+exactly one answer that is **not** on the cells: click *no fill* on a cell whose
+fill comes from a column band and the only answer changes the band — the whole
+column, silently, from a gesture on one cell. `alone` is now granted only to an
+answer that writes on the cells acted on; a band or a declaration speaks for more
+than the selection whatever the projection holds of it, so it asks. This is the
+rule for every lone answer, not only for a look taken off.
+
 *Taking the last leaf out takes its mapping with it*, up to but never past the
 construct's own node. `- { at: A, style: { fill: X } }` goes back to
 `- { at: A }` rather than to `- { at: A, style: {} }`, so a look put on and
@@ -2442,8 +2451,21 @@ that takes it off again.
 - **The switches stopped being addressed by position.** `.look:nth-child(3)` was
   the underline switch until a fifth control landed; each now carries the name of
   the leaf it sets.
-- Comment shape: exports 414 blocks / 897 lines (avg 2.2), private 273 / 299
-  (1.1), inline 51 / 68 (1.3), 11 over the limit — the same eleven.
+- **A colour landed on the wrong cell, and running it is what found that.** A
+  colour input commits when it is *dismissed*, and the click that dismisses it
+  has already moved the selection — so the fill went to whatever was clicked
+  next. Every toolbar control now acts on the rectangle its toolbar was drawn
+  over rather than on the live selection, which is the same thing for a button
+  and is not for a picker. Pinned in `index.test.ts`, where the whole gesture is
+  driven: select, open, select elsewhere, commit.
+- **A band is no longer changed without asking**, which was the second thing
+  running it found: taking a fill off a cell under a column band has exactly one
+  answer, and it applied silently to the column. What a reader wants there —
+  this one cell, uncoloured — is a thing `docs/spec.md` cannot say (ADR-038),
+  so the honest move is to name what the one answer would do and let them
+  decline it.
+- Comment shape: exports 414 blocks / 897 lines (avg 2.2), private 275 / 301
+  (1.1), inline 52 / 70 (1.3), 11 over the limit — the same eleven.
 
 ### 2026-08-20 — A rectangle that takes its look from more than one place
 The refusal the last pass left behind, answered: §4.4's `setStyle` step 4, which

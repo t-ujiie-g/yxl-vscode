@@ -1,5 +1,6 @@
 import type { StyleProperty, StyleValues, StyleWant } from '@yxl-vscode/spec';
-import { type Color, parseColor } from '@yxl-vscode/units';
+import { type Color, parseColor, type Rect } from '@yxl-vscode/units';
+import { between } from './keys';
 import type { DrawnCell } from './protocol';
 import type { Asks, Showing } from './showing';
 
@@ -66,7 +67,7 @@ function toggle(of: Toggle, showing: Showing, asks: Asks): HTMLElement {
   button.title = of.says;
   button.disabled = showing.selected === null;
   button.setAttribute('aria-pressed', on ? 'true' : 'false');
-  button.addEventListener('click', () => asks.wear({ [of.key]: !on } as StyleWant));
+  button.addEventListener('click', () => asks.wear({ [of.key]: !on } as StyleWant, over(showing)));
 
   return button;
 }
@@ -87,10 +88,13 @@ function ink(of: Ink, showing: Showing, asks: Asks): HTMLElement[] {
   pick.className = 'pick';
   pick.value = now === null ? of.opens : picked(now);
   pick.disabled = nowhere;
+  // The picker commits when it is dismissed, by which time the reader may have
+  // selected something else, so the rectangle is the one it was opened over.
+  const where = over(showing);
   pick.addEventListener('change', () => {
     // The picker says `#rrggbb`; a spec writes `RRGGBB` (`docs/spec.md` §6).
     const colour = parseColor(pick.value.replace('#', '').toUpperCase());
-    if (colour !== null) asks.wear({ [of.key]: colour } as StyleWant);
+    if (colour !== null) asks.wear({ [of.key]: colour } as StyleWant, where);
   });
   swatch.append(pick);
 
@@ -100,9 +104,15 @@ function ink(of: Ink, showing: Showing, asks: Asks): HTMLElement[] {
   off.textContent = '×';
   off.title = of.clears;
   off.disabled = nowhere || now === null;
-  off.addEventListener('click', () => asks.wear({ [of.key]: null } as StyleWant));
+  off.addEventListener('click', () => asks.wear({ [of.key]: null } as StyleWant, where));
 
   return [swatch, off];
+}
+
+/** The rectangle the toolbar was drawn over, which is what its controls act on. */
+function over(showing: Showing): Rect {
+  const at = showing.selected ?? { row: 1, col: 1 };
+  return between(at, showing.anchor ?? at);
 }
 
 /** What the cell the reader has selected wears, which is what the toolbar shows. */
