@@ -10,7 +10,7 @@ import {
   sheetOf,
   styleAt,
 } from '@yxl-vscode/compile';
-import type { Node, Op, Path } from '@yxl-vscode/cst';
+import { apply, type Node, type Op, type Path } from '@yxl-vscode/cst';
 import { normalize, written } from '@yxl-vscode/normalize';
 import { STYLE_PROPERTIES, type StyleProperty, type StyleValues } from '@yxl-vscode/spec';
 import {
@@ -45,21 +45,34 @@ export function setStyle(
   const wanted = properties(want);
   if (sheet === null || wanted.length === 0) return [];
 
-  const addresses = spread(where.rect);
-  const from = origins(sheet, addresses, wanted);
-  if (from.length > 1) return apart(spec, sheet, where, from, want, read);
+  const from = origins(sheet, spread(where.rect), wanted);
+  const answers =
+    from.length > 1
+      ? apart(spec, sheet, where, from, want, read)
+      : fromOne(spec, sheet, where, from[0]?.layer ?? null, want, read);
 
-  const supplier = from[0]?.layer ?? null;
+  return answers.length === 1 ? [{ ...answers[0], alone: true } as Candidate] : answers;
+}
+
+/** The answers where every cell of the rectangle takes the look from the same place. */
+function fromOne(
+  spec: Styling,
+  sheet: CompiledSheet,
+  where: { sheet: SheetName; rect: Rect },
+  supplier: StyleLayer | null,
+  want: StyleValues,
+  read: Reading,
+): readonly Candidate[] {
   const answers: Candidate[] = [];
   if (supplier === null || !excepted(supplier)) {
-    const own = onCells(spec, sheet, where.sheet, everyone(addresses, want), read);
+    const own = onCells(spec, sheet, where.sheet, everyone(spread(where.rect), want), read);
     if (own !== null) answers.push(own);
   }
 
   const shared = elsewhere(spec, supplier, want, read);
   if (shared !== null) answers.unshift(shared);
 
-  return answers.length === 1 ? [{ ...answers[0], alone: true } as Candidate] : answers;
+  return answers;
 }
 
 /** A look asked for over one address: which of its properties are to land there. */
@@ -124,21 +137,39 @@ function apart(
   want: StyleValues,
   read: Reading,
 ): readonly Candidate[] {
-  const answers: Candidate[] = [];
-
   const wants = everyone(spread(where.rect), want);
   const hidden = from.some((one) => one.layer !== null && excepted(one.layer));
-  const all = hidden ? null : onEvery(spec, sheet, where.sheet, wants, read);
-  if (all !== null && all.ops.length > 0) {
-    answers.push(candidate('all', 'Apply it to every cell here, whatever each takes it from', all));
-  }
-
+  const alike = hidden ? null : onEvery(spec, sheet, where.sheet, wants, read);
   const split = splitting(spec, sheet, where.sheet, from, want, read);
-  if (split !== null) {
+
+  const answers: Candidate[] = [];
+  if (alike !== null && alike.ops.length > 0) {
+    answers.push(
+      candidate('all', 'Apply it to every cell here, whatever each takes it from', alike),
+    );
+  }
+  if (split !== null && !(alike !== null && same(alike, split, read))) {
     answers.push(candidate('split', 'Split it by where each cell takes it from', split));
   }
 
   return answers;
+}
+
+/** Whether two answers would leave the file the same, which makes them one answer rather than a question. */
+function same(one: Writing, than: Writing, read: Reading): boolean {
+  if (one.file !== than.file) return false;
+
+  const text = read.text(one.file);
+  if (text === null) return false;
+
+  const written = after(text, one);
+  return written !== null && written === after(text, than);
+}
+
+/** The file as an answer would leave it, or `null` where any of its ops is refused. */
+function after(text: string, writing: Writing): string | null {
+  const done = apply(text, writing.ops, { file: writing.file });
+  return done.diagnostics.length === 0 ? done.text : null;
 }
 
 /** Each origin changed where it lives, with the cells nothing supplies written on themselves. */

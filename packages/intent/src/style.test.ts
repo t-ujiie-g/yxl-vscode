@@ -233,12 +233,29 @@ describe('a rectangle whose cells take it from different places', () => {
     expect(text).toContain('B1: { value: Revenue }\n');
   });
 
+  it('is one answer where both would leave the file the same, and asks nothing', () => {
+    const [answer, ...rest] = answers({ 'font.bold': true });
+    if (answer === undefined) throw new Error('nothing was offered');
+
+    expect([answer.id, answer.alone, rest]).toEqual(['all', true, []]);
+    expect(taken(MIXED, answer)).toContain('C1: { value: 3, style: { font: { bold: true } } }');
+  });
+
+  it('leaves the declaration and the band alone where that answer is the only one', () => {
+    const [answer] = answers({ 'font.bold': true });
+    if (answer === undefined) throw new Error('nothing was offered');
+
+    const text = taken(MIXED, answer);
+    expect(text).toContain('header: { font: { bold: true }, fill: "1F3864" }');
+    expect(text).toContain('- { at: B, style: { font: { bold: true } } }');
+  });
+
   it('does not offer to write on cells an override would hide it under', () => {
     const spec = `${SALES}    cells:\n      A1: 1\n      A2: 2\noverrides:\n  - at: Sales!A1\n    style: { font: { bold: true } }\n`;
     const [answer, ...rest] = offered(spec, at(1, 1, 2, 1), { 'font.bold': false });
     if (answer === undefined) throw new Error('nothing was offered');
 
-    expect([answer.id, rest]).toEqual(['split', []]);
+    expect([answer.id, answer.alone, rest]).toEqual(['split', true, []]);
     expect(taken(spec, answer)).toContain('    style: { font: { bold: false } }');
   });
 
