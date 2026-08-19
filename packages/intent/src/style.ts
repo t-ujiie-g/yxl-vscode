@@ -166,10 +166,7 @@ function onCell(
   };
 }
 
-/**
- * A cell with its look taken off: the `style:` key goes, and a cell left
- * holding nothing but a value goes back to being that value.
- */
+/** A cell with its look taken off: the key goes, and a cell left holding only a value is that value again. */
 function bare(
   found: Found & { kind: 'found' },
   read: Reading,
@@ -188,13 +185,7 @@ function bare(
   return { file: found.file, ops: [{ op: 'write', path: found.path, source }] };
 }
 
-/**
- * The look with what it need not say taken out: a cell does not restate its
- * band, and a switch turned off comes off rather than being written `false`.
- * What a declaration the cell *names* says has to be answered out loud, so it
- * stays — `{ extends: header, font: { bold: false } }` is the honest form of
- * "a header, but not bold".
- */
+/** The look with what it need not say taken out; what a declaration the cell *names* says stays, and is answered. */
 function beyond(gives: StyleValues, under: StyleValues, named: StyleValues): StyleValues {
   const kept: Record<string, unknown> = {};
 
