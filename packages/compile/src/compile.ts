@@ -11,9 +11,9 @@ import {
 import { compileFacets } from './cell';
 import { CODE } from './codes';
 import { type Ctx, context, type DataReader, reject, type Setting, text } from './ctx';
-import type { CompiledCell, CompiledGrid, CompiledSheet } from './grid';
+import type { CompiledCell, CompiledGrid, CompiledSheet, DeclaredStyle } from './grid';
 import { compileSheet, type Drafted } from './sheet';
-import type { StyleLayer } from './style';
+import { layersOf, resolve, type StyleLayer } from './style';
 
 /**
  * The grid a spec projects to: pure and computed forward only (ADR-001). `read`
@@ -32,7 +32,22 @@ export function compile(doc: SpecDoc, options: Options = {}): CompiledGrid {
 
   for (const override of doc.overrides) applyOverride(ctx, override, drafts);
 
-  return { sheets: drafts.map((draft) => draft.sheet), diagnostics: ctx.diagnostics };
+  return {
+    sheets: drafts.map((draft) => draft.sheet),
+    styles: declaredStyles(ctx, doc),
+    diagnostics: ctx.diagnostics,
+  };
+}
+
+/** Every look the spec declares, resolved; what will not resolve is reported where a *cell* reads it. */
+function declaredStyles(ctx: Ctx, doc: SpecDoc): DeclaredStyle[] {
+  const quiet = { ...ctx, diagnostics: [] };
+
+  return doc.defs.styles.map((def) => ({
+    name: def.name,
+    gives: resolve(layersOf(quiet, def, 'cell', { kind: 'ref', name: def.name }, null)),
+    node: def.id,
+  }));
 }
 
 /** The sheet of that name, or `null` where the grid has none. */

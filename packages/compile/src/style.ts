@@ -13,6 +13,9 @@ import { type Ctx, reject, text } from './ctx';
 /** How a look reaches a cell — which construct applies it, which is a different edit from which one holds it. */
 export type StyleSource = 'column' | 'row' | 'cell' | 'override';
 
+/** Which key of that construct set it: its `style:`, or the `format:` written beside it (`docs/spec.md` §4). */
+export type StyleKey = 'style' | 'format';
+
 /**
  * One construct's contribution to how a cell looks, only the leaves it set
  * (ADR-005). `name` is set for a `defs.styles` entry; a base's layer comes
@@ -20,6 +23,7 @@ export type StyleSource = 'column' | 'row' | 'cell' | 'override';
  */
 export interface StyleLayer {
   readonly through: StyleSource;
+  readonly key: StyleKey;
   readonly node: NodeId;
   readonly name: StyleName | null;
   readonly gives: StyleValues;
@@ -44,7 +48,7 @@ export function layersOf(
 
   if (format !== null) {
     const code = text(ctx, format, node);
-    layers.push({ through, node: node.id, name: null, gives: { format: code } });
+    layers.push({ through, key: 'format', node: node.id, name: null, gives: { format: code } });
   }
   return layers;
 }
@@ -99,15 +103,17 @@ function fromStyle(
       ? []
       : fromName(ctx, node, through, text(ctx, style.extends, node), chain);
 
-  return [...base, { through, node: node.id, name, gives: flatten(ctx, style, node) }];
+  return [
+    ...base,
+    { through, key: 'style', node: node.id, name, gives: flatten(ctx, style, node) },
+  ];
 }
 
 const EDGES = ['left', 'right', 'top', 'bottom'] as const;
 
 type Setting = { -readonly [K in StyleProperty]?: StyleValues[K] };
 
-/** A style as the leaves it sets, with `border: all` spread over the four sides. */
-/** A style as the leaves it sets, with every template in it resolved. */
+/** A style as the leaves it sets, with `border: all` spread over its four sides and every template resolved. */
 export function flatten(ctx: Ctx, style: Style, node: SpecNode): StyleValues {
   const values: Setting = {};
 

@@ -27,6 +27,8 @@ function asks(): Asks {
     goOn: vi.fn(),
     goTo: vi.fn(),
     stopLooking: vi.fn(),
+    wear: vi.fn(),
+    wornWith: vi.fn(),
   };
 }
 

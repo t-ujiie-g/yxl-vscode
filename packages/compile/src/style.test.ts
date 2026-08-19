@@ -15,6 +15,7 @@ describe('a style layer', () => {
     expect(layers(source, 'A1')).toEqual([
       {
         through: 'cell',
+        key: 'style',
         node: '["spec.yxl.yaml","sheets",0,"cells","A1"]',
         name: null,
         gives: { 'font.bold': true },
@@ -27,6 +28,7 @@ describe('a style layer', () => {
     expect(layers(source, 'A1')).toEqual([
       {
         through: 'cell',
+        key: 'style',
         node: '["spec.yxl.yaml","defs","styles","header"]',
         name: 'header',
         gives: { 'font.bold': true },

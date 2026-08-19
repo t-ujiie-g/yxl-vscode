@@ -1,6 +1,5 @@
 import type { Site } from './locate';
 import type { Mapping } from './node';
-import type { Op } from './op';
 import { renderScalar } from './write';
 
 type Held = Extract<Site, { in: 'map' } | { in: 'seq' }>;
@@ -10,11 +9,17 @@ type Held = Extract<Site, { in: 'map' } | { in: 'seq' }>;
  * or last without one. Everything but the entry and its separator is the file's
  * own bytes.
  */
-export function withEntry(source: string, target: Mapping, op: Extract<Op, { op: 'add' }>): string {
+export function withEntry(
+  source: string,
+  target: Mapping,
+  key: string,
+  value: string,
+  before: string | null,
+): string {
   const whole = target.span;
-  const written = `${renderScalar(op.key)}: ${renderScalar(op.value)}`;
+  const written = `${renderScalar(key)}: ${value}`;
 
-  const above = target.entries.find((entry) => entry.key.value === op.before);
+  const above = target.entries.find((entry) => entry.key.value === before);
   if (above !== undefined) {
     return (
       source.slice(whole.start, above.span.start) +

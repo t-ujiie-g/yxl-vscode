@@ -23,6 +23,7 @@ import {
 } from './panels';
 import type { DrawnCell, DrawnMerge, DrawnSheet } from './protocol';
 import { type Asks, cellKey, GUTTER, type Showing } from './showing';
+import { toolbar } from './toolbar';
 import { across, down, heightOf, type Where, wanted, widthOf } from './window';
 
 /**
@@ -51,6 +52,7 @@ export function draw(into: HTMLElement, showing: Showing, asks: Asks): void {
   if (showing.looking !== null) into.append(findBar(showing.looking, asks));
   if (drawing.params.length > 0) into.append(parameters(drawing, asks));
   if (drawing.sheets.length > 1) into.append(tabs(drawing, showing.sheet, asks.showSheet));
+  into.append(toolbar(showing, asks));
 
   const sheet = drawing.sheets[Math.min(showing.sheet, drawing.sheets.length - 1)];
   if (sheet !== undefined) {

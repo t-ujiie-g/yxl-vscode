@@ -266,7 +266,7 @@ function resolving(spec: Spec, read: Reading): Resolving {
 }
 
 /** A candidate as the view shows one: what it does, and what it would move. */
-function shown(candidate: Candidate): Choice {
+export function shown(candidate: Candidate): Choice {
   return {
     id: candidate.id,
     what: candidate.what,

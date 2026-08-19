@@ -7,6 +7,7 @@ import * as vscode from 'vscode';
 import { paste, pastedWith, pasteFrom, whose } from './clipboard';
 import { asOpen, put, reveal, textOf } from './documents';
 import { inspect, type Nodes, nodeUnder } from './inspect';
+import { wear } from './look';
 import { type Projected, project, redraw, type Window } from './project';
 import { goBack } from './undo';
 import {
@@ -239,6 +240,18 @@ export class Preview {
     if (asked.kind === 'emptied') {
       const { kind, choice, ...ranged } = asked;
       this.writing((spec, port) => emptied(spec, ranged, choice, port));
+      return;
+    }
+
+    if (asked.kind === 'wear') {
+      const { kind, ...worn } = asked;
+      this.writing((spec, port) => wear(spec, worn, port));
+      return;
+    }
+
+    if (asked.kind === 'worn') {
+      const { kind, choice, ...worn } = asked;
+      this.writing((spec, port) => wear(spec, worn, port, choice));
       return;
     }
 

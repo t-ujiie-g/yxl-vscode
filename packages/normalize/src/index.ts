@@ -1,1 +1,1 @@
-export { type Declared, NEARBY, normalize, type Written } from './style';
+export { type Declared, NEARBY, normalize, type Written, written } from './style';

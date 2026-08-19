@@ -406,7 +406,8 @@ not a date.
 | Paste from Excel or Sheets | ✅ for the values; the looks wait on Phase 9's normalizer (ADR-034) |
 | A box to type an address into | ✅ — in the corner, where every spreadsheet keeps it |
 | Find something in the sheet | ✅ — `Cmd`+`F`, `Cmd`+`G` through what it found |
-| Bold, fill, borders, alignment, number format | **Phase 9** |
+| Bold, italic, underline, strike | ✅ — from the toolbar, through the normalizer, with the ripple count where the look is shared |
+| Fill, text colour, borders, alignment, number format | **Phase 9** |
 | Drag a column wider, a row taller | **Phase 9** |
 | Freeze the heading rows | **Phase 9** |
 | Insert or delete a row or column | **Phase 10** |
@@ -994,9 +995,22 @@ The other half of what a person does with a sheet, and the half that decides
 whether the spec survives contact with a GUI (ADR-008).
 - [ ] A toolbar of what a reader reaches for: bold, italic, fill, text colour,
       borders, alignment, number format
-- [ ] Every style write through the **normalizer** and through §4.4's `setStyle`
+      **The four font switches are in** — bold, italic, underline, strike —
+      above the grid, showing what the selected cell wears and asking for the
+      other of it. The rest are the same path with more controls: a colour needs
+      a picker, a border needs an edge chosen, a number format needs the cell's
+      own `format:` key rather than its `style:`.
+- [x] Every style write through the **normalizer** and through §4.4's `setStyle`
       table — change the definition, or fork it for this range, with the ripple
       count shown *before* the choice
+      **Shipped**: `setStyle` finds the layer the look comes from and offers
+      what §4.4's table says — change the declaration every cell reading it
+      follows, change the band over the whole column, or write it on these cells
+      — each with the count of what it would move. Where nothing else says how
+      the cell looks there is one answer and it applies without asking. What
+      lands on the cells is the normalizer's answer (ADR-037), so bolding a cell
+      that wears `base` writes `{ extends: base, font: { bold: true } }` rather
+      than a fourth anonymous look.
 - [ ] The same over a range whose cells have different origins: "apply to all"
       and "split by origin", never a silent pick
 - [ ] Column width and row height by dragging, written as `columns:` / `rows:`
@@ -2366,6 +2380,53 @@ this at a phase boundary rather than at the end.
   two serials either side of it, so the next reader knows it is deliberate.
 - A cell's own format — written, or the one its type takes — now wins over a
   band's. Both are requests about *that* cell; a band is something reaching it.
+
+### 2026-08-19 — A look you can apply, and the table that decides where it goes
+The first thing a reader can click that changes how the workbook *looks*: four
+font switches above the grid, and §4.4's `setStyle` table underneath them.
+**Phase 9's second item is done**; the toolbar's other controls are the same
+path with more UI.
+
+- **`setStyle` finds where the look comes from and offers what the table says.**
+  A declaration every cell reading it follows, a band over the whole column, or
+  these cells — each with the count of what it would move, shown before the
+  choice. Where nothing else says how the cell looks there is one answer, and it
+  applies without asking, which is what makes bolding a plain cell feel like
+  bolding a plain cell.
+- **What lands on the cells is the normalizer's answer (ADR-037)**, which is
+  what it was built for: bolding a cell that wears `base` writes
+  `{ extends: base, font: { bold: true } }`; bolding one where a declaration
+  already says exactly that writes `style: strong`; bolding a plain cell writes
+  the look itself. `normalize` grew `written`, which spells one out — a name, or
+  a flow mapping with the leaves nested back into the keys they came from, and
+  colours and number formats quoted, since `000000` and `0.0%` are not the
+  strings they look like.
+- **A cell written as a value becomes one that carries a look as well**:
+  `A1: 1` is rewritten as `A1: { value: 1, style: … }`, keeping the value's own
+  spelling. An address nothing had written gets a cell that is only a look,
+  which `docs/spec.md` §3 has a sentence for.
+- **`addSource` reaches inside a flow mapping now.** `A1: { value: 1 }` had no
+  way to gain a `style:` key: `add` handled the flow form and `addSource` refused
+  it. They share one writer, and a source with a line break in it is still
+  refused, since a flow mapping is one line.
+- **The grid carries the looks the spec declares** — `CompiledGrid.styles`,
+  resolved through whatever each one extends. It is what the normalizer is asked
+  against, and it is part of the projection rather than something every caller
+  works out again. What will not resolve is reported where a *cell* reads it, so
+  a cycle is named once rather than once per declaration in it.
+- **A style layer says which key of the construct set it.** A cell's `format:`
+  is a layer of its own beside its `style:`, and without telling them apart the
+  first style write copied the format into the style mapping. `StyleLayer.key`
+  is `style` or `format`, and the §8.6 duplicate doc comment on `flatten` — two
+  of them, on one declaration — went with it.
+- **What it will not do yet**: a rectangle whose cells take the look from
+  different places is refused with a reason and no answers, which is the next
+  item ("apply to all" / "split by origin"); and a look under an `overrides:`
+  entry offers to change the override rather than the cell, since writing under
+  it would change nothing a reader can see.
+- **This pass ends at: exports 413 blocks / 893 lines (avg 2.2), private 252 /
+  278 (1.1), inline 49 / 66 (1.3), 11 over the limit** — the eleven the last pass
+  kept, and nothing new.
 
 ### 2026-08-19 — Refactoring pass over the whole tree (`AGENTS.md` §8)
 At the Phase 7 boundary, and the pass that finally cleared the comment backlog.
