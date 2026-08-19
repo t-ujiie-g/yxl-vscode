@@ -75,20 +75,49 @@ body {
   border-color: var(--vscode-focusBorder);
 }
 
-.look:nth-child(1) {
+.look.bold {
   font-weight: 700;
 }
 
-.look:nth-child(2) {
+.look.italic {
   font-style: italic;
 }
 
-.look:nth-child(3) {
+.look.underline {
   text-decoration: underline;
 }
 
-.look:nth-child(4) {
+.look.strike {
   text-decoration: line-through;
+}
+
+.look.ink,
+.look.fill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-bottom-width: 3px;
+  border-bottom-style: solid;
+  position: relative;
+}
+
+.look.off {
+  width: 1.2rem;
+  margin-left: -1px;
+  opacity: 0.7;
+}
+
+.pick {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+.pick:disabled {
+  cursor: default;
 }
 
 .tabs {

@@ -859,7 +859,7 @@ describe('the switches over the grid', () => {
 
   it('follow the selection, which arrives after the grid was drawn', () => {
     const into = document.createElement('div');
-    const switches = () => [...into.querySelectorAll<HTMLButtonElement>('.look')];
+    const switches = () => [...into.querySelectorAll<HTMLButtonElement>('button.look:not(.off)')];
 
     draw(into, state(null), asks());
     expect(switches().every((one) => one.disabled)).toBe(true);

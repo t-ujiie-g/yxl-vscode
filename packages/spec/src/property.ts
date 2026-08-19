@@ -31,6 +31,12 @@ export interface StyleValues {
   readonly format?: string;
 }
 
+/**
+ * A look asked for rather than read: a value to take on, or `null` to take the
+ * property off, which the schema says only by leaving the leaf out.
+ */
+export type StyleWant = { readonly [K in StyleProperty]?: StyleValues[K] | null };
+
 /** Every leaf a look is made of, in the order a spec writes them. */
 export const STYLE_PROPERTIES = [
   'font.bold',

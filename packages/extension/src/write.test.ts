@@ -2,7 +2,7 @@ import { compile } from '@yxl-vscode/compile';
 import { parse } from '@yxl-vscode/cst';
 import { type IncludeReader, load } from '@yxl-vscode/loader';
 import { did, type History, nothing } from '@yxl-vscode/patch';
-import { type FilePath, filePath } from '@yxl-vscode/units';
+import { type FilePath, filePath, parseColor } from '@yxl-vscode/units';
 import type { Choice, Typed, Worn } from '@yxl-vscode/webview/protocol';
 import { describe, expect, it } from 'vitest';
 import { wear } from './look';
@@ -481,6 +481,23 @@ describe('a look asked for over the grid', () => {
     await wear(spec, worn(), port);
     expect(files[ROOT]).toContain('A1: { value: 1, style: { font: { bold: true } } }');
     expect(told).toEqual(['1 cell restyled.']);
+  });
+
+  it('writes a colour picked over a cell that had none', async () => {
+    const { spec, port, files, told } = editor({ [ROOT]: `${SALES}    cells:\n      A1: 1\n` });
+
+    await wear(spec, worn({ want: { fill: parseColor('1F3864') } }), port);
+    expect(files[ROOT]).toContain('A1: { value: 1, style: { fill: "1F3864" } }');
+    expect(told).toEqual(['1 cell restyled.']);
+  });
+
+  it('takes one off again, leaving the cell as it was written', async () => {
+    const plain = `${SALES}    cells:\n      A1: 1\n`;
+    const spec = `${SALES}    cells:\n      A1: { value: 1, style: { fill: "1F3864" } }\n`;
+    const { spec: read, port, files } = editor({ [ROOT]: spec });
+
+    await wear(read, worn({ want: { fill: null } }), port);
+    expect(files[ROOT]).toBe(plain);
   });
 
   it('asks where the look comes from a declaration other cells read', async () => {

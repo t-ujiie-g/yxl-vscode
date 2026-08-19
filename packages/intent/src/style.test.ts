@@ -1,8 +1,8 @@
 import { compile } from '@yxl-vscode/compile';
 import { parse } from '@yxl-vscode/cst';
 import { type IncludeReader, load } from '@yxl-vscode/loader';
-import type { StyleValues } from '@yxl-vscode/spec';
-import { type FilePath, filePath, type Rect, type SheetName } from '@yxl-vscode/units';
+import type { StyleValues, StyleWant } from '@yxl-vscode/spec';
+import { type FilePath, filePath, parseColor, type Rect, type SheetName } from '@yxl-vscode/units';
 import { type Ctx, checked } from '@yxl-vscode/verify';
 import { describe, expect, it } from 'vitest';
 import { reading } from './direct';
@@ -29,7 +29,7 @@ const at = (top: number, left: number, bottom = top, right = left): Rect => ({
 });
 
 /** The answers a look asked for has, over the rectangle named. */
-function offered(source: string, rect: Rect, want: StyleValues): readonly Candidate[] {
+function offered(source: string, rect: Rect, want: StyleWant): readonly Candidate[] {
   const { grid, read } = files(source);
   return setStyle({ grid }, { sheet: 'Sales' as SheetName, rect }, want, read);
 }
@@ -194,6 +194,72 @@ describe('a look something else already supplies', () => {
     if (answer === undefined) throw new Error('nothing was offered');
 
     expect(taken(BANDED, answer)).toContain('- { at: A, style: { font: { bold: false } } }');
+  });
+});
+
+describe('a colour, and a look taken off', () => {
+  const FILL = { fill: parseColor('1F3864') } as const;
+
+  it('writes it on a cell that had none', () => {
+    const spec = `${SALES}    cells:\n      A1: 1\n`;
+    const [answer] = offered(spec, at(1, 1), FILL);
+    if (answer === undefined) throw new Error('nothing was offered');
+
+    expect(taken(spec, answer)).toContain('A1: { value: 1, style: { fill: "1F3864" } }');
+  });
+
+  it('writes it beside the look the cell already carries', () => {
+    const spec = `${SALES}    cells:\n      A1: { value: 1, style: { fill: "1F3864" } }\n`;
+    const [answer] = offered(spec, at(1, 1), { 'font.color': parseColor('FFFFFF') });
+    if (answer === undefined) throw new Error('nothing was offered');
+
+    expect(taken(spec, answer)).toContain(
+      'A1: { value: 1, style: { font: { color: "FFFFFF" }, fill: "1F3864" } }',
+    );
+  });
+
+  it('takes it off the cell that carries it, leaving the file as it was', () => {
+    const plain = `${SALES}    cells:\n      A1: 1\n`;
+    const [on] = offered(plain, at(1, 1), FILL);
+    if (on === undefined) throw new Error('nothing was offered');
+
+    const filled = taken(plain, on);
+    const [off] = offered(filled, at(1, 1), { fill: null });
+    if (off === undefined) throw new Error('nothing was offered');
+
+    expect(taken(filled, off)).toBe(plain);
+  });
+
+  it('offers the declaration it comes from, and the cell detached from it', () => {
+    const spec = `defs:\n  styles:\n    header: { font: { bold: true }, fill: "1F3864" }\n${SALES}    cells:\n      A1: { value: 1, style: header }\n`;
+    const answers = offered(spec, at(1, 1), { fill: null });
+
+    expect(answers.map((one) => one.id)).toEqual(['definition', 'onCells']);
+    expect(taken(spec, answers[0] as Candidate)).toContain('header: { font: { bold: true } }');
+    expect(taken(spec, answers[1] as Candidate)).toContain(
+      'A1: { value: 1, style: { font: { bold: true } } }',
+    );
+  });
+
+  const BANDED = `${SALES}    columns:\n      - { at: A, style: { fill: "1F3864" } }\n    cells:\n      A1: 1\n`;
+
+  it('has no answer on the cell where what is asked off comes from under it', () => {
+    expect(offered(BANDED, at(1, 1), { fill: null }).map((one) => one.id)).toEqual(['band']);
+  });
+
+  it('takes the mapping it emptied with it, so the band is as it was written', () => {
+    const [answer] = offered(BANDED, at(1, 1), { fill: null });
+    if (answer === undefined) throw new Error('nothing was offered');
+
+    expect(taken(BANDED, answer)).toContain('- { at: A }\n');
+  });
+
+  it('leaves the leaves beside it alone', () => {
+    const spec = `${SALES}    columns:\n      - { at: A, style: { font: { bold: true, color: "FF0000" } } }\n    cells:\n      A1: 1\n`;
+    const [answer] = offered(spec, at(1, 1), { 'font.color': null });
+    if (answer === undefined) throw new Error('nothing was offered');
+
+    expect(taken(spec, answer)).toContain('- { at: A, style: { font: { bold: true } } }');
   });
 });
 

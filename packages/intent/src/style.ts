@@ -12,7 +12,12 @@ import {
 } from '@yxl-vscode/compile';
 import { apply, type Node, type Op, type Path } from '@yxl-vscode/cst';
 import { normalize, written } from '@yxl-vscode/normalize';
-import { STYLE_PROPERTIES, type StyleProperty, type StyleValues } from '@yxl-vscode/spec';
+import {
+  STYLE_PROPERTIES,
+  type StyleProperty,
+  type StyleValues,
+  type StyleWant,
+} from '@yxl-vscode/spec';
 import {
   type A1Addr,
   addrAt,
@@ -38,7 +43,7 @@ export interface Styling {
 export function setStyle(
   spec: Styling,
   where: { sheet: SheetName; rect: Rect },
-  want: StyleValues,
+  want: StyleWant,
   read: Reading,
 ): readonly Candidate[] {
   const sheet = sheetOf(spec.grid, where.sheet);
@@ -60,7 +65,7 @@ function fromOne(
   sheet: CompiledSheet,
   where: { sheet: SheetName; rect: Rect },
   supplier: StyleLayer | null,
-  want: StyleValues,
+  want: StyleWant,
   read: Reading,
 ): readonly Candidate[] {
   const answers: Candidate[] = [];
@@ -78,7 +83,7 @@ function fromOne(
 /** A look asked for over one address: which of its properties are to land there. */
 interface Wanted {
   readonly at: A1Addr;
-  readonly want: StyleValues;
+  readonly want: StyleWant;
 }
 
 /** What one answer would write, and every cell it would move. */
@@ -134,7 +139,7 @@ function apart(
   sheet: CompiledSheet,
   where: { sheet: SheetName; rect: Rect },
   from: readonly Origin[],
-  want: StyleValues,
+  want: StyleWant,
   read: Reading,
 ): readonly Candidate[] {
   const wants = everyone(spread(where.rect), want);
@@ -178,10 +183,10 @@ function splitting(
   sheet: CompiledSheet,
   name: SheetName,
   from: readonly Origin[],
-  want: StyleValues,
+  want: StyleWant,
   read: Reading,
 ): Writing | null {
-  const own = new Map<A1Addr, StyleValues>();
+  const own = new Map<A1Addr, StyleWant>();
   const parts: Writing[] = [];
 
   for (const group of from) {
@@ -288,13 +293,15 @@ function onCell(
   spec: Styling,
   sheet: CompiledSheet,
   at: A1Addr,
-  want: StyleValues,
+  want: StyleWant,
   read: Reading,
 ): { file: FilePath; ops: readonly Op[] } | null {
   const layers = styleAt(sheet, at);
   const own = layers.filter(fromCell);
   const under = resolve(layers.filter((one) => !fromCell(one)));
   const named = resolve(own.filter((one) => one.name !== null));
+  if (stuck(want, under)) return null;
+
   const gives = beyond({ ...resolve(own), ...want }, under, named);
 
   const how = properties(gives).length === 0 ? null : normalize(gives, spec.grid.styles);
@@ -347,11 +354,18 @@ function bare(
   return { file: found.file, ops: [{ op: 'write', path: found.path, source }] };
 }
 
+/** Whether a property asked off is still supplied from under the cell, where nothing it can carry would undo it. */
+function stuck(want: StyleWant, under: StyleValues): boolean {
+  return properties(want).some((key) => want[key] === null && under[key] !== undefined);
+}
+
 /** The look with what it need not say taken out; what a declaration the cell *names* says stays, and is answered. */
-function beyond(gives: StyleValues, under: StyleValues, named: StyleValues): StyleValues {
+function beyond(gives: StyleWant, under: StyleValues, named: StyleValues): StyleValues {
   const kept: Record<string, unknown> = {};
 
   for (const key of properties(gives)) {
+    if (gives[key] === null) continue;
+
     const same = under[key] === gives[key];
     const off = under[key] === undefined && named[key] === undefined && gives[key] === false;
     if (!same && !off) kept[key] = gives[key];
@@ -387,7 +401,7 @@ function newCell(
 function elsewhere(
   spec: Styling,
   supplier: StyleLayer | null,
-  want: StyleValues,
+  want: StyleWant,
   read: Reading,
 ): Candidate | null {
   if (supplier === null || itsOwn(supplier)) return null;
@@ -405,7 +419,7 @@ function elsewhere(
 function atSupplier(
   spec: Styling,
   supplier: StyleLayer,
-  want: StyleValues,
+  want: StyleWant,
   read: Reading,
 ): Writing | null {
   const found = located(supplier.node, read);
@@ -450,7 +464,7 @@ function naming(supplier: StyleLayer): string {
 function writing(
   found: Found & { kind: 'found' },
   into: string | null,
-  want: StyleValues,
+  want: StyleWant,
 ): Op[] | null {
   const ops: Op[] = [];
 
@@ -465,7 +479,7 @@ function writing(
   return ops;
 }
 
-/** The op that puts one leaf in: a `set` where the key is there, and the keys it is missing where not. */
+/** The op one leaf becomes: a `set` where the key is there, the keys it is missing where not, a `remove` where it is asked off. */
 function under(node: Node, at: Path, path: readonly string[], value: unknown): Op | null {
   const [head, ...rest] = path;
   if (head === undefined) return null;
@@ -473,6 +487,8 @@ function under(node: Node, at: Path, path: readonly string[], value: unknown): O
 
   const held = node.entries.find((entry) => String(entry.key.value) === head);
   if (held === undefined) {
+    if (value === null) return null;
+
     const gives = { [path.join('.')]: value } as StyleValues;
     const source = written({ kind: 'inline', gives })
       .replace(/^\{ |\}$/g, '')
@@ -480,9 +496,23 @@ function under(node: Node, at: Path, path: readonly string[], value: unknown): O
     return { op: 'addSource', path: at, key: head, source: source.slice(head.length + 2) };
   }
 
-  if (rest.length === 0) return { op: 'set', path: [...at, head], value: value as never };
+  if (rest.length === 0) {
+    return value === null
+      ? { op: 'remove', path: [...at, head] }
+      : { op: 'set', path: [...at, head], value: value as never };
+  }
 
-  return under(held.value, [...at, head], rest, value);
+  const deeper = under(held.value, [...at, head], rest, value);
+  if (deeper?.op === 'remove' && deeper.path.length === at.length + 2 && sole(held.value)) {
+    return { op: 'remove', path: [...at, head] };
+  }
+
+  return deeper;
+}
+
+/** Whether a mapping holds the one entry only, so taking that out would leave it empty. */
+function sole(node: Node): boolean {
+  return node.kind === 'map' && node.entries.length === 1;
 }
 
 /** The addresses of a rectangle, in reading order. */
@@ -513,7 +543,7 @@ function nodeOf(origin: FacetOrigin): NodeId | null {
   return origin.node;
 }
 
-function properties(values: StyleValues): StyleProperty[] {
+function properties(values: StyleWant): StyleProperty[] {
   return STYLE_PROPERTIES.filter((key) => values[key] !== undefined);
 }
 
@@ -521,13 +551,13 @@ const STYLE = 'style';
 const CELLS = 'cells';
 
 /** Every address of a rectangle asked for the whole look. */
-function everyone(addresses: readonly A1Addr[], want: StyleValues): Wanted[] {
+function everyone(addresses: readonly A1Addr[], want: StyleWant): Wanted[] {
   return addresses.map((at) => ({ at, want }));
 }
 
 /** The look narrowed to the properties named. */
-function only(want: StyleValues, keys: readonly StyleProperty[]): StyleValues {
+function only(want: StyleWant, keys: readonly StyleProperty[]): StyleWant {
   const kept: Record<string, unknown> = {};
   for (const key of keys) kept[key] = want[key];
-  return kept as StyleValues;
+  return kept as StyleWant;
 }

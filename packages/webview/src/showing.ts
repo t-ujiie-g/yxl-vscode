@@ -1,4 +1,4 @@
-import type { StyleValues } from '@yxl-vscode/spec';
+import type { StyleWant } from '@yxl-vscode/spec';
 import type { Rect } from '@yxl-vscode/units';
 import type { At } from './keys';
 import type {
@@ -74,7 +74,7 @@ export interface Asks {
   readonly paste: (row: number, col: number) => void;
   readonly resolveWith: (typed: Typed, choice: string) => void;
   readonly emptiedWith: (ranged: Ranged, choice: string) => void;
-  readonly wear: (want: StyleValues) => void;
+  readonly wear: (want: StyleWant) => void;
   readonly wornWith: (worn: Worn, choice: string) => void;
   readonly pastedWith: (pasted: Pasted, choice: string) => void;
   readonly pastedTextWith: (text: PastedText, choice: string) => void;
