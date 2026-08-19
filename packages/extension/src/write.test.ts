@@ -500,14 +500,13 @@ describe('a look asked for over the grid', () => {
     expect(files[ROOT]).toBe(plain);
   });
 
-  it('asks before changing a band, which speaks for more than the cell', async () => {
+  it('changes the band a colour comes from, which is the only answer there is', async () => {
     const spec = `${SALES}    columns:\n      - { at: A, style: { fill: "FFF2CC" } }\n    cells:\n      A1: 1\n`;
-    const { spec: read, port, answers, refusals, files } = editor({ [ROOT]: spec });
+    const { spec: read, port, refusals, files } = editor({ [ROOT]: spec });
 
     await wear(read, worn({ want: { fill: null } }), port);
-    expect(answers[0]?.map((one) => one.id)).toEqual(['band']);
-    expect(refusals[0]).toContain('speaks for more than the cells you picked');
-    expect(files[ROOT]).toBe(spec);
+    expect(refusals).toEqual([]);
+    expect(files[ROOT]).toContain('- { at: A }\n');
   });
 
   it('asks where the look comes from a declaration other cells read', async () => {

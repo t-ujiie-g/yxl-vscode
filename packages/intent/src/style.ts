@@ -56,13 +56,7 @@ export function setStyle(
       ? apart(spec, sheet, where, from, want, read)
       : fromOne(spec, sheet, where, from[0]?.layer ?? null, want, read);
 
-  const only = answers.length === 1 ? answers[0] : undefined;
-  return only !== undefined && itself(only) ? [{ ...only, alone: true }] : answers;
-}
-
-/** Whether an answer changes only the cells acted on: a band speaks for more, whatever the projection holds of it. */
-function itself(answer: Candidate): boolean {
-  return answer.id === ON_CELLS || answer.id === ALIKE || answer.id === OVERRIDE;
+  return answers.length === 1 ? [{ ...answers[0], alone: true } as Candidate] : answers;
 }
 
 /** The answers where every cell of the rectangle takes the look from the same place. */
@@ -156,11 +150,11 @@ function apart(
   const answers: Candidate[] = [];
   if (alike !== null && alike.ops.length > 0) {
     answers.push(
-      candidate(ALIKE, 'Apply it to every cell here, whatever each takes it from', alike),
+      candidate('all', 'Apply it to every cell here, whatever each takes it from', alike),
     );
   }
   if (split !== null && !(alike !== null && same(alike, split, read))) {
-    answers.push(candidate(SPLIT, 'Split it by where each cell takes it from', split));
+    answers.push(candidate('split', 'Split it by where each cell takes it from', split));
   }
 
   return answers;
@@ -264,7 +258,7 @@ function onCells(
   const writing = onEvery(spec, sheet, name, wants, read);
   if (writing === null || writing.ops.length === 0) return null;
 
-  return candidate(ON_CELLS, `Write it on ${said(wants.map((one) => one.at))}`, writing);
+  return candidate('onCells', `Write it on ${said(wants.map((one) => one.at))}`, writing);
 }
 
 /** What writing the look on each of those cells would be — no ops where they already look as asked. */
@@ -416,7 +410,7 @@ function elsewhere(
   if (writing === null) return null;
 
   const id =
-    supplier.name !== null ? DEFINITION : supplier.through === 'override' ? OVERRIDE : BAND;
+    supplier.name !== null ? 'definition' : supplier.through === 'override' ? 'override' : 'band';
 
   return candidate(id, naming(supplier), writing);
 }
@@ -555,14 +549,6 @@ function properties(values: StyleWant): StyleProperty[] {
 
 const STYLE = 'style';
 const CELLS = 'cells';
-
-/** What each answer of §4.4's `setStyle` table is called, which is what a choice comes back as. */
-const ON_CELLS = 'onCells';
-const ALIKE = 'all';
-const SPLIT = 'split';
-const DEFINITION = 'definition';
-const BAND = 'band';
-const OVERRIDE = 'override';
 
 /** Every address of a rectangle asked for the whole look. */
 function everyone(addresses: readonly A1Addr[], want: StyleWant): Wanted[] {
