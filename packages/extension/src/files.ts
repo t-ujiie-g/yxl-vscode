@@ -6,9 +6,8 @@ import { type FilePath, filePath } from '@yxl-vscode/units';
 
 /**
  * The half of reading a spec that belongs to the host (ADR-004): resolve a path
- * against `from` and read it. Synchronous `node:fs`, because the core is; an
- * `$include` resolves against its file and a `data:` path against the opened
- * spec (`docs/spec.md` §8, §9), which is the caller's `from` to choose.
+ * against `from` and read it, synchronously, because the core is. Which file
+ * `from` is — the includer, or the opened spec — is the caller's to choose.
  */
 export const readBeside: IncludeReader & DataReader = (from, path) => {
   const found = resolve(dirname(from), path.replace(/\\/g, '/'));

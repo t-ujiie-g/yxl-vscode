@@ -134,9 +134,8 @@ function looking(showing: Showing): string {
 }
 
 /**
- * The drawn window in a box padded to the whole sheet's size, so the scrollbar
- * says how much sheet there is and every row keeps its offset whichever window
- * is drawn. Nearing an edge asks the host for the next window.
+ * The drawn window in a box padded to the whole sheet's size, so the scrollbar says
+ * how much sheet there is and every row keeps its offset. An edge asks for the next.
  */
 function scroller(sheet: DrawnSheet, showing: Showing, asks: Asks): HTMLElement {
   const box = document.createElement('div');

@@ -4,10 +4,7 @@ import { CODE } from './codes';
 import { type Ctx, keyOf, reject, type Site } from './ctx';
 import { follow } from './include';
 
-/**
- * A mapping, wherever an `$include` turned out to put it, or `null` with the
- * reason reported. What comes back carries the file and path to go on with.
- */
+/** A mapping, wherever an `$include` put it, or `null` with the reason reported; it carries the file to go on with. */
 function openMap(ctx: Ctx, node: Node, path: Path, what: string): Site<Mapping> | null {
   const here = follow(ctx, node, path);
   if (here === null) return null;

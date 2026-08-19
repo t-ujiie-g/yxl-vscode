@@ -123,10 +123,7 @@ export function readTextAs<T>(
   return value;
 }
 
-/**
- * Whether the text holds a `${...}` a parameter will fill in. `$$` and a lone
- * `$` do not open one, and neither does an unclosed `${` (`docs/spec.md` §7).
- */
+/** Whether the text holds a `${...}` a parameter will fill in; `$$`, a lone `$` and an unclosed `${` do not (`docs/spec.md` §7). */
 function holdsPlaceholder(text: string): boolean {
   for (let index = 0; index < text.length; index++) {
     if (text[index] !== '$') continue;

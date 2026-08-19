@@ -27,7 +27,7 @@ import {
   beside,
   entryOp,
   type Found,
-  type Holds,
+  holding,
   type Intent,
   located,
   type Reading,
@@ -38,8 +38,7 @@ import { meaning } from './typed';
 /**
  * One answer an edit has, with what it would do and every cell it would move,
  * for the reader to choose between (ADR-001). `alone` says it is the *whole*
- * answer, so a caller may take it without asking. `overrides:` is offered
- * beside the list, not in it (ADR-007).
+ * answer, so a caller may take it without asking.
  */
 export interface Candidate {
   readonly id: string;
@@ -84,9 +83,8 @@ export interface Resolving {
 }
 
 /**
- * The `param` row: change the default every cell reading it follows. Only where
- * the cell is exactly one placeholder — `"${quarter} ${region}"` typed over
- * would have to be split back across two, and which half went where is a guess.
+ * The `param` row: change the default every cell reading it follows. Only where the
+ * cell is one placeholder — `"${quarter} ${region}"` would have to be split in two.
  */
 function parameter(
   spec: Resolving,
@@ -206,9 +204,8 @@ function reference(found: Found): { file: FilePath; path: Path } | null {
 }
 
 /**
- * Whether a `data:` rectangle sits above or to the left, where extending it
- * would reach this address — the `empty` row's second answer, which makes the
- * first a choice.
+ * Whether a `data:` rectangle sits above or to the left, near enough that extending
+ * it would reach this address — which is what makes the `empty` row's first a choice.
  */
 function nextToData(sheet: CompiledSheet, at: A1Addr): boolean {
   const cell = cellOf(at);
@@ -237,7 +234,12 @@ function newCell(
   if (found.kind === 'refused' || found.node.kind !== 'map') return null;
 
   const holds = found.node.entries.some((entry) => entry.key.value === 'cells');
-  const op = entryOp(holds ? [...found.path, 'cells'] : found.path, holds, where.at, held(typed));
+  const op = entryOp(
+    holds ? [...found.path, 'cells'] : found.path,
+    holds,
+    where.at,
+    holding(typed),
+  );
 
   return {
     id: 'newCell',
@@ -254,9 +256,8 @@ function newCell(
 }
 
 /**
- * The `external` row: write the CSV field, and no other byte of the file. JSON
- * is not offered — a value cannot yet be put back into one without reformatting
- * the rest, and reformatting somebody's data file is not a trade this makes.
+ * The `external` row: write the CSV field, and no other byte of the file. JSON is
+ * not offered — putting a value back into one reformats the rest of it.
  */
 function external(
   origin: Extract<FacetOrigin, { kind: 'external' }>,
@@ -436,12 +437,4 @@ function around(rect: Rect, cell: CellRef): readonly Rect[] {
   if (cell.row < rect.bottom) pieces.push({ ...rect, top: cell.row + 1 });
 
   return pieces;
-}
-
-/** What a typed edit would have a cell hold, a formula that is not one taken as nothing. */
-function held(typed: string): Holds {
-  const meant = meaning(typed);
-  if (meant.is === 'formula') return { formula: meant.body };
-
-  return { value: meant.is === 'value' ? meant.value : null };
 }

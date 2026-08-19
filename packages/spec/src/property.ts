@@ -3,9 +3,8 @@ import type { BorderStyle, HAlign, VAlign } from './style';
 
 /**
  * A look as the leaves it is made of — `font.bold`, `border.left.color` — which
- * layer per leaf, as `extends:` and a band do (`docs/spec.md` §4, §6), and let
- * a layer record only what it contributed (ADR-005). `border.all` is expanded
- * into its four sides.
+ * layer per leaf, as `extends:` and a band do (`docs/spec.md` §4, §6).
+ * `border.all` is expanded into its four sides.
  */
 export interface StyleValues {
   readonly 'font.bold'?: boolean;

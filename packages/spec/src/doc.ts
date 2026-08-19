@@ -12,10 +12,9 @@ import type { Style } from './style';
 import type { ScalarValue } from './value';
 
 /**
- * A whole spec as this editor models it — the truth patches apply to and the
- * compiler's only input (ADR-001). What is not modeled is in `opaque`, per
- * document and per sheet, and is never dropped or reformatted (ADR-011).
- * `date1904` is modeled because it decides what every date *is*.
+ * A whole spec as this editor models it (ADR-001). What is not modeled is in
+ * `opaque`, per document and per sheet, and is never dropped or reformatted
+ * (ADR-011); `date1904` is, because it decides what every date *is*.
  */
 export interface SpecDoc extends SpecNode {
   readonly sheets: readonly Sheet[];
@@ -30,7 +29,6 @@ export interface SpecDoc extends SpecNode {
  * One deliberate one-off deviation (`docs/spec.md` §23, ADR-007): the cell it
  * lands on, the facets it replaces, and why. Applied after every rule that
  * wrote the cell; the facets are independent, and `reason` is for the reader.
- * Where it may land is checked with the whole workbook in view, not here.
  */
 export interface Override extends SpecNode, CellFacets {
   readonly at: Templated<QualifiedAddr>;

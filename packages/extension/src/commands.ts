@@ -45,10 +45,7 @@ export class Compiler {
     if (open !== undefined) await vscode.env.openExternal(vscode.Uri.file(workbook));
   }
 
-  /**
-   * Run the compiler, having said what is worth saying about it first: a
-   * missing one, or one that is not the version this editor targets.
-   */
+  /** Run the compiler, having first said what is worth saying: it is missing, or it is not the pinned version. */
   private async ask(args: readonly string[]): Promise<{ ok: boolean; said: string } | null> {
     const binary = vscode.workspace.getConfiguration('yxl').get<string>('path') ?? 'yxl';
     this.output.appendLine(`$ ${binary} ${args.join(' ')}`);

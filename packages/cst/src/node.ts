@@ -6,8 +6,7 @@ export type ScalarStyle = 'plain' | 'single' | 'double' | 'literal' | 'folded';
 /**
  * A YAML document as this project reads it, with a span on every node and
  * nothing of the parser library showing through. A scalar carries the `source`
- * bytes it was written as beside its `value`; a collection's `flow` is
- * `{ a: 1 }` against the block form, which are edited differently.
+ * bytes it was written as beside its `value`; `flow` is `{ a: 1 }`, not a block.
  */
 export type Node = Scalar | Mapping | Sequence;
 

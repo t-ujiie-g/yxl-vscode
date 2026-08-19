@@ -14,16 +14,16 @@ import {
   type Intent,
   located,
   type Reading,
+  refused,
   setValue,
   standing,
   stood,
 } from './direct';
 
 /**
- * Emptying a cell. A cell with nothing in it is not something the format can
- * say (`docs/spec.md` §3), so the entry is taken out and what it *wears* stays:
- * `{ value: 1, style: header }` keeps its style. A `data:` field is the
- * exception — `null` in a row is a blank cell (§9) — and takes the ordinary write.
+ * Emptying a cell: the entry is taken out and what it *wears* stays, since a
+ * cell holding nothing is not something the format can say (`docs/spec.md` §3).
+ * A `data:` field is the exception — `null` in a row is a blank cell (§9).
  */
 export function clearCell(
   grid: CompiledGrid,
@@ -79,7 +79,7 @@ export function clearRange(
   adding: readonly Op[] = [],
 ): Intent {
   const sheet = sheetOf(grid, where.sheet);
-  if (sheet === null) return { kind: 'refused', why: `there is no sheet named \`${where.sheet}\`` };
+  if (sheet === null) return refused(`there is no sheet named \`${where.sheet}\``);
 
   const ops = new Map<FilePath, Op[]>();
   const cells = new Set<string>();
@@ -104,19 +104,18 @@ export function clearRange(
   }
 
   if (held.length > 0 && !only) {
-    return { kind: 'refused', why: standing(cells.size, held, 'emptied') };
+    return refused(standing(cells.size, held, 'emptied'));
   }
   if (cells.size === 0) {
-    return { kind: 'refused', why: 'nothing in this range holds anything to empty' };
+    return refused('nothing in this range holds anything to empty');
   }
 
   const files = [...ops.keys()];
   const file = files[0];
   if (file === undefined || files.length > 1) {
-    return {
-      kind: 'refused',
-      why: `this range is written across ${files.map(beside).join(' and ')}, and this editor empties one file at a time`,
-    };
+    return refused(
+      `this range is written across ${files.map(beside).join(' and ')}, and this editor empties one file at a time`,
+    );
   }
 
   return {

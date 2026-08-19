@@ -197,7 +197,7 @@ a higher one. The rows below are in dependency order, and that order is
 | `spec` | L1 | The `SpecDoc` AST — the TypeScript shape of `docs/spec.md` — and the schema's own vocabulary: `MODELED_KEYS`, which is where the line ADR-011 draws is written down. Types and tables, no logic. |
 | `loader` | L1 | CST tree → `SpecDoc`, with the validation projection requires and `$include` expanded through an injected reader. Preserves unmodeled-but-valid constructs verbatim, marked `opaque`. (ADR-011) |
 | `compile` | L2/L3 | `SpecDoc` → `CompiledGrid` + per-facet provenance and style layers. Pure and deterministic; the workhorse. Reaches a `csv:` / `json:` file only through an injected reader. (ADR-005, ADR-019) |
-| `normalize` | L4 | The style normalizer: an applied style becomes a reference, an `extends:`, or a new definition — in that order of preference. (ADR-008) |
+| `normalize` | L4 | The style normalizer: an applied style becomes a reference to a declaration, a variant extending the nearest one, or the look itself — in that order of preference. (ADR-008, ADR-037) |
 | `patch` | L0/L1 | `Patch` → `cst` ops, the inverse patch that makes undo AST-level (ADR-010), and how many lines a patch rewrites. |
 | `verify` | L4 | The double-compile diff gate every patch passes. (ADR-009) |
 | `evaluate` | — | Formula evaluation behind a seam; display only, never written back. (ADR-013) |
@@ -2366,6 +2366,54 @@ this at a phase boundary rather than at the end.
   two serials either side of it, so the next reader knows it is deliberate.
 - A cell's own format — written, or the one its type takes — now wins over a
   band's. Both are requests about *that* cell; a band is something reaching it.
+
+### 2026-08-19 — Refactoring pass over the whole tree (`AGENTS.md` §8)
+At the Phase 7 boundary, and the pass that finally cleared the comment backlog.
+
+- **§8.1 — the schema key names stay literals, with the reason written down.**
+  `'value'`, `'formula'`, `'cells'`, `'overrides'` are spelled in `intent` while
+  `spec/keys.ts` owns `MODELED_KEYS`. They are not the same thing: `MODELED_KEYS`
+  is the set a *reader* validates against, and these are path segments a *writer*
+  builds. Promoting them would make `[...path, KEY.formula]` of every path for a
+  rename-safety a YAML schema does not have, and the guard that matters — the
+  checker compiling before and after — is already there. Left, with the note.
+- **§8.2 — `held(string): Holds` was byte-identical in `resolve.ts` and
+  `paste.ts`**, and `refused(why)` in `direct.ts` and `paste.ts`, with thirteen
+  more refusals built as literals. One `holding` and one `refused`, both in
+  `direct.ts` where `Holds` and `Intent` live.
+- **§8.2 — two different functions were named `beside`.** The one in `intent`
+  names a file by its last two segments; the one in `extension/inspect.ts`
+  resolves it against the spec. The second is `nearTo` now. No dead exports:
+  every export outside `normalize` (which Phase 9 will call) has a real caller,
+  measured rather than assumed.
+- **§8.3 — `paste.ts` was 527 lines and two subjects.** The gestures —
+  `pasteRange`, `pasteText`, the shape question — stay; where a rectangle *lands*
+  cell by cell, and what a blocked group becomes, is `landing.ts`. 527 to 279 and
+  254, and the one file both gestures share is now named after what it does.
+- **§8.4 — `excepting()` had no direct test.** It decides how an answer names a
+  group, singular and plural, and a definition's answer is not an override; all
+  three are pinned now.
+- **§8.5 — §4.2's `normalize` row still described ADR-008's third step**, which
+  ADR-037 superseded four hours earlier. Fixed; the README's prose already said
+  the new thing.
+- **§8.6 — the backlog went from 37 blocks over the limit to 11.** Two passes
+  had left it at 38, which is how a measurement becomes wallpaper. Every export
+  doc that ran to four lines lost the line that was a *why* or a second pointer;
+  every private doc that ran to two or three is one line where one line says it.
+  **The eleven kept, and why:** `Removal`, `FacetOrigin` and `DrawnCell` are
+  types whose conventions §8.6 says to state once in the type's own doc rather
+  than per field — the first is the rule's own example — and the eight private
+  ones each carry two constraints that one line cannot hold honestly
+  (`intoBlock`'s indentation *and* its quoting, the lexer's bare-name quirk in
+  `about`, and so on). The next pass can start from that list rather than
+  re-reading them.
+- **§8.7 — `layers ok`**, and the new `landing.ts` imports downward only: the
+  paste gestures hand it what it needs and it hands back ops.
+- **§8.9 — biome 2.5.9**, in its own commit, with `biome migrate` moving the
+  schema stamp. Node 22.21 and pnpm 11.21 are current; nothing else is behind.
+- **This pass ends at: exports 404 blocks / 876 lines (avg 2.2), private 234 /
+  260 (1.1), inline 47 / 64 (1.4), 11 over the limit** — from 37, and the private
+  average down from 1.3.
 
 ### 2026-08-19 — One answer per origin, and Phase 7 is complete
 A rectangle landing on cells that came from different places used to have one

@@ -9,8 +9,7 @@ import { parse } from './parse';
 import { renderScalar, type Value } from './write';
 
 /**
- * Apply ops to YAML source, changing only the bytes the ops reach: each op is
- * one replaced range and everything between is the original file (ADR-017).
+ * Apply ops to YAML source, changing only the bytes the ops reach (ADR-017).
  * An op that cannot be applied is refused with a diagnostic; the rest still
  * apply.
  */

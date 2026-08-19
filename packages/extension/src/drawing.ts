@@ -218,9 +218,8 @@ function typeable(cell: CompiledCell | null): Editable {
 }
 
 /**
- * The number format that applies: the cell's `own` first, else the inherited
- * one — which does not reach a text cell unless it has a text section
- * (`docs/spec.md` §4).
+ * The number format that applies: the cell's `own` first, else the inherited one,
+ * which does not reach a text cell unless it has a text section (`docs/spec.md` §4).
  */
 function applies(
   layers: readonly StyleLayer[],

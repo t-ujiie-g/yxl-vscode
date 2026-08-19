@@ -10,10 +10,9 @@ export interface FullAddr {
 }
 
 /**
- * Every cell one node of the spec reaches — what a resolution counts and what
- * `verify` takes as an edit's claim. Answers over the cells the projection
- * holds and the ones a `formulas:` range covers; a band's reach into empty
- * addresses cannot be said, since no cell is there to name.
+ * Every cell one node of the spec reaches, over the cells the projection holds
+ * and the ones a `formulas:` range covers. A band's reach into empty addresses
+ * cannot be said, since no cell is there to name.
  */
 export function reaches(grid: CompiledGrid, node: NodeId): readonly FullAddr[] {
   const found: FullAddr[] = [];
