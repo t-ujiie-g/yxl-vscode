@@ -995,11 +995,12 @@ The other half of what a person does with a sheet, and the half that decides
 whether the spec survives contact with a GUI (ADR-008).
 - [ ] A toolbar of what a reader reaches for: bold, italic, fill, text colour,
       borders, alignment, number format
-      **The four font switches are in** — bold, italic, underline, strike —
-      above the grid, showing what the selected cell wears and asking for the
-      other of it. The rest are the same path with more controls: a colour needs
-      a picker, a border needs an edge chosen, a number format needs the cell's
-      own `format:` key rather than its `style:`.
+      **The four font switches and the two colours are in** — bold, italic,
+      underline, strike, a fill and a text colour — above the grid, each showing
+      what the selected cell wears, and each colour with a button that takes it
+      off again (**ADR-038**). What is left is a border, which needs an edge
+      chosen, an alignment, and a number format, which is the cell's own
+      `format:` key rather than its `style:`.
 - [x] Every style write through the **normalizer** and through §4.4's `setStyle`
       table — change the definition, or fork it for this range, with the ripple
       count shown *before* the choice
@@ -1913,6 +1914,41 @@ variant a variant. A declaration that sets a property the look does not is never
 extended: the schema has no way to take a property back, so it would arrive on
 the cell.
 
+### ADR-038 — A look is taken off by leaving the leaf out, so `null` is the ask
+**Accepted.** A gesture that takes a look off — "no fill", "automatic text
+colour" — is `null` for that property in a `StyleWant`, the write-path twin of
+`StyleValues`. The schema has no way to say "no fill" (ADR-037's last paragraph
+is the same observation from the other end): absence is the only way it is said,
+so the ask is *drop the leaf*, and the edit is a `remove` rather than a `set`.
+
+*What follows, and is the point of writing this down:* a property supplied from
+*under* the cell cannot be taken off **at** the cell. Where a band or a
+declaration gives the fill, no bytes written on the cell take it away, so the
+cells answer is not offered at all and the only answers are at the layer that
+supplies it — change the declaration, change the band — each with its ripple
+count. That is the resolution table working, not a gap in it.
+
+*A boolean is the exception, and stays one.* A switch turned off sends `false`,
+not `null`: `{ extends: header, font: { bold: false } }` is a thing the schema
+can say and the honest form of "a header, but not bold". `null` is available for
+a boolean too and means the stronger "stop saying anything about it", which no
+control sends today.
+
+*The gesture a reader expects here is one the schema cannot answer*, and that
+is **[yxl#71](https://github.com/t-ujiie-g/yxl/issues/71)** rather than something
+to build around. Click *no fill* on a cell under a filled column band and the
+only answer is to change the band — the whole column, from a gesture on one
+cell. An editor-side consolation (asking first, refusing, offering a white fill)
+would be work thrown away the day `fill: null` exists, so the request went
+upstream and the behaviour here stands as it is until it is answered (§8 Q16).
+
+*Taking the last leaf out takes its mapping with it*, up to but never past the
+construct's own node. `- { at: A, style: { fill: X } }` goes back to
+`- { at: A }` rather than to `- { at: A, style: {} }`, so a look put on and
+taken off leaves the file byte for byte where it started. The declaration itself
+is never removed — cells name it — so a `defs.styles` entry emptied this way is
+left as `{}`.
+
 ## 8. Open questions
 
 - **Q1 — `cells:` A1 keys and row insertion.** Inserting a row rewrites every
@@ -2054,6 +2090,14 @@ the cell.
   than guessing at the reader from the outside — which is what this pass did,
   and why it got one of three things right.
 
+- **Q16 — Can a spec say a property is *not* set?** Filed upstream as
+  [yxl#71](https://github.com/t-ujiie-g/yxl/issues/71). A boolean can be
+  contradicted (`{ extends: header, font: { bold: false } }`); nothing else can,
+  since absence is the schema's only way of spelling "off" and absence is what
+  lets a band through. Until it is answered, taking a colour off a cell that
+  reads it from a band or a declaration changes *that*, with the count of what
+  it moves — which is the resolution table working, not a gap in it (ADR-038).
+  If the answer is no, the editor keeps that behaviour and the README says so.
 - **Q13 — What draws a chart's sketch?** ADR-029 needs an outline, a title, a
   legend box and a series list — which is hand-written SVG, not a chart library,
   unless the sketch turns out to want axes. No runtime dependency without an ADR
@@ -2156,6 +2200,25 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-20 — Unsetting a style property requested upstream
+- Filed [yxl#71](https://github.com/t-ujiie-g/yxl/issues/71) for ADR-038 / §8
+  Q16: a spec can say a property **is** something and has no way to say it is
+  **nothing** where a band or a declaration already says it is something.
+- **Writing it up turned a GUI request into a round-trip defect**, which is the
+  stronger half of it. A workbook with a column-wide fill and one deliberately
+  unfilled cell — an ordinary thing in Excel — was built with openpyxl, run
+  through `yxl extract`, and rebuilt: the exception cell comes back **filled**,
+  and `extract` reports that everything rebuilds as read. There was nothing it
+  could have written. Same family as yxl#48, but on a written cell and with no
+  warning at all.
+- Both spellings the request could take are errors today (`fill: null` — "must
+  be a hex color or a mapping"; `fill: none` — "not a valid hex color"), so
+  giving either a meaning is additive. Measured rather than assumed, as was
+  everything above.
+- **Nothing is built here in the meantime.** The editor's honest answer —
+  change the band, and say what that moves — already exists; an editor-side
+  consolation would be thrown away the day the schema can say it.
 
 ### 2026-08-14 — Project bootstrapped
 - Reviewed `yxl` (v0.3.3, MoonBit, Phase 10/11 of its own roadmap) and the
@@ -2387,6 +2450,47 @@ this at a phase boundary rather than at the end.
   two serials either side of it, so the next reader knows it is deliberate.
 - A cell's own format — written, or the one its type takes — now wins over a
   band's. Both are requests about *that* cell; a band is something reaching it.
+
+### 2026-08-20 — A colour you can pick, and a look you can take off
+The toolbar's next two controls, and the ask they needed: a fill and a text
+colour, each a swatch showing what the selected cell wears, each with a button
+that takes it off again.
+
+- **`StyleWant` is the write path's twin of `StyleValues`** (**ADR-038**): the
+  same leaves, each also allowing `null`, which asks for the property to be taken
+  off. The schema says "no fill" only by leaving the leaf out, so the ask had to
+  be a third state rather than a value — `false` is a look, not an absence.
+- **A property supplied from under the cell has no answer on the cell.** Where a
+  band or a declaration gives the fill, nothing written on the cell takes it
+  away, so `setStyle` offers only the answers at the layer that supplies it, with
+  what each would move. Asking for it off where the *cell* carries it writes the
+  cell back to what it was.
+- **Taking the last leaf out takes its mapping with it.** `- { at: A, style: {
+  fill: X } }` goes back to `- { at: A }`, not to `- { at: A, style: {} }`, and
+  the pruning stops at the construct's own node so a declaration is never
+  removed out from under the cells that name it. Without this, "put a fill on
+  and take it off" left a residue, which is the standard the font switches
+  already meet.
+- **The picker is the browser's**, and its `#rrggbb` is not the spelling a spec
+  writes: what leaves the view is `RRGGBB`, parsed through `parseColor` at the
+  edge so a value that is not a colour never becomes an edit.
+- **The switches stopped being addressed by position.** `.look:nth-child(3)` was
+  the underline switch until a fifth control landed; each now carries the name of
+  the leaf it sets.
+- **A colour landed on the wrong cell, and running it is what found that.** A
+  colour input commits when it is *dismissed*, and the click that dismisses it
+  has already moved the selection — so the fill went to whatever was clicked
+  next. Every toolbar control now acts on the rectangle its toolbar was drawn
+  over rather than on the live selection, which is the same thing for a button
+  and is not for a picker. Pinned in `index.test.ts`, where the whole gesture is
+  driven: select, open, select elsewhere, commit.
+- **Taking a fill off a cell under a band changes the band**, which is the whole
+  column, and that is the only answer there is: what a reader wants there — this
+  one cell, uncoloured — is a thing `docs/spec.md` cannot say (ADR-038). Filed
+  as [yxl#71](https://github.com/t-ujiie-g/yxl/issues/71) rather than worked
+  around here.
+- Comment shape: exports 414 blocks / 897 lines (avg 2.2), private 273 / 299
+  (1.1), inline 52 / 70 (1.3), 11 over the limit — the same eleven.
 
 ### 2026-08-20 — A rectangle that takes its look from more than one place
 The refusal the last pass left behind, answered: §4.4's `setStyle` step 4, which

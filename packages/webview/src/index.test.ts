@@ -99,6 +99,32 @@ describe('what the view sends', () => {
     ]);
   });
 
+  it('sends a colour to the cells the picker was opened over, not to what is selected since', () => {
+    const { into, sent } = view();
+
+    at(into, 1, 1)?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    const pick = into.querySelector<HTMLInputElement>('.look.fill .pick');
+    if (pick === null) throw new Error('there is no picker');
+
+    // A colour input commits when it is dismissed, and the click that dismissed
+    // it has already moved the selection by then.
+    at(into, 2, 2)?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    pick.value = '#1f3864';
+    pick.dispatchEvent(new Event('change'));
+
+    expect(sent.filter((one) => one.kind === 'wear')).toEqual([
+      {
+        kind: 'wear',
+        sheet: 'Sales',
+        top: 1,
+        left: 1,
+        bottom: 1,
+        right: 1,
+        want: { fill: '1F3864' },
+      },
+    ]);
+  });
+
   it('sends an override as an override, whatever the offer arrived carrying', () => {
     // The offer comes back from the host, and a message carries its own `kind`.
     // Spread into the next one it overwrote it, and the override went out as
