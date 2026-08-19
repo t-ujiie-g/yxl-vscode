@@ -111,6 +111,9 @@ export function restate(into: HTMLElement, showing: Showing, asks: Asks): void {
     grid.querySelector(`td[data-at="${key}"]`)?.classList.add('reached');
   }
 
+  // The switches say what the *selected* cell wears, so they follow the selection.
+  into.querySelector('.toolbar')?.replaceWith(toolbar(showing, asks));
+
   say(under, showing, asks);
   told(into, showing);
 }

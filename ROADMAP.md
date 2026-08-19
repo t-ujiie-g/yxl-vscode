@@ -2424,6 +2424,10 @@ path with more UI.
   item ("apply to all" / "split by origin"); and a look under an `overrides:`
   entry offers to change the override rather than the cell, since writing under
   it would change nothing a reader can see.
+- **The switches follow the selection**, which is not where they were first
+  drawn: a click restates the view rather than redrawing it, so the toolbar had
+  to be rebuilt there too. Found by running it, and pinned by a test that draws
+  with nothing selected and restates with something.
 - **This pass ends at: exports 413 blocks / 893 lines (avg 2.2), private 252 /
   278 (1.1), inline 49 / 66 (1.3), 11 over the limit** — the eleven the last pass
   kept, and nothing new.

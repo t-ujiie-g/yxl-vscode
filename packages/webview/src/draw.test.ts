@@ -841,3 +841,44 @@ describe('what the view says about a spec', () => {
     expect(into.querySelector('.note')?.textContent).toContain('no sheets');
   });
 });
+
+describe('the switches over the grid', () => {
+  const state = (selected: Showing['selected']): Showing => ({
+    drawing: drawing({ sheets: [sheet({ cells: [cell(1, 1, { value: 'APAC' })] })] }),
+    sheet: 0,
+    selected,
+    anchor: null,
+    sources: null,
+    reached: null,
+    refused: null,
+    said: null,
+    copied: null,
+    looking: null,
+    editable: null,
+  });
+
+  it('follow the selection, which arrives after the grid was drawn', () => {
+    const into = document.createElement('div');
+    const switches = () => [...into.querySelectorAll<HTMLButtonElement>('.look')];
+
+    draw(into, state(null), asks());
+    expect(switches().every((one) => one.disabled)).toBe(true);
+
+    restate(into, state({ row: 1, col: 1 }), asks());
+    expect(switches().some((one) => one.disabled)).toBe(false);
+  });
+
+  it('show what the cell now selected wears, not what the last one did', () => {
+    const into = document.createElement('div');
+    const bold = drawing({
+      sheets: [sheet({ cells: [cell(1, 1, { style: { 'font.bold': true } }), cell(2, 1)] })],
+    });
+
+    draw(into, { ...state(null), drawing: bold }, asks());
+    restate(into, { ...state({ row: 1, col: 1 }), drawing: bold }, asks());
+    expect(into.querySelector('.look')?.classList.contains('on')).toBe(true);
+
+    restate(into, { ...state({ row: 2, col: 1 }), drawing: bold }, asks());
+    expect(into.querySelector('.look')?.classList.contains('on')).toBe(false);
+  });
+});
