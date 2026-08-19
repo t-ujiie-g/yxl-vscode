@@ -11,8 +11,7 @@ export type Editability = 'direct' | 'mediated' | 'external' | 'readonly';
 /**
  * How editable a value or a format is. An `empty` origin with a cell is
  * `direct` — one place a value would go — and without one asks, since a new
- * entry and an extended `data:` rectangle are both answers. Nothing is
- * `readonly` yet.
+ * entry and an extended `data:` rectangle are both answers.
  */
 export function editabilityOf(origin: FacetOrigin): Editability {
   switch (origin.kind) {

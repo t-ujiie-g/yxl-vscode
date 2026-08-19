@@ -20,8 +20,7 @@ export type IncludeReader = (from: FilePath, path: FilePath) => Included | null;
 
 /**
  * What every reader is given: the file it is reading, somewhere to put what it
- * could not read, and the way out to another file. A reader reports and carries
- * on — a spec being edited is wrong most of the time. `chain` is the files
+ * could not read, and the way out to another file. `chain` is the files
  * followed to get here, so an include that comes back round can name the loop.
  */
 export interface Ctx {

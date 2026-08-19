@@ -155,10 +155,7 @@ function emptyAt(offset: number): Scalar {
   return { kind: 'scalar', value: null, source: '', style: 'plain', span: span(offset, offset) };
 }
 
-/**
- * Where an absent value sits: just after the `:`. `sep` runs on through the
- * whitespace and line break, so the indicator is found by type, not taken last.
- */
+/** Where an absent value sits: just after the `:`, found among `sep` by token type rather than by position. */
 function afterSeparator(item: CST.CollectionItem, fallback: number): number {
   const indicator = item.sep?.find((token) => token.type === 'map-value-ind');
   return indicator ? indicator.offset + indicator.source.length : fallback;

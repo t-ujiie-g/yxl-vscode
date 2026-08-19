@@ -6,10 +6,9 @@ import type { Value } from './write';
 export type Path = readonly (string | number)[];
 
 /**
- * An edit against the YAML tree. They come in pairs (`ROADMAP.md` §4.5): `set`
- * against `write` / `clear`, `insert` and `add` against `remove`, `remove`
- * against `restore`, `renameKey` against itself. `write` and `restore` put back
- * *text*, which is what makes an undo byte-exact (ADR-026, ADR-027).
+ * An edit against the YAML tree; they come in pairs, listed in `ROADMAP.md`
+ * §4.5. `write` and `restore` put back *text*, which is what makes an undo
+ * byte-exact (ADR-026, ADR-027).
  */
 export type Op =
   | { readonly op: 'set'; readonly path: Path; readonly value: Value }

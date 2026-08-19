@@ -92,10 +92,7 @@ function addresses(before: CompiledSheet, after: CompiledSheet): A1Addr[] {
   return [...all] as A1Addr[];
 }
 
-/**
- * How many addresses one comparison looks at. Past it, addresses inside a
- * `formulas:` range are dropped: a million cells holding one shifted formula.
- */
+/** How many addresses one comparison looks at; past it, the inside of a `formulas:` range is dropped. */
 const REACH = 50_000;
 
 function alike(before: StyleValues, after: StyleValues): boolean {

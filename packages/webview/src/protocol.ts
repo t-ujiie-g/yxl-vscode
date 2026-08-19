@@ -4,8 +4,7 @@ import type { ScalarValue, StyleValues } from '@yxl-vscode/spec';
 /**
  * What the host sends the view, and all the view knows of a spec: a projection
  * flattened for JSON, with every decision about how a cell looks made on the
- * side that has the provenance (ADR-001). `uncomputed` says why some cells show
- * a formula rather than a result.
+ * side that has the provenance (ADR-001).
  */
 export interface Drawing {
   readonly kind: 'drawing';
@@ -128,9 +127,8 @@ export interface Highlighted {
 
 /**
  * Why an edit did not happen, said beside the grid. `choices` are the ways it
- * could be made, for the reader to pick between (ADR-001); `canOverride` offers
- * the exception (ADR-007). Both are about `typed`, which the view sends back
- * when one is taken.
+ * could be made (ADR-001) and `canOverride` offers the exception (ADR-007);
+ * both are about `about`, which the view sends back when one is taken.
  */
 export interface Refused {
   readonly kind: 'refused';

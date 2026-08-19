@@ -82,10 +82,8 @@ function flat(computed: ReadonlyMap<SheetName, ReadonlyMap<A1Addr, Computed>>) {
 }
 
 /**
- * Which sheets cannot be computed, and what is missing. A formula naming what
- * the engine was not given taints everything that reads it; without a
- * dependency graph the line is the sheet, and doubt crosses wherever a formula
- * reads across one (ADR-025).
+ * Which sheets cannot be computed, and what is missing: without a dependency
+ * graph the line is the sheet, and doubt crosses wherever one reads (ADR-025).
  */
 function doubt(
   asked: readonly Asked[],
@@ -142,10 +140,7 @@ function said(names: ReadonlySet<string>): string {
 const LIMIT = 20_000;
 const PASSES = 20;
 
-/**
- * The cells one sheet holds and the formulas it asks for. A `formulas:` range
- * is walked only over the box the sheet writes: `D2:D1048576` is legal.
- */
+/** The cells one sheet holds and the formulas it asks for, over the box the sheet writes: `D2:D1048576` is legal. */
 function gather(sheet: CompiledSheet, held: Map<SheetName, Held[]>, asked: Asked[]): void {
   const name = sheetName(sheet.name) ?? (sheet.name as SheetName);
   const holds = held.get(name) ?? [];

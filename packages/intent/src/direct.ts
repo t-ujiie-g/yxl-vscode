@@ -26,6 +26,7 @@ import {
   type SheetName,
 } from '@yxl-vscode/units';
 import type { Expects } from '@yxl-vscode/verify';
+import { meaning } from './typed';
 
 /**
  * What a gesture came to: an edit to make, with what it claims to change, or a
@@ -233,6 +234,14 @@ export function literalPath(
   }
 }
 
+/** What a typed string would have a cell hold; a formula that is not one is taken as nothing. */
+export function holding(typed: string): Holds {
+  const meant = meaning(typed);
+  if (meant.is === 'formula') return { formula: meant.body };
+
+  return { value: meant.is === 'value' ? meant.value : null };
+}
+
 /** One `cells:` entry as it is written: a formula is a key under the address, a value its own scalar (`docs/spec.md` §3). */
 export function entryText(at: A1Addr, holds: Holds): string {
   return 'formula' in holds
@@ -369,6 +378,7 @@ export function beside(file: string): string {
   return file.split('/').slice(-2).join('/');
 }
 
-function refused(why: string): Intent & { kind: 'refused' } {
+/** An edit that will not happen, and the sentence a reader can act on (ADR-001). */
+export function refused(why: string): Intent & { kind: 'refused' } {
   return { kind: 'refused', why };
 }

@@ -49,10 +49,7 @@ export function compileFacets(
   };
 }
 
-/**
- * A `type: date` or `type: duration` as the number Excel keeps, and the default
- * format that number reads under where the spec wrote none (`docs/spec.md` §3).
- */
+/** A `type: date` or `type: duration` as the number Excel keeps, under the format it reads (`docs/spec.md` §3). */
 function asTyped(
   ctx: Ctx,
   node: SpecNode & CellFacets,

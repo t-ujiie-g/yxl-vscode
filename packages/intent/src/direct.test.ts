@@ -4,7 +4,7 @@ import { type IncludeReader, load } from '@yxl-vscode/loader';
 import { type A1Addr, type FilePath, filePath, type SheetName } from '@yxl-vscode/units';
 import { type Ctx, checked } from '@yxl-vscode/verify';
 import { describe, expect, it } from 'vitest';
-import { type Intent, reading, setFormula, setValue, type Text } from './direct';
+import { excepting, type Intent, reading, setFormula, setValue, type Text } from './direct';
 
 const ROOT = filePath('spec.yxl.yaml') ?? ('' as FilePath);
 
@@ -233,5 +233,22 @@ describe('the files an edit reads', () => {
   it('hands the text through as it stands, for the files it does not parse', () => {
     const read = reading((file) => (file === ROOT ? 'APAC,1\n' : null));
     expect(read.text(ROOT)).toBe('APAC,1\n');
+  });
+});
+
+describe('what an answer for one group of a rectangle says', () => {
+  it('names the group in the words the refusal counted it in', () => {
+    expect(excepting('range', 2)).toBe('Write the 2 that are filled by a range as overrides');
+  });
+
+  it('says one of them singly, since a count of one improves on nothing', () => {
+    expect(excepting('parameter', 1)).toBe('Write the one that reads a parameter as an override');
+  });
+
+  it('says what a cell reading a definition becomes, which is not an override', () => {
+    expect([excepting('definition', 1), excepting('definition', 3)]).toEqual([
+      'Write the one that reads a definition as a value of its own',
+      'Write the 3 that read a definition as values of their own',
+    ]);
   });
 });

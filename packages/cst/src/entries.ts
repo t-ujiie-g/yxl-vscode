@@ -35,10 +35,7 @@ export function insertion(
   return { span: span(placed.at, placed.at), text: written };
 }
 
-/**
- * Where an item goes into a block sequence, and the prefix — indentation and
- * `- ` — it takes from a neighbour. An empty sequence has none to copy.
- */
+/** Where an item goes into a block sequence, and the `- ` prefix it takes from a neighbour; an empty one has none. */
 function intoSequence(
   source: string,
   op: { readonly path: Path; readonly index: number },
@@ -204,10 +201,7 @@ function opensAnItem(source: string, start: number): boolean {
 
 type Held = Extract<Site, { in: 'map' } | { in: 'seq' }>;
 
-/**
- * The text a removal covers: the entry, the comment block directly above it,
- * and the blank line under it where one separates it from the next.
- */
+/** The text a removal covers: the entry, the comment block above it, and the blank line under it. */
 function taken(source: string, site: Held): Span {
   const own = site.in === 'map' ? site.entry.span : site.node.span;
   const next = siblingsOf(site)[site.index + 1];

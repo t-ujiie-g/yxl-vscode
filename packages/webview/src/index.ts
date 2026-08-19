@@ -53,8 +53,7 @@ export interface Host {
 /**
  * The view, driven by the host's messages. It holds a few things of its own —
  * named, not numbered, so a spec read again finds them (ADR-023) — and redraws
- * outright for everything else (ADR-001). Takes the page and the host so that
- * what it *sends* can be tested.
+ * outright for everything else (ADR-001).
  */
 export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
   let drawing: Drawing | null = null;

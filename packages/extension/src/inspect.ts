@@ -56,7 +56,7 @@ function says(origin: FacetOrigin, where: Described | undefined, from: string): 
     case 'inline':
       return `row ${origin.row + 1}, field ${origin.col + 1} of ${where?.what ?? 'a data block'}`;
     case 'external':
-      return `row ${origin.row + 1}, field ${origin.col + 1} of \`${beside(from, origin.file)}\``;
+      return `row ${origin.row + 1}, field ${origin.col + 1} of \`${nearTo(from, origin.file)}\``;
     case 'formulaRange':
       return `filled from \`${origin.anchor}\` by ${where?.what ?? 'a formula range'}`;
     case 'defRef':
@@ -78,7 +78,7 @@ function through(from: string, where: Described | undefined): string {
 }
 
 /** A file as the spec would name it, relative to the spec; the absolute path is this machine's. */
-function beside(from: string, file: string): string {
+function nearTo(from: string, file: string): string {
   const near = relative(dirname(from), file);
   return near === '' || near.startsWith('..') ? file : near;
 }

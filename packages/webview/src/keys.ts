@@ -69,10 +69,7 @@ function stepping(event: KeyboardEvent, sheet: DrawnSheet): { rows: number; cols
   }
 }
 
-/**
- * The edge of the block: the far end of a run, or across a gap to the next
- * thing, or the edge of the sheet. Over the cells the host has drawn.
- */
+/** The edge of the block: the far end of a run, across a gap to the next thing, or the sheet's own edge. */
 function edge(
   sheet: DrawnSheet,
   held: ReadonlyMap<string, DrawnCell>,
