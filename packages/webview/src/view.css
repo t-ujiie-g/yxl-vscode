@@ -48,6 +48,49 @@ body {
   border-color: var(--vscode-focusBorder);
 }
 
+.toolbar {
+  display: flex;
+  gap: 0.25rem;
+  margin-bottom: 0.4rem;
+}
+
+.look {
+  width: 1.9rem;
+  padding: 0.15rem 0;
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 3px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.look:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.look.on {
+  background: var(--vscode-toolbar-activeBackground, var(--vscode-tab-activeBackground));
+  border-color: var(--vscode-focusBorder);
+}
+
+.look:nth-child(1) {
+  font-weight: 700;
+}
+
+.look:nth-child(2) {
+  font-style: italic;
+}
+
+.look:nth-child(3) {
+  text-decoration: underline;
+}
+
+.look:nth-child(4) {
+  text-decoration: line-through;
+}
+
 .tabs {
   display: flex;
   gap: 0.25rem;

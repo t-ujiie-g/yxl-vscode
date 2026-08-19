@@ -81,8 +81,12 @@ export function addedBlock(
   const target = mappingFor(op, site, refuse);
   if (target === undefined) return undefined;
   if (target.flow) {
-    refuse(CODE.flowNotSupported, insideFlow(op.path), target.span);
-    return undefined;
+    // A flow mapping is one line, so only a source that is one line fits in it.
+    if (op.source.includes('\n')) {
+      refuse(CODE.flowNotSupported, insideFlow(op.path), target.span);
+      return undefined;
+    }
+    return { span: target.span, text: withEntry(source, target, op.key, op.source, null) };
   }
 
   const last = target.entries[target.entries.length - 1];
@@ -117,7 +121,12 @@ export function addition(
 ): Edit | undefined {
   const target = mappingFor(op, site, refuse);
   if (target === undefined) return undefined;
-  if (target.flow) return { span: target.span, text: withEntry(source, target, op) };
+  if (target.flow) {
+    return {
+      span: target.span,
+      text: withEntry(source, target, op.key, renderScalar(op.value), op.before),
+    };
+  }
 
   const first = target.entries[0];
   if (!first) {

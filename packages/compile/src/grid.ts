@@ -1,6 +1,6 @@
 import type { Diagnostic } from '@yxl-vscode/diag';
 import type { CellType, ScalarValue, StyleValues } from '@yxl-vscode/spec';
-import type { A1Addr, NodeId, Rect, SheetName } from '@yxl-vscode/units';
+import type { A1Addr, NodeId, Rect, SheetName, StyleName } from '@yxl-vscode/units';
 import type { CellProvenance } from './provenance';
 import type { StyleLayer } from './style';
 
@@ -11,7 +11,15 @@ import type { StyleLayer } from './style';
  */
 export interface CompiledGrid {
   readonly sheets: readonly CompiledSheet[];
+  readonly styles: readonly DeclaredStyle[];
   readonly diagnostics: readonly Diagnostic[];
+}
+
+/** One look the spec declares, by the values its name resolves to — what a style write reuses (ADR-037). */
+export interface DeclaredStyle {
+  readonly name: StyleName;
+  readonly gives: StyleValues;
+  readonly node: NodeId;
 }
 
 /** One sheet, held sparse: `cellAt` answers for an address whichever construct holds it. */

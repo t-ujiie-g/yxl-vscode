@@ -94,6 +94,7 @@ function taken(about: About, choice: string, asks: Asks): void {
   if (about.is === 'ranged') asks.emptiedWith(about.ranged, choice);
   if (about.is === 'pasted') asks.pastedWith(about.pasted, choice);
   if (about.is === 'text') asks.pastedTextWith(about.text, choice);
+  if (about.is === 'worn') asks.wornWith(about.worn, choice);
 }
 
 /** What a choice would move, as a count a reader can act on and a few names. */

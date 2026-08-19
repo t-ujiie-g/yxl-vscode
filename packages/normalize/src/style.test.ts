@@ -1,7 +1,7 @@
 import type { StyleValues } from '@yxl-vscode/spec';
 import { parseColor, type StyleName, styleName } from '@yxl-vscode/units';
 import { describe, expect, it } from 'vitest';
-import { type Declared, NEARBY, normalize } from './style';
+import { type Declared, NEARBY, normalize, written } from './style';
 
 function named(name: string): StyleName {
   const read = styleName(name);
@@ -156,5 +156,37 @@ describe('a look nothing declared can say', () => {
 describe('a look with nothing in it', () => {
   it('is nothing to write', () => {
     expect(normalize({}, declares({ base: BASE }))).toBeNull();
+  });
+});
+
+describe('a look as a spec writes it', () => {
+  it('is the name alone where a declaration says it', () => {
+    expect(written({ kind: 'ref', name: named('header') })).toBe('header');
+  });
+
+  it('nests the leaves back into the mapping they came from', () => {
+    const gives: StyleValues = { 'font.bold': true, 'font.size': 11, 'align.wrap': true };
+    expect(written({ kind: 'inline', gives })).toBe(
+      '{ font: { bold: true, size: 11 }, align: { wrap: true } }',
+    );
+  });
+
+  it('quotes a colour and a format code, which are not the numbers they look like', () => {
+    const gives: StyleValues = { fill: colour('000000'), format: '0.0%' };
+    expect(written({ kind: 'inline', gives })).toBe('{ fill: "000000", format: "0.0%" }');
+  });
+
+  it('writes a variant as the declaration it extends and what it says over it', () => {
+    const gives: StyleValues = { 'font.bold': true };
+    expect(written({ kind: 'extend', base: named('base'), gives })).toBe(
+      '{ extends: base, font: { bold: true } }',
+    );
+  });
+
+  it('spreads a border edge back over the keys it was written under', () => {
+    const gives: StyleValues = { 'border.top.style': 'thin', 'border.top.color': colour('CCCCCC') };
+    expect(written({ kind: 'inline', gives })).toBe(
+      '{ border: { top: { style: thin, color: "CCCCCC" } } }',
+    );
   });
 });

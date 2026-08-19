@@ -1,3 +1,4 @@
+import { renderScalar, type Value } from '@yxl-vscode/cst';
 import { STYLE_PROPERTIES, type StyleProperty, type StyleValues } from '@yxl-vscode/spec';
 import type { StyleName } from '@yxl-vscode/units';
 
@@ -90,4 +91,50 @@ function ordered(values: StyleValues): StyleValues {
 
 function properties(values: StyleValues): StyleProperty[] {
   return STYLE_PROPERTIES.filter((key) => values[key] !== undefined);
+}
+
+/** A look as a spec writes one: the name of a declaration, or a mapping in flow form (`docs/spec.md` §6). */
+export function written(of: Written): string {
+  if (of.kind === 'ref') return of.name;
+
+  const gives = spelled(of.gives);
+  return of.kind === 'extend' ? `{ extends: ${of.base}, ${gives.slice(2)}` : gives;
+}
+
+/** The properties as the nested mapping they are leaves of, in flow form. */
+function spelled(gives: StyleValues): string {
+  const tree: Nested = {};
+  for (const key of properties(gives)) place(tree, key.split('.'), scalar(key, gives[key]));
+
+  return flow(tree);
+}
+
+type Nested = { [key: string]: Nested | string };
+
+function place(tree: Nested, path: readonly string[], value: string): void {
+  const [head, ...rest] = path;
+  if (head === undefined) return;
+  if (rest.length === 0) {
+    tree[head] = value;
+    return;
+  }
+
+  const under = tree[head];
+  const held = typeof under === 'object' ? under : {};
+  tree[head] = held;
+  place(held, rest, value);
+}
+
+function flow(tree: Nested): string {
+  const entries = Object.entries(tree).map(
+    ([key, held]) => `${key}: ${typeof held === 'string' ? held : flow(held)}`,
+  );
+
+  return `{ ${entries.join(', ')} }`;
+}
+
+/** A colour or a format code is quoted, since `000000` and `0.0%` are not the strings they look like. */
+function scalar(key: StyleProperty, value: unknown): string {
+  const spelt = key === 'format' || key === 'fill' || key.endsWith('color');
+  return spelt ? renderScalar(String(value), 'double') : renderScalar(value as Value);
 }

@@ -1,0 +1,217 @@
+import { compile } from '@yxl-vscode/compile';
+import { parse } from '@yxl-vscode/cst';
+import { type IncludeReader, load } from '@yxl-vscode/loader';
+import type { StyleValues } from '@yxl-vscode/spec';
+import { type FilePath, filePath, type Rect, type SheetName } from '@yxl-vscode/units';
+import { type Ctx, checked } from '@yxl-vscode/verify';
+import { describe, expect, it } from 'vitest';
+import { reading } from './direct';
+import type { Candidate } from './resolve';
+import { setStyle } from './style';
+
+const ROOT = filePath('spec.yxl.yaml') ?? ('' as FilePath);
+const SALES = 'sheets:\n  - name: Sales\n';
+
+function files(source: string) {
+  const includes: IncludeReader = (_from, path) => (path === ROOT ? { file: ROOT, source } : null);
+
+  const { doc } = load(parse(source, { file: ROOT }), includes);
+  if (doc === null) throw new Error('did not load');
+
+  return { grid: compile(doc, { read: includes }), read: reading(() => source), includes };
+}
+
+const at = (top: number, left: number, bottom = top, right = left): Rect => ({
+  top,
+  left,
+  bottom,
+  right,
+});
+
+/** The answers a look asked for has, over the rectangle named. */
+function offered(source: string, rect: Rect, want: StyleValues): readonly Candidate[] {
+  const { grid, read } = files(source);
+  return setStyle({ grid }, { sheet: 'Sales' as SheetName, rect }, want, read);
+}
+
+/** The chosen answer, taken all the way through the checker. */
+function taken(source: string, candidate: Candidate): string {
+  const { intent } = candidate;
+  if (intent.kind !== 'edit') throw new Error('a file was not written');
+
+  const { includes } = files(source);
+  const ctx: Ctx = { root: ROOT, file: intent.file, read: includes };
+  const done = checked(source, intent.patch, intent.expects, ctx);
+  if (done.ok === false) {
+    throw new Error(`the checker refused it: ${done.diagnostics[0]?.message ?? 'a surprise'}`);
+  }
+
+  return done.text;
+}
+
+const BOLD: StyleValues = { 'font.bold': true };
+
+describe('a look nothing else supplies', () => {
+  it('is one answer, which a caller may take without asking', () => {
+    const spec = `${SALES}    cells:\n      A1: 1\n`;
+    const answers = offered(spec, at(1, 1), BOLD);
+
+    expect(answers.map((one) => [one.id, one.alone])).toEqual([['onCells', true]]);
+  });
+
+  it('turns a cell written as a value into one that carries a look as well', () => {
+    const spec = `${SALES}    cells:\n      A1: 1\n`;
+    const [answer] = offered(spec, at(1, 1), BOLD);
+    if (answer === undefined) throw new Error('nothing was offered');
+
+    expect(taken(spec, answer)).toBe(
+      `${SALES}    cells:\n      A1: { value: 1, style: { font: { bold: true } } }\n`,
+    );
+  });
+
+  it('writes it beside what a cell already says, leaving that alone', () => {
+    const spec = `${SALES}    cells:\n      A1: { value: 1, format: "0.0%" }\n`;
+    const [answer] = offered(spec, at(1, 1), BOLD);
+    if (answer === undefined) throw new Error('nothing was offered');
+
+    expect(taken(spec, answer)).toContain(
+      'A1: { value: 1, format: "0.0%", style: { font: { bold: true } } }',
+    );
+  });
+
+  it('writes a cell of its own at an address nothing has written', () => {
+    const spec = `${SALES}    cells:\n      A1: 1\n`;
+    const [answer] = offered(spec, at(5, 2), BOLD);
+    if (answer === undefined) throw new Error('nothing was offered');
+
+    expect(taken(spec, answer)).toBe(
+      `${SALES}    cells:\n      A1: 1\n      B5:\n        style: { font: { bold: true } }\n`,
+    );
+  });
+
+  it('names the declaration that already says exactly this look (ADR-037)', () => {
+    const spec = `defs:\n  styles:\n    strong: { font: { bold: true } }\n${SALES}    cells:\n      A1: 1\n`;
+    const [answer] = offered(spec, at(1, 1), BOLD);
+    if (answer === undefined) throw new Error('nothing was offered');
+
+    expect(taken(spec, answer)).toContain('A1: { value: 1, style: strong }');
+  });
+
+  it('extends the declaration a cell already wears rather than restating it', () => {
+    const spec = `defs:\n  styles:\n    base: { font: { name: Calibri, size: 11 } }\n${SALES}    cells:\n      A1: { value: 1, style: base }\n`;
+    const [answer] = offered(spec, at(1, 1), BOLD);
+    if (answer === undefined) throw new Error('nothing was offered');
+
+    expect(taken(spec, answer)).toContain(
+      'A1: { value: 1, style: { extends: base, font: { bold: true } } }',
+    );
+  });
+});
+
+describe('a look the cell itself already carries', () => {
+  const BOLDED = `${SALES}    cells:\n      A1: { value: 1, style: { font: { bold: true } } }\n`;
+
+  it("is the cell's own answer and nobody else's, so it is not a question", () => {
+    const answers = offered(BOLDED, at(1, 1), { 'font.bold': false });
+    expect(answers.map((one) => [one.id, one.alone])).toEqual([['onCells', true]]);
+  });
+
+  it('comes off again, leaving the cell as it was written before it went on', () => {
+    const plain = `${SALES}    cells:\n      A1: 1\n`;
+    const [on] = offered(plain, at(1, 1), BOLD);
+    if (on === undefined) throw new Error('nothing was offered');
+
+    const bolded = taken(plain, on);
+    const [off] = offered(bolded, at(1, 1), { 'font.bold': false });
+    if (off === undefined) throw new Error('nothing was offered');
+
+    expect(taken(bolded, off)).toBe(plain);
+  });
+
+  it('leaves the rest of the look where only one of it comes off', () => {
+    const spec = `${SALES}    cells:\n      A1: { value: 1, style: { font: { bold: true, italic: true } } }\n`;
+    const [answer] = offered(spec, at(1, 1), { 'font.bold': false });
+    if (answer === undefined) throw new Error('nothing was offered');
+
+    expect(taken(spec, answer)).toContain('A1: { value: 1, style: { font: { italic: true } } }');
+  });
+
+  it('keeps a switch turned off where a band under it turns it on', () => {
+    const spec = `${SALES}    columns:\n      - { at: A, style: { font: { bold: true } } }\n    cells:\n      A1: { value: 1, style: { font: { italic: true } } }\n`;
+    const [, answer] = offered(spec, at(1, 1), { 'font.bold': false });
+    if (answer === undefined) throw new Error('nothing was offered');
+
+    expect(taken(spec, answer)).toContain(
+      'A1: { value: 1, style: { font: { bold: false, italic: true } } }',
+    );
+  });
+
+  it('does not restate what the band under it already says', () => {
+    const spec = `${SALES}    columns:\n      - { at: A, style: { font: { bold: true } } }\n    cells:\n      A1: 1\n`;
+    const answers = offered(spec, at(1, 1), { 'font.bold': true });
+
+    expect(answers.map((one) => one.id)).toEqual(['band']);
+  });
+});
+
+describe('a look something else already supplies', () => {
+  const DECLARED = `defs:\n  styles:\n    header: { font: { bold: true }, fill: "1F3864" }\n${SALES}    cells:\n      A1: { value: Region, style: header }\n      B1: { value: Revenue, style: header }\n`;
+
+  it('offers the declaration first, with every cell reading it', () => {
+    const answers = offered(DECLARED, at(1, 1), { 'font.bold': false });
+
+    expect(answers.map((one) => [one.id, one.moves.length, one.alone])).toEqual([
+      ['definition', 2, false],
+      ['onCells', 1, false],
+    ]);
+  });
+
+  it('changes the definition where that is the answer taken, and nothing else', () => {
+    const [answer] = offered(DECLARED, at(1, 1), { 'font.bold': false });
+    if (answer === undefined) throw new Error('nothing was offered');
+
+    expect(taken(DECLARED, answer)).toContain('header: { font: { bold: false }, fill: "1F3864" }');
+  });
+
+  it('writes a variant on the cell where that is the answer taken', () => {
+    const [, answer] = offered(DECLARED, at(1, 1), { 'font.bold': false });
+    if (answer === undefined) throw new Error('nothing was offered');
+
+    expect(taken(DECLARED, answer)).toContain(
+      'A1: { value: Region, style: { extends: header, font: { bold: false } } }',
+    );
+  });
+
+  const BANDED = `${SALES}    columns:\n      - { at: A, style: { font: { bold: true } } }\n    cells:\n      A1: 1\n`;
+
+  it('offers the band it comes from, and the cells instead', () => {
+    const answers = offered(BANDED, at(1, 1), { 'font.bold': false });
+    expect(answers.map((one) => one.id)).toEqual(['band', 'onCells']);
+  });
+
+  it('changes the band where that is the answer taken', () => {
+    const [answer] = offered(BANDED, at(1, 1), { 'font.bold': false });
+    if (answer === undefined) throw new Error('nothing was offered');
+
+    expect(taken(BANDED, answer)).toContain('- { at: A, style: { font: { bold: false } } }');
+  });
+});
+
+describe('what a look will not do', () => {
+  it('says nothing where the cells of a rectangle take it from different places', () => {
+    const spec = `defs:\n  styles:\n    strong: { font: { bold: true } }\n${SALES}    cells:\n      A1: { value: 1, style: strong }\n      A2: 2\n`;
+
+    expect(offered(spec, at(1, 1, 2, 1), { 'font.bold': false })).toEqual([]);
+  });
+
+  it('says nothing about a look with nothing in it', () => {
+    expect(offered(`${SALES}    cells:\n      A1: 1\n`, at(1, 1), {})).toEqual([]);
+  });
+
+  it('says nothing about a sheet that is not there', () => {
+    const { grid, read } = files(`${SALES}    cells:\n      A1: 1\n`);
+    const where = { sheet: 'Nowhere' as SheetName, rect: at(1, 1) };
+
+    expect(setStyle({ grid }, where, BOLD, read)).toEqual([]);
+  });
+});

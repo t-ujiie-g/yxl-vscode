@@ -147,7 +147,8 @@ export type About =
   | { readonly is: 'typed'; readonly typed: Typed }
   | { readonly is: 'ranged'; readonly ranged: Ranged }
   | { readonly is: 'pasted'; readonly pasted: Pasted }
-  | { readonly is: 'text'; readonly text: PastedText };
+  | { readonly is: 'text'; readonly text: PastedText }
+  | { readonly is: 'worn'; readonly worn: Worn };
 
 /**
  * `Cmd`+`V` in the grid: where it goes, what the grid holds of its own, and what
@@ -241,6 +242,8 @@ export type FromView =
   | ({ readonly kind: 'pasted'; readonly choice: string } & Pasted)
   | ({ readonly kind: 'pasteAt' } & PastedAt)
   | ({ readonly kind: 'pastedText'; readonly choice: string } & PastedText)
+  | ({ readonly kind: 'wear' } & Worn)
+  | ({ readonly kind: 'worn'; readonly choice: string } & Worn)
   | ({ readonly kind: 'resolve'; readonly choice: string } & Typed)
   | ({ readonly kind: 'override'; readonly reason: string } & Typed)
   | {
@@ -249,6 +252,11 @@ export type FromView =
       readonly row: number;
       readonly col: number;
     };
+
+/** A look asked for over a rectangle: the properties the reader changed, and nothing else. */
+export interface Worn extends Ranged {
+  readonly want: StyleValues;
+}
 
 /** A rectangle of the grid a gesture names, in the row and column numbers the view draws. */
 export interface Ranged {

@@ -136,6 +136,12 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
     cell?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
   };
 
+  /** The one cell selected, as the rectangle a gesture over it names. */
+  const corner = (): Rect | null => {
+    if (selected === null) return null;
+    return { top: selected.row, left: selected.col, bottom: selected.row, right: selected.col };
+  };
+
   /** The rectangle selected, read live: the grid restates rather than redraws on a selection. */
   const spanned = (): Rect | null => {
     if (selected === null || anchor === null) return null;
@@ -234,6 +240,20 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
     },
     resolveWith: (typed, choice) => {
       host.postMessage({ ...typed, choice, kind: 'resolve' });
+    },
+    wear: (want) => {
+      refused = null;
+      said = null;
+
+      const rect = spanned() ?? corner();
+      if (rect === null) return;
+
+      host.postMessage({ kind: 'wear', sheet: named(), ...rect, want });
+    },
+    wornWith: (worn, choice) => {
+      refused = null;
+      said = null;
+      host.postMessage({ kind: 'worn', choice, ...worn });
     },
     emptiedWith: (ranged, choice) => {
       refused = null;

@@ -3,8 +3,9 @@ import { parse } from '@yxl-vscode/cst';
 import { type IncludeReader, load } from '@yxl-vscode/loader';
 import { did, type History, nothing } from '@yxl-vscode/patch';
 import { type FilePath, filePath } from '@yxl-vscode/units';
-import type { Choice, Typed } from '@yxl-vscode/webview/protocol';
+import type { Choice, Typed, Worn } from '@yxl-vscode/webview/protocol';
 import { describe, expect, it } from 'vitest';
+import { wear } from './look';
 import { emptied, empty, type Port, resolve, type Spec, write, writeOverride } from './write';
 
 const ROOT = filePath('/specs/report.yxl.yaml') ?? ('' as FilePath);
@@ -459,5 +460,63 @@ describe('a rectangle emptied', () => {
 
     await empty(spec, { ...rect, sheet: '' }, port);
     expect(refusals[0]).toContain('is not a name a sheet can have');
+  });
+});
+
+describe('a look asked for over the grid', () => {
+  const BOLD = { 'font.bold': true } as const;
+  const worn = (of: Partial<Worn> = {}): Worn => ({
+    sheet: 'Sales',
+    top: 1,
+    left: 1,
+    bottom: 1,
+    right: 1,
+    want: BOLD,
+    ...of,
+  });
+
+  it('lands without asking where nothing else says how the cell looks', async () => {
+    const { spec, port, files, told } = editor({ [ROOT]: `${SALES}    cells:\n      A1: 1\n` });
+
+    await wear(spec, worn(), port);
+    expect(files[ROOT]).toContain('A1: { value: 1, style: { font: { bold: true } } }');
+    expect(told).toEqual(['1 cell restyled.']);
+  });
+
+  it('asks where the look comes from a declaration other cells read', async () => {
+    const spec = `defs:\n  styles:\n    header: { font: { bold: true } }\n${SALES}    cells:\n      A1: { value: 1, style: header }\n      A2: { value: 2, style: header }\n`;
+    const { spec: read, port, answers, refusals } = editor({ [ROOT]: spec });
+
+    await wear(read, worn({ want: { 'font.bold': false } }), port);
+    expect(refusals[0]).toContain('more than one way to change it');
+    expect(answers[0]?.map((one) => [one.id, one.moves])).toEqual([
+      ['definition', 2],
+      ['onCells', 1],
+    ]);
+  });
+
+  it('writes the answer the reader picked, and says what it moved', async () => {
+    const spec = `defs:\n  styles:\n    header: { font: { bold: true } }\n${SALES}    cells:\n      A1: { value: 1, style: header }\n      A2: { value: 2, style: header }\n`;
+    const { spec: read, port, files, told } = editor({ [ROOT]: spec });
+
+    await wear(read, worn({ want: { 'font.bold': false } }), port, 'definition');
+    expect(files[ROOT]).toContain('header: { font: { bold: false } }');
+    expect(told).toEqual(['2 cells restyled.']);
+  });
+
+  it('refuses a rectangle whose cells take the look from different places', async () => {
+    const spec = `defs:\n  styles:\n    header: { font: { bold: true } }\n${SALES}    cells:\n      A1: { value: 1, style: header }\n      A2: 2\n`;
+    const { spec: read, port, refusals, files } = editor({ [ROOT]: spec });
+
+    await wear(read, worn({ bottom: 2, want: { 'font.bold': false } }), port);
+    expect(refusals[0]).toContain('take that from different places');
+    expect(files[ROOT]).toBe(spec);
+  });
+
+  it('takes no answer it did not offer', async () => {
+    const { spec, port, refusals } = editor({ [ROOT]: `${SALES}    cells:\n      A1: 1\n` });
+
+    await wear(spec, worn(), port, 'somethingElse');
+    expect(refusals[0]).toContain('no longer one of the ways');
   });
 });
