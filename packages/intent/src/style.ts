@@ -3,13 +3,14 @@ import {
   type CompiledSheet,
   cellAt,
   type FacetOrigin,
+  type FullAddr,
   reaches,
   resolve,
   type StyleLayer,
   sheetOf,
   styleAt,
 } from '@yxl-vscode/compile';
-import type { Node, Op, Path } from '@yxl-vscode/cst';
+import { apply, type Node, type Op, type Path } from '@yxl-vscode/cst';
 import { normalize, written } from '@yxl-vscode/normalize';
 import { STYLE_PROPERTIES, type StyleProperty, type StyleValues } from '@yxl-vscode/spec';
 import {
@@ -44,83 +45,244 @@ export function setStyle(
   const wanted = properties(want);
   if (sheet === null || wanted.length === 0) return [];
 
-  const addresses = spread(where.rect);
-  const supplier = supplying(sheet, addresses, wanted);
-  if (supplier === 'mixed') return [];
+  const from = origins(sheet, spread(where.rect), wanted);
+  const answers =
+    from.length > 1
+      ? apart(spec, sheet, where, from, want, read)
+      : fromOne(spec, sheet, where, from[0]?.layer ?? null, want, read);
 
+  return answers.length === 1 ? [{ ...answers[0], alone: true } as Candidate] : answers;
+}
+
+/** The answers where every cell of the rectangle takes the look from the same place. */
+function fromOne(
+  spec: Styling,
+  sheet: CompiledSheet,
+  where: { sheet: SheetName; rect: Rect },
+  supplier: StyleLayer | null,
+  want: StyleValues,
+  read: Reading,
+): readonly Candidate[] {
   const answers: Candidate[] = [];
   if (supplier === null || !excepted(supplier)) {
-    const own = onCells(spec, sheet, where, addresses, want, read);
+    const own = onCells(spec, sheet, where.sheet, everyone(spread(where.rect), want), read);
     if (own !== null) answers.push(own);
   }
 
   const shared = elsewhere(spec, supplier, want, read);
   if (shared !== null) answers.unshift(shared);
 
-  return answers.length === 1 ? [{ ...answers[0], alone: true } as Candidate] : answers;
+  return answers;
 }
 
-/** The layer every cell takes these from: `null` where none does, `mixed` where they disagree (ADR-001). */
-function supplying(
+/** A look asked for over one address: which of its properties are to land there. */
+interface Wanted {
+  readonly at: A1Addr;
+  readonly want: StyleValues;
+}
+
+/** What one answer would write, and every cell it would move. */
+interface Writing {
+  readonly file: FilePath;
+  readonly ops: readonly Op[];
+  readonly moves: readonly FullAddr[];
+}
+
+/** One layer, the properties it supplies, and the cells that read them from it. */
+interface Origin {
+  readonly layer: StyleLayer | null;
+  readonly keys: readonly StyleProperty[];
+  readonly addresses: readonly A1Addr[];
+}
+
+/** Where the rectangle takes each property from, grouped by the layer that supplies it (`null` where none does). */
+function origins(
   sheet: CompiledSheet,
   addresses: readonly A1Addr[],
   wanted: readonly StyleProperty[],
-): StyleLayer | null | 'mixed' {
-  const seen = new Set<string>();
-  let found: StyleLayer | null = null;
+): Origin[] {
+  const grouped = new Map<
+    string,
+    { layer: StyleLayer | null; keys: Set<StyleProperty>; addresses: Set<A1Addr> }
+  >();
 
   for (const at of addresses) {
     const layers = styleAt(sheet, at);
     for (const key of wanted) {
       const layer = layers.findLast((one) => one.gives[key] !== undefined) ?? null;
-      seen.add(layer === null ? '' : layer.node);
-      found = layer ?? found;
+      const group = grouped.get(layer?.node ?? '') ?? {
+        layer,
+        keys: new Set<StyleProperty>(),
+        addresses: new Set<A1Addr>(),
+      };
+      group.keys.add(key);
+      group.addresses.add(at);
+      grouped.set(layer?.node ?? '', group);
     }
   }
 
-  if (seen.size > 1) return 'mixed';
-  return seen.has('') ? null : found;
+  return [...grouped.values()].map((one) => ({
+    layer: one.layer,
+    keys: [...one.keys],
+    addresses: [...one.addresses],
+  }));
+}
+
+/** The two answers §4.4 gives a rectangle whose cells take the look from different places. */
+function apart(
+  spec: Styling,
+  sheet: CompiledSheet,
+  where: { sheet: SheetName; rect: Rect },
+  from: readonly Origin[],
+  want: StyleValues,
+  read: Reading,
+): readonly Candidate[] {
+  const wants = everyone(spread(where.rect), want);
+  const hidden = from.some((one) => one.layer !== null && excepted(one.layer));
+  const alike = hidden ? null : onEvery(spec, sheet, where.sheet, wants, read);
+  const split = splitting(spec, sheet, where.sheet, from, want, read);
+
+  const answers: Candidate[] = [];
+  if (alike !== null && alike.ops.length > 0) {
+    answers.push(
+      candidate('all', 'Apply it to every cell here, whatever each takes it from', alike),
+    );
+  }
+  if (split !== null && !(alike !== null && same(alike, split, read))) {
+    answers.push(candidate('split', 'Split it by where each cell takes it from', split));
+  }
+
+  return answers;
+}
+
+/** Whether two answers would leave the file the same, which makes them one answer rather than a question. */
+function same(one: Writing, than: Writing, read: Reading): boolean {
+  if (one.file !== than.file) return false;
+
+  const text = read.text(one.file);
+  if (text === null) return false;
+
+  const written = after(text, one);
+  return written !== null && written === after(text, than);
+}
+
+/** The file as an answer would leave it, or `null` where any of its ops is refused. */
+function after(text: string, writing: Writing): string | null {
+  const done = apply(text, writing.ops, { file: writing.file });
+  return done.diagnostics.length === 0 ? done.text : null;
+}
+
+/** Each origin changed where it lives, with the cells nothing supplies written on themselves. */
+function splitting(
+  spec: Styling,
+  sheet: CompiledSheet,
+  name: SheetName,
+  from: readonly Origin[],
+  want: StyleValues,
+  read: Reading,
+): Writing | null {
+  const own = new Map<A1Addr, StyleValues>();
+  const parts: Writing[] = [];
+
+  for (const group of from) {
+    const some = only(want, group.keys);
+    if (group.layer === null || itsOwn(group.layer)) {
+      for (const at of group.addresses) own.set(at, { ...own.get(at), ...some });
+      continue;
+    }
+
+    const one = atSupplier(spec, group.layer, some, read);
+    if (one === null) return null;
+
+    parts.push(one);
+  }
+
+  if (own.size > 0) {
+    const wants = [...own].map(([at, some]) => ({ at, want: some }));
+    const one = onEvery(spec, sheet, name, wants, read);
+    if (one === null) return null;
+
+    parts.push(one);
+  }
+
+  return joined(parts);
+}
+
+/** Several answers as one, which they can only be where they all write the same file. */
+function joined(parts: readonly Writing[]): Writing | null {
+  const file = parts[0]?.file;
+  const ops = parts.flatMap((one) => one.ops);
+  if (file === undefined || ops.length === 0) return null;
+  if (parts.some((one) => one.file !== file)) return null;
+
+  const moves = new Map<string, FullAddr>();
+  for (const part of parts) {
+    for (const move of part.moves) moves.set(`${move.sheet}!${move.at}`, move);
+  }
+
+  return { file, ops, moves: [...moves.values()] };
+}
+
+/** An answer as the reader is offered it, claiming exactly the cells it moves. */
+function candidate(id: string, what: string, writing: Writing): Candidate {
+  return {
+    id,
+    what,
+    moves: writing.moves,
+    alone: false,
+    intent: {
+      kind: 'edit',
+      file: writing.file,
+      patch: { ops: writing.ops },
+      expects: {
+        cells: new Set(writing.moves.map((one) => qualified(one.sheet as SheetName, one.at))),
+        beyond: 'ask',
+      },
+    },
+  };
 }
 
 /** The answer that writes it on the cells themselves, over what each already contributes (ADR-008, ADR-037). */
 function onCells(
   spec: Styling,
   sheet: CompiledSheet,
-  where: { sheet: SheetName; rect: Rect },
-  addresses: readonly A1Addr[],
-  want: StyleValues,
+  name: SheetName,
+  wants: readonly Wanted[],
   read: Reading,
 ): Candidate | null {
+  const writing = onEvery(spec, sheet, name, wants, read);
+  if (writing === null || writing.ops.length === 0) return null;
+
+  return candidate('onCells', `Write it on ${said(wants.map((one) => one.at))}`, writing);
+}
+
+/** What writing the look on each of those cells would be — no ops where they already look as asked. */
+function onEvery(
+  spec: Styling,
+  sheet: CompiledSheet,
+  name: SheetName,
+  wants: readonly Wanted[],
+  read: Reading,
+): Writing | null {
   const ops = new Map<FilePath, Op[]>();
 
-  for (const at of addresses) {
-    const one = onCell(spec, sheet, at, want, read);
-    if (one === null) return null;
+  for (const one of wants) {
+    const written = onCell(spec, sheet, one.at, one.want, read);
+    if (written === null) return null;
 
-    ops.set(one.file, [...(ops.get(one.file) ?? []), ...one.ops]);
+    ops.set(written.file, [...(ops.get(written.file) ?? []), ...written.ops]);
   }
 
   const files = [...ops.keys()];
   const file = files[0];
   if (file === undefined || files.length > 1) return null;
-  if ((ops.get(file) ?? []).length === 0) return null;
-
-  const moves = addresses.map((at) => ({ sheet: where.sheet, at }));
 
   return {
-    id: 'onCells',
-    what: `Write it on ${said(addresses)}`,
-    moves,
-    alone: false,
-    intent: {
-      kind: 'edit',
-      file,
-      patch: { ops: ops.get(file) ?? [] },
-      expects: { cells: new Set(moves.map((one) => qualified(one.sheet, one.at))), beyond: 'ask' },
-    },
+    file,
+    ops: ops.get(file) ?? [],
+    moves: wants.map((one) => ({ sheet: name, at: one.at })),
   };
 }
-
 /** One cell's own `style:`, rewritten as what it contributes now plus what was asked for. */
 function onCell(
   spec: Styling,
@@ -230,6 +392,22 @@ function elsewhere(
 ): Candidate | null {
   if (supplier === null || itsOwn(supplier)) return null;
 
+  const writing = atSupplier(spec, supplier, want, read);
+  if (writing === null) return null;
+
+  const id =
+    supplier.name !== null ? 'definition' : supplier.through === 'override' ? 'override' : 'band';
+
+  return candidate(id, naming(supplier), writing);
+}
+
+/** What changing one supplying layer would be, over every cell that reads it. */
+function atSupplier(
+  spec: Styling,
+  supplier: StyleLayer,
+  want: StyleValues,
+  read: Reading,
+): Writing | null {
   const found = located(supplier.node, read);
   if (found.kind === 'refused' || found.node.kind !== 'map') return null;
 
@@ -237,24 +415,7 @@ function elsewhere(
   const ops = writing(found, into, want);
   if (ops === null) return null;
 
-  const moves = reaches(spec.grid, supplier.node);
-
-  return {
-    id:
-      supplier.name !== null ? 'definition' : supplier.through === 'override' ? 'override' : 'band',
-    what: naming(supplier),
-    moves,
-    alone: false,
-    intent: {
-      kind: 'edit',
-      file: found.file,
-      patch: { ops },
-      expects: {
-        cells: new Set(moves.map((one) => qualified(one.sheet as SheetName, one.at))),
-        beyond: 'ask',
-      },
-    },
-  };
+  return { file: found.file, ops, moves: reaches(spec.grid, supplier.node) };
 }
 
 /** Whether the look comes from an override's own style, under which anything written on the cell is invisible. */
@@ -358,3 +519,15 @@ function properties(values: StyleValues): StyleProperty[] {
 
 const STYLE = 'style';
 const CELLS = 'cells';
+
+/** Every address of a rectangle asked for the whole look. */
+function everyone(addresses: readonly A1Addr[], want: StyleValues): Wanted[] {
+  return addresses.map((at) => ({ at, want }));
+}
+
+/** The look narrowed to the properties named. */
+function only(want: StyleValues, keys: readonly StyleProperty[]): StyleValues {
+  const kept: Record<string, unknown> = {};
+  for (const key of keys) kept[key] = want[key];
+  return kept as StyleValues;
+}

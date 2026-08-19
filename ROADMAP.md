@@ -1011,8 +1011,15 @@ whether the spec survives contact with a GUI (ADR-008).
       lands on the cells is the normalizer's answer (ADR-037), so bolding a cell
       that wears `base` writes `{ extends: base, font: { bold: true } }` rather
       than a fourth anonymous look.
-- [ ] The same over a range whose cells have different origins: "apply to all"
+- [x] The same over a range whose cells have different origins: "apply to all"
       and "split by origin", never a silent pick
+      **Shipped**: a rectangle whose cells take the look from different places
+      is grouped by the layer each property comes from, and offered both — write
+      it on every cell alike, or change each origin where it lives — with the
+      count each would move, and neither ever taken without asking. Where an
+      override hides what a cell would carry, only the split is offered, and
+      where the two would leave the file the same they are one answer and it
+      applies.
 - [ ] Column width and row height by dragging, written as `columns:` / `rows:`
       bands rather than as forty cells
 - [ ] `freeze:` (`docs/spec.md` §2) honoured in the preview, and set from it
@@ -2380,6 +2387,52 @@ this at a phase boundary rather than at the end.
   two serials either side of it, so the next reader knows it is deliberate.
 - A cell's own format — written, or the one its type takes — now wins over a
   band's. Both are requests about *that* cell; a band is something reaching it.
+
+### 2026-08-20 — A rectangle that takes its look from more than one place
+The refusal the last pass left behind, answered: §4.4's `setStyle` step 4, which
+is the last thing between the four font switches and a rectangle a reader would
+actually select. **Phase 9's third item is done.**
+
+- **The rectangle is grouped by where each property comes from**, per cell and
+  per property rather than per cell. `origins` returns one group per supplying
+  layer — a declaration, a band, an override, or nothing — carrying the
+  properties it supplies and the cells that read them from it. The single-origin
+  path is the one-group case of the same function, so the table's first three
+  rows did not change.
+- **Two answers, and never a pick between them.** *Apply it to every cell here*
+  writes the look on each cell whatever it wore before; *split it by where each
+  cell takes it from* changes the declaration in `defs.styles`, the band in
+  `columns:`, and the override, each where it lives, and writes on only the cells
+  nothing supplies. Both carry the count of what they would move — the split's
+  includes the cells outside the rectangle its declaration reaches, which is the
+  number that decides which answer a reader wants.
+- **Where an override hides it, only the split is offered.** Writing on a cell
+  under an `overrides:` entry that gives a `style:` changes bytes and nothing a
+  reader can see, and the single-origin path has refused that since it was
+  written; "apply to all" would have quietly reintroduced it for the one cell in
+  the rectangle that had one.
+- **"Nothing to write" and "cannot write" stopped being the same answer.** They
+  had been one `null`, which was invisible while every answer covered the whole
+  rectangle and wrong the moment one covered part of it: a split whose cells were
+  already as asked took the whole answer down with it. `onEvery` now returns the
+  ops it has, empty included, and each caller decides — an answer with no ops is
+  not offered, a *part* with none is simply a part that writes nothing.
+- **The refusal that told a reader to try the cells apart is gone**, since the
+  editor now does that itself. What is left says only that nothing here can carry
+  the look, which is the case it was always about.
+- **Two answers that leave the file the same are one answer.** Found by running
+  it: bolding a selection where only the last cell is plain reaches three origins
+  and asks, but the declaration and the band already say `bold: true`, so both
+  answers come down to the one cell — the question had no side to take. The
+  answers are now compared by the text they would leave, and where a lone answer
+  survives the rule that has always applied to one applies here too: it is taken
+  without asking. The rule now lives in `setStyle` alone, over both paths.
+  Comparing results rather than ops is what makes this hold: the ops differ
+  (`style: header` rewritten over itself, `bold: true` set where it is already
+  true) while the bytes do not.
+- Comment shape unchanged where it counts: exports 413 blocks / 893 lines
+  (avg 2.2), private 269 / 295 (1.1), inline 50 / 67 (1.3), 11 over the limit —
+  the same eleven, with thirteen new private one-liners.
 
 ### 2026-08-19 — A look you can apply, and the table that decides where it goes
 The first thing a reader can click that changes how the workbook *looks*: four

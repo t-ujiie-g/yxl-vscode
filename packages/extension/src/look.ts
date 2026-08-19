@@ -20,7 +20,7 @@ export async function wear(spec: Spec, worn: Worn, port: Port, choice?: string):
   const answers = setStyle({ grid: spec.grid }, where, worn.want, read);
 
   if (answers.length === 0) {
-    port.refuse(nothing(worn), null);
+    port.refuse('nothing here can carry that look', null);
     return;
   }
 
@@ -49,16 +49,12 @@ export async function wear(spec: Spec, worn: Worn, port: Port, choice?: string):
   if (done) port.said(`${taken.moves.length} cell${taken.moves.length === 1 ? '' : 's'} restyled.`);
 }
 
-/** Why a look has no answer at all: the cells of the rectangle do not take it from one place. */
-function nothing(worn: Worn): string {
-  const one = worn.top === worn.bottom && worn.left === worn.right;
-  return one
-    ? 'nothing here can carry that look'
-    : 'the cells here take that from different places, so there is no one answer — try them apart';
-}
-
 /** Why a look is a question: something other than these cells says how they look. */
 function comes(answers: readonly Candidate[]): string {
+  if (answers.some((one) => one.id === 'all' || one.id === 'split')) {
+    return 'the cells here take that look from different places, so there is more than one way to change it';
+  }
+
   const shared = answers.find((one) => one.id !== 'onCells');
   const many = shared?.moves.length ?? 0;
 

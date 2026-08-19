@@ -197,13 +197,80 @@ describe('a look something else already supplies', () => {
   });
 });
 
-describe('what a look will not do', () => {
-  it('says nothing where the cells of a rectangle take it from different places', () => {
-    const spec = `defs:\n  styles:\n    strong: { font: { bold: true } }\n${SALES}    cells:\n      A1: { value: 1, style: strong }\n      A2: 2\n`;
+describe('a rectangle whose cells take it from different places', () => {
+  const HEADER = 'defs:\n  styles:\n    header: { font: { bold: true }, fill: "1F3864" }\n';
+  const MIXED = `${HEADER}${SALES}    columns:\n      - { at: B, style: { font: { bold: true } } }\n    cells:\n      A1: { value: Region, style: header }\n      B1: { value: Revenue }\n      C1: 3\n`;
 
-    expect(offered(spec, at(1, 1, 2, 1), { 'font.bold': false })).toEqual([]);
+  const answers = (want: StyleValues = { 'font.bold': false }) =>
+    offered(MIXED, at(1, 1, 1, 3), want);
+
+  it('offers all of them alike and each origin apart, and picks between them for nobody', () => {
+    expect(answers().map((one) => [one.id, one.alone])).toEqual([
+      ['all', false],
+      ['split', false],
+    ]);
   });
 
+  it('writes it on the cells of the rectangle where all of them alike is taken', () => {
+    const [answer] = answers();
+    if (answer === undefined) throw new Error('nothing was offered');
+
+    const text = taken(MIXED, answer);
+    expect(text).toContain(
+      'A1: { value: Region, style: { extends: header, font: { bold: false } } }',
+    );
+    expect(text).toContain('B1: { value: Revenue, style: { font: { bold: false } } }');
+    expect(text).toContain('header: { font: { bold: true }, fill: "1F3864" }');
+  });
+
+  it('changes the declaration and the band where splitting them is taken', () => {
+    const [, answer] = answers();
+    if (answer === undefined) throw new Error('nothing was offered');
+
+    const text = taken(MIXED, answer);
+    expect(text).toContain('header: { font: { bold: false }, fill: "1F3864" }');
+    expect(text).toContain('- { at: B, style: { font: { bold: false } } }');
+    expect(text).toContain('B1: { value: Revenue }\n');
+  });
+
+  it('is one answer where both would leave the file the same, and asks nothing', () => {
+    const [answer, ...rest] = answers({ 'font.bold': true });
+    if (answer === undefined) throw new Error('nothing was offered');
+
+    expect([answer.id, answer.alone, rest]).toEqual(['all', true, []]);
+    expect(taken(MIXED, answer)).toContain('C1: { value: 3, style: { font: { bold: true } } }');
+  });
+
+  it('leaves the declaration and the band alone where that answer is the only one', () => {
+    const [answer] = answers({ 'font.bold': true });
+    if (answer === undefined) throw new Error('nothing was offered');
+
+    const text = taken(MIXED, answer);
+    expect(text).toContain('header: { font: { bold: true }, fill: "1F3864" }');
+    expect(text).toContain('- { at: B, style: { font: { bold: true } } }');
+  });
+
+  it('does not offer to write on cells an override would hide it under', () => {
+    const spec = `${SALES}    cells:\n      A1: 1\n      A2: 2\noverrides:\n  - at: Sales!A1\n    style: { font: { bold: true } }\n`;
+    const [answer, ...rest] = offered(spec, at(1, 1, 2, 1), { 'font.bold': false });
+    if (answer === undefined) throw new Error('nothing was offered');
+
+    expect([answer.id, answer.alone, rest]).toEqual(['split', true, []]);
+    expect(taken(spec, answer)).toContain('    style: { font: { bold: false } }');
+  });
+
+  it('counts what each answer would move, the cells outside the rectangle included', () => {
+    const spec = `${HEADER}${SALES}    cells:\n      A1: { value: Region, style: header }\n      B1: 2\n      D1: { value: Units, style: header }\n`;
+    const both = offered(spec, at(1, 1, 1, 2), { 'font.bold': false });
+
+    expect(both.map((one) => [one.id, one.moves.map((move) => move.at)])).toEqual([
+      ['all', ['A1', 'B1']],
+      ['split', ['A1', 'D1', 'B1']],
+    ]);
+  });
+});
+
+describe('what a look will not do', () => {
   it('says nothing about a look with nothing in it', () => {
     expect(offered(`${SALES}    cells:\n      A1: 1\n`, at(1, 1), {})).toEqual([]);
   });

@@ -504,13 +504,34 @@ describe('a look asked for over the grid', () => {
     expect(told).toEqual(['2 cells restyled.']);
   });
 
-  it('refuses a rectangle whose cells take the look from different places', async () => {
+  it('asks over a rectangle whose cells take the look from different places', async () => {
     const spec = `defs:\n  styles:\n    header: { font: { bold: true } }\n${SALES}    cells:\n      A1: { value: 1, style: header }\n      A2: 2\n`;
-    const { spec: read, port, refusals, files } = editor({ [ROOT]: spec });
+    const { spec: read, port, answers, refusals, files } = editor({ [ROOT]: spec });
 
     await wear(read, worn({ bottom: 2, want: { 'font.bold': false } }), port);
-    expect(refusals[0]).toContain('take that from different places');
+    expect(refusals[0]).toContain('take that look from different places');
+    expect(answers[0]?.map((one) => one.id)).toEqual(['all', 'split']);
     expect(files[ROOT]).toBe(spec);
+  });
+
+  it('lands without asking where the answers would leave the file the same', async () => {
+    const spec = `defs:\n  styles:\n    header: { font: { bold: true } }\n${SALES}    columns:\n      - { at: B, style: { font: { bold: true } } }\n    cells:\n      A1: { value: 1, style: header }\n      B1: 2\n      C1: 3\n`;
+    const { spec: read, port, files, refusals, told } = editor({ [ROOT]: spec });
+
+    await wear(read, worn({ right: 3 }), port);
+    expect(refusals).toEqual([]);
+    expect(files[ROOT]).toContain('C1: { value: 3, style: header }');
+    expect(files[ROOT]).toContain('B1: 2\n');
+    expect(told).toEqual(['3 cells restyled.']);
+  });
+
+  it('splits it by origin where that is the answer picked', async () => {
+    const spec = `defs:\n  styles:\n    header: { font: { bold: true } }\n${SALES}    cells:\n      A1: { value: 1, style: header }\n      A2: 2\n`;
+    const { spec: read, port, files, told } = editor({ [ROOT]: spec });
+
+    await wear(read, worn({ bottom: 2, want: { 'font.bold': false } }), port, 'split');
+    expect(files[ROOT]).toContain('header: { font: { bold: false } }');
+    expect(told).toEqual(['2 cells restyled.']);
   });
 
   it('takes no answer it did not offer', async () => {
