@@ -108,6 +108,52 @@ describe('a look nothing else supplies', () => {
   });
 });
 
+describe('a look the cell itself already carries', () => {
+  const BOLDED = `${SALES}    cells:\n      A1: { value: 1, style: { font: { bold: true } } }\n`;
+
+  it("is the cell's own answer and nobody else's, so it is not a question", () => {
+    const answers = offered(BOLDED, at(1, 1), { 'font.bold': false });
+    expect(answers.map((one) => [one.id, one.alone])).toEqual([['onCells', true]]);
+  });
+
+  it('comes off again, leaving the cell as it was written before it went on', () => {
+    const plain = `${SALES}    cells:\n      A1: 1\n`;
+    const [on] = offered(plain, at(1, 1), BOLD);
+    if (on === undefined) throw new Error('nothing was offered');
+
+    const bolded = taken(plain, on);
+    const [off] = offered(bolded, at(1, 1), { 'font.bold': false });
+    if (off === undefined) throw new Error('nothing was offered');
+
+    expect(taken(bolded, off)).toBe(plain);
+  });
+
+  it('leaves the rest of the look where only one of it comes off', () => {
+    const spec = `${SALES}    cells:\n      A1: { value: 1, style: { font: { bold: true, italic: true } } }\n`;
+    const [answer] = offered(spec, at(1, 1), { 'font.bold': false });
+    if (answer === undefined) throw new Error('nothing was offered');
+
+    expect(taken(spec, answer)).toContain('A1: { value: 1, style: { font: { italic: true } } }');
+  });
+
+  it('keeps a switch turned off where a band under it turns it on', () => {
+    const spec = `${SALES}    columns:\n      - { at: A, style: { font: { bold: true } } }\n    cells:\n      A1: { value: 1, style: { font: { italic: true } } }\n`;
+    const [, answer] = offered(spec, at(1, 1), { 'font.bold': false });
+    if (answer === undefined) throw new Error('nothing was offered');
+
+    expect(taken(spec, answer)).toContain(
+      'A1: { value: 1, style: { font: { bold: false, italic: true } } }',
+    );
+  });
+
+  it('does not restate what the band under it already says', () => {
+    const spec = `${SALES}    columns:\n      - { at: A, style: { font: { bold: true } } }\n    cells:\n      A1: 1\n`;
+    const answers = offered(spec, at(1, 1), { 'font.bold': true });
+
+    expect(answers.map((one) => one.id)).toEqual(['band']);
+  });
+});
+
 describe('a look something else already supplies', () => {
   const DECLARED = `defs:\n  styles:\n    header: { font: { bold: true }, fill: "1F3864" }\n${SALES}    cells:\n      A1: { value: Region, style: header }\n      B1: { value: Revenue, style: header }\n`;
 

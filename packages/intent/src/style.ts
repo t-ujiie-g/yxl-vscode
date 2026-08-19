@@ -103,6 +103,7 @@ function onCells(
   const files = [...ops.keys()];
   const file = files[0];
   if (file === undefined || files.length > 1) return null;
+  if ((ops.get(file) ?? []).length === 0) return null;
 
   const moves = addresses.map((at) => ({ sheet: where.sheet, at }));
 
@@ -128,27 +129,33 @@ function onCell(
   want: StyleValues,
   read: Reading,
 ): { file: FilePath; ops: readonly Op[] } | null {
-  const own = styleAt(sheet, at).filter((one) => one.through === 'cell' && one.key === 'style');
-  const gives = { ...resolve(own), ...want };
-  const how = normalize(gives, spec.grid.styles);
-  if (how === null) return null;
+  const layers = styleAt(sheet, at);
+  const own = layers.filter(fromCell);
+  const under = resolve(layers.filter((one) => !fromCell(one)));
+  const named = resolve(own.filter((one) => one.name !== null));
+  const gives = beyond({ ...resolve(own), ...want }, under, named);
 
-  const source = written(how);
+  const how = properties(gives).length === 0 ? null : normalize(gives, spec.grid.styles);
+  const source = how === null ? null : written(how);
   const cell = cellAt(sheet, at);
   const node = cell === null ? null : nodeOf(cell.provenance.value);
-  if (node === null) return newCell(sheet, at, source, read);
+  if (node === null) return source === null ? null : newCell(sheet, at, source, read);
 
   const found = located(node, read);
   if (found.kind === 'refused') return null;
 
   // `A1: 1` has nowhere to put a look; it becomes the cell the long way round.
   if (found.node.kind === 'scalar') {
-    const written = `{ value: ${found.node.source}, ${STYLE}: ${source} }`;
-    return { file: found.file, ops: [{ op: 'write', path: found.path, source: written }] };
+    if (source === null) return { file: found.file, ops: [] };
+
+    const whole = `{ value: ${found.node.source}, ${STYLE}: ${source} }`;
+    return { file: found.file, ops: [{ op: 'write', path: found.path, source: whole }] };
   }
   if (found.node.kind !== 'map') return null;
 
   const holds = found.node.entries.some((entry) => entry.key.value === STYLE);
+  if (source === null) return holds ? bare(found, read) : { file: found.file, ops: [] };
+
   return {
     file: found.file,
     ops: [
@@ -157,6 +164,47 @@ function onCell(
         : { op: 'addSource', path: found.path, key: STYLE, source },
     ],
   };
+}
+
+/**
+ * A cell with its look taken off: the `style:` key goes, and a cell left
+ * holding nothing but a value goes back to being that value.
+ */
+function bare(
+  found: Found & { kind: 'found' },
+  read: Reading,
+): { file: FilePath; ops: readonly Op[] } | null {
+  if (found.node.kind !== 'map') return null;
+
+  const rest = found.node.entries.filter((entry) => entry.key.value !== STYLE);
+  const only = rest.length === 1 && rest[0]?.key.value === 'value' ? rest[0] : undefined;
+  if (only === undefined) {
+    return { file: found.file, ops: [{ op: 'remove', path: [...found.path, STYLE] }] };
+  }
+
+  const source = read.text(found.file)?.slice(only.value.span.start, only.value.span.end) ?? null;
+  if (source === null) return null;
+
+  return { file: found.file, ops: [{ op: 'write', path: found.path, source }] };
+}
+
+/**
+ * The look with what it need not say taken out: a cell does not restate its
+ * band, and a switch turned off comes off rather than being written `false`.
+ * What a declaration the cell *names* says has to be answered out loud, so it
+ * stays — `{ extends: header, font: { bold: false } }` is the honest form of
+ * "a header, but not bold".
+ */
+function beyond(gives: StyleValues, under: StyleValues, named: StyleValues): StyleValues {
+  const kept: Record<string, unknown> = {};
+
+  for (const key of properties(gives)) {
+    const same = under[key] === gives[key];
+    const off = under[key] === undefined && named[key] === undefined && gives[key] === false;
+    if (!same && !off) kept[key] = gives[key];
+  }
+
+  return kept as StyleValues;
 }
 
 /** A look on an address nothing writes: a cell that carries styling and no value (`docs/spec.md` §3). */
@@ -189,7 +237,7 @@ function elsewhere(
   want: StyleValues,
   read: Reading,
 ): Candidate | null {
-  if (supplier === null) return null;
+  if (supplier === null || itsOwn(supplier)) return null;
 
   const found = located(supplier.node, read);
   if (found.kind === 'refused' || found.node.kind !== 'map') return null;
@@ -221,6 +269,16 @@ function elsewhere(
 /** Whether the look comes from an override's own style, under which anything written on the cell is invisible. */
 function excepted(supplier: StyleLayer): boolean {
   return supplier.through === 'override' && supplier.name === null;
+}
+
+/** Whether it comes from the cell's own `style:` written out — which is not somewhere else, it is the cell. */
+function itsOwn(supplier: StyleLayer): boolean {
+  return fromCell(supplier) && supplier.name === null;
+}
+
+/** Whether the cell's own `style:` put it there, a declaration it names included: rewriting that key replaces all of it. */
+function fromCell(layer: StyleLayer): boolean {
+  return layer.through === 'cell' && layer.key === 'style';
 }
 
 /** What the answer that reaches beyond the rectangle says it would change. */
