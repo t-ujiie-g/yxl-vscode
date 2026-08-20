@@ -2271,8 +2271,22 @@ line to draw it in. **The item is ticked.**
   cell really does lose its left and top. **That is the loop to reach for when a
   question is about layout** — the tests answer what the DOM holds, not what it
   looks like.
-- 1482 → 1499 tests. Comment shape: exports 417 blocks / 905 lines (avg 2.2),
-  private 298 / 324 (1.1), inline 56 / 75 (1.3), 11 over the limit — the same
+- **A cell written for its look alone goes when the look does.** Drawing a
+  border on an empty address writes `D6:` with nothing but a `style:`; taking it
+  off left the cell with no key at all, which is not a cell (`docs/spec.md` §3)
+  and which `cst` refused, correctly, as an entry with nothing to put it back
+  beside. The entry is removed instead, so the round trip through an empty
+  address is byte-for-byte again. Where `cells:` holds nothing else, the refusal
+  stands and the file is untouched — the gesture asked to take a look off, not
+  to take a `cells:` block out.
+- **An answer names the cells it would write on.** A border sends four
+  properties at once, so a rectangle whose style leaves have a supplier and
+  whose colour leaves do not is *mixed* by §4.4's reckoning even when it is one
+  cell — and "apply it to every cell here" is a strange thing to read about one
+  cell. It says what it would put it on now, in the same words the other answers
+  use.
+- 1482 → 1502 tests. Comment shape: exports 417 blocks / 905 lines (avg 2.2),
+  private 298 / 324 (1.1), inline 57 / 76 (1.3), 11 over the limit — the same
   eleven.
 
 ### 2026-08-20 — A number under a format, from the toolbar
