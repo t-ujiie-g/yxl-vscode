@@ -154,16 +154,18 @@ describe('what a cell looks like', () => {
       'border.top.style': 'thick',
       'border.top.color': colour('FF0000'),
     } as const;
-    const drawn = drawCell(cell({ value: 'x', style }), undefined);
+    const over = drawCell(cell({ value: 'x', style }), undefined).querySelector<HTMLElement>(
+      '.edges',
+    );
 
-    expect(drawn.style.borderTop).toBe('3px solid rgb(255, 0, 0)');
+    expect(over?.style.borderTop).toBe('3px solid rgb(255, 0, 0)');
   });
 
   it('draws an edge with no colour of its own in the text colour', () => {
     const drawn = drawCell(cell({ value: 'x', style: { 'border.left.style': 'hair' } }), undefined);
     // jsdom's CSSOM drops the `currentColor` keyword when it serializes the
     // shorthand back; a browser keeps it, and either way no colour was chosen.
-    expect(drawn.style.borderLeft).toBe('0.5px solid');
+    expect(drawn.querySelector<HTMLElement>('.edges')?.style.borderLeft).toBe('0.5px solid');
   });
 });
 
@@ -220,5 +222,36 @@ describe('the box a reader types in', () => {
     // Typing `*1.1` onto the end of the anchor's formula would write a formula
     // for a row this cell is not on.
     expect(box({ formula: 'C5*D5', filledFrom: 'E2' })).toBe('=C5*D5');
+  });
+});
+
+describe('the borders a cell wears', () => {
+  const edges = (of: Partial<DrawnCell>) => drawCell(cell(of), undefined).querySelector('.edges');
+
+  it('are drawn over the grid own lines rather than on the cell itself', () => {
+    const drawn = drawCell(cell({ style: { 'border.left.style': 'thin' } }), undefined);
+
+    expect(drawn.style.borderLeft).toBe('');
+    expect(drawn.querySelector<HTMLElement>('.edges')?.style.borderLeft).toBe('1px solid');
+  });
+
+  it('are one element for every edge the cell has', () => {
+    const over = edges({
+      style: { 'border.top.style': 'thin', 'border.bottom.style': 'double' },
+    });
+
+    expect(over?.getAttribute('style')).toBe('border-top: 1px solid; border-bottom: 2px solid;');
+  });
+
+  it('are not there at all where the cell has none', () => {
+    expect(edges({ style: { 'font.bold': true } })).toBeNull();
+  });
+
+  it('keep the colour the spec drew them in', () => {
+    const over = edges({
+      style: { 'border.top.style': 'thin', 'border.top.color': 'CCCCCC' as never },
+    });
+
+    expect(over?.getAttribute('style')).toBe('border-top: 1px solid rgb(204, 204, 204);');
   });
 });

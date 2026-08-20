@@ -2252,8 +2252,17 @@ line to draw it in. **The item is ticked.**
   round the *outside* of a range, which asks each cell for a different edge —
   one want per address rather than one for the rectangle, which `setStyle`
   already takes but the `wear` message does not carry.
-- 1482 → 1495 tests. Comment shape: exports 417 blocks / 905 lines (avg 2.2),
-  private 297 / 323 (1.1), inline 56 / 75 (1.3), 11 over the limit — the same
+- **A `thin` border was invisible on the edges that matter**, and running it is
+  what found that. The grid is a collapsed table, so a cell's own border and the
+  grid's own line meet at the same pixel and CSS resolves the tie: same width,
+  same style, and then *the cell further left, or further up, wins*. Every left
+  and top edge in the sheet lost. `double` came through only because it renders
+  2px, and wide beats narrow. A cell's borders are now drawn on an element of
+  their own over the cell rather than collapsed with the grid, so what the spec
+  says is what is seen — and the clipboard keeps the real `border-*` CSS it
+  needs (ADR-028).
+- 1482 → 1499 tests. Comment shape: exports 417 blocks / 905 lines (avg 2.2),
+  private 298 / 324 (1.1), inline 56 / 75 (1.3), 11 over the limit — the same
   eleven.
 
 ### 2026-08-20 — A number under a format, from the toolbar
