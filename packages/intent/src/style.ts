@@ -1,40 +1,18 @@
 import {
-  type CompiledGrid,
   type CompiledSheet,
-  cellAt,
-  type FacetOrigin,
   type FullAddr,
-  reaches,
-  resolve,
   type StyleLayer,
   sheetOf,
   styleAt,
 } from '@yxl-vscode/compile';
-import { apply, type Node, type Op, type Path, renderScalar } from '@yxl-vscode/cst';
-import { normalize, written } from '@yxl-vscode/normalize';
-import {
-  ordered,
-  propertiesOf,
-  type StyleProperty,
-  type StyleSays,
-  type StyleValues,
-} from '@yxl-vscode/spec';
-import {
-  type A1Addr,
-  addrAt,
-  type FilePath,
-  type NodeId,
-  qualified,
-  type Rect,
-  type SheetName,
-} from '@yxl-vscode/units';
-import { type Found, located, type Reading } from './direct';
+import { apply } from '@yxl-vscode/cst';
+import { ordered, propertiesOf, type StyleProperty, type StyleSays } from '@yxl-vscode/spec';
+import { type A1Addr, addrAt, qualified, type Rect, type SheetName } from '@yxl-vscode/units';
+import type { Reading } from './direct';
 import type { Candidate } from './resolve';
+import { atSupplier, onEvery, type Styling, type Wanted, type Writing } from './writes';
 
-/** What a style write needs of the spec: what it draws, which carries the looks it declares. */
-export interface Styling {
-  readonly grid: CompiledGrid;
-}
+export type { Styling } from './writes';
 
 /**
  * Every way of making a rectangle look as the reader asked — `ROADMAP.md` §4.4's
@@ -79,19 +57,6 @@ function fromOne(
   if (shared !== null) answers.unshift(shared);
 
   return answers;
-}
-
-/** A look asked for over one address: which of its properties are to land there. */
-interface Wanted {
-  readonly at: A1Addr;
-  readonly want: StyleSays;
-}
-
-/** What one answer would write, and every cell it would move. */
-interface Writing {
-  readonly file: FilePath;
-  readonly ops: readonly Op[];
-  readonly moves: readonly FullAddr[];
 }
 
 /** One layer, the properties it supplies, and the cells that read them from it. */
@@ -263,206 +228,6 @@ function onCells(
   return candidate('onCells', `Write it on ${said(wants.map((one) => one.at))}`, writing);
 }
 
-/** What writing the look on each of those cells would be — no ops where they already look as asked. */
-function onEvery(
-  spec: Styling,
-  sheet: CompiledSheet,
-  name: SheetName,
-  wants: readonly Wanted[],
-  read: Reading,
-): Writing | null {
-  const ops = new Map<FilePath, Op[]>();
-
-  for (const one of wants) {
-    const written = onCell(spec, sheet, one.at, one.want, read);
-    if (written === null) return null;
-
-    ops.set(written.file, [...(ops.get(written.file) ?? []), ...written.ops]);
-  }
-
-  const files = [...ops.keys()];
-  const file = files[0];
-  if (file === undefined || files.length > 1) return null;
-
-  return {
-    file,
-    ops: ops.get(file) ?? [],
-    moves: wants.map((one) => ({ sheet: name, at: one.at })),
-  };
-}
-/** One key of a cell as the ask leaves it: the source to write there, or `null` to take the key out. */
-interface Carries {
-  readonly key: string;
-  readonly source: string | null;
-}
-
-/** The cell's own keys, rewritten as what they contribute now plus what was asked for. */
-function onCell(
-  spec: Styling,
-  sheet: CompiledSheet,
-  at: A1Addr,
-  want: StyleSays,
-  read: Reading,
-): { file: FilePath; ops: readonly Op[] } | null {
-  const layers = styleAt(sheet, at);
-  const own = layers.filter(fromCell);
-  // A cell's own `format:` layers over a declaration it names (`docs/spec.md` §6).
-  const inStyle = resolve(own.filter((one) => one.name === null)).format !== undefined;
-
-  const carries = [
-    ...asStyle(spec, layers, own, inStyle ? want : without(want, FORMAT)),
-    ...(inStyle ? [] : asFormat(layers, want)),
-  ];
-
-  const cell = cellAt(sheet, at);
-  const node = cell === null ? null : nodeOf(cell.provenance.value);
-  if (node === null) return newCell(sheet, at, carries, read);
-
-  const found = located(node, read);
-  if (found.kind === 'refused') return null;
-
-  // `A1: 1` has nowhere to put a look; it becomes the cell the long way round.
-  if (found.node.kind === 'scalar') {
-    const written = carries.filter((one) => one.source !== null);
-    if (written.length === 0) return { file: found.file, ops: [] };
-
-    const keys = written.map((one) => `${one.key}: ${one.source}`).join(', ');
-    const whole = `{ value: ${found.node.source}, ${keys} }`;
-    return { file: found.file, ops: [{ op: 'write', path: found.path, source: whole }] };
-  }
-  if (found.node.kind !== 'map') return null;
-
-  return { file: found.file, ops: intoCell(found, carries, read) };
-}
-
-/** The look the cell's `style:` would carry, where the ask reaches it at all (ADR-008, ADR-037). */
-function asStyle(
-  spec: Styling,
-  layers: readonly StyleLayer[],
-  own: readonly StyleLayer[],
-  want: StyleSays,
-): Carries[] {
-  if (propertiesOf(want).length === 0) return [];
-
-  const under = resolve(layers.filter((one) => !fromCell(one)));
-  const named = resolve(own.filter((one) => one.name !== null));
-  const gives = beyond({ ...resolve(own), ...want }, under, named);
-
-  const how = propertiesOf(gives).length === 0 ? null : normalize(gives, spec.grid.styles);
-  return [{ key: STYLE, source: how === null ? null : written(how) }];
-}
-
-/** The `format:` the cell would carry: the ask itself, since one key holds all of it. */
-function asFormat(layers: readonly StyleLayer[], want: StyleSays): Carries[] {
-  const wanted = want.format;
-  if (wanted === undefined) return [];
-
-  const under = resolve(layers.filter((one) => !ownFormat(one))).format;
-  const supplied = under !== undefined && under !== null;
-  if (wanted === under || (wanted === null && !supplied)) return [{ key: FORMAT, source: null }];
-
-  return [{ key: FORMAT, source: wanted === null ? 'null' : renderScalar(wanted, 'double') }];
-}
-
-/** Whether the layer is the cell's own `format:` key, which the ask replaces outright. */
-function ownFormat(layer: StyleLayer): boolean {
-  return layer.through === 'cell' && layer.key === 'format';
-}
-
-/** The ops that put each key where it goes; a cell left holding only a value is that value again. */
-function intoCell(
-  found: Found & { kind: 'found' },
-  carries: readonly Carries[],
-  read: Reading,
-): Op[] {
-  if (found.node.kind !== 'map') return [];
-
-  const held = (key: string) => found.node.kind === 'map' && has(found.node.entries, key);
-  const gone = carries.filter((one) => one.source === null && held(one.key)).map((one) => one.key);
-  const rest = found.node.entries.filter((entry) => !gone.includes(String(entry.key.value)));
-  const only = rest.length === 1 && rest[0]?.key.value === 'value' ? rest[0] : undefined;
-  const writes = carries.some((one) => one.source !== null);
-
-  // A cell written for its look alone goes when the look does (`docs/spec.md` §3).
-  if (rest.length === 0 && gone.length > 0 && !writes) {
-    return [{ op: 'remove', path: found.path }];
-  }
-
-  if (only !== undefined && gone.length > 0) {
-    const source = read.text(found.file)?.slice(only.value.span.start, only.value.span.end) ?? null;
-    if (source !== null) return [{ op: 'write', path: found.path, source }];
-  }
-
-  return carries.flatMap((one) => {
-    if (one.source === null) {
-      return held(one.key) ? [{ op: 'remove', path: [...found.path, one.key] } as Op] : [];
-    }
-    return [
-      held(one.key)
-        ? ({ op: 'write', path: [...found.path, one.key], source: one.source } as Op)
-        : ({ op: 'addSource', path: found.path, key: one.key, source: one.source } as Op),
-    ];
-  });
-}
-
-function has(entries: readonly { key: { value: unknown } }[], key: string): boolean {
-  return entries.some((entry) => entry.key.value === key);
-}
-
-/** The look narrowed to everything but one property, which is written somewhere else. */
-function without(want: StyleSays, key: StyleProperty): StyleSays {
-  return ordered(
-    want,
-    propertiesOf(want).filter((one) => one !== key),
-  );
-}
-
-/** The look with what it need not say taken out; what a declaration the cell *names* says stays, and is answered. */
-function beyond(gives: StyleSays, under: StyleSays, named: StyleSays): StyleSays {
-  const kept: Record<string, unknown> = {};
-
-  for (const key of propertiesOf(gives)) {
-    const same = under[key] === gives[key];
-    const nothing = gives[key] === false || gives[key] === null;
-    const off = nothing && !supplied(under, key) && !supplied(named, key);
-    if (!same && !off) kept[key] = gives[key];
-  }
-
-  return kept as StyleSays;
-}
-
-/** Whether a look hands the cell the attribute at all: `null` is a layer saying it does not. */
-function supplied(said: StyleSays, key: StyleProperty): boolean {
-  return said[key] !== undefined && said[key] !== null;
-}
-
-/** A look on an address nothing writes: a cell that carries formatting and no value (`docs/spec.md` §3). */
-function newCell(
-  sheet: CompiledSheet,
-  at: A1Addr,
-  carries: readonly Carries[],
-  read: Reading,
-): { file: FilePath; ops: readonly Op[] } | null {
-  const written = carries.filter((one) => one.source !== null);
-  if (written.length === 0) return null;
-
-  const found = located(sheet.node, read);
-  if (found.kind === 'refused' || found.node.kind !== 'map') return null;
-
-  const holds = found.node.entries.some((entry) => entry.key.value === CELLS);
-  const entry = written.map((one) => `${one.key}: ${one.source}`).join(', ');
-  const body = written.length === 1 ? entry : `{ ${entry} }`;
-
-  return {
-    file: found.file,
-    ops: [
-      holds
-        ? { op: 'addSource', path: [...found.path, CELLS], key: at, source: body }
-        : { op: 'addSource', path: found.path, key: CELLS, source: `${at}:\n  ${body}` },
-    ],
-  };
-}
-
 /** The answer that changes what the look comes from: a declaration, a band, or the override over it. */
 function elsewhere(
   spec: Styling,
@@ -481,23 +246,6 @@ function elsewhere(
   return candidate(id, naming(supplier), writing);
 }
 
-/** What changing one supplying layer would be, over every cell that reads it. */
-function atSupplier(
-  spec: Styling,
-  supplier: StyleLayer,
-  want: StyleSays,
-  read: Reading,
-): Writing | null {
-  const found = located(supplier.node, read);
-  if (found.kind === 'refused' || found.node.kind !== 'map') return null;
-
-  const into = supplier.key === 'style' && supplier.name === null ? STYLE : null;
-  const ops = writing(found, into, want);
-  if (ops === null) return null;
-
-  return { file: found.file, ops, moves: reaches(spec.grid, supplier.node) };
-}
-
 /** Whether the look comes from an override's own style, under which anything written on the cell is invisible. */
 function excepted(supplier: StyleLayer): boolean {
   return supplier.through === 'override' && supplier.name === null;
@@ -506,11 +254,6 @@ function excepted(supplier: StyleLayer): boolean {
 /** Whether it comes from a key of the cell's own — which is not somewhere else, it is the cell. */
 function itsOwn(supplier: StyleLayer): boolean {
   return supplier.through === 'cell' && supplier.name === null;
-}
-
-/** Whether the cell's own `style:` put it there, a declaration it names included: rewriting that key replaces all of it. */
-function fromCell(layer: StyleLayer): boolean {
-  return layer.through === 'cell' && layer.key === 'style';
 }
 
 /** What the answer that reaches beyond the rectangle says it would change. */
@@ -524,61 +267,6 @@ function naming(supplier: StyleLayer): string {
   return supplier.through === 'column'
     ? 'Change the column it is set on, which is the whole column'
     : 'Change the row it is set on, which is the whole row';
-}
-
-/** The properties written into a mapping that already has some of them, as deep as its keys go. */
-function writing(
-  found: Found & { kind: 'found' },
-  into: string | null,
-  want: StyleSays,
-): Op[] | null {
-  const ops: Op[] = [];
-
-  for (const key of propertiesOf(want)) {
-    const path = into === null ? key.split('.') : [into, ...key.split('.')];
-    const op = under(found.node, [...found.path], path, want[key]);
-    if (op === null) return null;
-
-    ops.push(op);
-  }
-
-  return ops;
-}
-
-/** The op one leaf becomes: a `set` where the key is there, the keys it is missing where not, a `remove` where it is asked off. */
-function under(node: Node, at: Path, path: readonly string[], value: unknown): Op | null {
-  const [head, ...rest] = path;
-  if (head === undefined) return null;
-  if (node.kind !== 'map') return null;
-
-  const held = node.entries.find((entry) => String(entry.key.value) === head);
-  if (held === undefined) {
-    if (value === null) return null;
-
-    const gives = { [path.join('.')]: value } as StyleValues;
-    const source = written({ kind: 'inline', gives })
-      .replace(/^\{ |\}$/g, '')
-      .trim();
-    return { op: 'addSource', path: at, key: head, source: source.slice(head.length + 2) };
-  }
-
-  if (rest.length === 0) {
-    return value === null
-      ? { op: 'remove', path: [...at, head] }
-      : { op: 'set', path: [...at, head], value: value as never };
-  }
-
-  const deeper = under(held.value, [...at, head], rest, value);
-  if (deeper?.op === 'remove' && deeper.path.length === at.length + 2 && sole(held.value)) {
-    return { op: 'remove', path: [...at, head] };
-  }
-
-  return deeper;
-}
-
-/** Whether a mapping holds the one entry only, so taking that out would leave it empty. */
-function sole(node: Node): boolean {
-  return node.kind === 'map' && node.entries.length === 1;
 }
 
 /** The addresses of a rectangle, in reading order. */
@@ -599,19 +287,6 @@ function said(addresses: readonly A1Addr[]): string {
 
   return first === last ? `\`${first}\`` : `the ${addresses.length} cells from \`${first}\``;
 }
-
-/** The node a cell's look would be written on, where one construct wrote the cell. */
-function nodeOf(origin: FacetOrigin): NodeId | null {
-  if (origin.kind === 'formulaRange' || origin.kind === 'empty') {
-    return origin.kind === 'empty' ? origin.node : null;
-  }
-
-  return origin.node;
-}
-
-const STYLE = 'style';
-const FORMAT = 'format';
-const CELLS = 'cells';
 
 /** Every address of a rectangle asked for the whole look. */
 function everyone(addresses: readonly A1Addr[], want: StyleSays): Wanted[] {

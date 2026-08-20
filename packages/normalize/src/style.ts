@@ -90,9 +90,12 @@ export function written(of: Written): string {
 /** The properties as the nested mapping they are leaves of, in flow form. */
 function spelled(gives: StyleSays): string {
   const tree: Nested = {};
+  let drawn = false;
+
   for (const key of propertiesOf(gives)) {
     if (key.startsWith('border.')) {
-      tree['border'] ??= borders(gives);
+      if (!drawn) place(tree, ['border'], borders(gives));
+      drawn = true;
       continue;
     }
     place(tree, key.split('.'), scalar(key, gives[key]));
@@ -131,7 +134,7 @@ function edgeOf(gives: StyleSays, edge: string): Nested | string | null {
 
 type Nested = { [key: string]: Nested | string };
 
-function place(tree: Nested, path: readonly string[], value: string): void {
+function place(tree: Nested, path: readonly string[], value: Nested | string): void {
   const [head, ...rest] = path;
   if (head === undefined) return;
   if (rest.length === 0) {
