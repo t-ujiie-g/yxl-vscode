@@ -28,7 +28,7 @@ function sheet(of: Partial<DrawnSheet> = {}): DrawnSheet {
     columns: 2,
     at: { row: 1, col: 1 },
     of: { rows: 2, columns: 2 },
-    widths: [],
+    widths: [{ first: 1, last: 1, size: 10, hidden: false }],
     heights: [],
     cells: [cell()],
     merges: [],
@@ -122,6 +122,44 @@ describe('what the view sends', () => {
         right: 1,
         want: { fill: '1F3864' },
       },
+    ]);
+  });
+
+  it('sends a column dragged by its edge, in the units a spec writes widths in', () => {
+    const { into, sent } = view();
+
+    const grip = into.querySelector('thead .grip.column');
+    if (grip === null) throw new Error('there is no grip to drag');
+
+    grip.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, clientX: 100 }));
+    document.dispatchEvent(new MouseEvent('mousemove', { clientX: 114 }));
+    document.dispatchEvent(new MouseEvent('mouseup'));
+
+    expect(sent.filter((one) => one.kind === 'resize')).toEqual([
+      { kind: 'resize', sheet: 'Sales', axis: 'column', at: 1, size: 12 },
+    ]);
+  });
+
+  it('sends nothing where the edge was pressed and let go without moving', () => {
+    const { into, sent } = view();
+
+    const grip = into.querySelector('thead .grip.column');
+    grip?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, clientX: 100 }));
+    document.dispatchEvent(new MouseEvent('mouseup'));
+
+    expect(sent.filter((one) => one.kind === 'resize')).toEqual([]);
+  });
+
+  it('sends a row dragged by its edge, in points', () => {
+    const { into, sent } = view();
+
+    const grip = into.querySelector('tbody .grip.row');
+    grip?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, clientY: 50 }));
+    document.dispatchEvent(new MouseEvent('mousemove', { clientY: 70 }));
+    document.dispatchEvent(new MouseEvent('mouseup'));
+
+    expect(sent.filter((one) => one.kind === 'resize')).toEqual([
+      { kind: 'resize', sheet: 'Sales', axis: 'row', at: 1, size: 30 },
     ]);
   });
 

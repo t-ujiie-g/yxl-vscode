@@ -10,9 +10,9 @@ import { ordered, propertiesOf, type StyleProperty, type StyleSays } from '@yxl-
 import { type A1Addr, addrAt, qualified, type Rect, type SheetName } from '@yxl-vscode/units';
 import type { Reading } from './direct';
 import type { Candidate } from './resolve';
-import { atSupplier, onEvery, type Styling, type Wanted, type Writing } from './writes';
+import { atSupplier, onEvery, type Projection, type Wanted, type Writing } from './writes';
 
-export type { Styling } from './writes';
+export type { Projection } from './writes';
 
 /**
  * Every way of making a rectangle look as the reader asked — `ROADMAP.md` §4.4's
@@ -20,7 +20,7 @@ export type { Styling } from './writes';
  * caller may take it without asking (ADR-001).
  */
 export function setStyle(
-  spec: Styling,
+  spec: Projection,
   where: { sheet: SheetName; rect: Rect },
   want: StyleSays,
   read: Reading,
@@ -40,7 +40,7 @@ export function setStyle(
 
 /** The answers where every cell of the rectangle takes the look from the same place. */
 function fromOne(
-  spec: Styling,
+  spec: Projection,
   sheet: CompiledSheet,
   where: { sheet: SheetName; rect: Rect },
   supplier: StyleLayer | null,
@@ -101,7 +101,7 @@ function origins(
 
 /** The two answers §4.4 gives a rectangle whose cells take the look from different places. */
 function apart(
-  spec: Styling,
+  spec: Projection,
   sheet: CompiledSheet,
   where: { sheet: SheetName; rect: Rect },
   from: readonly Origin[],
@@ -146,7 +146,7 @@ function after(text: string, writing: Writing): string | null {
 
 /** Each origin changed where it lives, with the cells nothing supplies written on themselves. */
 function splitting(
-  spec: Styling,
+  spec: Projection,
   sheet: CompiledSheet,
   name: SheetName,
   from: readonly Origin[],
@@ -216,7 +216,7 @@ function candidate(id: string, what: string, writing: Writing): Candidate {
 
 /** The answer that writes it on the cells themselves, over what each already contributes (ADR-008, ADR-037). */
 function onCells(
-  spec: Styling,
+  spec: Projection,
   sheet: CompiledSheet,
   name: SheetName,
   wants: readonly Wanted[],
@@ -230,7 +230,7 @@ function onCells(
 
 /** The answer that changes what the look comes from: a declaration, a band, or the override over it. */
 function elsewhere(
-  spec: Styling,
+  spec: Projection,
   supplier: StyleLayer | null,
   want: StyleSays,
   read: Reading,

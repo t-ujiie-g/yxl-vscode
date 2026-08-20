@@ -8,6 +8,7 @@ import type {
   PastedText,
   Ranged,
   Refused,
+  Resized,
   Source,
   Typed,
   Worn,
@@ -79,6 +80,8 @@ export interface Asks {
   readonly emptiedWith: (ranged: Ranged, choice: string) => void;
   readonly wear: (want: StyleSays, over: Rect) => void;
   readonly drawWith: (line: BorderStyle) => void;
+  readonly resize: (axis: 'column' | 'row', at: number, size: number) => void;
+  readonly resizedWith: (resized: Resized, choice: string) => void;
   readonly wornWith: (worn: Worn, choice: string) => void;
   readonly pastedWith: (pasted: Pasted, choice: string) => void;
   readonly pastedTextWith: (text: PastedText, choice: string) => void;

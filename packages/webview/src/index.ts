@@ -241,6 +241,16 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       line = chosen;
       restated();
     },
+    resize: (axis, at, size) => {
+      refused = null;
+      said = null;
+      host.postMessage({ kind: 'resize', sheet: named(), axis, at, size });
+    },
+    resizedWith: (resized, choice) => {
+      refused = null;
+      said = null;
+      host.postMessage({ ...resized, choice, kind: 'resized' });
+    },
     wear: (want, over) => {
       refused = null;
       said = null;

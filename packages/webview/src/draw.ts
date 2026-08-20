@@ -24,7 +24,7 @@ import {
 import type { DrawnCell, DrawnMerge, DrawnSheet } from './protocol';
 import { type Asks, cellKey, GUTTER, type Showing } from './showing';
 import { toolbar } from './toolbar';
-import { across, down, heightOf, type Where, wanted, widthOf } from './window';
+import { across, down, heightOf, sizeOf, type Where, wanted, widthOf } from './window';
 
 /**
  * The whole view, rebuilt outright whenever the host sends a new drawing
@@ -287,6 +287,7 @@ function headings(sheet: DrawnSheet, showing: Showing, asks: Asks): HTMLElement 
     const heading = document.createElement('th');
     heading.textContent = columnLabel(col);
     heading.style.width = `${wide}px`;
+    heading.append(grip('column', col, wide, asks));
     line.append(heading);
   }
 
@@ -295,6 +296,39 @@ function headings(sheet: DrawnSheet, showing: Showing, asks: Asks): HTMLElement 
 
   head.append(line);
   return head;
+}
+
+/** The edge of a heading, dragged to size what it heads; sent once on the way up, since every step would be an edit. */
+function grip(axis: 'column' | 'row', at: number, from: number, asks: Asks): HTMLElement {
+  const held = document.createElement('span');
+  held.className = `grip ${axis}`;
+
+  held.addEventListener('mousedown', (down: MouseEvent) => {
+    down.preventDefault();
+    down.stopPropagation();
+
+    const heading = held.parentElement;
+    const start = axis === 'column' ? down.clientX : down.clientY;
+    let size = from;
+
+    const moved = (at: MouseEvent) => {
+      size = Math.max(1, from + (axis === 'column' ? at.clientX : at.clientY) - start);
+      if (heading === null) return;
+      if (axis === 'column') heading.style.width = `${size}px`;
+      else heading.style.height = `${size}px`;
+    };
+
+    const up = () => {
+      document.removeEventListener('mousemove', moved);
+      document.removeEventListener('mouseup', up);
+      if (size !== from) asks.resize(axis, at, sizeOf(axis, size));
+    };
+
+    document.addEventListener('mousemove', moved);
+    document.addEventListener('mouseup', up);
+  });
+
+  return held;
 }
 
 /** The width of the columns the window left out; a `td` even among headings, since it must scroll. */
@@ -331,6 +365,7 @@ function line(
 
   const number = document.createElement('th');
   number.textContent = String(row);
+  number.append(grip('row', row, heightOf(sheet, row), asks));
   line.append(number);
 
   const before = across(sheet, sheet.at.col);
