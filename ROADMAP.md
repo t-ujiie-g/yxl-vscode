@@ -2250,13 +2250,17 @@ whose answer does not go in a `style:` at all.
   a cell can now gain a style and a format from one gesture, and a scalar cell
   expanded for both has to be one op or the two would overlap. Taking both away
   leaves `A1: 1` again.
-- **The formats are offered as what they make of a number** — `1,234.57`,
-  `12.3%`, `2026-08-20` — with the code in the tooltip. A code the list does
-  not hold is added to it rather than dropped, so the box never lies about what
-  the cell wears; typing one that is not on the list is still a job for the
-  YAML.
-- 1467 → 1479 tests. Comment shape: exports 416 blocks / 904 lines (avg 2.2),
-  private 287 / 313 (1.1), inline 57 / 76 (1.3), 11 over the limit — the same
+- **The formats are offered as what they would make of *this cell's* number**,
+  with the code in the tooltip. They were samples of some other number at first
+  — `12.3%` beside a cell holding `1234.5678`, which would render `123456.8%` —
+  and a label that is a rendering of a number the reader cannot see is a lie
+  about the only thing the control does. Found by running it. Where the cell
+  holds no number the code is the label, since there is nothing to show.
+- A code the list does not hold is added to it rather than dropped, so the box
+  never lies about what the cell wears; typing one that is not on the list is
+  still a job for the YAML.
+- 1467 → 1482 tests. Comment shape: exports 417 blocks / 905 lines (avg 2.2),
+  private 290 / 316 (1.1), inline 57 / 76 (1.3), 11 over the limit — the same
   eleven.
 
 ### 2026-08-20 — Where the text sits

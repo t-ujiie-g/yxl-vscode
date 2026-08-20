@@ -114,13 +114,23 @@ function run(of: DrawnRun): HTMLElement {
  * its format.
  */
 export function shown(cell: DrawnCell): string {
-  const computed = cell.computed;
-  if (computed?.kind === 'error') return computed.error;
-  if (computed?.kind === 'value') return formatted(computed.value, cell.format);
+  if (cell.computed?.kind === 'error') return cell.computed.error;
 
-  if (cell.value !== null) return formatted(cell.value, cell.format);
+  const value = held(cell);
+  if (value !== null) return formatted(value, cell.format);
 
   return cell.formula === null ? '' : `=${cell.formula}`;
+}
+
+/** What a format would make of the number a cell shows, or `null` where it shows none. */
+export function underFormat(cell: DrawnCell, format: string): string | null {
+  const value = held(cell);
+  return typeof value === 'number' ? formatted(value, format) : null;
+}
+
+/** The value a cell shows: what was computed where there is one, else what the spec holds (ADR-014). */
+function held(cell: DrawnCell): ScalarValue | null {
+  return cell.computed?.kind === 'value' ? cell.computed.value : cell.value;
 }
 
 function formatted(value: ScalarValue, format: string | null): string {

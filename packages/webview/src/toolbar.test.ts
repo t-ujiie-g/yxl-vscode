@@ -236,6 +236,46 @@ describe('a number under a format', () => {
     expect(wear).toHaveBeenCalledWith({ format: null }, ONE);
   });
 
+  it('says what each format would make of the number the cell holds', () => {
+    const cells = [cell({ value: 1234.5678 })];
+    const bar = toolbar(showing({ cells, selected: { row: 1, col: 1 } }), asks());
+
+    const options = [...(box(bar)?.options ?? [])].map((one) => [one.value, one.textContent]);
+    expect(options.slice(0, 6)).toEqual([
+      ['', 'General'],
+      ['#,##0', '1,235'],
+      ['#,##0.00', '1,234.57'],
+      ['0.00', '1234.57'],
+      ['0%', '123457%'],
+      ['0.0%', '123456.8%'],
+    ]);
+  });
+
+  it('says the code itself where the cell holds no number to make anything of', () => {
+    const cells = [cell({ value: 'APAC' })];
+    const bar = toolbar(showing({ cells, selected: { row: 1, col: 1 } }), asks());
+
+    const options = [...(box(bar)?.options ?? [])].map((one) => one.textContent);
+    expect(options).toEqual([
+      'General',
+      '#,##0',
+      '#,##0.00',
+      '0.00',
+      '0%',
+      '0.0%',
+      'yyyy-mm-dd',
+      'h:mm',
+    ]);
+  });
+
+  it('makes it of what a formula was computed to, since that is the number shown', () => {
+    const cells = [cell({ value: null, computed: { kind: 'value', value: 0.085 } })];
+    const bar = toolbar(showing({ cells, selected: { row: 1, col: 1 } }), asks());
+
+    const options = [...(box(bar)?.options ?? [])].map((one) => one.textContent);
+    expect(options[5]).toBe('8.5%');
+  });
+
   it('shows a code it does not offer rather than losing it', () => {
     const cells = [cell({ style: { format: '[h]:mm:ss' } })];
     const bar = toolbar(showing({ cells, selected: { row: 1, col: 1 } }), asks());
