@@ -995,12 +995,13 @@ The other half of what a person does with a sheet, and the half that decides
 whether the spec survives contact with a GUI (ADR-008).
 - [ ] A toolbar of what a reader reaches for: bold, italic, fill, text colour,
       borders, alignment, number format
-      **The font switches, the two colours and where the text sits are in** —
-      bold, italic, underline, strike, a fill, a text colour, both alignment
-      axes and wrap — above the grid, each showing what the selected cell wears,
-      and each taking itself off again (**ADR-038**, **ADR-039**). What is left
-      is a border, which needs an edge chosen, and a number format, which is the
-      cell's own `format:` key rather than its `style:`.
+      **All of it but the border is in** — bold, italic, underline, strike, a
+      fill, a text colour, both alignment axes, wrap, and a number format —
+      above the grid, each showing what the selected cell wears and each taking
+      itself off again (**ADR-038**, **ADR-039**). The border is what is left,
+      and it is the one that needs an edge chosen before it can be asked for.
+      A format code the list does not offer is shown rather than lost, but
+      cannot be typed yet.
 - [x] Every style write through the **normalizer** and through §4.4's `setStyle`
       table — change the definition, or fork it for this range, with the ripple
       count shown *before* the choice
@@ -2226,6 +2227,41 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-20 — A number under a format, from the toolbar
+The last of §4.4's `setStyle` row that is not a border, and the first control
+whose answer does not go in a `style:` at all.
+
+- **A number format is a key of the cell's own**, so the write goes to
+  `format:` beside `value:` rather than into the style mapping — except where
+  the style *written out on the cell* is what says it, which is rewritten in
+  place. Over a declaration the cell names, the key layers: `{ value: 1,
+  style: money, format: "0.0%" }` keeps `money` rather than detaching from it,
+  which is the sentence `docs/spec.md` §6 ends on.
+- **`StyleLayer.key` finally earns its keep.** It has said `style` or `format`
+  since the first style write; now it decides *where* the answer is written —
+  a band that gives a format changes its own `format:` key, not a `style:`
+  mapping it never had.
+- **Anything the cell itself says is the cell's answer**, whichever key said
+  it. `itsOwn` asked for the `style:` key alone, so a cell's own `format:` was
+  offered as somewhere else to go, labelled as a row band. One predicate,
+  three words shorter, and the label goes with it.
+- **`onCell` writes keys rather than a look.** It was one source into one key;
+  a cell can now gain a style and a format from one gesture, and a scalar cell
+  expanded for both has to be one op or the two would overlap. Taking both away
+  leaves `A1: 1` again.
+- **The formats are offered as what they would make of *this cell's* number**,
+  with the code in the tooltip. They were samples of some other number at first
+  — `12.3%` beside a cell holding `1234.5678`, which would render `123456.8%` —
+  and a label that is a rendering of a number the reader cannot see is a lie
+  about the only thing the control does. Found by running it. Where the cell
+  holds no number the code is the label, since there is nothing to show.
+- A code the list does not hold is added to it rather than dropped, so the box
+  never lies about what the cell wears; typing one that is not on the list is
+  still a job for the YAML.
+- 1467 → 1482 tests. Comment shape: exports 417 blocks / 905 lines (avg 2.2),
+  private 290 / 316 (1.1), inline 57 / 76 (1.3), 11 over the limit — the same
+  eleven.
 
 ### 2026-08-20 — Where the text sits
 Both alignment axes and wrap, which is the third group of the toolbar and the

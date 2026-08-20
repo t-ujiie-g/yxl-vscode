@@ -1,5 +1,6 @@
 import type { HAlign, StyleProperty, StyleSays, StyleValues, VAlign } from '@yxl-vscode/spec';
 import { type Color, parseColor, type Rect } from '@yxl-vscode/units';
+import { underFormat } from './cell';
 import { between } from './keys';
 import type { DrawnCell } from './protocol';
 import type { Asks, Showing } from './showing';
@@ -15,6 +16,8 @@ export function toolbar(showing: Showing, asks: Asks): HTMLElement {
   bar.append(gap());
   for (const one of PICKS) bar.append(pick(one, showing, asks));
   bar.append(toggle(WRAP, showing, asks));
+  bar.append(gap());
+  bar.append(numbers(showing, asks));
 
   return bar;
 }
@@ -193,6 +196,53 @@ function marked(bars: readonly Bar[]): SVGSVGElement {
 
 const SVG = 'http://www.w3.org/2000/svg';
 
+/** A number format, said as what it would make of the number this cell holds. */
+function numbers(showing: Showing, asks: Asks): HTMLElement {
+  const of = cellOf(showing);
+  const now = wornBy(showing).format ?? null;
+  const box = document.createElement('select');
+
+  box.className = 'look numbers';
+  box.title = now === null ? 'Number format' : `Number format: ${now}`;
+  box.disabled = showing.selected === null;
+
+  const known = NUMBERS.includes(now);
+  for (const code of known ? NUMBERS : [...NUMBERS, now]) {
+    const option = document.createElement('option');
+    option.value = code ?? '';
+    option.textContent = says(code, of);
+    option.title = code ?? '';
+    option.selected = code === now;
+    box.append(option);
+  }
+
+  const where = over(showing);
+  box.addEventListener('change', () => {
+    asks.wear({ format: box.value === '' ? null : box.value }, where);
+  });
+
+  return box;
+}
+
+/** The formats a toolbar offers, by their codes: what each is called depends on the cell. */
+const NUMBERS: readonly (string | null)[] = [
+  null,
+  '#,##0',
+  '#,##0.00',
+  '0.00',
+  '0%',
+  '0.0%',
+  'yyyy-mm-dd',
+  'h:mm',
+];
+
+/** What a format is called here: what it would make of this cell's number, or the code where there is none. */
+function says(code: string | null, of: DrawnCell | undefined): string {
+  if (code === null) return 'General';
+
+  return (of === undefined ? null : underFormat(of, code)) ?? code;
+}
+
 /** A colour, as the swatch the selected cell wears and the button that takes it off. */
 function ink(of: Ink, showing: Showing, asks: Asks): HTMLElement[] {
   const now = wornBy(showing)[of.key] ?? null;
@@ -238,11 +288,16 @@ function over(showing: Showing): Rect {
 
 /** What the cell the reader has selected wears, which is what the toolbar shows. */
 function wornBy(showing: Showing): StyleValues {
+  return cellOf(showing)?.style ?? {};
+}
+
+/** The cell the reader has selected, where the drawing holds one. */
+function cellOf(showing: Showing): DrawnCell | undefined {
   const at = showing.selected;
-  if (at === null) return {};
+  if (at === null) return undefined;
 
   const cells = showing.drawing.sheets[showing.sheet]?.cells ?? [];
-  return cells.find((one: DrawnCell) => one.row === at.row && one.col === at.col)?.style ?? {};
+  return cells.find((one: DrawnCell) => one.row === at.row && one.col === at.col);
 }
 
 /** A colour as the picker takes one: six digits behind a `#`, an eight-digit form's alpha dropped. */
