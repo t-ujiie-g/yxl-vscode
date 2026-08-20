@@ -2229,6 +2229,56 @@ than widening it silently.
 
 ## 11. Living changelog
 
+### 2026-08-21 — Refactoring pass over the whole tree (`AGENTS.md` §8)
+After the five commits that built Phase 9's toolbar, which is where the debt
+was: each control landed on the end of the file it belonged in, and each one
+brought a copy of the vocabulary it needed.
+
+- **§8.1 — the four border edges were spelled in four places, in two orders.**
+  `compile` and `normalize` had `left, right, top, bottom`; the toolbar had
+  `top, right, bottom, left`; `webview/cell.ts` paired each with its CSS
+  property. They are `BORDER_EDGES` in `spec` now, `BORDER_SIDES` is that list
+  with `all` in front of it, and the CSS pairing was derivable.
+- **§8.2 — three helpers were one function under two names.**
+  `properties(said)` was private and identical in `intent` and `normalize`,
+  `only(said, keys)` likewise, and `ordered(said)` in `normalize` was `only`
+  over every property. They are `propertiesOf` and `ordered` in `spec`, one
+  each, with `ordered`'s second argument defaulting to every property — which
+  is what made the third copy disappear. `columnAt` / `rowAt` in `webview` are
+  exported only for their tests and were **kept**: pixel to row is the whole
+  scrolling model, and it is the arithmetic worth asserting on directly.
+- **§8.3 — two files were doing two jobs each.** `intent/style.ts` (619 lines)
+  held both which places can answer a style write and what bytes each place
+  gets; they are `style.ts` (294) and `writes.ts` (330), and the seam is three
+  names wide. Splitting it is what showed `fromCell` belongs with the writers.
+  `webview/toolbar.ts` had each control's table two controls away from its
+  renderer; it reads in the order the bar reads now, and the SVG marks are
+  `marks.ts` with tests of their own.
+- **§8.4 — `spec` had no test file at all**, for the package every other one
+  takes its vocabulary from. It has one, including the case that makes
+  `propertiesUnder` worth having: `border.left` covers the line *and* the
+  colour, since the edge is the unit a border is taken away at. `underFormat`
+  got the direct test it never had.
+- **§8.6 — the over-limit list moved for the first time in four passes.** Nine
+  of the eleven earn it: three type docs standing in for the per-field comments
+  §8.6 forbids, and six privates each carrying a constraint the code cannot
+  show. Two did not — one explained what makes a resolution row a choice, which
+  is this file's job, and one described the scroll handler the scroll handler
+  describes.
+- **§8.5 — the README's "Applies a look" row had grown a clause per pull
+  request** until it was five sentences about three things. Two rows now: what
+  the toolbar does, and what happens when a look comes from somewhere else.
+- **§8.7 — clean, and checked rather than assumed.** No package imports upward.
+  The one `applyEdit` in the tree is behind `Port.put`, which is called from
+  exactly two places and both of them after `checked`. Nothing reads a computed
+  value on a write path — the number-format list renders one for a *label*,
+  which is display (ADR-014). `Showing.line` is the view's own setting, not
+  cell state (ADR-001).
+- **§8.9 — vitest 4.1.11**, on its own commit; nothing else in the tree is
+  behind, and the one lint info left in the source is gone.
+- 1502 → 1521 tests. **This pass ends at: exports 427 blocks / 918 lines
+  (avg 2.1), private 289 / 309 (1.1), inline 57 / 76 (1.3), 9 over the limit.**
+
 ### 2026-08-20 — An edge you can draw, and Phase 9's toolbar is done
 The last control of §6 Phase 9's first item: a border on any edge, with the
 line to draw it in. **The item is ticked.**

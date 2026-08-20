@@ -1,5 +1,7 @@
 import {
+  BORDER_EDGES,
   BORDER_STYLES,
+  type BorderEdgeName,
   type BorderStyle,
   type HAlign,
   type StyleProperty,
@@ -10,6 +12,7 @@ import {
 import { type Color, parseColor, type Rect } from '@yxl-vscode/units';
 import { underFormat } from './cell';
 import { between } from './keys';
+import { ACROSS, type Bar, DOWN, framed, marked, RAGGED } from './marks';
 import type { DrawnCell } from './protocol';
 import type { Asks, Showing } from './showing';
 
@@ -40,6 +43,26 @@ function gap(): HTMLElement {
   return span;
 }
 
+/** The rectangle the toolbar was drawn over, which is what its controls act on. */
+function over(showing: Showing): Rect {
+  const at = showing.selected ?? { row: 1, col: 1 };
+  return between(at, showing.anchor ?? at);
+}
+
+/** What the cell the reader has selected wears, which is what the toolbar shows. */
+function wornBy(showing: Showing): StyleValues {
+  return cellOf(showing)?.style ?? {};
+}
+
+/** The cell the reader has selected, where the drawing holds one. */
+function cellOf(showing: Showing): DrawnCell | undefined {
+  const at = showing.selected;
+  if (at === null) return undefined;
+
+  const cells = showing.drawing.sheets[showing.sheet]?.cells ?? [];
+  return cells.find((one: DrawnCell) => one.row === at.row && one.col === at.col);
+}
+
 interface Toggle {
   readonly key: StyleProperty;
   readonly name: string;
@@ -56,6 +79,87 @@ const TOGGLES: readonly Toggle[] = [
 
 const WRAP: Toggle = { key: 'align.wrap', name: 'wrap', mark: '\u21b5', says: 'Wrap text' };
 
+/** One switch, showing what the selected cell wears and asking for the other of it. */
+function toggle(of: Toggle, showing: Showing, asks: Asks): HTMLElement {
+  const on = wornBy(showing)[of.key] === true;
+  const button = document.createElement('button');
+
+  button.type = 'button';
+  button.className = `look ${of.name}${on ? ' on' : ''}`;
+  button.textContent = of.mark;
+  button.title = of.says;
+  button.disabled = showing.selected === null;
+  button.setAttribute('aria-pressed', on ? 'true' : 'false');
+  button.addEventListener('click', () => asks.wear({ [of.key]: !on } as StyleSays, over(showing)));
+
+  return button;
+}
+
+interface Ink {
+  readonly key: 'font.color' | 'fill';
+  readonly name: string;
+  readonly mark: string;
+  readonly says: string;
+  readonly clears: string;
+  readonly opens: string;
+}
+
+const INKS: readonly Ink[] = [
+  {
+    key: 'font.color',
+    name: 'ink',
+    mark: 'A',
+    says: 'Text colour',
+    clears: 'Automatic text colour',
+    opens: '#000000',
+  },
+  {
+    key: 'fill',
+    name: 'fill',
+    mark: '■',
+    says: 'Fill',
+    clears: 'No fill',
+    opens: '#ffffff',
+  },
+];
+
+/** A colour, as the swatch the selected cell wears and the button that takes it off. */
+function ink(of: Ink, showing: Showing, asks: Asks): HTMLElement[] {
+  const now = wornBy(showing)[of.key] ?? null;
+  const nowhere = showing.selected === null;
+
+  const swatch = document.createElement('label');
+  swatch.className = `look ${of.name}`;
+  swatch.title = of.says;
+  swatch.append(of.mark);
+  swatch.style.setProperty('border-bottom-color', now === null ? 'transparent' : picked(now));
+
+  const pick = document.createElement('input');
+  pick.type = 'color';
+  pick.className = 'pick';
+  pick.value = now === null ? of.opens : picked(now);
+  pick.disabled = nowhere;
+  // The picker commits when it is dismissed, by which time the reader may have
+  // selected something else, so the rectangle is the one it was opened over.
+  const where = over(showing);
+  pick.addEventListener('change', () => {
+    // The picker says `#rrggbb`; a spec writes `RRGGBB` (`docs/spec.md` §6).
+    const colour = parseColor(pick.value.replace('#', '').toUpperCase());
+    if (colour !== null) asks.wear({ [of.key]: colour } as StyleSays, where);
+  });
+  swatch.append(pick);
+
+  const off = document.createElement('button');
+  off.type = 'button';
+  off.className = `look off ${of.name}`;
+  off.textContent = '×';
+  off.title = of.clears;
+  off.disabled = nowhere || now === null;
+  off.addEventListener('click', () => asks.wear({ [of.key]: null } as StyleSays, where));
+
+  return [swatch, off];
+}
+
 /** One place the text can sit; pressing the one that already holds takes it off (ADR-039). */
 interface Pick {
   readonly key: 'align.horizontal' | 'align.vertical';
@@ -64,18 +168,6 @@ interface Pick {
   readonly says: string;
   readonly bars: readonly Bar[];
 }
-
-interface Bar {
-  readonly x: number;
-  readonly y: number;
-  readonly width: number;
-  readonly height?: number;
-  readonly faint?: boolean;
-}
-
-const ACROSS = [2, 5.6, 9.2, 12.8];
-const DOWN = [0, 2.8, 5.6];
-const RAGGED = [12, 8, 12, 8];
 
 const PICKS: readonly Pick[] = [
   {
@@ -126,48 +218,10 @@ const PICKS: readonly Pick[] = [
   },
 ];
 
-interface Ink {
-  readonly key: 'font.color' | 'fill';
-  readonly name: string;
-  readonly mark: string;
-  readonly says: string;
-  readonly clears: string;
-  readonly opens: string;
-}
-
-const INKS: readonly Ink[] = [
-  {
-    key: 'font.color',
-    name: 'ink',
-    mark: 'A',
-    says: 'Text colour',
-    clears: 'Automatic text colour',
-    opens: '#000000',
-  },
-  {
-    key: 'fill',
-    name: 'fill',
-    mark: '■',
-    says: 'Fill',
-    clears: 'No fill',
-    opens: '#ffffff',
-  },
-];
-
-/** One switch, showing what the selected cell wears and asking for the other of it. */
-function toggle(of: Toggle, showing: Showing, asks: Asks): HTMLElement {
-  const on = wornBy(showing)[of.key] === true;
-  const button = document.createElement('button');
-
-  button.type = 'button';
-  button.className = `look ${of.name}${on ? ' on' : ''}`;
-  button.textContent = of.mark;
-  button.title = of.says;
-  button.disabled = showing.selected === null;
-  button.setAttribute('aria-pressed', on ? 'true' : 'false');
-  button.addEventListener('click', () => asks.wear({ [of.key]: !on } as StyleSays, over(showing)));
-
-  return button;
+/** A colour as the picker takes one: six digits behind a `#`, an eight-digit form's alpha dropped. */
+function picked(of: Color): string {
+  const digits = of.startsWith('#') ? of.slice(1) : of;
+  return `#${digits.length === 8 ? digits.slice(2) : digits}`;
 }
 
 /** One of a group, showing where the text sits and asking for it there — or, where it already is, nowhere. */
@@ -188,39 +242,15 @@ function pick(of: Pick, showing: Showing, asks: Asks): HTMLElement {
   return button;
 }
 
-/** A mark drawn as the bars of text it stands for, which is how a spreadsheet draws this. */
-function marked(bars: readonly Bar[]): SVGSVGElement {
-  const svg = document.createElementNS(SVG, 'svg');
-  svg.setAttribute('viewBox', '0 0 16 16');
-  svg.setAttribute('aria-hidden', 'true');
-
-  for (const bar of bars) {
-    const drawn = document.createElementNS(SVG, 'rect');
-    drawn.setAttribute('x', String(bar.x));
-    drawn.setAttribute('y', String(bar.y));
-    drawn.setAttribute('width', String(bar.width));
-    drawn.setAttribute('height', String(bar.height ?? 1.6));
-    drawn.setAttribute('rx', '0.6');
-    if (bar.faint === true) drawn.setAttribute('class', 'faint');
-    svg.append(drawn);
-  }
-
-  return svg;
-}
-
-const SVG = 'http://www.w3.org/2000/svg';
-
 /** One border a reader draws: which edges it puts the line on, or takes it off. */
 interface Edge {
   readonly name: string;
   readonly says: string;
-  readonly sides: readonly ('left' | 'right' | 'top' | 'bottom')[];
+  readonly sides: readonly BorderEdgeName[];
 }
 
-const SIDES = ['top', 'right', 'bottom', 'left'] as const;
-
 const EDGES: readonly Edge[] = [
-  { name: 'all', says: 'All borders', sides: SIDES },
+  { name: 'all', says: 'All borders', sides: BORDER_EDGES },
   { name: 'top', says: 'Top border', sides: ['top'] },
   { name: 'bottom', says: 'Bottom border', sides: ['bottom'] },
   { name: 'left', says: 'Left border', sides: ['left'] },
@@ -246,7 +276,7 @@ function edge(of: Edge, showing: Showing, asks: Asks): HTMLElement {
 function drawn(of: Edge, line: BorderStyle): StyleSays {
   if (of.sides.length === 0) {
     return Object.fromEntries(
-      SIDES.flatMap((side) => [
+      BORDER_EDGES.flatMap((side) => [
         [`border.${side}.style`, null],
         [`border.${side}.color`, null],
       ]),
@@ -254,18 +284,6 @@ function drawn(of: Edge, line: BorderStyle): StyleSays {
   }
 
   return Object.fromEntries(of.sides.map((side) => [`border.${side}.style`, line])) as StyleSays;
-}
-
-/** The box a border mark is drawn in, with the edges it puts a line on standing out. */
-function framed(sides: readonly string[]): Bar[] {
-  const box = {
-    top: { x: 1, y: 1, width: 14, height: 1 },
-    bottom: { x: 1, y: 14, width: 14, height: 1 },
-    left: { x: 1, y: 1, width: 1, height: 14 },
-    right: { x: 14, y: 1, width: 1, height: 14 },
-  };
-
-  return SIDES.map((side) => ({ ...box[side], faint: !sides.includes(side) }));
 }
 
 /** The line the border buttons draw with, which is the reader's choice and not the cell's. */
@@ -291,6 +309,18 @@ function lines(showing: Showing, asks: Asks): HTMLElement {
 
   return box;
 }
+
+/** The formats a toolbar offers, by their codes: what each is called depends on the cell. */
+const NUMBERS: readonly (string | null)[] = [
+  null,
+  '#,##0',
+  '#,##0.00',
+  '0.00',
+  '0%',
+  '0.0%',
+  'yyyy-mm-dd',
+  'h:mm',
+];
 
 /** A number format, said as what it would make of the number this cell holds. */
 function numbers(showing: Showing, asks: Asks): HTMLElement {
@@ -320,84 +350,9 @@ function numbers(showing: Showing, asks: Asks): HTMLElement {
   return box;
 }
 
-/** The formats a toolbar offers, by their codes: what each is called depends on the cell. */
-const NUMBERS: readonly (string | null)[] = [
-  null,
-  '#,##0',
-  '#,##0.00',
-  '0.00',
-  '0%',
-  '0.0%',
-  'yyyy-mm-dd',
-  'h:mm',
-];
-
 /** What a format is called here: what it would make of this cell's number, or the code where there is none. */
 function says(code: string | null, of: DrawnCell | undefined): string {
   if (code === null) return 'General';
 
   return (of === undefined ? null : underFormat(of, code)) ?? code;
-}
-
-/** A colour, as the swatch the selected cell wears and the button that takes it off. */
-function ink(of: Ink, showing: Showing, asks: Asks): HTMLElement[] {
-  const now = wornBy(showing)[of.key] ?? null;
-  const nowhere = showing.selected === null;
-
-  const swatch = document.createElement('label');
-  swatch.className = `look ${of.name}`;
-  swatch.title = of.says;
-  swatch.append(of.mark);
-  swatch.style.setProperty('border-bottom-color', now === null ? 'transparent' : picked(now));
-
-  const pick = document.createElement('input');
-  pick.type = 'color';
-  pick.className = 'pick';
-  pick.value = now === null ? of.opens : picked(now);
-  pick.disabled = nowhere;
-  // The picker commits when it is dismissed, by which time the reader may have
-  // selected something else, so the rectangle is the one it was opened over.
-  const where = over(showing);
-  pick.addEventListener('change', () => {
-    // The picker says `#rrggbb`; a spec writes `RRGGBB` (`docs/spec.md` §6).
-    const colour = parseColor(pick.value.replace('#', '').toUpperCase());
-    if (colour !== null) asks.wear({ [of.key]: colour } as StyleSays, where);
-  });
-  swatch.append(pick);
-
-  const off = document.createElement('button');
-  off.type = 'button';
-  off.className = `look off ${of.name}`;
-  off.textContent = '×';
-  off.title = of.clears;
-  off.disabled = nowhere || now === null;
-  off.addEventListener('click', () => asks.wear({ [of.key]: null } as StyleSays, where));
-
-  return [swatch, off];
-}
-
-/** The rectangle the toolbar was drawn over, which is what its controls act on. */
-function over(showing: Showing): Rect {
-  const at = showing.selected ?? { row: 1, col: 1 };
-  return between(at, showing.anchor ?? at);
-}
-
-/** What the cell the reader has selected wears, which is what the toolbar shows. */
-function wornBy(showing: Showing): StyleValues {
-  return cellOf(showing)?.style ?? {};
-}
-
-/** The cell the reader has selected, where the drawing holds one. */
-function cellOf(showing: Showing): DrawnCell | undefined {
-  const at = showing.selected;
-  if (at === null) return undefined;
-
-  const cells = showing.drawing.sheets[showing.sheet]?.cells ?? [];
-  return cells.find((one: DrawnCell) => one.row === at.row && one.col === at.col);
-}
-
-/** A colour as the picker takes one: six digits behind a `#`, an eight-digit form's alpha dropped. */
-function picked(of: Color): string {
-  const digits = of.startsWith('#') ? of.slice(1) : of;
-  return `#${digits.length === 8 ? digits.slice(2) : digits}`;
 }

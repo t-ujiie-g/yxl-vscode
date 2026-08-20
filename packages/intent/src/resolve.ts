@@ -203,10 +203,7 @@ function reference(found: Found): { file: FilePath; path: Path } | null {
     : null;
 }
 
-/**
- * Whether a `data:` rectangle sits above or to the left, near enough that extending
- * it would reach this address — which is what makes the `empty` row's first a choice.
- */
+/** Whether a `data:` rectangle sits above or to the left, near enough that extending it would reach this address. */
 function nextToData(sheet: CompiledSheet, at: A1Addr): boolean {
   const cell = cellOf(at);
   const neighbours = [

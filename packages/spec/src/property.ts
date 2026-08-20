@@ -74,3 +74,24 @@ export type StyleProperty = (typeof STYLE_PROPERTIES)[number];
 export function propertiesUnder(key: string): StyleProperty[] {
   return STYLE_PROPERTIES.filter((one) => one === key || one.startsWith(`${key}.`));
 }
+
+/** The properties a look says something about, in the order the model declares them. */
+export function propertiesOf(said: StyleSays): StyleProperty[] {
+  return STYLE_PROPERTIES.filter((key) => said[key] !== undefined);
+}
+
+/**
+ * The look in the order the model declares it, narrowed to the properties
+ * named — the order that makes one look always the same bytes.
+ */
+export function ordered(
+  said: StyleSays,
+  keys: readonly StyleProperty[] = STYLE_PROPERTIES,
+): StyleSays {
+  const kept: Record<string, unknown> = {};
+  for (const key of propertiesOf(said)) {
+    if (keys.includes(key)) kept[key] = said[key];
+  }
+
+  return kept as StyleSays;
+}

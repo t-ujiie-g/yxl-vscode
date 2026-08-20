@@ -57,8 +57,13 @@ export interface Font {
   readonly color: Templated<Color> | null;
 }
 
+/** The four edges a border is drawn at, which is the unit the schema takes one away at (`docs/spec.md` §6). */
+export const BORDER_EDGES = ['left', 'right', 'top', 'bottom'] as const;
+
+export type BorderEdgeName = (typeof BORDER_EDGES)[number];
+
 /** The sides a border may name; `all` sets the other four at once. */
-export const BORDER_SIDES = ['all', 'left', 'right', 'top', 'bottom'] as const;
+export const BORDER_SIDES = ['all', ...BORDER_EDGES] as const;
 
 export type BorderSideName = (typeof BORDER_SIDES)[number];
 
