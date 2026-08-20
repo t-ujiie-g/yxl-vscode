@@ -38,7 +38,23 @@ export function drawCell(
   if (cell.computed?.kind === 'error') drawn.classList.add('problem');
   else if (cell.computed === null && cell.filledFrom !== null) drawn.classList.add('filled');
   apply(drawn, cell.style);
+
+  const over = edges(cell.style);
+  if (over !== null) drawn.append(over);
+
   return drawn;
+}
+
+/** A cell's own borders, drawn over the grid's lines rather than collapsed with them, which a 1px line loses. */
+function edges(style: StyleValues): HTMLElement | null {
+  const drawn = declarations(style).filter(([name]) => name.startsWith('border-'));
+  if (drawn.length === 0) return null;
+
+  const over = document.createElement('span');
+  over.className = 'edges';
+  for (const [name, value] of drawn) over.style.setProperty(name, value);
+
+  return over;
 }
 
 /**
@@ -193,7 +209,9 @@ function declarations(style: StyleValues): [string, string][] {
 }
 
 function apply(drawn: HTMLElement, style: StyleValues): void {
-  for (const [name, value] of declarations(style)) drawn.style.setProperty(name, value);
+  for (const [name, value] of declarations(style)) {
+    if (!name.startsWith('border-')) drawn.style.setProperty(name, value);
+  }
 }
 
 /** A colour as another spreadsheet reads one: six digits, since a cell's fill has no alpha there. */

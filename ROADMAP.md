@@ -993,15 +993,16 @@ work.
 ### Phase 9 — Look you can apply
 The other half of what a person does with a sheet, and the half that decides
 whether the spec survives contact with a GUI (ADR-008).
-- [ ] A toolbar of what a reader reaches for: bold, italic, fill, text colour,
+- [x] A toolbar of what a reader reaches for: bold, italic, fill, text colour,
       borders, alignment, number format
-      **All of it but the border is in** — bold, italic, underline, strike, a
-      fill, a text colour, both alignment axes, wrap, and a number format —
-      above the grid, each showing what the selected cell wears and each taking
-      itself off again (**ADR-038**, **ADR-039**). The border is what is left,
-      and it is the one that needs an edge chosen before it can be asked for.
-      A format code the list does not offer is shown rather than lost, but
-      cannot be typed yet.
+      **Shipped**: bold, italic, underline, strike, a fill, a text colour, both
+      alignment axes, wrap, a number format, and a border on any edge — above
+      the grid, each showing what the selected cell wears and each taking itself
+      off again (**ADR-038**, **ADR-039**). Two holes are named rather than
+      hidden: a format code the list does not offer is shown but cannot be
+      typed, and a border round the *outside* of a range asks each cell for a
+      different edge, which is a want per address rather than one for the
+      rectangle.
 - [x] Every style write through the **normalizer** and through §4.4's `setStyle`
       table — change the definition, or fork it for this range, with the ripple
       count shown *before* the choice
@@ -2227,6 +2228,66 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-20 — An edge you can draw, and Phase 9's toolbar is done
+The last control of §6 Phase 9's first item: a border on any edge, with the
+line to draw it in. **The item is ticked.**
+
+- **Six buttons and a line.** All, top, bottom, left, right, none — each puts
+  the toolbar's line on the edges it names, and `none` takes all four off. They
+  *act* rather than hold, so unlike every other control on the bar none of them
+  is ever lit: a border is a thing done to a cell, not a thing a cell wears in
+  one place a switch could read.
+- **The line lives in the view, not in the cell.** It is the reader's choice of
+  `thin` … `hair` and the toolbar is rebuilt on every restate, so it had to
+  become `Showing.line` — the third thing the view holds of its own, beside
+  what is copied and what is being looked for.
+- **A border is written the way a person writes one.** Four edges alike are
+  `border: thin`, an edge with no colour is `border: { bottom: double }`, and
+  four edges taken away are `border: null` — rather than the eight-leaf spelling
+  the model holds them in. The §1 convergence claim is made of exactly this
+  sort of thing, and the model's leaves being finer than the schema's is the
+  reason it needs saying in the writer.
+- **What it will not do yet, and is written down rather than hidden**: a border
+  round the *outside* of a range, which asks each cell for a different edge —
+  one want per address rather than one for the rectangle, which `setStyle`
+  already takes but the `wear` message does not carry.
+- **A `thin` border was invisible on the edges that matter**, and running it is
+  what found that. The grid is a collapsed table, so a cell's own border and the
+  grid's own line meet at the same pixel and CSS resolves the tie: same width,
+  same style, and then *the cell further left, or further up, wins*. Every left
+  and top edge in the sheet lost. `double` came through only because it renders
+  2px, and wide beats narrow. A cell's borders are now drawn on an element of
+  their own over the cell rather than collapsed with the grid, so what the spec
+  says is what is seen — and the clipboard keeps the real `border-*` CSS it
+  needs (ADR-028).
+- **The first attempt at that made it worse and the second was measured**, which
+  is the note worth keeping. An overlay at `inset: -1px` sits in the pixel the
+  cell's own `overflow: hidden` clips, so every border disappeared. jsdom has no
+  layout, so no test here could have caught either that or the tie it was fixing.
+  What settled it was rendering the real `view.css` under headless Chrome
+  (`--headless --screenshot`) with the candidates side by side and looking:
+  `inset: 0` draws, `inset: -1px` draws nothing, and a 1px border on a collapsed
+  cell really does lose its left and top. **That is the loop to reach for when a
+  question is about layout** — the tests answer what the DOM holds, not what it
+  looks like.
+- **A cell written for its look alone goes when the look does.** Drawing a
+  border on an empty address writes `D6:` with nothing but a `style:`; taking it
+  off left the cell with no key at all, which is not a cell (`docs/spec.md` §3)
+  and which `cst` refused, correctly, as an entry with nothing to put it back
+  beside. The entry is removed instead, so the round trip through an empty
+  address is byte-for-byte again. Where `cells:` holds nothing else, the refusal
+  stands and the file is untouched — the gesture asked to take a look off, not
+  to take a `cells:` block out.
+- **An answer names the cells it would write on.** A border sends four
+  properties at once, so a rectangle whose style leaves have a supplier and
+  whose colour leaves do not is *mixed* by §4.4's reckoning even when it is one
+  cell — and "apply it to every cell here" is a strange thing to read about one
+  cell. It says what it would put it on now, in the same words the other answers
+  use.
+- 1482 → 1502 tests. Comment shape: exports 417 blocks / 905 lines (avg 2.2),
+  private 298 / 324 (1.1), inline 57 / 76 (1.3), 11 over the limit — the same
+  eleven.
 
 ### 2026-08-20 — A number under a format, from the toolbar
 The last of §4.4's `setStyle` row that is not a border, and the first control

@@ -105,20 +105,44 @@ export function written(of: Written): string {
 function spelled(gives: StyleSays): string {
   const tree: Nested = {};
   for (const key of properties(gives)) {
-    // An edge is the unit a spec takes a border away at, not its `style` and `colour` (`docs/spec.md` §6).
-    const path = cleared(gives, key) ? key.split('.').slice(0, 2) : key.split('.');
-    place(tree, path, scalar(key, gives[key]));
+    if (key.startsWith('border.')) {
+      tree['border'] ??= borders(gives);
+      continue;
+    }
+    place(tree, key.split('.'), scalar(key, gives[key]));
   }
 
   return flow(tree);
 }
 
-/** Whether the whole border edge this leaf belongs to is taken away. */
-function cleared(gives: StyleSays, key: StyleProperty): boolean {
-  if (!key.startsWith('border.')) return false;
+const EDGES = ['left', 'right', 'top', 'bottom'] as const;
 
-  const edge = key.split('.').slice(0, 2).join('.');
-  return properties(gives).every((one) => !one.startsWith(edge) || gives[one] === null);
+/** A border as a spec writes one: four edges alike are one word (`docs/spec.md` §6). */
+function borders(gives: StyleSays): Nested | string {
+  const said: Nested = {};
+  for (const edge of EDGES) {
+    const one = edgeOf(gives, edge);
+    if (one !== null) said[edge] = one;
+  }
+
+  const all = Object.values(said);
+  const first = all[0];
+  const alike = all.length === EDGES.length && all.every((one) => one === first);
+  return alike && typeof first === 'string' ? first : said;
+}
+
+/** One edge: its line style where that is all the look says of it, `null` where the look takes the edge away. */
+function edgeOf(gives: StyleSays, edge: string): Nested | string | null {
+  const keys = [`border.${edge}.style`, `border.${edge}.color`] as StyleProperty[];
+  const said = keys.filter((one) => gives[one] !== undefined);
+  const [line, colour] = keys;
+  if (said.length === 0 || line === undefined || colour === undefined) return null;
+  if (said.every((one) => gives[one] === null)) return 'null';
+  if (gives[colour] === undefined) return scalar(line, gives[line]);
+
+  const held: Nested = {};
+  for (const one of said) held[one.split('.')[2] ?? one] = scalar(one, gives[one]);
+  return held;
 }
 
 type Nested = { [key: string]: Nested | string };

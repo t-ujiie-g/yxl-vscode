@@ -1,4 +1,4 @@
-import type { StyleSays } from '@yxl-vscode/spec';
+import type { BorderStyle, StyleSays } from '@yxl-vscode/spec';
 import type { Rect } from '@yxl-vscode/units';
 import type { At } from './keys';
 import type {
@@ -26,6 +26,9 @@ export interface Showing {
   readonly said: string | null;
   readonly copied: Copied | null;
   readonly looking: Looking | null;
+
+  /** The line a border button draws with, which is the toolbar's own setting. */
+  readonly line: BorderStyle;
 
   /** Whether the selected cell can be typed into, where one is selected. */
   readonly editable: Editable | null;
@@ -75,6 +78,7 @@ export interface Asks {
   readonly resolveWith: (typed: Typed, choice: string) => void;
   readonly emptiedWith: (ranged: Ranged, choice: string) => void;
   readonly wear: (want: StyleSays, over: Rect) => void;
+  readonly drawWith: (line: BorderStyle) => void;
   readonly wornWith: (worn: Worn, choice: string) => void;
   readonly pastedWith: (pasted: Pasted, choice: string) => void;
   readonly pastedTextWith: (text: PastedText, choice: string) => void;

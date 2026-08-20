@@ -142,7 +142,8 @@ function apart(
   want: StyleSays,
   read: Reading,
 ): readonly Candidate[] {
-  const wants = everyone(spread(where.rect), want);
+  const addresses = spread(where.rect);
+  const wants = everyone(addresses, want);
   const hidden = from.some((one) => one.layer !== null && excepted(one.layer));
   const alike = hidden ? null : onEvery(spec, sheet, where.sheet, wants, read);
   const split = splitting(spec, sheet, where.sheet, from, want, read);
@@ -150,7 +151,7 @@ function apart(
   const answers: Candidate[] = [];
   if (alike !== null && alike.ops.length > 0) {
     answers.push(
-      candidate('all', 'Apply it to every cell here, whatever each takes it from', alike),
+      candidate('all', `Put it on ${said(addresses)}, whatever they take it from now`, alike),
     );
   }
   if (split !== null && !(alike !== null && same(alike, split, read))) {
@@ -379,6 +380,12 @@ function intoCell(
   const gone = carries.filter((one) => one.source === null && held(one.key)).map((one) => one.key);
   const rest = found.node.entries.filter((entry) => !gone.includes(String(entry.key.value)));
   const only = rest.length === 1 && rest[0]?.key.value === 'value' ? rest[0] : undefined;
+  const writes = carries.some((one) => one.source !== null);
+
+  // A cell written for its look alone goes when the look does (`docs/spec.md` §3).
+  if (rest.length === 0 && gone.length > 0 && !writes) {
+    return [{ op: 'remove', path: found.path }];
+  }
 
   if (only !== undefined && gone.length > 0) {
     const source = read.text(found.file)?.slice(only.value.span.start, only.value.span.end) ?? null;
