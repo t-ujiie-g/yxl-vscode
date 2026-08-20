@@ -61,6 +61,7 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
   let selected: Showing['selected'] = null;
   /** Where a range was started from, which stays put while the selection moves. */
   let anchor: Showing['anchor'] = null;
+  let line: Showing['line'] = 'thin';
   let sources: readonly Source[] | null = null;
   let reached: Reached | null = null;
   let refused: Refused | null = null;
@@ -83,6 +84,7 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
     sheet,
     selected,
     anchor,
+    line,
     sources,
     reached,
     refused,
@@ -234,6 +236,10 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
     },
     resolveWith: (typed, choice) => {
       host.postMessage({ ...typed, choice, kind: 'resolve' });
+    },
+    drawWith: (chosen) => {
+      line = chosen;
+      restated();
     },
     wear: (want, over) => {
       refused = null;

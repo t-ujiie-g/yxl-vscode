@@ -196,6 +196,36 @@ describe('a look as a spec writes it', () => {
     );
   });
 
+  it('writes an edge as its line style, which is how a spec says one with no colour', () => {
+    const gives: StyleSays = { 'border.bottom.style': 'double' };
+    expect(written({ kind: 'inline', gives })).toBe('{ border: { bottom: double } }');
+  });
+
+  it('writes four edges alike as the one word they were written as', () => {
+    const gives: StyleSays = {
+      'border.left.style': 'thin',
+      'border.right.style': 'thin',
+      'border.top.style': 'thin',
+      'border.bottom.style': 'thin',
+    };
+    expect(written({ kind: 'inline', gives })).toBe('{ border: thin }');
+  });
+
+  it('writes four edges taken away as the one `null` they were taken away by', () => {
+    const gives: StyleSays = Object.fromEntries(
+      ['left', 'right', 'top', 'bottom'].flatMap((edge) => [
+        [`border.${edge}.style`, null],
+        [`border.${edge}.color`, null],
+      ]),
+    );
+    expect(written({ kind: 'inline', gives })).toBe('{ border: null }');
+  });
+
+  it('keeps the edges apart where they are not alike', () => {
+    const gives: StyleSays = { 'border.top.style': 'thin', 'border.bottom.style': 'double' };
+    expect(written({ kind: 'inline', gives })).toBe('{ border: { top: thin, bottom: double } }');
+  });
+
   it('takes a border away at the edge, which is the unit the schema has for it', () => {
     const gives: StyleSays = { 'border.top.style': null, 'border.top.color': null };
     expect(written({ kind: 'inline', gives })).toBe('{ border: { top: null } }');

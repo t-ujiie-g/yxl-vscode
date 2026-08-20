@@ -58,6 +58,7 @@ function showing(of: { cells?: DrawnCell[]; selected?: { row: number; col: numbe
     copied: null,
     looking: null,
     editable: 'direct',
+    line: 'thin',
   };
 }
 
@@ -86,6 +87,12 @@ describe('the switches a reader reaches for first', () => {
       'Align middle',
       'Align bottom',
       'Wrap text',
+      'All borders',
+      'Top border',
+      'Bottom border',
+      'Left border',
+      'Right border',
+      'No borders',
     ]);
     expect([...bar.querySelectorAll('input')].every((one) => one.disabled)).toBe(true);
   });
@@ -156,7 +163,9 @@ describe('the colours a reader picks', () => {
 
 describe('where the text sits', () => {
   const marks = (bar: HTMLElement) =>
-    [...bar.querySelectorAll('button.look')].filter((one) => one.querySelector('svg') !== null);
+    [...bar.querySelectorAll('button.look:not(.edge)')].filter(
+      (one) => one.querySelector('svg') !== null,
+    );
 
   it('is a group where only the one that holds is lit', () => {
     const cells = [cell({ style: { 'align.horizontal': 'center' } })];
@@ -286,5 +295,82 @@ describe('a number under a format', () => {
 
   it('is disabled until a cell is selected', () => {
     expect(box(toolbar(showing({}), asks()))?.disabled).toBe(true);
+  });
+});
+
+describe('a border a reader draws', () => {
+  const drawn = (bar: HTMLElement, name: string) =>
+    bar.querySelector<HTMLButtonElement>(`button.edge.${name}`);
+
+  it('puts the line the toolbar is set to on the edges it names', () => {
+    const wear = vi.fn();
+    const bar = toolbar(showing({ cells: [cell({})], selected: { row: 1, col: 1 } }), asks(wear));
+
+    drawn(bar, 'bottom')?.click();
+    expect(wear).toHaveBeenCalledWith({ 'border.bottom.style': 'thin' }, ONE);
+
+    drawn(bar, 'all')?.click();
+    expect(wear).toHaveBeenCalledWith(
+      {
+        'border.top.style': 'thin',
+        'border.right.style': 'thin',
+        'border.bottom.style': 'thin',
+        'border.left.style': 'thin',
+      },
+      ONE,
+    );
+  });
+
+  it('draws with the line the reader chose, not the one it started on', () => {
+    const wear = vi.fn();
+    const at = { ...showing({ cells: [cell({})], selected: { row: 1, col: 1 } }), line: 'double' };
+    const bar = toolbar(at as Showing, asks(wear));
+
+    drawn(bar, 'top')?.click();
+    expect(wear).toHaveBeenCalledWith({ 'border.top.style': 'double' }, ONE);
+  });
+
+  it('asks for the line style the reader picked, which is the view own setting', () => {
+    const drawWith = vi.fn();
+    const bar = toolbar(showing({ cells: [cell({})], selected: { row: 1, col: 1 } }), {
+      drawWith,
+    } as unknown as Asks);
+
+    const box = [...bar.querySelectorAll('select')][1];
+    if (box === undefined) throw new Error('there is no line box');
+    box.value = 'medium';
+    box.dispatchEvent(new Event('change'));
+
+    expect(drawWith).toHaveBeenCalledWith('medium');
+  });
+
+  it('takes every edge off, since that is the unit the schema has (ADR-039)', () => {
+    const wear = vi.fn();
+    const bar = toolbar(showing({ cells: [cell({})], selected: { row: 1, col: 1 } }), asks(wear));
+
+    drawn(bar, 'none')?.click();
+    expect(wear).toHaveBeenCalledWith(
+      {
+        'border.top.style': null,
+        'border.top.color': null,
+        'border.right.style': null,
+        'border.right.color': null,
+        'border.bottom.style': null,
+        'border.bottom.color': null,
+        'border.left.style': null,
+        'border.left.color': null,
+      },
+      ONE,
+    );
+  });
+
+  it('is never lit, since drawing a border is a thing done rather than worn', () => {
+    const cells = [cell({ style: { 'border.top.style': 'thin' } })];
+    const bar = toolbar(showing({ cells, selected: { row: 1, col: 1 } }), asks());
+
+    const lit = [...bar.querySelectorAll('button.edge')].some((one) =>
+      one.classList.contains('on'),
+    );
+    expect(lit).toBe(false);
   });
 });

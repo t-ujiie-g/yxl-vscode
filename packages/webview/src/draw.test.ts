@@ -8,6 +8,7 @@ import type { Asks, Showing } from './showing';
 function asks(): Asks {
   return {
     showSheet: vi.fn(),
+    drawWith: vi.fn(),
     select: vi.fn(),
     reveal: vi.fn(),
     setParam: vi.fn(),
@@ -93,6 +94,7 @@ function shown(of: Partial<Showing> = {}, on: Asks = asks()): HTMLElement {
       copied: null,
       looking: null,
       editable: null,
+      line: 'thin',
       ...of,
     },
     on,
@@ -218,6 +220,7 @@ describe('a sheet larger than the window drawn of it', () => {
       copied: null,
       looking: null,
       editable: null,
+      line: 'thin',
     });
 
     draw(into, showing(tall), on);
@@ -243,6 +246,7 @@ describe('a sheet larger than the window drawn of it', () => {
       copied: null,
       looking: null,
       editable: null,
+      line: 'thin',
     });
 
     draw(into, showing(0), on);
@@ -611,6 +615,7 @@ describe('what changes without redrawing the grid', () => {
       copied: null,
       looking: null,
       editable: null,
+      line: 'thin',
       ...of,
     };
   }
@@ -855,6 +860,7 @@ describe('the switches over the grid', () => {
     copied: null,
     looking: null,
     editable: null,
+    line: 'thin',
   });
 
   it('follow the selection, which arrives after the grid was drawn', () => {

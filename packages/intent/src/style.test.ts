@@ -367,6 +367,61 @@ describe('a number under a format', () => {
   });
 });
 
+describe('a border a reader draws', () => {
+  const ALL: StyleSays = {
+    'border.left.style': 'thin',
+    'border.right.style': 'thin',
+    'border.top.style': 'thin',
+    'border.bottom.style': 'thin',
+  };
+
+  it('is four edges alike, written as the one word a spec writes them as', () => {
+    const spec = `${SALES}    cells:\n      A1: 1\n`;
+    const [answer] = offered(spec, at(1, 1), ALL);
+    if (answer === undefined) throw new Error('nothing was offered');
+
+    expect(taken(spec, answer)).toContain('A1: { value: 1, style: { border: thin } }');
+  });
+
+  it('is one edge where one edge is asked for, and keeps the ones beside it', () => {
+    const spec = `${SALES}    cells:\n      A1: { value: 1, style: { border: { top: thin } } }\n`;
+    const [answer] = offered(spec, at(1, 1), { 'border.bottom.style': 'double' });
+    if (answer === undefined) throw new Error('nothing was offered');
+
+    expect(taken(spec, answer)).toContain(
+      'A1: { value: 1, style: { border: { top: thin, bottom: double } } }',
+    );
+  });
+
+  it('comes off again, leaving the cell as it was written', () => {
+    const plain = `${SALES}    cells:\n      A1: 1\n`;
+    const [on] = offered(plain, at(1, 1), ALL);
+    if (on === undefined) throw new Error('nothing was offered');
+
+    const bordered = taken(plain, on);
+    const off = Object.fromEntries(
+      ['left', 'right', 'top', 'bottom'].flatMap((edge) => [
+        [`border.${edge}.style`, null],
+        [`border.${edge}.color`, null],
+      ]),
+    ) as StyleSays;
+    const [taking] = offered(bordered, at(1, 1), off);
+    if (taking === undefined) throw new Error('nothing was offered');
+
+    expect(taken(bordered, taking)).toBe(plain);
+  });
+
+  it('keeps the colour an edge was drawn in where only the line changes', () => {
+    const spec = `${SALES}    cells:\n      A1: { value: 1, style: { border: { top: { style: thin, color: "CCCCCC" } } } }\n`;
+    const [answer] = offered(spec, at(1, 1), { 'border.top.style': 'medium' });
+    if (answer === undefined) throw new Error('nothing was offered');
+
+    expect(taken(spec, answer)).toContain(
+      'A1: { value: 1, style: { border: { top: { style: medium, color: "CCCCCC" } } } }',
+    );
+  });
+});
+
 describe('a rectangle whose cells take it from different places', () => {
   const HEADER = 'defs:\n  styles:\n    header: { font: { bold: true }, fill: "1F3864" }\n';
   const MIXED = `${HEADER}${SALES}    columns:\n      - { at: B, style: { font: { bold: true } } }\n    cells:\n      A1: { value: Region, style: header }\n      B1: { value: Revenue }\n      C1: 3\n`;

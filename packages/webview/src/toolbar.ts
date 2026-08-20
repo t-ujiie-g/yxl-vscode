@@ -1,4 +1,12 @@
-import type { HAlign, StyleProperty, StyleSays, StyleValues, VAlign } from '@yxl-vscode/spec';
+import {
+  BORDER_STYLES,
+  type BorderStyle,
+  type HAlign,
+  type StyleProperty,
+  type StyleSays,
+  type StyleValues,
+  type VAlign,
+} from '@yxl-vscode/spec';
 import { type Color, parseColor, type Rect } from '@yxl-vscode/units';
 import { underFormat } from './cell';
 import { between } from './keys';
@@ -18,6 +26,9 @@ export function toolbar(showing: Showing, asks: Asks): HTMLElement {
   bar.append(toggle(WRAP, showing, asks));
   bar.append(gap());
   bar.append(numbers(showing, asks));
+  bar.append(gap());
+  for (const one of EDGES) bar.append(edge(one, showing, asks));
+  bar.append(lines(showing, asks));
 
   return bar;
 }
@@ -58,6 +69,8 @@ interface Bar {
   readonly x: number;
   readonly y: number;
   readonly width: number;
+  readonly height?: number;
+  readonly faint?: boolean;
 }
 
 const ACROSS = [2, 5.6, 9.2, 12.8];
@@ -186,8 +199,9 @@ function marked(bars: readonly Bar[]): SVGSVGElement {
     drawn.setAttribute('x', String(bar.x));
     drawn.setAttribute('y', String(bar.y));
     drawn.setAttribute('width', String(bar.width));
-    drawn.setAttribute('height', '1.6');
+    drawn.setAttribute('height', String(bar.height ?? 1.6));
     drawn.setAttribute('rx', '0.6');
+    if (bar.faint === true) drawn.setAttribute('class', 'faint');
     svg.append(drawn);
   }
 
@@ -195,6 +209,88 @@ function marked(bars: readonly Bar[]): SVGSVGElement {
 }
 
 const SVG = 'http://www.w3.org/2000/svg';
+
+/** One border a reader draws: which edges it puts the line on, or takes it off. */
+interface Edge {
+  readonly name: string;
+  readonly says: string;
+  readonly sides: readonly ('left' | 'right' | 'top' | 'bottom')[];
+}
+
+const SIDES = ['top', 'right', 'bottom', 'left'] as const;
+
+const EDGES: readonly Edge[] = [
+  { name: 'all', says: 'All borders', sides: SIDES },
+  { name: 'top', says: 'Top border', sides: ['top'] },
+  { name: 'bottom', says: 'Bottom border', sides: ['bottom'] },
+  { name: 'left', says: 'Left border', sides: ['left'] },
+  { name: 'right', says: 'Right border', sides: ['right'] },
+  { name: 'none', says: 'No borders', sides: [] },
+];
+
+/** A border on the edges it names, with the line the toolbar is set to; these act rather than hold, so none is lit. */
+function edge(of: Edge, showing: Showing, asks: Asks): HTMLElement {
+  const button = document.createElement('button');
+
+  button.type = 'button';
+  button.className = `look edge ${of.name}`;
+  button.title = of.says;
+  button.disabled = showing.selected === null;
+  button.append(marked(framed(of.sides)));
+  button.addEventListener('click', () => asks.wear(drawn(of, showing.line), over(showing)));
+
+  return button;
+}
+
+/** What a border button asks for: the line on the edges it names, or every edge taken away. */
+function drawn(of: Edge, line: BorderStyle): StyleSays {
+  if (of.sides.length === 0) {
+    return Object.fromEntries(
+      SIDES.flatMap((side) => [
+        [`border.${side}.style`, null],
+        [`border.${side}.color`, null],
+      ]),
+    ) as StyleSays;
+  }
+
+  return Object.fromEntries(of.sides.map((side) => [`border.${side}.style`, line])) as StyleSays;
+}
+
+/** The box a border mark is drawn in, with the edges it puts a line on standing out. */
+function framed(sides: readonly string[]): Bar[] {
+  const box = {
+    top: { x: 1, y: 1, width: 14, height: 1 },
+    bottom: { x: 1, y: 14, width: 14, height: 1 },
+    left: { x: 1, y: 1, width: 1, height: 14 },
+    right: { x: 14, y: 1, width: 1, height: 14 },
+  };
+
+  return SIDES.map((side) => ({ ...box[side], faint: !sides.includes(side) }));
+}
+
+/** The line the border buttons draw with, which is the reader's choice and not the cell's. */
+function lines(showing: Showing, asks: Asks): HTMLElement {
+  const box = document.createElement('select');
+
+  box.className = 'look numbers';
+  box.title = 'The line a border is drawn with';
+  box.disabled = showing.selected === null;
+
+  for (const style of BORDER_STYLES) {
+    const option = document.createElement('option');
+    option.value = style;
+    option.textContent = style;
+    option.selected = style === showing.line;
+    box.append(option);
+  }
+
+  box.addEventListener('change', () => {
+    const chosen = BORDER_STYLES.find((one) => one === box.value);
+    if (chosen !== undefined) asks.drawWith(chosen);
+  });
+
+  return box;
+}
 
 /** A number format, said as what it would make of the number this cell holds. */
 function numbers(showing: Showing, asks: Asks): HTMLElement {
