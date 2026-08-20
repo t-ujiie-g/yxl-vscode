@@ -1,4 +1,4 @@
-import type { StyleProperty, StyleValues, StyleWant } from '@yxl-vscode/spec';
+import type { StyleProperty, StyleSays, StyleValues } from '@yxl-vscode/spec';
 import { type Color, parseColor, type Rect } from '@yxl-vscode/units';
 import { between } from './keys';
 import type { DrawnCell } from './protocol';
@@ -67,7 +67,7 @@ function toggle(of: Toggle, showing: Showing, asks: Asks): HTMLElement {
   button.title = of.says;
   button.disabled = showing.selected === null;
   button.setAttribute('aria-pressed', on ? 'true' : 'false');
-  button.addEventListener('click', () => asks.wear({ [of.key]: !on } as StyleWant, over(showing)));
+  button.addEventListener('click', () => asks.wear({ [of.key]: !on } as StyleSays, over(showing)));
 
   return button;
 }
@@ -94,7 +94,7 @@ function ink(of: Ink, showing: Showing, asks: Asks): HTMLElement[] {
   pick.addEventListener('change', () => {
     // The picker says `#rrggbb`; a spec writes `RRGGBB` (`docs/spec.md` §6).
     const colour = parseColor(pick.value.replace('#', '').toUpperCase());
-    if (colour !== null) asks.wear({ [of.key]: colour } as StyleWant, where);
+    if (colour !== null) asks.wear({ [of.key]: colour } as StyleSays, where);
   });
   swatch.append(pick);
 
@@ -104,7 +104,7 @@ function ink(of: Ink, showing: Showing, asks: Asks): HTMLElement[] {
   off.textContent = '×';
   off.title = of.clears;
   off.disabled = nowhere || now === null;
-  off.addEventListener('click', () => asks.wear({ [of.key]: null } as StyleWant, where));
+  off.addEventListener('click', () => asks.wear({ [of.key]: null } as StyleSays, where));
 
   return [swatch, off];
 }

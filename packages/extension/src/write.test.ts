@@ -500,13 +500,22 @@ describe('a look asked for over the grid', () => {
     expect(files[ROOT]).toBe(plain);
   });
 
-  it('changes the band a colour comes from, which is the only answer there is', async () => {
+  it('asks between the band a colour comes from and the one cell that refuses it', async () => {
     const spec = `${SALES}    columns:\n      - { at: A, style: { fill: "FFF2CC" } }\n    cells:\n      A1: 1\n`;
-    const { spec: read, port, refusals, files } = editor({ [ROOT]: spec });
+    const { spec: read, port, answers, files } = editor({ [ROOT]: spec });
 
     await wear(read, worn({ want: { fill: null } }), port);
-    expect(refusals).toEqual([]);
-    expect(files[ROOT]).toContain('- { at: A }\n');
+    expect(answers[0]?.map((one) => one.id)).toEqual(['band', 'onCells']);
+    expect(files[ROOT]).toBe(spec);
+  });
+
+  it('writes the cell that refuses it where that is the answer picked', async () => {
+    const spec = `${SALES}    columns:\n      - { at: A, style: { fill: "FFF2CC" } }\n    cells:\n      A1: 1\n`;
+    const { spec: read, port, files, told } = editor({ [ROOT]: spec });
+
+    await wear(read, worn({ want: { fill: null } }), port, 'onCells');
+    expect(files[ROOT]).toContain('A1: { value: 1, style: { fill: null } }');
+    expect(told).toEqual(['1 cell restyled.']);
   });
 
   it('asks where the look comes from a declaration other cells read', async () => {

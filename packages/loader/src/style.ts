@@ -9,7 +9,9 @@ import {
   H_ALIGNS,
   MODELED_KEYS,
   type Protection,
+  propertiesUnder,
   type Style,
+  type StyleProperty,
   type StyleUse,
   V_ALIGNS,
 } from '@yxl-vscode/spec';
@@ -20,6 +22,7 @@ import {
   expectNumber,
   expectSpelling,
   expectText,
+  isCleared,
   openEntries,
   rejectUnknownKey,
 } from './read';
@@ -48,27 +51,34 @@ export function readStyle(ctx: Ctx, node: Node, what: string): Style | null {
   let align: Align | null = null;
   let protection: Protection | null = null;
   let format: string | null = null;
+  const cleared = new Set<StyleProperty>();
 
   for (const entry of opened.entries) {
-    const at = `${what} \`${keyOf(entry)}\``;
-    switch (keyOf(entry)) {
+    const key = keyOf(entry);
+    const at = `${what} \`${key}\``;
+    if (key !== 'extends' && isCleared(entry.value)) {
+      clear(cleared, key);
+      continue;
+    }
+
+    switch (key) {
       case 'extends':
         base = readAs(here, entry.value, at, STYLE_NAME);
         break;
       case 'font':
-        font = readFont(here, entry.value, at);
+        font = readFont(here, entry.value, at, cleared);
         break;
       case 'fill':
         fill = readFill(here, entry.value, at);
         break;
       case 'border':
-        border = readBorder(here, entry.value, at);
+        border = readBorder(here, entry.value, at, cleared);
         break;
       case 'align':
-        align = readAlign(here, entry.value, at);
+        align = readAlign(here, entry.value, at, cleared);
         break;
       case 'protection':
-        protection = readProtection(here, entry.value, at);
+        protection = readProtection(here, entry.value, at, cleared);
         break;
       case 'format':
         format = expectText(here, entry.value, at);
@@ -78,10 +88,20 @@ export function readStyle(ctx: Ctx, node: Node, what: string): Style | null {
     }
   }
 
-  return { extends: base, font, fill, border, align, protection, format };
+  return { extends: base, font, fill, border, align, protection, format, cleared };
 }
 
-export function readFont(ctx: Ctx, node: Node, what: string): Font | null {
+/** The leaves a key stands for, added to what the style says is not set; an unknown key adds nothing. */
+function clear(cleared: Set<StyleProperty>, key: string, group = ''): void {
+  for (const one of propertiesUnder(group === '' ? key : `${group}.${key}`)) cleared.add(one);
+}
+
+export function readFont(
+  ctx: Ctx,
+  node: Node,
+  what: string,
+  cleared: Set<StyleProperty>,
+): Font | null {
   const opened = openEntries(ctx, node, [], what);
   if (opened === null) return null;
   const here = opened.ctx;
@@ -95,8 +115,14 @@ export function readFont(ctx: Ctx, node: Node, what: string): Font | null {
   let color: Font['color'] = null;
 
   for (const entry of opened.entries) {
-    const at = `${what} \`${keyOf(entry)}\``;
-    switch (keyOf(entry)) {
+    const key = keyOf(entry);
+    const at = `${what} \`${key}\``;
+    if (isCleared(entry.value) && MODELED_KEYS.font.has(key)) {
+      clear(cleared, key, 'font');
+      continue;
+    }
+
+    switch (key) {
       case 'bold':
         bold = expectBool(here, entry.value, at);
         break;
@@ -147,7 +173,12 @@ function readFill(ctx: Ctx, node: Node, what: string): Style['fill'] {
   return color;
 }
 
-function readBorder(ctx: Ctx, node: Node, what: string): readonly BorderSide[] | null {
+function readBorder(
+  ctx: Ctx,
+  node: Node,
+  what: string,
+  cleared: Set<StyleProperty>,
+): readonly BorderSide[] | null {
   if (node.kind === 'scalar') {
     const edge = readBorderEdge(ctx, node, what);
     return edge === null ? null : [{ side: 'all', edge }];
@@ -164,6 +195,12 @@ function readBorder(ctx: Ctx, node: Node, what: string): readonly BorderSide[] |
       rejectUnknownKey(here, entry, what, MODELED_KEYS.border);
       continue;
     }
+    // An edge is the unit a `null` takes away, so its `style` and `colour` go together.
+    if (isCleared(entry.value)) {
+      clear(cleared, side === 'all' ? 'border' : `border.${side}`);
+      continue;
+    }
+
     const edge = readBorderEdge(here, entry.value, `${what} \`${side}\``);
     if (edge !== null) sides.push({ side, edge });
   }
@@ -205,7 +242,7 @@ function readBorderEdge(ctx: Ctx, node: Node, what: string): BorderEdge | null {
   return { style, color };
 }
 
-function readAlign(ctx: Ctx, node: Node, what: string): Align | null {
+function readAlign(ctx: Ctx, node: Node, what: string, cleared: Set<StyleProperty>): Align | null {
   const opened = openEntries(ctx, node, [], what);
   if (opened === null) return null;
   const here = opened.ctx;
@@ -215,8 +252,14 @@ function readAlign(ctx: Ctx, node: Node, what: string): Align | null {
   let wrap: boolean | null = null;
 
   for (const entry of opened.entries) {
-    const at = `${what} \`${keyOf(entry)}\``;
-    switch (keyOf(entry)) {
+    const key = keyOf(entry);
+    const at = `${what} \`${key}\``;
+    if (isCleared(entry.value) && MODELED_KEYS.align.has(key)) {
+      clear(cleared, key, 'align');
+      continue;
+    }
+
+    switch (key) {
       case 'horizontal':
         horizontal = expectSpelling(here, entry.value, at, H_ALIGNS);
         break;
@@ -234,7 +277,12 @@ function readAlign(ctx: Ctx, node: Node, what: string): Align | null {
   return { horizontal, vertical, wrap };
 }
 
-function readProtection(ctx: Ctx, node: Node, what: string): Protection | null {
+function readProtection(
+  ctx: Ctx,
+  node: Node,
+  what: string,
+  cleared: Set<StyleProperty>,
+): Protection | null {
   const opened = openEntries(ctx, node, [], what);
   if (opened === null) return null;
   const here = opened.ctx;
@@ -243,8 +291,14 @@ function readProtection(ctx: Ctx, node: Node, what: string): Protection | null {
   let hidden: boolean | null = null;
 
   for (const entry of opened.entries) {
-    const at = `${what} \`${keyOf(entry)}\``;
-    switch (keyOf(entry)) {
+    const key = keyOf(entry);
+    const at = `${what} \`${key}\``;
+    if (isCleared(entry.value) && MODELED_KEYS.protection.has(key)) {
+      clear(cleared, key, 'protection');
+      continue;
+    }
+
+    switch (key) {
       case 'locked':
         locked = expectBool(here, entry.value, at);
         break;

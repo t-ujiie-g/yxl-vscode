@@ -1,4 +1,4 @@
-import type { StyleValues } from '@yxl-vscode/spec';
+import type { StyleSays, StyleValues } from '@yxl-vscode/spec';
 import { parseColor, type StyleName, styleName } from '@yxl-vscode/units';
 import { describe, expect, it } from 'vitest';
 import { type Declared, NEARBY, normalize, written } from './style';
@@ -188,5 +188,28 @@ describe('a look as a spec writes it', () => {
     expect(written({ kind: 'inline', gives })).toBe(
       '{ border: { top: { style: thin, color: "CCCCCC" } } }',
     );
+  });
+
+  it('writes an attribute taken away as the bare `null` that says so', () => {
+    expect(written({ kind: 'inline', gives: { fill: null, format: null } })).toBe(
+      '{ fill: null, format: null }',
+    );
+  });
+
+  it('takes a border away at the edge, which is the unit the schema has for it', () => {
+    const gives: StyleSays = { 'border.top.style': null, 'border.top.color': null };
+    expect(written({ kind: 'inline', gives })).toBe('{ border: { top: null } }');
+  });
+
+  it('keeps an edge whole where only one leaf of it is asked away', () => {
+    const gives: StyleSays = { 'border.top.style': 'thin', 'border.top.color': null };
+    expect(written({ kind: 'inline', gives })).toBe(
+      '{ border: { top: { style: thin, color: null } } }',
+    );
+  });
+
+  it('names a declaration that takes the same attribute away', () => {
+    const plain: Declared = { name: named('plain'), gives: { fill: null } };
+    expect(normalize({ fill: null }, [plain])).toEqual({ kind: 'ref', name: 'plain' });
   });
 });

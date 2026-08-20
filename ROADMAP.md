@@ -998,8 +998,8 @@ whether the spec survives contact with a GUI (ADR-008).
       **The four font switches and the two colours are in** — bold, italic,
       underline, strike, a fill and a text colour — above the grid, each showing
       what the selected cell wears, and each colour with a button that takes it
-      off again (**ADR-038**). What is left is a border, which needs an edge
-      chosen, an alignment, and a number format, which is the cell's own
+      off again (**ADR-038**, **ADR-039**). What is left is a border, which needs
+      an edge chosen, an alignment, and a number format, which is the cell's own
       `format:` key rather than its `style:`.
 - [x] Every style write through the **normalizer** and through §4.4's `setStyle`
       table — change the definition, or fork it for this range, with the ripple
@@ -1949,6 +1949,33 @@ taken off leaves the file byte for byte where it started. The declaration itself
 is never removed — cells name it — so a `defs.styles` entry emptied this way is
 left as `{}`.
 
+### ADR-039 — The spec can say an attribute is not set, so the cell answers
+**Accepted**, superseding **ADR-038**'s second half. yxl 0.3.5 gives `null` a
+meaning at every style attribute, at a whole group (`font: null`), and at the
+`format:` shorthand (`docs/spec.md` §6, yxl#71). What ADR-038 got right stands:
+`null` is the ask, and a boolean still says it with `false`. What it said could
+not be done now can.
+
+*The model carries it as the set an attribute is in, not as a third value in
+every field.* `Style.cleared` is a `ReadonlySet<StyleProperty>` beside the
+fields, mirroring the compiler's own bitmask, and `flatten` lays the clears down
+first so a value written beside one wins — which is the schema's rule, and is
+why `{ border: { all: thin, left: null } }` has four edges.
+
+*Two types, and the difference between them is the whole point.* `StyleSays` is
+what one construct says — a value, or `null` where it says the attribute is not
+set — and it is what a layer gives, what `resolve` returns, and what a reader
+asks for. `StyleValues` is what a cell finally looks like, where "not set" and
+"explicitly not set" are one cell; `settled` is the crossing between them, and
+everything that *draws* takes the settled form. The compiler makes the same
+distinction at the emitter for the same reason: two cells that look identical
+must intern as one.
+
+*A border is taken away at the edge*, not at its `style` and `colour`
+separately, because that is the unit the schema has. Our leaves are finer, so a
+cleared edge is both of them, and the writer folds them back into
+`border: { left: null }` — the only spelling that loads.
+
 ## 8. Open questions
 
 - **Q1 — `cells:` A1 keys and row insertion.** Inserting a row rewrites every
@@ -2090,14 +2117,13 @@ left as `{}`.
   than guessing at the reader from the outside — which is what this pass did,
   and why it got one of three things right.
 
-- **Q16 — Can a spec say a property is *not* set?** Filed upstream as
-  [yxl#71](https://github.com/t-ujiie-g/yxl/issues/71). A boolean can be
-  contradicted (`{ extends: header, font: { bold: false } }`); nothing else can,
-  since absence is the schema's only way of spelling "off" and absence is what
-  lets a band through. Until it is answered, taking a colour off a cell that
-  reads it from a band or a declaration changes *that*, with the count of what
-  it moves — which is the resolution table working, not a gap in it (ADR-038).
-  If the answer is no, the editor keeps that behaviour and the README says so.
+- **Q16 — Can a spec say a property is *not* set?** ✅ *Answered 2026-08-20 by
+  [yxl#71](https://github.com/t-ujiie-g/yxl/issues/71), which shipped in yxl
+  0.3.5 as `null` at every attribute* (`docs/spec.md` §6). Asked because a
+  boolean can be contradicted and nothing else could, so a cell under a filled
+  band had no way to say it is unfilled. Answering it took one round trip
+  through `extract` to show it was a defect rather than a GUI wish. **ADR-039**
+  is what this editor does with it; the cell is now one of the answers.
 - **Q13 — What draws a chart's sketch?** ADR-029 needs an outline, a title, a
   legend box and a series list — which is hand-written SVG, not a chart library,
   unless the sketch turns out to want axes. No runtime dependency without an ADR
@@ -2200,6 +2226,41 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-20 — yxl 0.3.5, and an attribute that says it is not set
+The pin moves to 0.3.5 and this editor learns what it added — the answer to
+yxl#71, filed here this morning. **ADR-039**; §8 Q16 closed.
+
+- **The bump found the drift in one run**, which is what §8.9 says a bump is
+  for: `styling.yxl.yaml` upstream now writes `{ value: 2, format: null }` and
+  `{ extends: header, fill: null }`, and our loader refused both. A spec that
+  builds and does not open is the divergence ADR-011 exists to prevent.
+- **`Style.cleared` is the set of attributes a style writes `null` at**, beside
+  the fields rather than inside them, and `flatten` lays it down before the
+  values so that a value written beside a clear wins — the schema's own rule,
+  and what makes `{ border: { all: thin, left: null } }` four edges.
+- **`StyleWant` became `StyleSays`**, because it stopped being only about what a
+  reader asks for: a *layer* says the same three things. `StyleValues` is now
+  only the settled look — what a cell finally wears — and `settled` is the one
+  crossing. Everything that draws takes the settled form, so a cleared attribute
+  is not painted and not shown on a switch.
+- **The gesture that had no answer has two.** Clicking *no fill* on a cell under
+  a filled column band now offers the band **and** the cell, which writes
+  `A1: { value: 1, style: { fill: null } }`. Taking a fill off a cell that wears
+  a declaration writes `{ extends: header, fill: null }` — a header, unfilled —
+  rather than detaching to an inline copy of everything the declaration said.
+  Both are the upstream examples, and both are what a reader asked for on
+  2026-08-20.
+- **A border is taken away at the edge.** Our leaves are `border.left.style` and
+  `border.left.color`; the schema's unit is the edge, so a cleared edge is both
+  leaves and the writer folds them back into `border: { left: null }`. Writing
+  `{ left: { style: null } }` would not load.
+- **A `rich:` run refuses it**, as upstream does: a run inherits nothing, so
+  there is nothing for `null` to take away.
+- 1439 → 1460 tests. Comment shape: exports 416 blocks / 904 lines (avg 2.2),
+  private 276 / 302 (1.1), inline 56 / 75 (1.3), 11 over the limit — the same
+  eleven, with five new inline lines that are all schema rules the code cannot
+  show.
 
 ### 2026-08-20 — Unsetting a style property requested upstream
 - Filed [yxl#71](https://github.com/t-ujiie-g/yxl/issues/71) for ADR-038 / §8

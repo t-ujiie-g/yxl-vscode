@@ -1,10 +1,12 @@
-import type {
-  SpecNode,
-  Style,
-  StyleProperty,
-  StyleUse,
-  StyleValues,
-  Templated,
+import {
+  type SpecNode,
+  STYLE_PROPERTIES,
+  type Style,
+  type StyleProperty,
+  type StyleSays,
+  type StyleUse,
+  type StyleValues,
+  type Templated,
 } from '@yxl-vscode/spec';
 import { type Color, type NodeId, parseColor, type StyleName } from '@yxl-vscode/units';
 import { CODE } from './codes';
@@ -26,14 +28,24 @@ export interface StyleLayer {
   readonly key: StyleKey;
   readonly node: NodeId;
   readonly name: StyleName | null;
-  readonly gives: StyleValues;
+  readonly gives: StyleSays;
 }
 
-/** The look itself: every layer laid over the one before it. */
-export function resolve(layers: readonly StyleLayer[]): StyleValues {
-  const looks: Setting = {};
-  for (const layer of layers) Object.assign(looks, layer.gives);
-  return looks;
+/** What every layer laid over the one before it says, `null` where the last word takes it away. */
+export function resolve(layers: readonly StyleLayer[]): StyleSays {
+  const said: Saying = {};
+  for (const layer of layers) Object.assign(said, layer.gives);
+  return said;
+}
+
+/** A look as a cell wears it: what is not set and what is explicitly not set are one cell. */
+export function settled(said: StyleSays): StyleValues {
+  const look: Setting = {};
+  for (const key of STYLE_PROPERTIES) {
+    const value = said[key];
+    if (value !== undefined && value !== null) look[key] = value as never;
+  }
+  return look;
 }
 
 /** The layers one construct contributes: its `style:`, then its own `format:` over that (`docs/spec.md` §6). */
@@ -43,13 +55,16 @@ export function layersOf(
   through: StyleSource,
   use: StyleUse | null,
   format: string | null,
+  clearsFormat = false,
 ): StyleLayer[] {
   const layers = use === null ? [] : fromUse(ctx, node, through, use, []);
+  const said = (gives: StyleSays) =>
+    layers.push({ through, key: 'format', node: node.id, name: null, gives });
 
-  if (format !== null) {
-    const code = text(ctx, format, node);
-    layers.push({ through, key: 'format', node: node.id, name: null, gives: { format: code } });
-  }
+  if (format !== null) said({ format: text(ctx, format, node) });
+  // A value beside it wins, whichever said which: the two states are exclusive.
+  else if (clearsFormat && resolve(layers).format === undefined) said({ format: null });
+
   return layers;
 }
 
@@ -113,9 +128,12 @@ const EDGES = ['left', 'right', 'top', 'bottom'] as const;
 
 type Setting = { -readonly [K in StyleProperty]?: StyleValues[K] };
 
+type Saying = { -readonly [K in StyleProperty]?: StyleValues[K] | null };
+
 /** A style as the leaves it sets, with `border: all` spread over its four sides and every template resolved. */
-export function flatten(ctx: Ctx, style: Style, node: SpecNode): StyleValues {
-  const values: Setting = {};
+export function flatten(ctx: Ctx, style: Style, node: SpecNode): StyleSays {
+  const values: Saying = {};
+  for (const key of style.cleared) values[key] = null;
 
   function set<K extends StyleProperty>(key: K, value: StyleValues[K] | null | undefined): void {
     if (value !== null && value !== undefined) values[key] = value;

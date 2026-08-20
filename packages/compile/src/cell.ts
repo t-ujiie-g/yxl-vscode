@@ -11,7 +11,7 @@ import {
   dateSerial,
   durationSerial,
 } from './serial';
-import { flatten, layersOf, type StyleSource } from './style';
+import { flatten, layersOf, type StyleSource, settled } from './style';
 
 /** An address after its parameters are substituted, or `null` with the reason reported. */
 export function address(ctx: Ctx, at: Templated<A1Addr>, node: SpecNode): A1Addr | null {
@@ -44,7 +44,7 @@ export function compileFacets(
     formula: compileFormula(ctx, node),
     format: written ?? typed.format,
     rich: compileRich(ctx, node),
-    style: layersOf(ctx, node, through, node.style, node.format),
+    style: layersOf(ctx, node, through, node.style, node.format, node.clearsFormat),
     provenance: { value: origin, format: node.format === null ? null : own },
   };
 }
@@ -136,7 +136,7 @@ function compileRich(ctx: Ctx, node: SpecNode & CellFacets): readonly CompiledRu
 
   return node.rich.map((run) => ({
     text: text(ctx, run.text, node),
-    look: flatten(ctx, { ...NO_STYLE, font: run.font }, node),
+    look: settled(flatten(ctx, { ...NO_STYLE, font: run.font }, node)),
   }));
 }
 
@@ -149,4 +149,5 @@ const NO_STYLE: Style = {
   align: null,
   protection: null,
   format: null,
+  cleared: new Set(),
 };

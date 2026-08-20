@@ -1,5 +1,6 @@
 import type { Color, StyleName } from '@yxl-vscode/units';
 import type { Templated } from './node';
+import type { StyleProperty } from './property';
 
 /** The line styles a border edge may take. */
 export const BORDER_STYLES = [
@@ -30,9 +31,9 @@ export type StyleUse =
   | { readonly kind: 'inline'; readonly style: Style };
 
 /**
- * A look as a spec writes one (`docs/spec.md` §6). `null` throughout is an
- * absent key, which inherits — not `false`, which overrides. A value rather
- * than a node: the node is whatever holds it.
+ * A look as a spec writes one (`docs/spec.md` §6). A `null` field is an absent
+ * key, which inherits — not `false`, which overrides; `cleared` names the
+ * attributes the style writes `null` at, which inherit nothing.
  */
 export interface Style {
   readonly extends: Templated<StyleName> | null;
@@ -42,6 +43,7 @@ export interface Style {
   readonly align: Align | null;
   readonly protection: Protection | null;
   readonly format: string | null;
+  readonly cleared: ReadonlySet<StyleProperty>;
 }
 
 /** A font, in the parts a spec may set independently. */

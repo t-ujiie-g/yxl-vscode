@@ -1,5 +1,5 @@
 import type { Computed } from '@yxl-vscode/evaluate';
-import type { ScalarValue, StyleValues, StyleWant } from '@yxl-vscode/spec';
+import type { ScalarValue, StyleSays, StyleValues } from '@yxl-vscode/spec';
 
 /**
  * What the host sends the view, and all the view knows of a spec: a projection
@@ -255,7 +255,7 @@ export type FromView =
 
 /** A look asked for over a rectangle: the properties the reader changed, and nothing else. */
 export interface Worn extends Ranged {
-  readonly want: StyleWant;
+  readonly want: StyleSays;
 }
 
 /** A rectangle of the grid a gesture names, in the row and column numbers the view draws. */

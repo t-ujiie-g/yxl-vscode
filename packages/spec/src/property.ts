@@ -32,10 +32,11 @@ export interface StyleValues {
 }
 
 /**
- * A look asked for rather than read: a value to take on, or `null` to take the
- * property off, which the schema says only by leaving the leaf out.
+ * A look as one construct says it, or as a reader asks for it: a value, or
+ * `null` where it says the attribute is not set (`docs/spec.md` §6). What a
+ * cell finally looks like is `StyleValues`, where the two absences are one.
  */
-export type StyleWant = { readonly [K in StyleProperty]?: StyleValues[K] | null };
+export type StyleSays = { readonly [K in StyleProperty]?: StyleValues[K] | null };
 
 /** Every leaf a look is made of, in the order a spec writes them. */
 export const STYLE_PROPERTIES = [
@@ -64,3 +65,12 @@ export const STYLE_PROPERTIES = [
 ] as const;
 
 export type StyleProperty = (typeof STYLE_PROPERTIES)[number];
+
+/**
+ * The leaves a `style:` key covers — `font`, `border.left`, `fill` — for the
+ * `null` that clears a whole group or one border edge at once
+ * (`docs/spec.md` §6).
+ */
+export function propertiesUnder(key: string): StyleProperty[] {
+  return STYLE_PROPERTIES.filter((one) => one === key || one.startsWith(`${key}.`));
+}

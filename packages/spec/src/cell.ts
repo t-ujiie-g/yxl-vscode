@@ -10,8 +10,8 @@ export type CellType = (typeof CELL_TYPES)[number];
 
 /**
  * What a cell holds, in the six keys of `docs/spec.md` §3, which an override
- * shares. `null` is a key that was absent; at least one of `value`, `formula`,
- * `rich`, `style`, `format` is present.
+ * shares. `null` is a key that was absent and `clearsFormat` the `format: null`
+ * that says a band supplies none (§6); at least one of the six is present.
  */
 export interface CellFacets {
   readonly value: CellValue | null;
@@ -19,6 +19,7 @@ export interface CellFacets {
   readonly rich: readonly RichRun[] | null;
   readonly type: CellType | null;
   readonly format: string | null;
+  readonly clearsFormat: boolean;
   readonly style: StyleUse | null;
 }
 

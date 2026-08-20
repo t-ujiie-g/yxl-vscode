@@ -3,7 +3,7 @@ import { run, versionOf, versionWarning } from './cli';
 
 describe('versionOf', () => {
   it('reads what `yxl version` answers', () => {
-    expect(versionOf('yxl 0.3.4')).toBe('0.3.4');
+    expect(versionOf('yxl 0.3.5')).toBe('0.3.5');
   });
 
   it('is nothing when the answer holds no version', () => {
@@ -13,15 +13,15 @@ describe('versionOf', () => {
 
 describe('what to say about the compiler that is installed', () => {
   it('says nothing when it is the one this editor targets', () => {
-    expect(versionWarning('0.3.4', '0.3.4')).toBeNull();
+    expect(versionWarning('0.3.5', '0.3.5')).toBeNull();
   });
 
   it('warns that an older one may not have the construct', () => {
-    expect(versionWarning('0.3.3', '0.3.4')).toContain('older');
+    expect(versionWarning('0.3.4', '0.3.5')).toContain('older');
   });
 
   it('warns that a newer one may have moved the schema, and still builds', () => {
-    const said = versionWarning('0.4.0', '0.3.4');
+    const said = versionWarning('0.4.0', '0.3.5');
     expect(said).toContain('newer');
     expect(said).toContain('still builds');
   });
@@ -33,7 +33,7 @@ describe('what to say about the compiler that is installed', () => {
   });
 
   it('says so when the compiler did not answer', () => {
-    expect(versionWarning(null, '0.3.4')).toContain('did not say');
+    expect(versionWarning(null, '0.3.5')).toContain('did not say');
   });
 });
 

@@ -1,18 +1,18 @@
 import { renderScalar, type Value } from '@yxl-vscode/cst';
-import { STYLE_PROPERTIES, type StyleProperty, type StyleValues } from '@yxl-vscode/spec';
+import { STYLE_PROPERTIES, type StyleProperty, type StyleSays } from '@yxl-vscode/spec';
 import type { StyleName } from '@yxl-vscode/units';
 
 /** A look the spec already declares, by the values its name resolves to. */
 export interface Declared {
   readonly name: StyleName;
-  readonly gives: StyleValues;
+  readonly gives: StyleSays;
 }
 
 /** How a look is written (ADR-037): a declaration's name, a variant of one, or the look itself. */
 export type Written =
   | { readonly kind: 'ref'; readonly name: StyleName }
-  | { readonly kind: 'extend'; readonly base: StyleName; readonly gives: StyleValues }
-  | { readonly kind: 'inline'; readonly gives: StyleValues };
+  | { readonly kind: 'extend'; readonly base: StyleName; readonly gives: StyleSays }
+  | { readonly kind: 'inline'; readonly gives: StyleSays };
 
 /** How many properties a variant may restate before it is a look of its own (ADR-037). */
 export const NEARBY = 2;
@@ -21,7 +21,7 @@ export const NEARBY = 2;
  * The look a construct is to contribute, as a spec would write it (ADR-037);
  * `null` where there is nothing to write.
  */
-export function normalize(wanted: StyleValues, declared: readonly Declared[]): Written | null {
+export function normalize(wanted: StyleSays, declared: readonly Declared[]): Written | null {
   const gives = ordered(wanted);
   if (properties(gives).length === 0) return null;
 
@@ -39,7 +39,7 @@ interface Near {
   readonly inherited: number;
 }
 
-function nearestTo(wanted: StyleValues, declared: readonly Declared[]): Near | null {
+function nearestTo(wanted: StyleSays, declared: readonly Declared[]): Near | null {
   let nearest: Near | null = null;
 
   for (const one of declared) {
@@ -51,7 +51,7 @@ function nearestTo(wanted: StyleValues, declared: readonly Declared[]): Near | n
 }
 
 /** What extending this declaration would cost, or `null` where it cannot say the look (ADR-037). */
-function measure(wanted: StyleValues, declared: Declared): Near | null {
+function measure(wanted: StyleSays, declared: Declared): Near | null {
   const said = properties(declared.gives);
   if (!said.every((key) => wanted[key] !== undefined)) return null;
 
@@ -74,22 +74,22 @@ function closer(one: Near, than: Near): boolean {
 }
 
 /** The look narrowed to the properties named, in the order it already holds them. */
-function only(gives: StyleValues, keys: readonly StyleProperty[]): StyleValues {
+function only(gives: StyleSays, keys: readonly StyleProperty[]): StyleSays {
   const kept: Record<string, unknown> = {};
   for (const key of keys) kept[key] = gives[key];
-  return kept as StyleValues;
+  return kept as StyleSays;
 }
 
 /** The look's properties in the order the model declares them, so one look is always the same bytes. */
-function ordered(values: StyleValues): StyleValues {
+function ordered(values: StyleSays): StyleSays {
   const gives: Record<string, unknown> = {};
   for (const key of STYLE_PROPERTIES) {
     if (values[key] !== undefined) gives[key] = values[key];
   }
-  return gives as StyleValues;
+  return gives as StyleSays;
 }
 
-function properties(values: StyleValues): StyleProperty[] {
+function properties(values: StyleSays): StyleProperty[] {
   return STYLE_PROPERTIES.filter((key) => values[key] !== undefined);
 }
 
@@ -102,11 +102,23 @@ export function written(of: Written): string {
 }
 
 /** The properties as the nested mapping they are leaves of, in flow form. */
-function spelled(gives: StyleValues): string {
+function spelled(gives: StyleSays): string {
   const tree: Nested = {};
-  for (const key of properties(gives)) place(tree, key.split('.'), scalar(key, gives[key]));
+  for (const key of properties(gives)) {
+    // An edge is the unit a spec takes a border away at, not its `style` and `colour` (`docs/spec.md` §6).
+    const path = cleared(gives, key) ? key.split('.').slice(0, 2) : key.split('.');
+    place(tree, path, scalar(key, gives[key]));
+  }
 
   return flow(tree);
+}
+
+/** Whether the whole border edge this leaf belongs to is taken away. */
+function cleared(gives: StyleSays, key: StyleProperty): boolean {
+  if (!key.startsWith('border.')) return false;
+
+  const edge = key.split('.').slice(0, 2).join('.');
+  return properties(gives).every((one) => !one.startsWith(edge) || gives[one] === null);
 }
 
 type Nested = { [key: string]: Nested | string };
@@ -135,6 +147,8 @@ function flow(tree: Nested): string {
 
 /** A colour or a format code is quoted, since `000000` and `0.0%` are not the strings they look like. */
 function scalar(key: StyleProperty, value: unknown): string {
+  if (value === null) return 'null';
+
   const spelt = key === 'format' || key === 'fill' || key.endsWith('color');
   return spelt ? renderScalar(String(value), 'double') : renderScalar(value as Value);
 }

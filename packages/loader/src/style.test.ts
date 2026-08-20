@@ -42,6 +42,7 @@ describe('a style', () => {
 
   it('leaves what the spec did not write unset', () => {
     expect(style('{ font: { bold: true } }')).toEqual({
+      cleared: new Set(),
       extends: null,
       font: {
         bold: true,
@@ -131,6 +132,80 @@ describe('an alignment', () => {
   it('reads the spellings both axes share', () => {
     const read = style('{ align: { horizontal: justify, vertical: justify } }');
     expect(read.align).toEqual({ horizontal: 'justify', vertical: 'justify', wrap: null });
+  });
+});
+
+describe('an attribute a style says is not set', () => {
+  const clears = (declaration: string) => [...style(declaration).cleared];
+
+  it('is the `null` written at it', () => {
+    expect(clears('{ fill: null }')).toEqual(['fill']);
+    expect(clears('{ format: null }')).toEqual(['format']);
+  });
+
+  it('reads an empty value as the same thing, which is what YAML makes of it', () => {
+    expect(clears('{ fill: }')).toEqual(['fill']);
+  });
+
+  it('takes a whole group where the group is the `null`', () => {
+    expect(clears('{ align: null }')).toEqual(['align.horizontal', 'align.vertical', 'align.wrap']);
+    expect(clears('{ protection: null }')).toEqual(['protection.locked', 'protection.hidden']);
+  });
+
+  it('takes one leaf of a group where the leaf is', () => {
+    expect(clears('{ font: { bold: null, size: null } }')).toEqual(['font.bold', 'font.size']);
+  });
+
+  it('takes a border edge whole, since that is the unit a spec draws one at', () => {
+    expect(clears('{ border: { left: null } }')).toEqual([
+      'border.left.style',
+      'border.left.color',
+    ]);
+  });
+
+  it('takes all four edges for `all`, and for the border itself', () => {
+    expect(clears('{ border: { all: null } }')).toEqual(clears('{ border: null }'));
+    expect(clears('{ border: null }')).toHaveLength(8);
+  });
+
+  it('leaves what it does not name alone', () => {
+    const read = style('{ font: { bold: true, italic: null }, fill: null }');
+
+    expect(read.font?.bold).toBe(true);
+    expect([...read.cleared]).toEqual(['font.italic', 'fill']);
+  });
+
+  it('is not a thing `extends` can be', () => {
+    expect(codes('{ extends: null }')).toEqual([CODE.notText]);
+  });
+});
+
+describe('the `format:` a cell or a band writes beside its style', () => {
+  const cell = (body: string) => {
+    const source = `sheets:\n  - name: S\n    cells:\n      A1: ${body}\n`;
+    return load(parse(source, { file: 'f' })).doc?.sheets[0]?.cells[0];
+  };
+
+  it('says there is none where it is `null`', () => {
+    expect(cell('{ value: 1, format: null }')?.clearsFormat).toBe(true);
+    expect(cell('{ value: 1, format: "0.0%" }')?.clearsFormat).toBe(false);
+  });
+
+  it('is enough on its own to make the cell a cell', () => {
+    expect(cell('{ format: null }')?.clearsFormat).toBe(true);
+  });
+
+  it('reads the same on a band, which a row may take from a column', () => {
+    const source = 'sheets:\n  - name: S\n    rows:\n      - { at: 2, format: null }\n';
+    const band = load(parse(source, { file: 'f' })).doc?.sheets[0]?.rows[0];
+    expect(band?.clearsFormat).toBe(true);
+  });
+
+  it('is refused inside a rich run, which inherits nothing to take away', () => {
+    const source =
+      'sheets:\n  - name: S\n    cells:\n      A1: { rich: [{ text: hi, font: { bold: null } }] }\n';
+    const said = load(parse(source, { file: 'f' })).diagnostics;
+    expect(said.map((one) => one.code)).toEqual([CODE.notText]);
   });
 });
 

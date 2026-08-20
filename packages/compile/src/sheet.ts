@@ -194,7 +194,7 @@ function columnBand(ctx: Ctx, band: ColumnBand): CompiledBand | null {
     size: band.width,
     hidden: band.hidden,
     group: band.group,
-    style: layersOf(ctx, band, 'column', band.style, band.format),
+    style: layersOf(ctx, band, 'column', band.style, band.format, band.clearsFormat),
     node: band.id,
   };
 }
@@ -214,7 +214,7 @@ function rowBand(ctx: Ctx, band: RowBand): CompiledBand | null {
     size: band.height,
     hidden: band.hidden,
     group: band.group,
-    style: layersOf(ctx, band, 'row', band.style, band.format),
+    style: layersOf(ctx, band, 'row', band.style, band.format, band.clearsFormat),
     node: band.id,
   };
 }
