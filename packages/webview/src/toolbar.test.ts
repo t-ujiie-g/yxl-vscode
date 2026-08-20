@@ -71,13 +71,21 @@ describe('the switches a reader reaches for first', () => {
     const bar = toolbar(showing({}), asks());
     const buttons = [...bar.querySelectorAll('button')];
 
-    expect(buttons.map((one) => [one.textContent, one.disabled])).toEqual([
-      ['B', true],
-      ['I', true],
-      ['U', true],
-      ['S', true],
-      ['×', true],
-      ['×', true],
+    expect(buttons.every((one) => one.disabled)).toBe(true);
+    expect(buttons.map((one) => one.title)).toEqual([
+      'Bold',
+      'Italic',
+      'Underline',
+      'Strikethrough',
+      'Automatic text colour',
+      'No fill',
+      'Align left',
+      'Align centre',
+      'Align right',
+      'Align top',
+      'Align middle',
+      'Align bottom',
+      'Wrap text',
     ]);
     expect([...bar.querySelectorAll('input')].every((one) => one.disabled)).toBe(true);
   });
@@ -95,9 +103,9 @@ describe('the switches a reader reaches for first', () => {
     const cells = [cell({ style: { 'font.italic': true } })];
     const bar = toolbar(showing({ cells, selected: { row: 1, col: 1 } }), asks());
 
-    const on = [...bar.querySelectorAll('button.look:not(.off)')].map((one) =>
-      one.classList.contains('on'),
-    );
+    const on = [...bar.querySelectorAll('button.look:not(.off)')]
+      .slice(0, 4)
+      .map((one) => one.classList.contains('on'));
     expect(on).toEqual([false, true, false, false]);
   });
 });
@@ -143,5 +151,52 @@ describe('the colours a reader picks', () => {
 
     expect(bar.querySelector<HTMLButtonElement>('button.off.fill')?.disabled).toBe(false);
     expect(bar.querySelector<HTMLButtonElement>('button.off.ink')?.disabled).toBe(true);
+  });
+});
+
+describe('where the text sits', () => {
+  const marks = (bar: HTMLElement) =>
+    [...bar.querySelectorAll('button.look')].filter((one) => one.querySelector('svg') !== null);
+
+  it('is a group where only the one that holds is lit', () => {
+    const cells = [cell({ style: { 'align.horizontal': 'center' } })];
+    const bar = toolbar(showing({ cells, selected: { row: 1, col: 1 } }), asks());
+
+    expect(marks(bar).map((one) => one.classList.contains('on'))).toEqual([
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+    ]);
+  });
+
+  it('asks for the one pressed, over both axes', () => {
+    const wear = vi.fn();
+    const bar = toolbar(showing({ cells: [cell({})], selected: { row: 1, col: 1 } }), asks(wear));
+
+    bar.querySelector<HTMLButtonElement>('button.right')?.click();
+    expect(wear).toHaveBeenCalledWith({ 'align.horizontal': 'right' }, ONE);
+
+    bar.querySelector<HTMLButtonElement>('button.middle')?.click();
+    expect(wear).toHaveBeenCalledWith({ 'align.vertical': 'middle' }, ONE);
+  });
+
+  it('takes it off where the one pressed is the one that holds (ADR-039)', () => {
+    const wear = vi.fn();
+    const cells = [cell({ style: { 'align.horizontal': 'right' } })];
+    const bar = toolbar(showing({ cells, selected: { row: 1, col: 1 } }), asks(wear));
+
+    bar.querySelector<HTMLButtonElement>('button.right')?.click();
+    expect(wear).toHaveBeenCalledWith({ 'align.horizontal': null }, ONE);
+  });
+
+  it('wraps as a switch, since that is what the schema makes of it', () => {
+    const wear = vi.fn();
+    const bar = toolbar(showing({ cells: [cell({})], selected: { row: 1, col: 1 } }), asks(wear));
+
+    bar.querySelector<HTMLButtonElement>('button.wrap')?.click();
+    expect(wear).toHaveBeenCalledWith({ 'align.wrap': true }, ONE);
   });
 });

@@ -1,4 +1,4 @@
-import type { StyleProperty, StyleSays, StyleValues } from '@yxl-vscode/spec';
+import type { HAlign, StyleProperty, StyleSays, StyleValues, VAlign } from '@yxl-vscode/spec';
 import { type Color, parseColor, type Rect } from '@yxl-vscode/units';
 import { between } from './keys';
 import type { DrawnCell } from './protocol';
@@ -8,10 +8,22 @@ import type { Asks, Showing } from './showing';
 export function toolbar(showing: Showing, asks: Asks): HTMLElement {
   const bar = document.createElement('div');
   bar.className = 'toolbar';
+
   for (const one of TOGGLES) bar.append(toggle(one, showing, asks));
+  bar.append(gap());
   for (const one of INKS) bar.append(...ink(one, showing, asks));
+  bar.append(gap());
+  for (const one of PICKS) bar.append(pick(one, showing, asks));
+  bar.append(toggle(WRAP, showing, asks));
 
   return bar;
+}
+
+/** The space between one group of controls and the next. */
+function gap(): HTMLElement {
+  const span = document.createElement('span');
+  span.className = 'gap';
+  return span;
 }
 
 interface Toggle {
@@ -26,6 +38,76 @@ const TOGGLES: readonly Toggle[] = [
   { key: 'font.italic', name: 'italic', mark: 'I', says: 'Italic' },
   { key: 'font.underline', name: 'underline', mark: 'U', says: 'Underline' },
   { key: 'font.strike', name: 'strike', mark: 'S', says: 'Strikethrough' },
+];
+
+const WRAP: Toggle = { key: 'align.wrap', name: 'wrap', mark: '\u21b5', says: 'Wrap text' };
+
+/** One place the text can sit; pressing the one that already holds takes it off (ADR-039). */
+interface Pick {
+  readonly key: 'align.horizontal' | 'align.vertical';
+  readonly value: HAlign | VAlign;
+  readonly name: string;
+  readonly says: string;
+  readonly bars: readonly Bar[];
+}
+
+interface Bar {
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+}
+
+const ACROSS = [2, 5.6, 9.2, 12.8];
+const DOWN = [0, 2.8, 5.6];
+const RAGGED = [12, 8, 12, 8];
+
+const PICKS: readonly Pick[] = [
+  {
+    key: 'align.horizontal',
+    value: 'left',
+    name: 'left',
+    says: 'Align left',
+    bars: ACROSS.map((y, row) => ({ x: 2, y, width: RAGGED[row] ?? 12 })),
+  },
+  {
+    key: 'align.horizontal',
+    value: 'center',
+    name: 'centre',
+    says: 'Align centre',
+    bars: ACROSS.map((y, row) => ({
+      x: (16 - (RAGGED[row] ?? 12)) / 2,
+      y,
+      width: RAGGED[row] ?? 12,
+    })),
+  },
+  {
+    key: 'align.horizontal',
+    value: 'right',
+    name: 'right',
+    says: 'Align right',
+    bars: ACROSS.map((y, row) => ({ x: 14 - (RAGGED[row] ?? 12), y, width: RAGGED[row] ?? 12 })),
+  },
+  {
+    key: 'align.vertical',
+    value: 'top',
+    name: 'top',
+    says: 'Align top',
+    bars: DOWN.map((y) => ({ x: 3, y: y + 2, width: 10 })),
+  },
+  {
+    key: 'align.vertical',
+    value: 'middle',
+    name: 'middle',
+    says: 'Align middle',
+    bars: DOWN.map((y) => ({ x: 3, y: y + 4.2, width: 10 })),
+  },
+  {
+    key: 'align.vertical',
+    value: 'bottom',
+    name: 'bottom',
+    says: 'Align bottom',
+    bars: DOWN.map((y) => ({ x: 3, y: y + 6.4, width: 10 })),
+  },
 ];
 
 interface Ink {
@@ -71,6 +153,45 @@ function toggle(of: Toggle, showing: Showing, asks: Asks): HTMLElement {
 
   return button;
 }
+
+/** One of a group, showing where the text sits and asking for it there — or, where it already is, nowhere. */
+function pick(of: Pick, showing: Showing, asks: Asks): HTMLElement {
+  const on = wornBy(showing)[of.key] === of.value;
+  const button = document.createElement('button');
+
+  button.type = 'button';
+  button.className = `look ${of.name}${on ? ' on' : ''}`;
+  button.title = of.says;
+  button.disabled = showing.selected === null;
+  button.setAttribute('aria-pressed', on ? 'true' : 'false');
+  button.append(marked(of.bars));
+  button.addEventListener('click', () =>
+    asks.wear({ [of.key]: on ? null : of.value } as StyleSays, over(showing)),
+  );
+
+  return button;
+}
+
+/** A mark drawn as the bars of text it stands for, which is how a spreadsheet draws this. */
+function marked(bars: readonly Bar[]): SVGSVGElement {
+  const svg = document.createElementNS(SVG, 'svg');
+  svg.setAttribute('viewBox', '0 0 16 16');
+  svg.setAttribute('aria-hidden', 'true');
+
+  for (const bar of bars) {
+    const drawn = document.createElementNS(SVG, 'rect');
+    drawn.setAttribute('x', String(bar.x));
+    drawn.setAttribute('y', String(bar.y));
+    drawn.setAttribute('width', String(bar.width));
+    drawn.setAttribute('height', '1.6');
+    drawn.setAttribute('rx', '0.6');
+    svg.append(drawn);
+  }
+
+  return svg;
+}
+
+const SVG = 'http://www.w3.org/2000/svg';
 
 /** A colour, as the swatch the selected cell wears and the button that takes it off. */
 function ink(of: Ink, showing: Showing, asks: Asks): HTMLElement[] {

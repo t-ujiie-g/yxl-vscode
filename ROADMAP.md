@@ -995,12 +995,12 @@ The other half of what a person does with a sheet, and the half that decides
 whether the spec survives contact with a GUI (ADR-008).
 - [ ] A toolbar of what a reader reaches for: bold, italic, fill, text colour,
       borders, alignment, number format
-      **The four font switches and the two colours are in** — bold, italic,
-      underline, strike, a fill and a text colour — above the grid, each showing
-      what the selected cell wears, and each colour with a button that takes it
-      off again (**ADR-038**, **ADR-039**). What is left is a border, which needs
-      an edge chosen, an alignment, and a number format, which is the cell's own
-      `format:` key rather than its `style:`.
+      **The font switches, the two colours and where the text sits are in** —
+      bold, italic, underline, strike, a fill, a text colour, both alignment
+      axes and wrap — above the grid, each showing what the selected cell wears,
+      and each taking itself off again (**ADR-038**, **ADR-039**). What is left
+      is a border, which needs an edge chosen, and a number format, which is the
+      cell's own `format:` key rather than its `style:`.
 - [x] Every style write through the **normalizer** and through §4.4's `setStyle`
       table — change the definition, or fork it for this range, with the ripple
       count shown *before* the choice
@@ -2226,6 +2226,27 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-20 — Where the text sits
+Both alignment axes and wrap, which is the third group of the toolbar and the
+first one that needed nothing new underneath it: ADR-039 landed this morning,
+and a `null` ask is what a group of three buttons is made of.
+
+- **A group where only one holds at a time.** Left, centre, right; top, middle,
+  bottom. Pressing the one already lit takes it off, which is the same gesture
+  as unbolding and was not expressible a day ago — there is no "no alignment"
+  value, only the absence `null` now says.
+- **Wrap is a switch, not one of a group**, because the schema makes it a
+  boolean, so it turns off as `false` and drops out where nothing under it says
+  otherwise. Two shapes on one row of §4.4's table, and the difference between
+  them is the difference the schema draws.
+- **The marks are drawn rather than written.** Four ragged bars for the
+  horizontal axis, three stacked for the vertical, as inline SVG that takes
+  `currentColor` — there is no glyph for "align centre" that renders the same on
+  three platforms, and a letter would have needed a legend.
+- 1460 → 1467 tests. Comment shape: exports 416 blocks / 904 lines (avg 2.2),
+  private 280 / 306 (1.1), inline 56 / 75 (1.3), 11 over the limit — the same
+  eleven.
 
 ### 2026-08-20 — yxl 0.3.5, and an attribute that says it is not set
 The pin moves to 0.3.5 and this editor learns what it added — the answer to
