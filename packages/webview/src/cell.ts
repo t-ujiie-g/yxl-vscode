@@ -1,13 +1,6 @@
-import type { ScalarValue, StyleValues } from '@yxl-vscode/spec';
+import { BORDER_EDGES, type ScalarValue, type StyleValues } from '@yxl-vscode/spec';
 import { format as excel } from 'numfmt';
 import type { DrawnCell, DrawnMerge, DrawnRun } from './protocol';
-
-const EDGES = [
-  ['left', 'border-left'],
-  ['right', 'border-right'],
-  ['top', 'border-top'],
-  ['bottom', 'border-bottom'],
-] as const;
 
 /** One cell as a `<td>`: what it says, and the look it was sent wearing. */
 export function drawCell(
@@ -196,13 +189,13 @@ function declarations(style: StyleValues): [string, string][] {
   if (style['align.vertical'] !== undefined) put('vertical-align', vertical(style));
   if (style['align.wrap'] === true) put('white-space', 'pre-wrap');
 
-  for (const [side, property] of EDGES) {
+  for (const side of BORDER_EDGES) {
     const line = style[`border.${side}.style`];
     if (line === undefined) continue;
 
     const edge = style[`border.${side}.color`];
     const drawnWith = edge === undefined ? 'currentColor' : colour(edge);
-    put(property, `${thickness(line)} solid ${drawnWith}`);
+    put(`border-${side}`, `${thickness(line)} solid ${drawnWith}`);
   }
 
   return css;

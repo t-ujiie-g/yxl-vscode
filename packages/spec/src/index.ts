@@ -13,6 +13,8 @@ export type { Defs, FormulaDef, Override, Param, SpecDoc, StyleDef, ValueDef } f
 export { INCLUDE_KEY, MODELED_KEYS, REF_KEY } from './keys';
 export type { Opaque, SpecNode, Template, Templated } from './node';
 export {
+  ordered,
+  propertiesOf,
   propertiesUnder,
   STYLE_PROPERTIES,
   type StyleProperty,
@@ -22,9 +24,11 @@ export {
 export type { FormulaRange, Merge, Sheet } from './sheet';
 export {
   type Align,
+  BORDER_EDGES,
   BORDER_SIDES,
   BORDER_STYLES,
   type BorderEdge,
+  type BorderEdgeName,
   type BorderSide,
   type BorderSideName,
   type BorderStyle,

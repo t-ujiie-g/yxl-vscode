@@ -1,5 +1,7 @@
 import {
+  BORDER_EDGES,
   BORDER_STYLES,
+  type BorderEdgeName,
   type BorderStyle,
   type HAlign,
   type StyleProperty,
@@ -214,13 +216,11 @@ const SVG = 'http://www.w3.org/2000/svg';
 interface Edge {
   readonly name: string;
   readonly says: string;
-  readonly sides: readonly ('left' | 'right' | 'top' | 'bottom')[];
+  readonly sides: readonly BorderEdgeName[];
 }
 
-const SIDES = ['top', 'right', 'bottom', 'left'] as const;
-
 const EDGES: readonly Edge[] = [
-  { name: 'all', says: 'All borders', sides: SIDES },
+  { name: 'all', says: 'All borders', sides: BORDER_EDGES },
   { name: 'top', says: 'Top border', sides: ['top'] },
   { name: 'bottom', says: 'Bottom border', sides: ['bottom'] },
   { name: 'left', says: 'Left border', sides: ['left'] },
@@ -246,7 +246,7 @@ function edge(of: Edge, showing: Showing, asks: Asks): HTMLElement {
 function drawn(of: Edge, line: BorderStyle): StyleSays {
   if (of.sides.length === 0) {
     return Object.fromEntries(
-      SIDES.flatMap((side) => [
+      BORDER_EDGES.flatMap((side) => [
         [`border.${side}.style`, null],
         [`border.${side}.color`, null],
       ]),
@@ -265,7 +265,7 @@ function framed(sides: readonly string[]): Bar[] {
     right: { x: 14, y: 1, width: 1, height: 14 },
   };
 
-  return SIDES.map((side) => ({ ...box[side], faint: !sides.includes(side) }));
+  return BORDER_EDGES.map((side) => ({ ...box[side], faint: !sides.includes(side) }));
 }
 
 /** The line the border buttons draw with, which is the reader's choice and not the cell's. */

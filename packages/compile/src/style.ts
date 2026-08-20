@@ -1,4 +1,5 @@
 import {
+  BORDER_EDGES,
   type SpecNode,
   STYLE_PROPERTIES,
   type Style,
@@ -124,8 +125,6 @@ function fromStyle(
   ];
 }
 
-const EDGES = ['left', 'right', 'top', 'bottom'] as const;
-
 type Setting = { -readonly [K in StyleProperty]?: StyleValues[K] };
 
 type Saying = { -readonly [K in StyleProperty]?: StyleValues[K] | null };
@@ -164,7 +163,7 @@ export function flatten(ctx: Ctx, style: Style, node: SpecNode): StyleSays {
   set('format', style.format === null ? undefined : text(ctx, style.format, node));
 
   for (const side of style.border ?? []) {
-    for (const edge of side.side === 'all' ? EDGES : [side.side]) {
+    for (const edge of side.side === 'all' ? BORDER_EDGES : [side.side]) {
       set(`border.${edge}.style`, side.edge.style);
       set(`border.${edge}.color`, colour(side.edge.color));
     }

@@ -1,5 +1,11 @@
 import { renderScalar, type Value } from '@yxl-vscode/cst';
-import { STYLE_PROPERTIES, type StyleProperty, type StyleSays } from '@yxl-vscode/spec';
+import {
+  BORDER_EDGES,
+  ordered,
+  propertiesOf,
+  type StyleProperty,
+  type StyleSays,
+} from '@yxl-vscode/spec';
 import type { StyleName } from '@yxl-vscode/units';
 
 /** A look the spec already declares, by the values its name resolves to. */
@@ -23,13 +29,13 @@ export const NEARBY = 2;
  */
 export function normalize(wanted: StyleSays, declared: readonly Declared[]): Written | null {
   const gives = ordered(wanted);
-  if (properties(gives).length === 0) return null;
+  if (propertiesOf(gives).length === 0) return null;
 
   const nearest = nearestTo(gives, declared);
   if (nearest === null) return { kind: 'inline', gives };
   if (nearest.restated.length === 0) return { kind: 'ref', name: nearest.declared.name };
 
-  return { kind: 'extend', base: nearest.declared.name, gives: only(gives, nearest.restated) };
+  return { kind: 'extend', base: nearest.declared.name, gives: ordered(gives, nearest.restated) };
 }
 
 /** A declaration measured against the look: what extending it would have to restate. */
@@ -52,10 +58,10 @@ function nearestTo(wanted: StyleSays, declared: readonly Declared[]): Near | nul
 
 /** What extending this declaration would cost, or `null` where it cannot say the look (ADR-037). */
 function measure(wanted: StyleSays, declared: Declared): Near | null {
-  const said = properties(declared.gives);
+  const said = propertiesOf(declared.gives);
   if (!said.every((key) => wanted[key] !== undefined)) return null;
 
-  const restated = properties(wanted).filter((key) => declared.gives[key] !== wanted[key]);
+  const restated = propertiesOf(wanted).filter((key) => declared.gives[key] !== wanted[key]);
   const inherited =
     said.length - restated.filter((key) => declared.gives[key] !== undefined).length;
   if (restated.length > NEARBY) return null;
@@ -73,26 +79,6 @@ function closer(one: Near, than: Near): boolean {
   return one.declared.name < than.declared.name;
 }
 
-/** The look narrowed to the properties named, in the order it already holds them. */
-function only(gives: StyleSays, keys: readonly StyleProperty[]): StyleSays {
-  const kept: Record<string, unknown> = {};
-  for (const key of keys) kept[key] = gives[key];
-  return kept as StyleSays;
-}
-
-/** The look's properties in the order the model declares them, so one look is always the same bytes. */
-function ordered(values: StyleSays): StyleSays {
-  const gives: Record<string, unknown> = {};
-  for (const key of STYLE_PROPERTIES) {
-    if (values[key] !== undefined) gives[key] = values[key];
-  }
-  return gives as StyleSays;
-}
-
-function properties(values: StyleSays): StyleProperty[] {
-  return STYLE_PROPERTIES.filter((key) => values[key] !== undefined);
-}
-
 /** A look as a spec writes one: the name of a declaration, or a mapping in flow form (`docs/spec.md` §6). */
 export function written(of: Written): string {
   if (of.kind === 'ref') return of.name;
@@ -104,7 +90,7 @@ export function written(of: Written): string {
 /** The properties as the nested mapping they are leaves of, in flow form. */
 function spelled(gives: StyleSays): string {
   const tree: Nested = {};
-  for (const key of properties(gives)) {
+  for (const key of propertiesOf(gives)) {
     if (key.startsWith('border.')) {
       tree['border'] ??= borders(gives);
       continue;
@@ -115,19 +101,17 @@ function spelled(gives: StyleSays): string {
   return flow(tree);
 }
 
-const EDGES = ['left', 'right', 'top', 'bottom'] as const;
-
 /** A border as a spec writes one: four edges alike are one word (`docs/spec.md` §6). */
 function borders(gives: StyleSays): Nested | string {
   const said: Nested = {};
-  for (const edge of EDGES) {
+  for (const edge of BORDER_EDGES) {
     const one = edgeOf(gives, edge);
     if (one !== null) said[edge] = one;
   }
 
   const all = Object.values(said);
   const first = all[0];
-  const alike = all.length === EDGES.length && all.every((one) => one === first);
+  const alike = all.length === BORDER_EDGES.length && all.every((one) => one === first);
   return alike && typeof first === 'string' ? first : said;
 }
 

@@ -13,7 +13,8 @@ import {
 import { apply, type Node, type Op, type Path, renderScalar } from '@yxl-vscode/cst';
 import { normalize, written } from '@yxl-vscode/normalize';
 import {
-  STYLE_PROPERTIES,
+  ordered,
+  propertiesOf,
   type StyleProperty,
   type StyleSays,
   type StyleValues,
@@ -47,7 +48,7 @@ export function setStyle(
   read: Reading,
 ): readonly Candidate[] {
   const sheet = sheetOf(spec.grid, where.sheet);
-  const wanted = properties(want);
+  const wanted = propertiesOf(want);
   if (sheet === null || wanted.length === 0) return [];
 
   const from = origins(sheet, spread(where.rect), wanted);
@@ -191,7 +192,7 @@ function splitting(
   const parts: Writing[] = [];
 
   for (const group of from) {
-    const some = only(want, group.keys);
+    const some = ordered(want, group.keys);
     if (group.layer === null || itsOwn(group.layer)) {
       for (const at of group.addresses) own.set(at, { ...own.get(at), ...some });
       continue;
@@ -341,13 +342,13 @@ function asStyle(
   own: readonly StyleLayer[],
   want: StyleSays,
 ): Carries[] {
-  if (properties(want).length === 0) return [];
+  if (propertiesOf(want).length === 0) return [];
 
   const under = resolve(layers.filter((one) => !fromCell(one)));
   const named = resolve(own.filter((one) => one.name !== null));
   const gives = beyond({ ...resolve(own), ...want }, under, named);
 
-  const how = properties(gives).length === 0 ? null : normalize(gives, spec.grid.styles);
+  const how = propertiesOf(gives).length === 0 ? null : normalize(gives, spec.grid.styles);
   return [{ key: STYLE, source: how === null ? null : written(how) }];
 }
 
@@ -410,9 +411,9 @@ function has(entries: readonly { key: { value: unknown } }[], key: string): bool
 
 /** The look narrowed to everything but one property, which is written somewhere else. */
 function without(want: StyleSays, key: StyleProperty): StyleSays {
-  return only(
+  return ordered(
     want,
-    properties(want).filter((one) => one !== key),
+    propertiesOf(want).filter((one) => one !== key),
   );
 }
 
@@ -420,7 +421,7 @@ function without(want: StyleSays, key: StyleProperty): StyleSays {
 function beyond(gives: StyleSays, under: StyleSays, named: StyleSays): StyleSays {
   const kept: Record<string, unknown> = {};
 
-  for (const key of properties(gives)) {
+  for (const key of propertiesOf(gives)) {
     const same = under[key] === gives[key];
     const nothing = gives[key] === false || gives[key] === null;
     const off = nothing && !supplied(under, key) && !supplied(named, key);
@@ -533,7 +534,7 @@ function writing(
 ): Op[] | null {
   const ops: Op[] = [];
 
-  for (const key of properties(want)) {
+  for (const key of propertiesOf(want)) {
     const path = into === null ? key.split('.') : [into, ...key.split('.')];
     const op = under(found.node, [...found.path], path, want[key]);
     if (op === null) return null;
@@ -608,10 +609,6 @@ function nodeOf(origin: FacetOrigin): NodeId | null {
   return origin.node;
 }
 
-function properties(values: StyleSays): StyleProperty[] {
-  return STYLE_PROPERTIES.filter((key) => values[key] !== undefined);
-}
-
 const STYLE = 'style';
 const FORMAT = 'format';
 const CELLS = 'cells';
@@ -619,11 +616,4 @@ const CELLS = 'cells';
 /** Every address of a rectangle asked for the whole look. */
 function everyone(addresses: readonly A1Addr[], want: StyleSays): Wanted[] {
   return addresses.map((at) => ({ at, want }));
-}
-
-/** The look narrowed to the properties named. */
-function only(want: StyleSays, keys: readonly StyleProperty[]): StyleSays {
-  const kept: Record<string, unknown> = {};
-  for (const key of keys) kept[key] = want[key];
-  return kept as StyleSays;
 }
