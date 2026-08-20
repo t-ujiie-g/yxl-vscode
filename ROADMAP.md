@@ -2261,6 +2261,16 @@ line to draw it in. **The item is ticked.**
   their own over the cell rather than collapsed with the grid, so what the spec
   says is what is seen — and the clipboard keeps the real `border-*` CSS it
   needs (ADR-028).
+- **The first attempt at that made it worse and the second was measured**, which
+  is the note worth keeping. An overlay at `inset: -1px` sits in the pixel the
+  cell's own `overflow: hidden` clips, so every border disappeared. jsdom has no
+  layout, so no test here could have caught either that or the tie it was fixing.
+  What settled it was rendering the real `view.css` under headless Chrome
+  (`--headless --screenshot`) with the candidates side by side and looking:
+  `inset: 0` draws, `inset: -1px` draws nothing, and a 1px border on a collapsed
+  cell really does lose its left and top. **That is the loop to reach for when a
+  question is about layout** — the tests answer what the DOM holds, not what it
+  looks like.
 - 1482 → 1499 tests. Comment shape: exports 417 blocks / 905 lines (avg 2.2),
   private 298 / 324 (1.1), inline 56 / 75 (1.3), 11 over the limit — the same
   eleven.

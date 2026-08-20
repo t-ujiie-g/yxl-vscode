@@ -208,10 +208,11 @@ body {
 
 /* A cell's own borders sit over the grid's own lines rather than collapsing
    with them: at 1px they lose that tie to the cell on their left, and to the
-   one above, which is every inner edge of the sheet. */
+   one above, which is every inner edge of the sheet. Inside the cell's own
+   clip, so that `overflow: hidden` does not eat them. */
 .grid td .edges {
   position: absolute;
-  inset: -1px;
+  inset: 0;
   pointer-events: none;
 }
 
