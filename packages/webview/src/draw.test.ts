@@ -9,6 +9,8 @@ function asks(): Asks {
   return {
     showSheet: vi.fn(),
     drawWith: vi.fn(),
+    resize: vi.fn(),
+    resizedWith: vi.fn(),
     select: vi.fn(),
     reveal: vi.fn(),
     setParam: vi.fn(),

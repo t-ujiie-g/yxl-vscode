@@ -63,7 +63,8 @@ export function refusal(refused: Refused, asks: Asks): HTMLElement {
     const pick = document.createElement('button');
     pick.type = 'button';
     pick.className = 'choice';
-    pick.textContent = `${choice.what} — ${moved(choice)}`;
+    const says = moved(choice);
+    pick.textContent = says === '' ? choice.what : `${choice.what} — ${says}`;
     pick.addEventListener('click', () => taken(about, choice.id, asks));
     said.append(' ', pick);
   }
@@ -95,10 +96,13 @@ function taken(about: About, choice: string, asks: Asks): void {
   if (about.is === 'pasted') asks.pastedWith(about.pasted, choice);
   if (about.is === 'text') asks.pastedTextWith(about.text, choice);
   if (about.is === 'worn') asks.wornWith(about.worn, choice);
+  if (about.is === 'resized') asks.resizedWith(about.resized, choice);
 }
 
-/** What a choice would move, as a count a reader can act on and a few names. */
+/** What a choice would move, as a count a reader can act on and a few names; nothing where it moves no cell. */
 function moved(choice: Choice): string {
+  if (choice.moves === 0) return '';
+
   const cells = `${choice.moves} cell${choice.moves === 1 ? '' : 's'}`;
   if (choice.sample.length === 0) return cells;
 

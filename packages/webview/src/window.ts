@@ -4,6 +4,18 @@ import type { DrawnSheet, Sized } from './protocol';
 const PER_CHARACTER = 7;
 const PER_POINT = 4 / 3;
 
+/** The smallest a drag may leave a column or a row, so the grip it was dragged by stays there. */
+const LEAST = { column: 1, row: 6 };
+
+/**
+ * A dragged size in the units a spec writes it in — character units across,
+ * points down (`docs/spec.md` §4) — to the two places a reader would read.
+ */
+export function sizeOf(axis: 'column' | 'row', px: number): number {
+  const size = px / (axis === 'column' ? PER_CHARACTER : PER_POINT);
+  return Math.max(LEAST[axis], Math.round(size * 100) / 100);
+}
+
 /** Where the scroller has been left, in pixels from the sheet's top-left. */
 export interface Where {
   readonly top: number;

@@ -148,7 +148,8 @@ export type About =
   | { readonly is: 'ranged'; readonly ranged: Ranged }
   | { readonly is: 'pasted'; readonly pasted: Pasted }
   | { readonly is: 'text'; readonly text: PastedText }
-  | { readonly is: 'worn'; readonly worn: Worn };
+  | { readonly is: 'worn'; readonly worn: Worn }
+  | { readonly is: 'resized'; readonly resized: Resized };
 
 /**
  * `Cmd`+`V` in the grid: where it goes, what the grid holds of its own, and what
@@ -244,6 +245,8 @@ export type FromView =
   | ({ readonly kind: 'pastedText'; readonly choice: string } & PastedText)
   | ({ readonly kind: 'wear' } & Worn)
   | ({ readonly kind: 'worn'; readonly choice: string } & Worn)
+  | ({ readonly kind: 'resize' } & Resized)
+  | ({ readonly kind: 'resized'; readonly choice: string } & Resized)
   | ({ readonly kind: 'resolve'; readonly choice: string } & Typed)
   | ({ readonly kind: 'override'; readonly reason: string } & Typed)
   | {
@@ -252,6 +255,14 @@ export type FromView =
       readonly row: number;
       readonly col: number;
     };
+
+/** A column dragged to a width in character units, or a row to a height in points (`docs/spec.md` §4). */
+export interface Resized {
+  readonly sheet: string;
+  readonly axis: 'column' | 'row';
+  readonly at: number;
+  readonly size: number;
+}
 
 /** A look asked for over a rectangle: the properties the reader changed, and nothing else. */
 export interface Worn extends Ranged {

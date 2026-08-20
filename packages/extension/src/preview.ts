@@ -9,6 +9,7 @@ import { asOpen, put, reveal, textOf } from './documents';
 import { inspect, type Nodes, nodeUnder } from './inspect';
 import { wear } from './look';
 import { type Projected, project, redraw, type Window } from './project';
+import { resize } from './size';
 import { goBack } from './undo';
 import {
   emptied,
@@ -252,6 +253,18 @@ export class Preview {
     if (asked.kind === 'worn') {
       const { kind, choice, ...worn } = asked;
       this.writing((spec, port) => wear(spec, worn, port, choice));
+      return;
+    }
+
+    if (asked.kind === 'resize') {
+      const { kind, ...resized } = asked;
+      this.writing((spec, port) => resize(spec, resized, port));
+      return;
+    }
+
+    if (asked.kind === 'resized') {
+      const { kind, choice, ...resized } = asked;
+      this.writing((spec, port) => resize(spec, resized, port, choice));
       return;
     }
 

@@ -285,6 +285,17 @@ feels good:
    "split by origin" rather than picking for the user
 ```
 
+**`setSize`** — a width or a height is a band, never forty cells:
+
+| What sizes it now | Candidates |
+|---|---|
+| nothing | a `columns:` / `rows:` band of its own *(auto)* |
+| a band over that one alone | change its `width` / `height` *(auto)* |
+| a band over several | ① change the band *(with how many it spans)* ② split it so this one stands alone, every other key it had kept |
+
+A band that sets no size does not size it: the first row is the answer there,
+and the two bands then say different things about the same column.
+
 **`insertRow` / `insertCol`** — enumerate consequences *before* running:
 `cells:` A1 keys shift (this is what bloats a diff), `data:` rectangles gain a
 blank row or move, `formulas:` ranges extend or move, `merges:`/`tables:`/charts
@@ -1023,8 +1034,13 @@ whether the spec survives contact with a GUI (ADR-008).
       override hides what a cell would carry, only the split is offered, and
       where the two would leave the file the same they are one answer and it
       applies.
-- [ ] Column width and row height by dragging, written as `columns:` / `rows:`
+- [x] Column width and row height by dragging, written as `columns:` / `rows:`
       bands rather than as forty cells
+      **Shipped**: the edge of a column or row heading is a grip; the size
+      follows the pointer and is written once, on the way up, in the units the
+      spec keeps it in. §4.4's `setSize` table decides where it lands, and a
+      band over more than the one dragged is a question — change the band, or
+      split it so this one stands alone.
 - [ ] `freeze:` (`docs/spec.md` §2) honoured in the preview, and set from it
 
 ### Phase 10 — Structural edits
@@ -2228,6 +2244,39 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-21 — A column you can drag
+Phase 9's fourth item, and the first gesture in the grid that is not about a
+cell at all. **§4.4 gains a `setSize` table.**
+
+- **The edge of a heading is a grip.** The size follows the pointer while the
+  drag lasts and is sent once, on the way up: every step of a drag would
+  otherwise be an edit, and the grid is a projection rather than a thing that
+  holds a width (ADR-001). What is sent is the size in the units the spec keeps
+  it in — character units across, points down (`docs/spec.md` §4) — rounded to
+  what a person would write rather than to what the pointer said.
+- **A size is a band, and which band is §4.4's new row.** Nothing sizes it yet:
+  write one of its own, in the block form the upstream examples write bands in.
+  A band over that column alone: change its `width`. A band over several: a
+  question, because the drag was about one column and the band is about three.
+- **The split keeps every key the band had.** `- { at: D-F, width: 12, style:
+  header }` becomes three entries that each still say `style: header`, because
+  the pieces are the band's own text with its `at` written over rather than a
+  band built again from what compiled. A band whose `at` is a placeholder is
+  refused rather than written over, as the `formulas:` split already refuses.
+- **A band that sets no size does not size it.** `- { at: D-F, style: header }`
+  says nothing about width, so dragging D writes a band of its own beside it,
+  and the two say different things about the same column — which is what
+  layering is for.
+- **An answer that moves no cell says nothing about cells.** A resize changes
+  no value and no look, so its `expects` claims none and the choice panel,
+  which said "0 cells", now says only what the answer does.
+- **The grips were measured, not reasoned about.** At `right: -3px` they were
+  half eaten by the heading's own `overflow: hidden` — the same trap as the
+  border overlay, found the same way, by rendering `view.css` under headless
+  Chrome before shipping it rather than after.
+- 1521 → 1549 tests. Comment shape: exports 433 blocks / 935 lines (avg 2.2),
+  private 302 / 322 (1.1), inline 59 / 79 (1.3), 9 over the limit.
 
 ### 2026-08-21 — Refactoring pass over the whole tree (`AGENTS.md` §8)
 After the five commits that built Phase 9's toolbar, which is where the debt

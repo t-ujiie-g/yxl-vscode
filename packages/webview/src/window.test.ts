@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DrawnSheet } from './protocol';
-import { across, columnAt, down, heightOf, rowAt, wanted, widthOf } from './window';
+import { across, columnAt, down, heightOf, rowAt, sizeOf, wanted, widthOf } from './window';
 
 function sheet(of: Partial<DrawnSheet> = {}): DrawnSheet {
   return {
@@ -92,5 +92,26 @@ describe('the window a scrolled view wants', () => {
   it('wants a window sideways as well, which a wide sheet scrolls', () => {
     const drawn = sheet({ at: { row: 1, col: 1 } });
     expect(wanted(drawn, { top: 0, left: across(drawn, 100) })).toEqual({ row: 1, col: 75 });
+  });
+});
+
+describe('a dragged size in the units a spec writes it in', () => {
+  it('is character units across, which is what a column band keeps', () => {
+    expect(sizeOf('column', 70)).toBe(10);
+    expect(sizeOf('column', 59)).toBe(8.43);
+  });
+
+  it('is points down, which is what a row band keeps', () => {
+    expect(sizeOf('row', 20)).toBe(15);
+    expect(sizeOf('row', 37.333)).toBe(28);
+  });
+
+  it('is rounded to what a person would write, not to what the pointer said', () => {
+    expect(sizeOf('column', 71)).toBe(10.14);
+  });
+
+  it('stops where the grip it was dragged by would go with it', () => {
+    expect(sizeOf('column', 0)).toBe(1);
+    expect(sizeOf('row', 1)).toBe(6);
   });
 });

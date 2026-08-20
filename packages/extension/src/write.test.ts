@@ -3,9 +3,10 @@ import { parse } from '@yxl-vscode/cst';
 import { type IncludeReader, load } from '@yxl-vscode/loader';
 import { did, type History, nothing } from '@yxl-vscode/patch';
 import { type FilePath, filePath, parseColor } from '@yxl-vscode/units';
-import type { Choice, Typed, Worn } from '@yxl-vscode/webview/protocol';
+import type { Choice, Resized, Typed, Worn } from '@yxl-vscode/webview/protocol';
 import { describe, expect, it } from 'vitest';
 import { wear } from './look';
+import { resize } from './size';
 import { emptied, empty, type Port, resolve, type Spec, write, writeOverride } from './write';
 
 const ROOT = filePath('/specs/report.yxl.yaml') ?? ('' as FilePath);
@@ -460,6 +461,59 @@ describe('a rectangle emptied', () => {
 
     await empty(spec, { ...rect, sheet: '' }, port);
     expect(refusals[0]).toContain('is not a name a sheet can have');
+  });
+});
+
+describe('a column or a row dragged to a size', () => {
+  const dragged = (of: Partial<Resized> = {}): Resized => ({
+    sheet: 'Sales',
+    axis: 'column',
+    at: 4,
+    size: 20,
+    ...of,
+  });
+
+  it('lands without asking where nothing sizes it yet', async () => {
+    const spec = `${SALES}    cells:\n      A1: 1\n`;
+    const { spec: read, port, files, told } = editor({ [ROOT]: spec });
+
+    await resize(read, dragged(), port);
+    expect(files[ROOT]).toContain('    columns:\n      - at: D\n        width: 20\n');
+    expect(told).toEqual(['Column 4 resized.']);
+  });
+
+  it('asks where the band it takes its size from is about more than it', async () => {
+    const spec = `${SALES}    columns:\n      - at: D-F\n        width: 12\n    cells:\n      A1: 1\n`;
+    const { spec: read, port, answers, refusals, files } = editor({ [ROOT]: spec });
+
+    await resize(read, dragged({ at: 5 }), port);
+    expect(refusals[0]).toContain('more than one way to change it');
+    expect(answers[0]?.map((one) => one.id)).toEqual(['band', 'apart']);
+    expect(files[ROOT]).toBe(spec);
+  });
+
+  it('splits the band where that is the answer picked', async () => {
+    const spec = `${SALES}    columns:\n      - at: D-F\n        width: 12\n    cells:\n      A1: 1\n`;
+    const { spec: read, port, files } = editor({ [ROOT]: spec });
+
+    await resize(read, dragged({ at: 5 }), port, 'apart');
+    expect(files[ROOT]).toContain(
+      '      - at: D\n        width: 12\n      - at: E\n        width: 20\n      - at: F\n        width: 12\n',
+    );
+  });
+
+  it('refuses a sheet that is not one', async () => {
+    const { spec, port, refusals } = editor({ [ROOT]: `${SALES}    cells:\n      A1: 1\n` });
+
+    await resize(spec, dragged({ sheet: '' }), port);
+    expect(refusals[0]).toContain('is not a name a sheet can have');
+  });
+
+  it('says so where the sheet is named but not there', async () => {
+    const { spec, port, refusals } = editor({ [ROOT]: `${SALES}    cells:\n      A1: 1\n` });
+
+    await resize(spec, dragged({ sheet: 'Nowhere' }), port);
+    expect(refusals[0]).toContain('nothing here can say how wide that column is');
   });
 });
 

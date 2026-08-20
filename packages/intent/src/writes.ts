@@ -21,8 +21,8 @@ import {
 import type { A1Addr, FilePath, NodeId, SheetName } from '@yxl-vscode/units';
 import { type Found, located, type Reading } from './direct';
 
-/** What a style write needs of the spec: what it draws, which carries the looks it declares. */
-export interface Styling {
+/** What a write needs of the spec: what it draws, which carries the looks and the bands it declares. */
+export interface Projection {
   readonly grid: CompiledGrid;
 }
 
@@ -41,7 +41,7 @@ export interface Writing {
 
 /** What writing the look on each of those cells would be — no ops where they already look as asked. */
 export function onEvery(
-  spec: Styling,
+  spec: Projection,
   sheet: CompiledSheet,
   name: SheetName,
   wants: readonly Wanted[],
@@ -74,7 +74,7 @@ interface Carries {
 
 /** The cell's own keys, rewritten as what they contribute now plus what was asked for. */
 function onCell(
-  spec: Styling,
+  spec: Projection,
   sheet: CompiledSheet,
   at: A1Addr,
   want: StyleSays,
@@ -113,7 +113,7 @@ function onCell(
 
 /** The look the cell's `style:` would carry, where the ask reaches it at all (ADR-008, ADR-037). */
 function asStyle(
-  spec: Styling,
+  spec: Projection,
   layers: readonly StyleLayer[],
   own: readonly StyleLayer[],
   want: StyleSays,
@@ -241,7 +241,7 @@ function newCell(
 
 /** What changing one supplying layer would be, over every cell that reads it. */
 export function atSupplier(
-  spec: Styling,
+  spec: Projection,
   supplier: StyleLayer,
   want: StyleSays,
   read: Reading,
