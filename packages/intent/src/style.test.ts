@@ -302,6 +302,71 @@ describe('where the text sits', () => {
   });
 });
 
+describe('a number under a format', () => {
+  it('is written in the cell key the schema keeps it in, not in its style', () => {
+    const spec = `${SALES}    cells:\n      A1: 1\n`;
+    const [answer] = offered(spec, at(1, 1), { format: '0.0%' });
+    if (answer === undefined) throw new Error('nothing was offered');
+
+    expect(taken(spec, answer)).toContain('A1: { value: 1, format: "0.0%" }');
+  });
+
+  it('comes off again, leaving the cell as it was written', () => {
+    const plain = `${SALES}    cells:\n      A1: 1\n`;
+    const [on] = offered(plain, at(1, 1), { format: '0.0%' });
+    if (on === undefined) throw new Error('nothing was offered');
+
+    const formatted = taken(plain, on);
+    const [off] = offered(formatted, at(1, 1), { format: null });
+    if (off === undefined) throw new Error('nothing was offered');
+
+    expect(taken(formatted, off)).toBe(plain);
+  });
+
+  it('layers over a declaration the cell names rather than replacing it (`docs/spec.md` §6)', () => {
+    const spec = `defs:\n  styles:\n    money: { format: "#,##0" }\n${SALES}    cells:\n      A1: { value: 1, style: money }\n`;
+    const answers = offered(spec, at(1, 1), { format: '0.0%' });
+
+    expect(answers.map((one) => one.id)).toEqual(['definition', 'onCells']);
+    expect(taken(spec, answers[1] as Candidate)).toContain(
+      'A1: { value: 1, style: money, format: "0.0%" }',
+    );
+  });
+
+  it('changes the band own key where the band is what says it', () => {
+    const spec = `${SALES}    columns:\n      - { at: A, format: "#,##0" }\n    cells:\n      A1: 1\n`;
+    const [answer] = offered(spec, at(1, 1), { format: '0.0%' });
+    if (answer === undefined) throw new Error('nothing was offered');
+
+    expect(taken(spec, answer)).toContain('- { at: A, format: "0.0%" }');
+  });
+
+  it('says the cell has none where a band gives it one', () => {
+    const spec = `${SALES}    columns:\n      - { at: A, format: "#,##0" }\n    cells:\n      A1: 1\n`;
+    const answers = offered(spec, at(1, 1), { format: null });
+
+    expect(taken(spec, answers[1] as Candidate)).toContain('A1: { value: 1, format: null }');
+  });
+
+  it('writes a cell that is only a format at an address nothing had written', () => {
+    const spec = `${SALES}    cells:\n      A1: 1\n`;
+    const [answer] = offered(spec, at(3, 2), { format: '0.0%' });
+    if (answer === undefined) throw new Error('nothing was offered');
+
+    expect(taken(spec, answer)).toContain('      B3:\n        format: "0.0%"\n');
+  });
+
+  it('goes on beside a look asked for in the same breath', () => {
+    const spec = `${SALES}    cells:\n      A1: 1\n`;
+    const [answer] = offered(spec, at(1, 1), { format: '0.0%', 'font.bold': true });
+    if (answer === undefined) throw new Error('nothing was offered');
+
+    expect(taken(spec, answer)).toContain(
+      'A1: { value: 1, style: { font: { bold: true } }, format: "0.0%" }',
+    );
+  });
+});
+
 describe('a rectangle whose cells take it from different places', () => {
   const HEADER = 'defs:\n  styles:\n    header: { font: { bold: true }, fill: "1F3864" }\n';
   const MIXED = `${HEADER}${SALES}    columns:\n      - { at: B, style: { font: { bold: true } } }\n    cells:\n      A1: { value: Region, style: header }\n      B1: { value: Revenue }\n      C1: 3\n`;

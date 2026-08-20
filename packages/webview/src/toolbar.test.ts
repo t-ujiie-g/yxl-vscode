@@ -200,3 +200,51 @@ describe('where the text sits', () => {
     expect(wear).toHaveBeenCalledWith({ 'align.wrap': true }, ONE);
   });
 });
+
+describe('a number under a format', () => {
+  const box = (bar: HTMLElement) => bar.querySelector<HTMLSelectElement>('select.numbers');
+
+  it('is on General where the cell has none', () => {
+    const bar = toolbar(showing({ cells: [cell({})], selected: { row: 1, col: 1 } }), asks());
+
+    expect(box(bar)?.value).toBe('');
+    expect(box(bar)?.title).toBe('Number format');
+  });
+
+  it('asks for the code behind what the reader picked', () => {
+    const wear = vi.fn();
+    const bar = toolbar(showing({ cells: [cell({})], selected: { row: 1, col: 1 } }), asks(wear));
+
+    const select = box(bar);
+    if (select === null) throw new Error('there is no format box');
+    select.value = '0.0%';
+    select.dispatchEvent(new Event('change'));
+
+    expect(wear).toHaveBeenCalledWith({ format: '0.0%' }, ONE);
+  });
+
+  it('asks for it off where the reader picks General', () => {
+    const wear = vi.fn();
+    const cells = [cell({ style: { format: '0.0%' } })];
+    const bar = toolbar(showing({ cells, selected: { row: 1, col: 1 } }), asks(wear));
+
+    const select = box(bar);
+    if (select === null) throw new Error('there is no format box');
+    select.value = '';
+    select.dispatchEvent(new Event('change'));
+
+    expect(wear).toHaveBeenCalledWith({ format: null }, ONE);
+  });
+
+  it('shows a code it does not offer rather than losing it', () => {
+    const cells = [cell({ style: { format: '[h]:mm:ss' } })];
+    const bar = toolbar(showing({ cells, selected: { row: 1, col: 1 } }), asks());
+
+    expect(box(bar)?.value).toBe('[h]:mm:ss');
+    expect(box(bar)?.title).toBe('Number format: [h]:mm:ss');
+  });
+
+  it('is disabled until a cell is selected', () => {
+    expect(box(toolbar(showing({}), asks()))?.disabled).toBe(true);
+  });
+});

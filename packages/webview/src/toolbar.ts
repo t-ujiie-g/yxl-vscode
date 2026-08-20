@@ -15,6 +15,8 @@ export function toolbar(showing: Showing, asks: Asks): HTMLElement {
   bar.append(gap());
   for (const one of PICKS) bar.append(pick(one, showing, asks));
   bar.append(toggle(WRAP, showing, asks));
+  bar.append(gap());
+  bar.append(numbers(showing, asks));
 
   return bar;
 }
@@ -192,6 +194,49 @@ function marked(bars: readonly Bar[]): SVGSVGElement {
 }
 
 const SVG = 'http://www.w3.org/2000/svg';
+
+/** A number format, chosen from what a reader reaches for and shown as what it makes of a number. */
+function numbers(showing: Showing, asks: Asks): HTMLElement {
+  const now = wornBy(showing).format ?? null;
+  const box = document.createElement('select');
+
+  box.className = 'look numbers';
+  box.title = now === null ? 'Number format' : `Number format: ${now}`;
+  box.disabled = showing.selected === null;
+
+  const known = NUMBERS.some((one) => one.code === now);
+  for (const one of known ? NUMBERS : [...NUMBERS, { says: now ?? '', code: now }]) {
+    const option = document.createElement('option');
+    option.value = one.code ?? '';
+    option.textContent = one.says;
+    option.selected = one.code === now;
+    box.append(option);
+  }
+
+  const where = over(showing);
+  box.addEventListener('change', () => {
+    asks.wear({ format: box.value === '' ? null : box.value }, where);
+  });
+
+  return box;
+}
+
+/** The formats a toolbar offers, said as what each makes of a number rather than as its code. */
+interface Numbers {
+  readonly says: string;
+  readonly code: string | null;
+}
+
+const NUMBERS: readonly Numbers[] = [
+  { says: 'General', code: null },
+  { says: '1,235', code: '#,##0' },
+  { says: '1,234.57', code: '#,##0.00' },
+  { says: '1234.57', code: '0.00' },
+  { says: '12%', code: '0%' },
+  { says: '12.3%', code: '0.0%' },
+  { says: '2026-08-20', code: 'yyyy-mm-dd' },
+  { says: '13:45', code: 'h:mm' },
+];
 
 /** A colour, as the swatch the selected cell wears and the button that takes it off. */
 function ink(of: Ink, showing: Showing, asks: Asks): HTMLElement[] {

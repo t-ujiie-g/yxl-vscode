@@ -121,6 +121,11 @@ body {
   width: 0.5rem;
 }
 
+.look.numbers {
+  width: auto;
+  padding: 0.1rem 0.2rem;
+}
+
 .pick {
   position: absolute;
   inset: 0;
