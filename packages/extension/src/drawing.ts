@@ -8,6 +8,7 @@ import {
   resolve,
   type Setting,
   type StyleLayer,
+  settled,
   styleAt,
 } from '@yxl-vscode/compile';
 import type { Diagnostic } from '@yxl-vscode/diag';
@@ -183,7 +184,7 @@ function drawCells(
       const addr = addrAt({ col, row });
       const cell = cellAt(sheet, addr);
       const layers = styleAt(sheet, addr);
-      const style = resolve(layers);
+      const style = settled(resolve(layers));
 
       const computed = evaluation?.values.get(qualified(sheet.name, addr)) ?? null;
       const holds =

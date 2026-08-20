@@ -13,10 +13,11 @@ export type { Defs, FormulaDef, Override, Param, SpecDoc, StyleDef, ValueDef } f
 export { INCLUDE_KEY, MODELED_KEYS, REF_KEY } from './keys';
 export type { Opaque, SpecNode, Template, Templated } from './node';
 export {
+  propertiesUnder,
   STYLE_PROPERTIES,
   type StyleProperty,
+  type StyleSays,
   type StyleValues,
-  type StyleWant,
 } from './property';
 export type { FormulaRange, Merge, Sheet } from './sheet';
 export {

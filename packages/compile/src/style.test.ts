@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CODE } from './codes';
 import { codes, layers, sheet } from './harness';
-import { resolve } from './style';
+import { resolve, settled } from './style';
 
 function looks(source: string, at: string) {
   return resolve(layers(source, at));
@@ -138,5 +138,40 @@ describe('a style that will not resolve', () => {
   it('is reported when a parameter fills a colour with something else', () => {
     const source = `params:\n  brand: not-a-colour\n${SHEET}    cells:\n      A1: { value: 1, style: { fill: "\${brand}" } }\n`;
     expect(codes(source)).toEqual([CODE.badColour]);
+  });
+});
+
+describe('an attribute a style says is not set', () => {
+  it('takes away what a band under the cell supplies', () => {
+    const source = `${SHEET}    columns:\n      - { at: A, style: { fill: "FFF2CC" } }\n    cells:\n      A1: { value: 1, style: { fill: null } }\n`;
+
+    expect(looks(source, 'A1').fill).toBeNull();
+    expect(settled(looks(source, 'A1'))).toEqual({});
+  });
+
+  it('takes away what the style it extends supplies, and keeps the rest', () => {
+    const source = `${SHEET}    cells:\n      A1: { value: 1, style: { extends: header, fill: null } }\ndefs:\n  styles:\n    header: { font: { bold: true }, fill: "1F3864" }\n`;
+
+    expect(settled(looks(source, 'A1'))).toEqual({ 'font.bold': true });
+  });
+
+  it('stays cleared until something sets one', () => {
+    const source = `${SHEET}    columns:\n      - { at: A, format: "#,##0" }\n    rows:\n      - { at: 1, format: null }\n    cells:\n      A1: 1\n      A2: 2\n`;
+
+    expect(settled(looks(source, 'A1')).format).toBeUndefined();
+    expect(settled(looks(source, 'A2')).format).toBe('#,##0');
+  });
+
+  it('is beaten by a value beside it, whichever the spec wrote first', () => {
+    const both = `${SHEET}    cells:\n      A1: { value: 1, style: { format: "0.00" }, format: null }\n`;
+    expect(settled(looks(both, 'A1')).format).toBe('0.00');
+
+    const edges = `${SHEET}    cells:\n      A1: { value: 1, style: { border: { all: thin, left: null } } }\n`;
+    expect(settled(looks(edges, 'A1'))['border.left.style']).toBe('thin');
+  });
+
+  it('is a cell of its own where the cell takes the band format away', () => {
+    const source = `${SHEET}    columns:\n      - { at: A, format: "#,##0" }\n    cells:\n      A1: { value: 1, format: null }\n`;
+    expect(settled(looks(source, 'A1')).format).toBeUndefined();
   });
 });

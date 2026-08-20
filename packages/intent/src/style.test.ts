@@ -1,7 +1,7 @@
 import { compile } from '@yxl-vscode/compile';
 import { parse } from '@yxl-vscode/cst';
 import { type IncludeReader, load } from '@yxl-vscode/loader';
-import type { StyleValues, StyleWant } from '@yxl-vscode/spec';
+import type { StyleSays, StyleValues } from '@yxl-vscode/spec';
 import { type FilePath, filePath, parseColor, type Rect, type SheetName } from '@yxl-vscode/units';
 import { type Ctx, checked } from '@yxl-vscode/verify';
 import { describe, expect, it } from 'vitest';
@@ -29,7 +29,7 @@ const at = (top: number, left: number, bottom = top, right = left): Rect => ({
 });
 
 /** The answers a look asked for has, over the rectangle named. */
-function offered(source: string, rect: Rect, want: StyleWant): readonly Candidate[] {
+function offered(source: string, rect: Rect, want: StyleSays): readonly Candidate[] {
   const { grid, read } = files(source);
   return setStyle({ grid }, { sheet: 'Sales' as SheetName, rect }, want, read);
 }
@@ -230,23 +230,26 @@ describe('a colour, and a look taken off', () => {
     expect(taken(filled, off)).toBe(plain);
   });
 
-  it('offers the declaration it comes from, and the cell detached from it', () => {
+  it('offers the declaration it comes from, and the cell that keeps it but not this', () => {
     const spec = `defs:\n  styles:\n    header: { font: { bold: true }, fill: "1F3864" }\n${SALES}    cells:\n      A1: { value: 1, style: header }\n`;
     const answers = offered(spec, at(1, 1), { fill: null });
 
     expect(answers.map((one) => one.id)).toEqual(['definition', 'onCells']);
     expect(taken(spec, answers[0] as Candidate)).toContain('header: { font: { bold: true } }');
     expect(taken(spec, answers[1] as Candidate)).toContain(
-      'A1: { value: 1, style: { font: { bold: true } } }',
+      'A1: { value: 1, style: { extends: header, fill: null } }',
     );
   });
 
   const BANDED = `${SALES}    columns:\n      - { at: A, style: { fill: "1F3864" } }\n    cells:\n      A1: 1\n`;
 
-  it('has no answer on the cell where what is asked off comes from under it', () => {
+  it('offers the band it comes from, and the one cell that says it has none', () => {
     const answers = offered(BANDED, at(1, 1), { fill: null });
 
-    expect(answers.map((one) => [one.id, one.alone])).toEqual([['band', true]]);
+    expect(answers.map((one) => one.id)).toEqual(['band', 'onCells']);
+    expect(taken(BANDED, answers[1] as Candidate)).toContain(
+      'A1: { value: 1, style: { fill: null } }',
+    );
   });
 
   it('takes the mapping it emptied with it, so the band is as it was written', () => {

@@ -4,6 +4,7 @@ import {
   type CompiledSheet,
   cellAt,
   resolve,
+  settled,
   styleAt,
 } from '@yxl-vscode/compile';
 import type { StyleValues } from '@yxl-vscode/spec';
@@ -57,7 +58,7 @@ function inSheet(before: CompiledSheet, after: CompiledSheet): Change[] {
     if (was.formula !== now.formula) changes.push({ kind: 'cell', sheet, at, what: 'formula' });
     if (was.format !== now.format) changes.push({ kind: 'cell', sheet, at, what: 'format' });
 
-    if (!alike(resolve(styleAt(before, at)), resolve(styleAt(after, at)))) {
+    if (!alike(settled(resolve(styleAt(before, at))), settled(resolve(styleAt(after, at))))) {
       changes.push({ kind: 'cell', sheet, at, what: 'style' });
     }
   }

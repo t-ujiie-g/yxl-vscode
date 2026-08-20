@@ -26,7 +26,7 @@ export async function run(binary: string, args: readonly string[]): Promise<Ran 
   }
 }
 
-/** The version out of `yxl version`, which answers `yxl 0.3.4`. */
+/** The version out of `yxl version`, which answers `yxl 0.3.5`. */
 export function versionOf(said: string): string | null {
   return /(\d+\.\d+\.\d+)/.exec(said)?.[1] ?? null;
 }

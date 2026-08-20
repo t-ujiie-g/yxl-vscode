@@ -9,6 +9,7 @@ import {
   MODELED_KEYS,
   REF_KEY,
   type RichRun,
+  type StyleProperty,
   type StyleUse,
   type Templated,
 } from '@yxl-vscode/spec';
@@ -18,6 +19,7 @@ import {
   expectSpelling,
   expectText,
   expectValue,
+  isCleared,
   openEntries,
   openSeq,
   rejectUnknownKey,
@@ -67,6 +69,7 @@ const NOTHING_ELSE = {
   rich: null,
   type: null,
   format: null,
+  clearsFormat: false,
   style: null,
 } as const;
 
@@ -93,6 +96,7 @@ export function readFacets(ctx: Ctx, entries: readonly Entry[], what: string): C
   let rich: readonly RichRun[] | null = null;
   let type: CellType | null = null;
   let format: string | null = null;
+  let clearsFormat = false;
   let style: StyleUse | null = null;
 
   for (const entry of entries) {
@@ -111,7 +115,8 @@ export function readFacets(ctx: Ctx, entries: readonly Entry[], what: string): C
         type = expectSpelling(ctx, entry.value, at, CELL_TYPES);
         break;
       case 'format':
-        format = expectText(ctx, entry.value, at);
+        if (isCleared(entry.value)) clearsFormat = true;
+        else format = expectText(ctx, entry.value, at);
         break;
       case 'style':
         style = readStyleUse(ctx, entry.value, at);
@@ -121,7 +126,7 @@ export function readFacets(ctx: Ctx, entries: readonly Entry[], what: string): C
     }
   }
 
-  return { value, formula, rich, type, format, style };
+  return { value, formula, rich, type, format, clearsFormat, style };
 }
 
 /** Whether the cell says anything at all, and whether what it says fits together (`docs/spec.md` §3). */
@@ -131,7 +136,8 @@ export function holdsSomething(ctx: Ctx, body: CellFacets, node: Node, what: str
     body.formula === null &&
     body.rich === null &&
     body.style === null &&
-    body.format === null;
+    body.format === null &&
+    !body.clearsFormat;
   if (holdsNothing) {
     reject(
       ctx,
@@ -233,9 +239,16 @@ function readRichRun(ctx: Ctx, node: Node, what: string): RichRun | null {
       case 'text':
         text = expectText(here, entry.value, at);
         break;
-      case 'font':
-        font = readFont(here, entry.value, at);
+      case 'font': {
+        // A run's font is the whole of what it wears, so there is nothing under
+        // it for a `null` to take away (`docs/spec.md` §6).
+        const cleared = new Set<StyleProperty>();
+        font = readFont(here, entry.value, at, cleared);
+        if (cleared.size > 0) {
+          reject(here, CODE.notText, `${at} cannot take an attribute away`, entry.value.span);
+        }
         break;
+      }
       default:
         rejectUnknownKey(here, entry, what, MODELED_KEYS.richRun);
     }

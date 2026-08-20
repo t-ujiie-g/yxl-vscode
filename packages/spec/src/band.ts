@@ -5,6 +5,7 @@ import type { StyleUse } from './style';
 interface BandBase extends SpecNode {
   readonly style: StyleUse | null;
   readonly format: string | null;
+  readonly clearsFormat: boolean;
   readonly hidden: boolean | null;
   readonly group: number | null;
 }

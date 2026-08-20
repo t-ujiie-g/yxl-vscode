@@ -68,6 +68,11 @@ export function readEach<T>(
 }
 
 /** Text, or `null` with the reason reported. A number is not text. */
+/** Whether a node is the `null` that says an attribute is not set — an empty value included (`docs/spec.md` §6). */
+export function isCleared(node: Node): boolean {
+  return node.kind === 'scalar' && node.value === null;
+}
+
 export function expectText(ctx: Ctx, node: Node, what: string): string | null {
   const here = follow(ctx, node, []);
   if (here === null) return null;

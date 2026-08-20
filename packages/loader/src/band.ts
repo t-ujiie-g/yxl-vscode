@@ -13,6 +13,7 @@ import {
   expectNumber,
   expectText,
   findEntry,
+  isCleared,
   type Opened,
   openEntries,
   readEach,
@@ -64,6 +65,7 @@ interface BandBody {
   readonly rest: {
     readonly style: StyleUse | null;
     readonly format: string | null;
+    readonly clearsFormat: boolean;
     readonly hidden: boolean | null;
     readonly group: number | null;
   };
@@ -79,6 +81,7 @@ function readBandBody(
   let size: number | null = null;
   let style: StyleUse | null = null;
   let format: string | null = null;
+  let clearsFormat = false;
   let hidden: boolean | null = null;
   let group: number | null = null;
 
@@ -96,7 +99,8 @@ function readBandBody(
         style = readStyleUse(band.ctx, entry.value, at);
         break;
       case 'format':
-        format = expectText(band.ctx, entry.value, at);
+        if (isCleared(entry.value)) clearsFormat = true;
+        else format = expectText(band.ctx, entry.value, at);
         break;
       case 'hidden':
         hidden = expectBool(band.ctx, entry.value, at);
@@ -109,7 +113,7 @@ function readBandBody(
     }
   }
 
-  return { size, rest: { style, format, hidden, group } };
+  return { size, rest: { style, format, clearsFormat, hidden, group } };
 }
 
 /** A band's `at`, which a row may write as a number. */
