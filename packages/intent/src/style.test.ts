@@ -268,6 +268,40 @@ describe('a colour, and a look taken off', () => {
   });
 });
 
+describe('where the text sits', () => {
+  it('is written under the key the schema keeps it in', () => {
+    const spec = `${SALES}    cells:\n      A1: 1\n`;
+    const [answer] = offered(spec, at(1, 1), { 'align.horizontal': 'center' });
+    if (answer === undefined) throw new Error('nothing was offered');
+
+    expect(taken(spec, answer)).toContain(
+      'A1: { value: 1, style: { align: { horizontal: center } } }',
+    );
+  });
+
+  it('comes off again, leaving the cell as it was written', () => {
+    const plain = `${SALES}    cells:\n      A1: 1\n`;
+    const [on] = offered(plain, at(1, 1), { 'align.horizontal': 'center' });
+    if (on === undefined) throw new Error('nothing was offered');
+
+    const aligned = taken(plain, on);
+    const [off] = offered(aligned, at(1, 1), { 'align.horizontal': null });
+    if (off === undefined) throw new Error('nothing was offered');
+
+    expect(taken(aligned, off)).toBe(plain);
+  });
+
+  it('says the cell has none where a band puts it somewhere', () => {
+    const spec = `${SALES}    columns:\n      - { at: A, style: { align: { horizontal: center } } }\n    cells:\n      A1: 1\n`;
+    const answers = offered(spec, at(1, 1), { 'align.horizontal': null });
+
+    expect(answers.map((one) => one.id)).toEqual(['band', 'onCells']);
+    expect(taken(spec, answers[1] as Candidate)).toContain(
+      'A1: { value: 1, style: { align: { horizontal: null } } }',
+    );
+  });
+});
+
 describe('a rectangle whose cells take it from different places', () => {
   const HEADER = 'defs:\n  styles:\n    header: { font: { bold: true }, fill: "1F3864" }\n';
   const MIXED = `${HEADER}${SALES}    columns:\n      - { at: B, style: { font: { bold: true } } }\n    cells:\n      A1: { value: Region, style: header }\n      B1: { value: Revenue }\n      C1: 3\n`;
