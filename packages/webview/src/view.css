@@ -179,8 +179,12 @@ body {
   color-scheme: light;
 }
 
+/* Separate borders, each cell carrying its own right and bottom line: under
+   `collapse` the lines belong to the *table*, which paints them under every
+   cell that stays put, and the scrolling text shows through a frozen pane. */
 .grid {
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   table-layout: fixed;
   background: #ffffff;
   color: #000000;
@@ -194,7 +198,8 @@ body {
      scrolls by is computed from those numbers, and padding added on top of
      them would drift the two apart a column at a time. */
   box-sizing: border-box;
-  border: 1px solid #d4d4d4;
+  border: 0 solid #d4d4d4;
+  border-width: 0 1px 1px 0;
   padding: 1px 4px;
   overflow: hidden;
   white-space: nowrap;
@@ -255,17 +260,19 @@ body {
 .grid thead th {
   position: sticky;
   top: 0;
-  z-index: 1;
+  z-index: 6;
 }
 
 .grid tbody th {
   position: sticky;
   left: 0;
+  z-index: 2;
 }
 
 .grid thead th:first-child {
   left: 0;
-  z-index: 2;
+  padding: 0;
+  z-index: 8;
 }
 
 .grid .pad,
@@ -273,6 +280,44 @@ body {
   padding: 0;
   border: none;
   background: none;
+}
+
+/* A frozen pane (`docs/spec.md` §2) stays where it was drawn while the rest
+   scrolls under it, so it needs a ground of its own: the table's own white is
+   painted once, behind everything, and would show the scrolling cells through.
+   `.stays` is a frozen column; a frozen row is the whole `tr`. */
+.grid .stays,
+.grid tr.frozen th,
+.grid tr.frozen td {
+  position: sticky;
+  background-color: #ffffff;
+}
+
+.grid thead th.stays,
+.grid tr.frozen th {
+  background-color: #f5f5f5;
+}
+
+/* Sticky cells of one z-index paint in the order they are written, so a band
+   that is to stay in front of another has to say by how much. */
+.grid td.stays {
+  z-index: 1;
+}
+
+.grid tr.frozen td {
+  z-index: 3;
+}
+
+.grid tr.frozen td.stays {
+  z-index: 4;
+}
+
+.grid tr.frozen th {
+  z-index: 5;
+}
+
+.grid thead th.stays {
+  z-index: 7;
 }
 
 .grid td.filled {
@@ -363,6 +408,7 @@ body {
 }
 
 .corner .address {
+  display: block;
   width: 100%;
   box-sizing: border-box;
   border: 1px solid #c6c6c6;

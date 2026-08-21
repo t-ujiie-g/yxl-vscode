@@ -1,4 +1,4 @@
-import type { A1Range, SheetName } from '@yxl-vscode/units';
+import type { A1Addr, A1Range, SheetName } from '@yxl-vscode/units';
 import type { ColumnBand, RowBand } from './band';
 import type { Cell } from './cell';
 import type { DataBlock } from './data';
@@ -16,6 +16,7 @@ export interface Sheet extends SpecNode {
   readonly columns: readonly ColumnBand[];
   readonly rows: readonly RowBand[];
   readonly merges: readonly Merge[];
+  readonly freeze: Templated<A1Addr> | null;
   readonly keyOrder: readonly string[];
   readonly opaque: readonly Opaque[];
 }

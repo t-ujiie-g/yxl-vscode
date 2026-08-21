@@ -23,7 +23,11 @@ function cell(of: Partial<DrawnCell>): DrawnCell {
   };
 }
 
-function showing(of: { cells?: DrawnCell[]; selected?: { row: number; col: number } }): Showing {
+function showing(of: {
+  cells?: DrawnCell[];
+  selected?: { row: number; col: number };
+  freeze?: DrawnSheet['freeze'];
+}): Showing {
   const sheet: DrawnSheet = {
     name: 'Sales',
     rows: 10,
@@ -35,6 +39,7 @@ function showing(of: { cells?: DrawnCell[]; selected?: { row: number; col: numbe
     cells: of.cells ?? [],
     merges: [],
     problems: [],
+    freeze: of.freeze ?? null,
   };
 
   const drawing: Drawing = {
@@ -93,6 +98,8 @@ describe('the switches a reader reaches for first', () => {
       'Left border',
       'Right border',
       'No borders',
+      'Freeze panes',
+      'Unfreeze',
     ]);
     expect([...bar.querySelectorAll('input')].every((one) => one.disabled)).toBe(true);
   });
@@ -163,7 +170,7 @@ describe('the colours a reader picks', () => {
 
 describe('where the text sits', () => {
   const marks = (bar: HTMLElement) =>
-    [...bar.querySelectorAll('button.look:not(.edge)')].filter(
+    [...bar.querySelectorAll('button.look:not(.edge):not(.freeze)')].filter(
       (one) => one.querySelector('svg') !== null,
     );
 
@@ -372,5 +379,44 @@ describe('a border a reader draws', () => {
       one.classList.contains('on'),
     );
     expect(lit).toBe(false);
+  });
+});
+
+describe('where the sheet is frozen', () => {
+  const asksFreeze = (freeze = vi.fn()): Asks => ({ freeze }) as unknown as Asks;
+  const button = (bar: HTMLElement, off = false) =>
+    bar.querySelector<HTMLButtonElement>(`button.freeze${off ? '.off' : ':not(.off)'}`);
+
+  it('asks for a freeze at the cell the reader has selected', () => {
+    const freeze = vi.fn();
+    const bar = toolbar(showing({ selected: { row: 2, col: 2 } }), asksFreeze(freeze));
+
+    expect(button(bar)?.title).toBe('Freeze the rows above and the columns left of B2');
+    button(bar)?.click();
+    expect(freeze).toHaveBeenCalledWith({ row: 2, col: 2 });
+  });
+
+  it('is lit where the sheet is frozen at the selected cell, and not where it is frozen elsewhere', () => {
+    const at = { row: 2, col: 2 };
+    expect(
+      button(toolbar(showing({ selected: at, freeze: at }), asksFreeze()))?.className,
+    ).toContain('on');
+
+    const other = showing({ selected: at, freeze: { row: 4, col: 1 } });
+    expect(button(toolbar(other, asksFreeze()))?.className).not.toContain('on');
+  });
+
+  it('cannot freeze at A1, which would freeze nothing (`docs/spec.md` §2)', () => {
+    const bar = toolbar(showing({ selected: { row: 1, col: 1 } }), asksFreeze());
+    expect(button(bar)?.disabled).toBe(true);
+  });
+
+  it('takes the freeze off, and offers that only where there is one', () => {
+    const freeze = vi.fn();
+    const bar = toolbar(showing({ freeze: { row: 2, col: 2 } }), asksFreeze(freeze));
+
+    button(bar, true)?.click();
+    expect(freeze).toHaveBeenCalledWith(null);
+    expect(button(toolbar(showing({}), asksFreeze()), true)?.disabled).toBe(true);
   });
 });

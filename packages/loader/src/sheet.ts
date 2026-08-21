@@ -16,7 +16,7 @@ import { CODE } from './codes';
 import { type Ctx, identify, keyOf, reject, type Site } from './ctx';
 import { readDataBlocks } from './data';
 import { expectText, findEntry, openEntries, readEach, rejectUnknownKey, scalarText } from './read';
-import { RANGE, readAs, SHEET_NAME } from './template';
+import { ADDRESS, RANGE, readAs, SHEET_NAME } from './template';
 
 /** The workbook's `sheets:` sequence, in tab order. */
 export function readSheets(ctx: Ctx, node: Node, path: Path): Sheet[] {
@@ -45,6 +45,7 @@ function readSheet(site: Site): Sheet | null {
   let columns: ColumnBand[] = [];
   let rows: RowBand[] = [];
   let merges: Merge[] = [];
+  let freeze: Sheet['freeze'] = null;
   const opaque: Opaque[] = [];
 
   for (const entry of entries) {
@@ -71,6 +72,9 @@ function readSheet(site: Site): Sheet | null {
       case 'merges':
         merges = readMerges(here, entry.value, at, what);
         break;
+      case 'freeze':
+        freeze = readAs(here, entry.value, `${what} \`freeze\``, ADDRESS);
+        break;
       default:
         opaque.push({ ...identify(here, at, entry.span), key });
     }
@@ -85,6 +89,7 @@ function readSheet(site: Site): Sheet | null {
     columns,
     rows,
     merges,
+    freeze,
     keyOrder: entries.map(keyOf),
     opaque,
   };

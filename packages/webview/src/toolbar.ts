@@ -9,14 +9,14 @@ import {
   type StyleValues,
   type VAlign,
 } from '@yxl-vscode/spec';
-import { type Color, parseColor, type Rect } from '@yxl-vscode/units';
+import { addrAt, type Color, parseColor, type Rect } from '@yxl-vscode/units';
 import { underFormat } from './cell';
 import { between } from './keys';
-import { ACROSS, type Bar, DOWN, framed, marked, RAGGED } from './marks';
+import { ACROSS, type Bar, DOWN, framed, marked, RAGGED, split } from './marks';
 import type { DrawnCell } from './protocol';
 import type { Asks, Showing } from './showing';
 
-/** The looks a reader reaches for first, over the cells they have selected. */
+/** What a reader reaches for first: the look of the cells they have selected, and where the sheet is frozen. */
 export function toolbar(showing: Showing, asks: Asks): HTMLElement {
   const bar = document.createElement('div');
   bar.className = 'toolbar';
@@ -32,8 +32,39 @@ export function toolbar(showing: Showing, asks: Asks): HTMLElement {
   bar.append(gap());
   for (const one of EDGES) bar.append(edge(one, showing, asks));
   bar.append(lines(showing, asks));
+  bar.append(gap());
+  bar.append(...panes(showing, asks));
 
   return bar;
+}
+
+/** Where the sheet's panes are frozen: at the selected cell, and the button that takes the freeze off. */
+function panes(showing: Showing, asks: Asks): HTMLElement[] {
+  const at = showing.selected;
+  const frozen = showing.drawing.sheets[showing.sheet]?.freeze ?? null;
+  const here = at !== null && frozen?.row === at.row && frozen.col === at.col;
+
+  const freeze = document.createElement('button');
+  freeze.type = 'button';
+  freeze.className = `look freeze${here ? ' on' : ''}`;
+  freeze.title =
+    at === null || (at.row === 1 && at.col === 1)
+      ? 'Freeze panes'
+      : `Freeze the rows above and the columns left of ${addrAt(at)}`;
+  freeze.disabled = at === null || (at.row === 1 && at.col === 1);
+  freeze.setAttribute('aria-pressed', here ? 'true' : 'false');
+  freeze.append(marked(split()));
+  freeze.addEventListener('click', () => asks.freeze(at));
+
+  const off = document.createElement('button');
+  off.type = 'button';
+  off.className = 'look off freeze';
+  off.textContent = '×';
+  off.title = 'Unfreeze';
+  off.disabled = frozen === null;
+  off.addEventListener('click', () => asks.freeze(null));
+
+  return [freeze, off];
 }
 
 /** The space between one group of controls and the next. */

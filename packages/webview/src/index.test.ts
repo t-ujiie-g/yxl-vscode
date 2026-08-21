@@ -33,6 +33,7 @@ function sheet(of: Partial<DrawnSheet> = {}): DrawnSheet {
     cells: [cell()],
     merges: [],
     problems: [],
+    freeze: null,
     ...of,
   };
 }

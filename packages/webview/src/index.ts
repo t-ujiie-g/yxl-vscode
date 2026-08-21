@@ -241,6 +241,11 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       line = chosen;
       restated();
     },
+    freeze: (at) => {
+      refused = null;
+      said = null;
+      host.postMessage({ kind: 'freeze', sheet: named(), at });
+    },
     resize: (axis, at, size) => {
       refused = null;
       said = null;

@@ -8,6 +8,7 @@ import { paste, pastedWith, pasteFrom, whose } from './clipboard';
 import { asOpen, put, reveal, textOf } from './documents';
 import { inspect, type Nodes, nodeUnder } from './inspect';
 import { wear } from './look';
+import { freeze } from './panes';
 import { type Projected, project, redraw, type Window } from './project';
 import { resize } from './size';
 import { goBack } from './undo';
@@ -253,6 +254,12 @@ export class Preview {
     if (asked.kind === 'worn') {
       const { kind, choice, ...worn } = asked;
       this.writing((spec, port) => wear(spec, worn, port, choice));
+      return;
+    }
+
+    if (asked.kind === 'freeze') {
+      const { kind, ...frozen } = asked;
+      this.writing((spec, port) => freeze(spec, frozen, port));
       return;
     }
 

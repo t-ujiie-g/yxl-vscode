@@ -32,6 +32,7 @@ function asks(): Asks {
     stopLooking: vi.fn(),
     wear: vi.fn(),
     wornWith: vi.fn(),
+    freeze: vi.fn(),
   };
 }
 
@@ -64,6 +65,7 @@ function sheet(of: Partial<DrawnSheet> = {}): DrawnSheet {
     cells: [],
     merges: [],
     problems: [],
+    freeze: null,
     ...of,
   };
 }
@@ -256,6 +258,63 @@ describe('a sheet larger than the window drawn of it', () => {
 
     draw(into, showing(1), on);
     expect(into.querySelector<HTMLElement>('.scroller')?.scrollTop).toBe(0);
+  });
+});
+
+describe('a sheet with frozen panes', () => {
+  const frozen = sheet({
+    rows: 2,
+    columns: 2,
+    at: { row: 51, col: 1 },
+    of: { rows: 100, columns: 2 },
+    freeze: { row: 3, col: 1 },
+  });
+
+  it('draws the frozen rows above the window, wherever the window is', () => {
+    const into = shown({ drawing: drawing({ sheets: [frozen] }) });
+    expect([...into.querySelectorAll('tbody th')].map((one) => one.textContent)).toEqual([
+      '1',
+      '2',
+      '51',
+      '52',
+    ]);
+  });
+
+  it('takes their height out of the gap, so the sheet is as tall as it was', () => {
+    const into = shown({ drawing: drawing({ sheets: [frozen] }) });
+    const gaps = [...into.querySelectorAll<HTMLElement>('tbody .gap')].map(
+      (one) => one.style.height,
+    );
+
+    // The 48 rows between the frozen two and the window, and the 48 below it.
+    expect(gaps).toEqual(['960px', '960px']);
+  });
+
+  it('keeps each frozen row under the headings, at the height it was drawn at', () => {
+    const into = shown({ drawing: drawing({ sheets: [frozen] }) });
+    const rows = [...into.querySelectorAll<HTMLElement>('tr.frozen')];
+
+    expect(rows.map((one) => one.querySelector<HTMLElement>('td')?.style.top)).toEqual([
+      '24px',
+      '44px',
+    ]);
+  });
+
+  it('keeps the frozen columns right of the row numbers', () => {
+    const sideways = sheet({
+      at: { row: 1, col: 3 },
+      of: { rows: 2, columns: 10 },
+      freeze: { row: 1, col: 2 },
+    });
+    const into = shown({ drawing: drawing({ sheets: [sideways] }) });
+    const headings = [...into.querySelectorAll<HTMLElement>('thead th.stays')];
+
+    expect(headings.map((one) => [one.textContent, one.style.left])).toEqual([['A', '44px']]);
+  });
+
+  it('holds nothing where the sheet freezes nothing', () => {
+    const into = shown({ drawing: drawing({ sheets: [sheet()] }) });
+    expect(into.querySelectorAll('.stays')).toHaveLength(0);
   });
 });
 
@@ -872,7 +931,8 @@ describe('the switches over the grid', () => {
     draw(into, state(null), asks());
     expect(switches().every((one) => one.disabled)).toBe(true);
 
-    restate(into, state({ row: 1, col: 1 }), asks());
+    // B2, not A1: freezing at A1 would freeze nothing, and that switch stays off there.
+    restate(into, state({ row: 2, col: 2 }), asks());
     expect(switches().some((one) => one.disabled)).toBe(false);
   });
 

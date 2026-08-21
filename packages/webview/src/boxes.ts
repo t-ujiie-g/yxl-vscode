@@ -1,6 +1,6 @@
 import { addrAt } from '@yxl-vscode/units';
 import { looking as lookingFor } from './keys';
-import { type Asks, GUTTER, type Looking, type Showing } from './showing';
+import { type Asks, GUTTER, HEADING, type Looking, type Showing } from './showing';
 
 /** The two boxes outside the grid, said again: the address the reader is on, and how far through a search. */
 export function told(into: HTMLElement, showing: Showing): void {
@@ -22,6 +22,9 @@ export function corner(showing: Showing, asks: Asks): HTMLElement {
   const box = document.createElement('input');
   box.type = 'text';
   box.className = 'address';
+  // The box is what makes the heading row as tall as it is, and a frozen row is
+  // put under that; the other pixel is the line beneath the headings.
+  box.style.height = `${HEADING - 1}px`;
   box.value = showing.selected === null ? '' : addrAt(showing.selected);
   box.title = 'Go to an address';
   box.setAttribute('aria-label', 'Go to an address');

@@ -35,6 +35,15 @@ export const ACROSS = [2, 5.6, 9.2, 12.8];
 export const DOWN = [0, 2.8, 5.6];
 export const RAGGED = [12, 8, 12, 8];
 
+/** The box a frozen pane is marked by: a faint frame, with the two edges the panes are split along. */
+export function split(): Bar[] {
+  return [
+    ...framed([]),
+    { x: 1, y: 5.6, width: 14, height: 1.6 },
+    { x: 5.6, y: 1, width: 1.6, height: 14 },
+  ];
+}
+
 /** The box a border mark is drawn in, with the edges it puts a line on standing out. */
 export function framed(sides: readonly string[]): Bar[] {
   const box = {

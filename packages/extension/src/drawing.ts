@@ -44,6 +44,9 @@ const BEYOND = 50;
 /** The empty room drawn past what a spec writes, so the sheet is somewhere to work rather than a table of what is there. */
 const ROOM = { rows: 40, columns: 6 };
 
+/** The most of a freeze a preview draws: past half a window a pane is not a pane, and it is left scrolling. */
+const PANE = { rows: WINDOW.rows / 2, columns: WINDOW.columns / 2 };
+
 export function drawn(
   file: string,
   projected: {
@@ -123,6 +126,7 @@ function drawSheet(
   };
   const rows = Math.min(of.rows - at.row + 1, WINDOW.rows);
   const columns = Math.min(of.columns - at.col + 1, WINDOW.columns);
+  const freeze = frozen(sheet);
 
   return {
     name: sheet.name,
@@ -131,9 +135,10 @@ function drawSheet(
     columns,
     at,
     of,
+    freeze,
     widths: sheet.columns.map(sizedRun),
     heights: sheet.rows.map(sizedRun),
-    cells: drawCells(sheet, at, rows, columns, evaluation),
+    cells: drawCells(sheet, { at, rows, columns, freeze }, evaluation),
     merges: sheet.merges.map(
       (merge): DrawnMerge => ({
         top: merge.rect.top,
@@ -169,18 +174,34 @@ function extent(sheet: CompiledSheet): { rows: number; columns: number } {
   return { rows: rows + ROOM.rows, columns: columns + ROOM.columns };
 }
 
-/** Every address in the window with anything to show — a band gives an empty cell a look. */
+/** Where a sheet's panes are frozen, drawn only as far as a pane is worth drawing. */
+function frozen(sheet: CompiledSheet): DrawnSheet['freeze'] {
+  if (sheet.freeze === null) return null;
+
+  const at = cellOf(sheet.freeze);
+  if (at.row === 1 && at.col === 1) return null;
+
+  return at.row - 1 > PANE.rows || at.col - 1 > PANE.columns ? null : at;
+}
+
+/** What a sheet is drawn as: the window, and the frozen band that stays whatever the window. */
+interface Drawn {
+  readonly at: Window;
+  readonly rows: number;
+  readonly columns: number;
+  readonly freeze: DrawnSheet['freeze'];
+}
+
+/** Every address the view draws with anything to show — a band gives an empty cell a look. */
 function drawCells(
   sheet: CompiledSheet,
-  at: Window,
-  rows: number,
-  columns: number,
+  drawing: Drawn,
   evaluation: Evaluation | null,
 ): DrawnCell[] {
   const drawn: DrawnCell[] = [];
 
-  for (let row = at.row; row < at.row + rows; row += 1) {
-    for (let col = at.col; col < at.col + columns; col += 1) {
+  for (const row of lines(drawing.at.row, drawing.rows, drawing.freeze?.row ?? 1)) {
+    for (const col of lines(drawing.at.col, drawing.columns, drawing.freeze?.col ?? 1)) {
       const addr = addrAt({ col, row });
       const cell = cellAt(sheet, addr);
       const layers = styleAt(sheet, addr);
@@ -208,6 +229,17 @@ function drawCells(
   }
 
   return drawn;
+}
+
+/** The rows or columns drawn along one axis: the frozen band, which stays, and then the window. */
+function lines(at: number, many: number, freeze: number): number[] {
+  const band = [];
+  for (let line = 1; line < freeze; line += 1) band.push(line);
+
+  const from = Math.max(at, freeze);
+  for (let line = from; line < at + many; line += 1) band.push(line);
+
+  return band;
 }
 
 /** Whether this cell can be typed into — `editabilityOf`'s answer, so the badge and the refusal agree. */

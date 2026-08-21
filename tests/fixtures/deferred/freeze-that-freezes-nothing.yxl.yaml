@@ -1,0 +1,7 @@
+# `freeze: A1` freezes nothing, which the compiler refuses (`docs/spec.md` §2).
+# The projection has no trouble with it: nothing above row 1 stays put.
+sheets:
+  - name: Sales
+    freeze: A1
+    cells:
+      A1: Region

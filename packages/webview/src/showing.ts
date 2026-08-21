@@ -81,6 +81,7 @@ export interface Asks {
   readonly wear: (want: StyleSays, over: Rect) => void;
   readonly drawWith: (line: BorderStyle) => void;
   readonly resize: (axis: 'column' | 'row', at: number, size: number) => void;
+  readonly freeze: (at: At | null) => void;
   readonly resizedWith: (resized: Resized, choice: string) => void;
   readonly wornWith: (worn: Worn, choice: string) => void;
   readonly pastedWith: (pasted: Pasted, choice: string) => void;
@@ -94,3 +95,6 @@ export interface Asks {
 
 /** How wide the column of row numbers is, which is not a column of the sheet. */
 export const GUTTER = 44;
+
+/** How tall the row of column headings is, which is not a row of the sheet; a frozen row sits under it. */
+export const HEADING = 24;

@@ -99,7 +99,7 @@ export function addedBlock(
     return undefined;
   }
 
-  const prefix = source.slice(lineStart(source, last.span.start), last.span.start);
+  const prefix = indentOf(source, last.span.start);
   const step = stepOf(source);
   const break_ = lineBreak(source);
   const written = `${prefix}${renderScalar(op.key)}:${break_}${item(op.source, `${prefix}${step}`)}${break_}`;
@@ -145,15 +145,25 @@ export function addition(
     return undefined;
   }
 
-  const prefix = source.slice(lineStart(source, first.span.start), first.span.start);
-  const written = `${prefix}${renderScalar(op.key)}: ${renderScalar(op.value)}${lineBreak(source)}`;
+  if (above !== undefined && opensAnItem(source, above.span.start)) {
+    refuse(CODE.itemMarker, carriesTheDash([...op.path, op.before ?? '']), target.span);
+    return undefined;
+  }
 
   const last = target.entries[target.entries.length - 1];
+  const beside = above ?? last ?? first;
+  const prefix = indentOf(source, beside.span.start);
+  const written = `${prefix}${renderScalar(op.key)}: ${renderScalar(op.value)}${lineBreak(source)}`;
+
   const at =
-    above === undefined
-      ? lineEnd(source, (last ?? first).span.end)
-      : lineStart(source, above.span.start);
+    above === undefined ? lineEnd(source, beside.span.end) : lineStart(source, beside.span.start);
   return { span: span(at, at), text: written };
+}
+
+/** The indent a line written beside this one takes: its own, an item's `- ` counted as the room it takes. */
+function indentOf(source: string, start: number): string {
+  const prefix = source.slice(lineStart(source, start), start);
+  return prefix.endsWith('- ') ? `${prefix.slice(0, -2)}  ` : prefix;
 }
 
 /** The mapping a key goes into, refused where the site is not one or already has the key. */

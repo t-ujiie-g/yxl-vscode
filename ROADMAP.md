@@ -418,9 +418,9 @@ not a date.
 | A box to type an address into | ✅ — in the corner, where every spreadsheet keeps it |
 | Find something in the sheet | ✅ — `Cmd`+`F`, `Cmd`+`G` through what it found |
 | Bold, italic, underline, strike | ✅ — from the toolbar, through the normalizer, with the ripple count where the look is shared |
-| Fill, text colour, borders, alignment, number format | **Phase 9** |
-| Drag a column wider, a row taller | **Phase 9** |
-| Freeze the heading rows | **Phase 9** |
+| Fill, text colour, borders, alignment, number format | ✅ — from the same toolbar, over a cell or a selection |
+| Drag a column wider, a row taller | ✅ — written as a band, and a band over more than the one dragged is a question |
+| Freeze the heading rows | ✅ — honoured wherever the reader has scrolled to, and set from the toolbar at the cell they are on |
 | Insert or delete a row or column | **Phase 10** |
 | Merge cells | **Phase 10** |
 | Fill down, and the drag handle | **Phase 10** (needs §8 Q2) |
@@ -1041,7 +1041,14 @@ whether the spec survives contact with a GUI (ADR-008).
       spec keeps it in. §4.4's `setSize` table decides where it lands, and a
       band over more than the one dragged is a question — change the band, or
       split it so this one stands alone.
-- [ ] `freeze:` (`docs/spec.md` §2) honoured in the preview, and set from it
+- [x] `freeze:` (`docs/spec.md` §2) honoured in the preview, and set from it
+      **Shipped**: the rows above the freeze and the columns left of it stay
+      put while the rest scrolls, and they stay put wherever the reader has
+      scrolled to — the frozen band is drawn beside the window rather than
+      inside it, so a reader in row 800 still reads the headings (**ADR-040**).
+      The toolbar freezes at the cell selected and takes the freeze off again;
+      a sheet written with a `split:` is refused rather than rewritten, since
+      the schema cannot hold both and the split is not ours to drop.
 
 ### Phase 10 — Structural edits
 - [ ] `insertRow` / `insertCol` / `deleteRow` / `deleteCol`, with the
@@ -1994,6 +2001,46 @@ separately, because that is the unit the schema has. Our leaves are finer, so a
 cleared edge is both of them, and the writer folds them back into
 `border: { left: null }` — the only spelling that loads.
 
+### ADR-040 — A frozen pane is drawn beside the window, and the grid stopped collapsing its borders
+**Accepted.** `freeze:` names the first cell that scrolls (`docs/spec.md` §2),
+so honouring it is two decisions: what the host sends, and how the view holds it
+still.
+
+*The frozen band is not part of the window.* The view is sent a window of the
+sheet (ADR-019), and a reader at row 800 has a window that starts at row 780 —
+the frozen rows are not in it, and a pane that disappears exactly when the sheet
+gets long is not a pane. So the host sends the frozen rows and columns **beside**
+the window, as an extra band of addresses, and the view draws them in flow at
+the top and the left with the gap under them shortened by their height. The cost
+is bounded by refusing to draw a pane deeper than half a window: freezing 100
+rows fills any viewport, and past that the sheet is drawn scrolling with no
+pane at all rather than half a promise.
+
+*Held still with `position: sticky`, which needed the grid's borders separated.*
+Under `border-collapse: collapse` the line between two cells belongs to the
+*table*, and so does each cell's background — Blink paints both in the table's
+own phase, under every positioned cell. A sticky cell therefore cannot cover
+what scrolls beneath it: the text of the scrolling cells shows straight through
+the frozen band. The grid is `border-collapse: separate` with each cell carrying
+its own right and bottom line, which draws the same 1px grey and lets a frozen
+cell paint over what passes under it. Measured under headless Chrome before
+shipping, as the drag grips were.
+
+*Setting one is not a resolution-table row.* A freeze has exactly one place to
+live — the sheet's own key — so there is nothing to enumerate: the gesture is an
+`Intent`, not a list of `Candidate`s, and it applies without asking. It moves no
+cell, so it claims none, and the checker's diff (which compares cells) never sees
+it — the same blind spot `width:` and `height:` already have, and the reason
+`expectedDiff: empty` is a claim about *cells* rather than about the file.
+
+*Two things the editor will not write.* `freeze: A1` freezes nothing and is an
+error upstream, so the button is disabled there and the intent refuses it — the
+loader still reads such a spec, because reading is not endorsing (ADR-011), and
+the fixture in `tests/fixtures/deferred` says so. A sheet already carrying a
+`split:` is refused rather than rewritten: the schema forbids both, `split` is
+not modeled here, and taking out a construct we do not draw is not a choice a
+reader can weigh in a preview.
+
 ## 8. Open questions
 
 - **Q1 — `cells:` A1 keys and row insertion.** Inserting a row rewrites every
@@ -2244,6 +2291,52 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-21 — Panes that stay put
+Phase 9's last item, and the first thing the preview honours that is about the
+*sheet* rather than about a cell. **ADR-040.**
+
+- **`freeze:` is read, drawn, and written.** The loader reads it as an address
+  where it read a key it did not model before, the compiled sheet carries it,
+  and the view keeps the rows above it and the columns left of it still while
+  the rest scrolls.
+- **The frozen band is drawn beside the window, not inside it.** A reader at row
+  800 is looking at a window that starts at row 780, so a pane drawn only from
+  what the window holds would vanish at exactly the moment it earns its keep.
+  The host sends the frozen rows and columns as their own band, and the view
+  draws them in flow with the gap under them shortened by their height, so the
+  sheet is as tall as it ever was. A freeze deeper than half a window is left
+  scrolling: a pane taller than what it is read against is not a pane.
+- **The grid's borders no longer collapse.** Under `border-collapse: collapse`
+  a cell's background and the line beside it belong to the *table*, which Blink
+  paints under every positioned cell — so a sticky pane cannot cover what
+  scrolls beneath it, and the scrolling text showed straight through the frozen
+  columns. Each cell carries its own right and bottom line now: the same 1px
+  grey, and a frozen cell that is actually opaque.
+- **Measured under headless Chrome, three times over.** The first render said
+  the panes stuck but leaked; the second said the leak was not a crack in the
+  layout, because the frozen cells abut to the pixel; the third — painting the
+  frozen band pink and the scrolling text blue — said the blue was on top, which
+  is what named the border model as the cause. The heading row was measured too:
+  it is 24px because the address box makes it so, and it is pinned there now so
+  the offset a frozen row is placed at is a fact rather than a guess.
+- **Setting one is not a resolution-table row.** A freeze has one place to live,
+  so `setFreeze` returns an `Intent` rather than a list of answers and applies
+  without asking. The toolbar freezes at the selected cell and takes it off
+  again; `A1` freezes nothing, so that button is disabled there.
+- **A sheet that is `split:` is refused, and a spec that is `freeze: A1` is
+  still read.** The schema forbids a sheet having both, and `split` is not
+  modeled here — taking out a construct the preview cannot draw is not a choice
+  a reader can weigh, so it is a refusal with the reason. The other way round,
+  a pointless freeze the compiler rejects still loads here, and there is a
+  `deferred` fixture that says so.
+- **A sheet key can be added at all now.** `add` into a mapping that opens a
+  sequence item took its layout from the entry on the `- ` line and wrote a
+  second item; it takes the layout from the line the new key lands beside, and
+  refuses to write *above* the entry the dash opens rather than moving it. Every
+  sheet-level key after this one needed that fixed.
+- 1549 → 1582 tests. Comment shape: exports 439 blocks / 953 lines (avg 2.2),
+  private 312 / 332 (1.1), inline 60 / 81 (1.4), 9 over the limit.
 
 ### 2026-08-21 — A column you can drag
 Phase 9's fourth item, and the first gesture in the grid that is not about a

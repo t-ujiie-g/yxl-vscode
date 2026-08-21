@@ -38,15 +38,25 @@ describe('a sheet', () => {
   });
 
   it('carries a key it does not model, in place', () => {
-    const read = sheet('name: S\n    charts: []\n    freeze: B2\n');
-    expect(read.opaque.map((o) => o.key)).toEqual(['charts', 'freeze']);
-    expect(read.keyOrder).toEqual(['name', 'charts', 'freeze']);
+    const read = sheet('name: S\n    charts: []\n    gridlines: true\n');
+    expect(read.opaque.map((o) => o.key)).toEqual(['charts', 'gridlines']);
+    expect(read.keyOrder).toEqual(['name', 'charts', 'gridlines']);
   });
 
   it('spans an unmodeled key over its whole entry', () => {
-    const source = 'sheets:\n  - name: S\n    freeze: B2\n';
+    const source = 'sheets:\n  - name: S\n    gridlines: true\n';
     const opaque = load(parse(source, { file: 'f' })).doc?.sheets[0]?.opaque[0];
-    expect(source.slice(opaque?.span.start, opaque?.span.end)).toBe('freeze: B2');
+    expect(source.slice(opaque?.span.start, opaque?.span.end)).toBe('gridlines: true');
+  });
+
+  it('reads where the panes are frozen', () => {
+    expect(sheet('name: S\n    freeze: B2\n').freeze).toBe('B2');
+    expect(sheet('name: S\n').freeze).toBeNull();
+  });
+
+  it('refuses a freeze that is not a cell', () => {
+    const { diagnostics } = load(parse('sheets:\n  - name: S\n    freeze: B2:C3\n', { file: 'f' }));
+    expect(diagnostics.map((one) => one.code)).toEqual(['loader.bad-address']);
   });
 });
 
