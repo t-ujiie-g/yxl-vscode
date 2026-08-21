@@ -28,10 +28,15 @@ const at = (top: number, left: number, bottom = top, right = left): Rect => ({
   right,
 });
 
-/** The answers a look asked for has, over the rectangle named. */
-function offered(source: string, rect: Rect, want: StyleSays): readonly Candidate[] {
+/** The answers a look asked for has, over the rectangle named — and how the reader took it. */
+function offered(
+  source: string,
+  rect: Rect,
+  want: StyleSays,
+  whole: 'columns' | 'rows' | null = null,
+): readonly Candidate[] {
   const { grid, read } = files(source);
-  return setStyle({ grid }, { sheet: 'Sales' as SheetName, rect }, want, read);
+  return setStyle({ grid }, { sheet: 'Sales' as SheetName, rect, whole }, want, read);
 }
 
 /** The chosen answer, taken all the way through the checker. */
@@ -544,5 +549,72 @@ describe('what a look will not do', () => {
     const where = { sheet: 'Nowhere' as SheetName, rect: at(1, 1) };
 
     expect(setStyle({ grid }, where, BOLD, read)).toEqual([]);
+  });
+});
+
+describe('a look over the whole of a column', () => {
+  const CELLS = `${SALES}    cells:\n      A1: 1\n      B1: 2\n      B2: 3\n`;
+
+  it('is a band, never four hundred cells (ADR-041)', () => {
+    const answers = offered(CELLS, at(1, 2, 400, 2), BOLD, 'columns');
+
+    expect(answers.map((one) => [one.id, one.alone])).toEqual([['ofItsOwn', true]]);
+    expect(answers[0]?.what).toBe('Write it on the column `B`');
+  });
+
+  it('writes one entry, in the block form a spec writes bands in', () => {
+    const [answer] = offered(CELLS, at(1, 2, 400, 2), BOLD, 'columns');
+    if (answer === undefined) throw new Error('nothing was offered');
+
+    expect(taken(CELLS, answer)).toBe(
+      `${CELLS}    columns:\n      - at: B\n        style: { font: { bold: true } }\n`,
+    );
+  });
+
+  it('claims the cells the band reaches, and no more', () => {
+    const [answer] = offered(CELLS, at(1, 2, 400, 2), BOLD, 'columns');
+    expect(answer?.moves.map((one) => one.at)).toEqual(['B1', 'B2']);
+  });
+
+  it('names the columns it covers where the reader took several', () => {
+    const [answer] = offered(CELLS, at(1, 1, 400, 2), BOLD, 'columns');
+    expect(answer?.what).toBe('Write it on the columns `A-B`');
+  });
+
+  it('is a row band where the rows are what was taken', () => {
+    const [answer] = offered(CELLS, at(1, 1, 1, 20), BOLD, 'rows');
+    if (answer === undefined) throw new Error('nothing was offered');
+
+    expect(taken(CELLS, answer)).toContain('    rows:\n      - at: 1\n        style:');
+    expect(answer.moves.map((one) => one.at)).toEqual(['A1', 'B1']);
+  });
+
+  it('reuses a declaration that already says it, as anything through the normalizer does', () => {
+    const spec = `defs:\n  styles:\n    strong:\n      font: { bold: true }\n${CELLS}`;
+    const [answer] = offered(spec, at(1, 2, 400, 2), BOLD, 'columns');
+    if (answer === undefined) throw new Error('nothing was offered');
+
+    expect(taken(spec, answer)).toContain('      - at: B\n        style: strong\n');
+  });
+
+  it('still offers what supplies the look where something does', () => {
+    const spec = `${SALES}    columns:\n      - at: B\n        style: { font: { bold: false } }\n    cells:\n      B1: 2\n`;
+    const answers = offered(spec, at(1, 2, 400, 2), BOLD, 'columns');
+
+    expect(answers.map((one) => one.id)).toEqual(['band', 'ofItsOwn']);
+  });
+});
+
+describe('a look over a column whose cells take it from different places', () => {
+  const MIXED = `defs:\n  styles:\n    strong:\n      font: { bold: true }\n${SALES}    cells:\n      B1: { value: 1, style: strong }\n      B2: 2\n`;
+
+  it('is still the band, since the answers a mixed rectangle has would write a cell per row', () => {
+    const answers = offered(MIXED, at(1, 2, 400, 2), BOLD, 'columns');
+    expect(answers.map((one) => [one.id, one.alone])).toEqual([['ofItsOwn', true]]);
+  });
+
+  it('writes the cells where the reader took cells rather than a column', () => {
+    const answers = offered(MIXED, at(1, 2, 2, 2), BOLD);
+    expect(answers.map((one) => one.id)).toEqual(['all']);
   });
 });

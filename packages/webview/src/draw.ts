@@ -12,7 +12,7 @@ import {
 } from './panels';
 import type { DrawnSheet } from './protocol';
 import { type Asks, cellKey, copiedFrom, lookedUp, ranged, type Showing } from './showing';
-import { grid } from './table';
+import { grid, headed } from './table';
 import { toolbar } from './toolbar';
 import { type Where, wanted } from './window';
 
@@ -79,7 +79,7 @@ export function restate(into: HTMLElement, showing: Showing, asks: Asks): void {
     return;
   }
 
-  for (const cell of grid.querySelectorAll('td.selected')) cell.classList.remove('selected');
+  for (const cell of grid.querySelectorAll('.selected')) cell.classList.remove('selected');
   for (const cell of grid.querySelectorAll('td.ranged')) cell.classList.remove('ranged');
   for (const cell of grid.querySelectorAll('td.copied')) cell.classList.remove('copied');
   for (const cell of grid.querySelectorAll('td.found')) cell.classList.remove('found');
@@ -96,6 +96,12 @@ export function restate(into: HTMLElement, showing: Showing, asks: Asks): void {
     if (ranged(showing, { row, col })) cell.classList.add('ranged');
     if (copiedFrom(showing, { row, col })) cell.classList.add('copied');
     if (lookedUp(showing, { row, col })) cell.classList.add('found');
+  }
+
+  for (const heading of grid.querySelectorAll<HTMLElement>('th[data-col], th[data-row]')) {
+    const across = heading.getAttribute('data-col');
+    const at = Number(across ?? heading.getAttribute('data-row'));
+    if (headed(showing, across === null ? 'row' : 'column', at)) heading.classList.add('selected');
   }
 
   for (const key of showing.reached?.cells ?? []) {

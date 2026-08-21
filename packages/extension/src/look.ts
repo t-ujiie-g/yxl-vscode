@@ -16,7 +16,7 @@ export async function wear(spec: Spec, worn: Worn, port: Port, choice?: string):
   }
 
   const read = reading(port.text);
-  const where = { sheet, rect: rectOf(worn) };
+  const where = { sheet, rect: rectOf(worn), whole: worn.whole };
   const answers = setStyle({ grid: spec.grid }, where, worn.want, read);
 
   if (answers.length === 0) {

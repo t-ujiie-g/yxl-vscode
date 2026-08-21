@@ -3,7 +3,16 @@ import { sheetAgain } from './again';
 import { flavours, onto } from './clipboard';
 import { draw, focusCell, restate } from './draw';
 import { between } from './keys';
-import type { Drawing, DrawnSheet, Editable, FromView, Refused, Source, ToView } from './protocol';
+import type {
+  Drawing,
+  DrawnSheet,
+  Editable,
+  FromView,
+  Refused,
+  Source,
+  ToView,
+  Whole,
+} from './protocol';
 import {
   type Asks,
   type Copied,
@@ -47,6 +56,8 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
   let going: { row: number; col: number } | null = null;
   /** What our own copy last put on the system clipboard, which says whose paste this is. */
   let ours: string | null = null;
+  /** How the selection was taken, which a heading changes and a cell puts back (ADR-041). */
+  let taken: Whole = null;
 
   /** Where the last edit was typed, so a refusal can put the reader back at it. */
   let typedAt: { row: number; col: number } | null = null;
@@ -141,6 +152,7 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
     select: (row, col) => {
       selected = { row, col };
       anchor = { row, col };
+      taken = null;
       sources = null;
       host.postMessage({ kind: 'inspect', sheet: named(), row, col });
       restated();
@@ -148,6 +160,7 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
     reachTo: (row, col) => {
       anchor ??= selected;
       selected = { row, col };
+      taken = null;
       sources = null;
       host.postMessage({ kind: 'inspect', sheet: named(), row, col });
       restated();
@@ -224,6 +237,22 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       said = null;
       host.postMessage({ kind: 'freeze', sheet: named(), at });
     },
+    takeBand: (axis, at, extend) => {
+      const of = drawing?.sheets[sheet];
+      if (of === undefined) return;
+
+      const far =
+        axis === 'column' ? { row: of.of.rows, col: at } : { row: at, col: of.of.columns };
+      const near = axis === 'column' ? { row: 1, col: at } : { row: at, col: 1 };
+      const along: Whole = axis === 'column' ? 'columns' : 'rows';
+
+      if (!extend || taken !== along || anchor === null) anchor = far;
+      selected = near;
+      taken = along;
+      sources = null;
+      host.postMessage({ kind: 'inspect', sheet: named(), row: near.row, col: near.col });
+      restated();
+    },
     resize: (axis, at, size) => {
       refused = null;
       said = null;
@@ -237,7 +266,7 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
     wear: (want, over) => {
       refused = null;
       said = null;
-      host.postMessage({ kind: 'wear', sheet: named(), ...over, want });
+      host.postMessage({ kind: 'wear', sheet: named(), ...over, want, whole: taken });
     },
     wornWith: (worn, choice) => {
       refused = null;

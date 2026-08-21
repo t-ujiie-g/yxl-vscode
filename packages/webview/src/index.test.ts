@@ -116,6 +116,7 @@ describe('what the view sends', () => {
         bottom: 1,
         right: 1,
         want: { fill: 'FF9900' },
+        whole: null,
       },
     ]);
   });
@@ -129,6 +130,68 @@ describe('what the view sends', () => {
 
     into.querySelector('.scrim')?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
     expect(into.querySelector('.panel')).toBeNull();
+  });
+
+  it('takes the whole column from its heading, and says so with the look it sends', () => {
+    const { into, sent } = view();
+
+    into
+      .querySelector<HTMLElement>('thead th[data-col="2"]')
+      ?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    into.querySelector<HTMLButtonElement>('button.look.bold')?.click();
+
+    expect(sent.filter((one) => one.kind === 'wear')).toEqual([
+      {
+        kind: 'wear',
+        sheet: 'Sales',
+        top: 1,
+        left: 2,
+        bottom: 2,
+        right: 2,
+        want: { 'font.bold': true },
+        whole: 'columns',
+      },
+    ]);
+  });
+
+  it('reaches across the headings dragged over, and takes the rows from theirs', () => {
+    const { into, sent } = view();
+    const at = (col: number) => into.querySelector<HTMLElement>(`thead th[data-col="${col}"]`);
+
+    at(1)?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    at(2)?.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true, buttons: 1 }));
+    into.querySelector<HTMLButtonElement>('button.look.bold')?.click();
+
+    expect(sent.filter((one) => one.kind === 'wear').at(-1)).toMatchObject({
+      left: 1,
+      right: 2,
+      whole: 'columns',
+    });
+
+    into
+      .querySelector<HTMLElement>('tbody th[data-row="2"]')
+      ?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    into.querySelector<HTMLButtonElement>('button.look.bold')?.click();
+
+    expect(sent.filter((one) => one.kind === 'wear').at(-1)).toMatchObject({
+      top: 2,
+      bottom: 2,
+      left: 1,
+      right: 2,
+      whole: 'rows',
+    });
+  });
+
+  it('is cells again once a cell is clicked, so a look lands where it was asked', () => {
+    const { into, sent } = view();
+
+    into
+      .querySelector<HTMLElement>('thead th[data-col="1"]')
+      ?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    at(into, 1, 1)?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    into.querySelector<HTMLButtonElement>('button.look.bold')?.click();
+
+    expect(sent.filter((one) => one.kind === 'wear').at(-1)).toMatchObject({ whole: null });
   });
 
   it('sends a column dragged by its edge, in the units a spec writes widths in', () => {

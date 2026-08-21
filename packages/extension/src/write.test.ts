@@ -518,6 +518,26 @@ describe('a column or a row dragged to a size', () => {
   });
 });
 
+describe('a look over a whole column', () => {
+  const BOLD = { 'font.bold': true } as const;
+
+  it('lands as a band without asking, since that is what the spec would write', async () => {
+    const spec = `${SALES}    cells:\n      B1: 2\n      B2: 3\n`;
+    const { spec: read, port, files, told } = editor({ [ROOT]: spec });
+
+    await wear(
+      read,
+      { sheet: 'Sales', top: 1, left: 2, bottom: 400, right: 2, want: BOLD, whole: 'columns' },
+      port,
+    );
+
+    expect(files[ROOT]).toBe(
+      `${spec}    columns:\n      - at: B\n        style: { font: { bold: true } }\n`,
+    );
+    expect(told).toEqual(['2 cells restyled.']);
+  });
+});
+
 describe('a sheet frozen from the preview', () => {
   const frozen = (of: Partial<Frozen> = {}): Frozen => ({
     sheet: 'Sales',
@@ -568,6 +588,7 @@ describe('a look asked for over the grid', () => {
     left: 1,
     bottom: 1,
     right: 1,
+    whole: null,
     want: BOLD,
     ...of,
   });

@@ -135,6 +135,7 @@ function headings(sheet: DrawnSheet, showing: Showing, asks: Asks): HTMLElement 
     heading.textContent = columnLabel(one.at);
     heading.style.width = `${wide}px`;
     if (one.stays) stay(sheet, heading, { col: one.at });
+    takes(heading, 'column', one.at, showing, asks);
     heading.append(grip('column', one.at, wide, asks));
     line.append(heading);
   }
@@ -162,6 +163,33 @@ function columnsOf(sheet: DrawnSheet): Along[] {
     pad: across(sheet, sheet.of.columns + 1) - across(sheet, sheet.at.col + sheet.columns),
   });
   return along;
+}
+
+/** A heading that takes its whole row or column, and reaches across the ones dragged over. */
+function takes(heading: HTMLElement, axis: Axis, at: number, showing: Showing, asks: Asks): void {
+  heading.setAttribute(axis === 'column' ? 'data-col' : 'data-row', String(at));
+  if (headed(showing, axis, at)) heading.classList.add('selected');
+
+  heading.addEventListener('mousedown', (event) => {
+    // Not the grip: dragging the edge sizes it, and that is a different gesture.
+    if (event.target !== heading) return;
+    asks.takeBand(axis, at, event.shiftKey);
+  });
+  heading.addEventListener('mouseenter', (event) => {
+    if ((event.buttons & 1) === 1) asks.takeBand(axis, at, true);
+  });
+}
+
+/** Whether the selection reaches this row or column, which is what lights its heading. */
+export function headed(showing: Showing, axis: Axis, at: number): boolean {
+  const { selected, anchor } = showing;
+  if (selected === null) return false;
+
+  const other = anchor ?? selected;
+  const one = axis === 'column' ? selected.col : selected.row;
+  const than = axis === 'column' ? other.col : other.row;
+
+  return at >= Math.min(one, than) && at <= Math.max(one, than);
 }
 
 /** A cell of a frozen band, put where it stays: under the headings, or right of the row numbers. */
@@ -240,6 +268,7 @@ function line(
 
   const number = document.createElement('th');
   number.textContent = String(row);
+  takes(number, 'row', row, showing, asks);
   number.append(grip('row', row, heightOf(sheet, row), asks));
   line.append(number);
 

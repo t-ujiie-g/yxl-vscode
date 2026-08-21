@@ -6,13 +6,29 @@ import {
   styleAt,
 } from '@yxl-vscode/compile';
 import { apply } from '@yxl-vscode/cst';
+import { normalize, written as spell } from '@yxl-vscode/normalize';
 import { ordered, propertiesOf, type StyleProperty, type StyleSays } from '@yxl-vscode/spec';
-import { type A1Addr, addrAt, qualified, type Rect, type SheetName } from '@yxl-vscode/units';
+import {
+  type A1Addr,
+  addrAt,
+  cellOf,
+  qualified,
+  type Rect,
+  type SheetName,
+} from '@yxl-vscode/units';
+import { bandOfItsOwn, type Span, spelled } from './bands';
 import type { Reading } from './direct';
 import type { Candidate } from './resolve';
 import { atSupplier, onEvery, type Projection, type Wanted, type Writing } from './writes';
 
 export type { Projection } from './writes';
+
+/** Where a look was asked for: the rectangle, and whether the reader took whole columns or rows. */
+export interface Over {
+  readonly sheet: SheetName;
+  readonly rect: Rect;
+  readonly whole?: 'columns' | 'rows' | null;
+}
 
 /**
  * Every way of making a rectangle look as the reader asked — `ROADMAP.md` §4.4's
@@ -21,7 +37,7 @@ export type { Projection } from './writes';
  */
 export function setStyle(
   spec: Projection,
-  where: { sheet: SheetName; rect: Rect },
+  where: Over,
   want: StyleSays,
   read: Reading,
 ): readonly Candidate[] {
@@ -38,17 +54,79 @@ export function setStyle(
   return answers.length === 1 ? [{ ...answers[0], alone: true } as Candidate] : answers;
 }
 
+/** The span a whole-column or whole-row selection names, or `null` where it named cells. */
+function spanning(where: Over): Span | null {
+  if (where.whole === 'columns') {
+    return { axis: 'column', first: where.rect.left, last: where.rect.right };
+  }
+  if (where.whole === 'rows')
+    return { axis: 'row', first: where.rect.top, last: where.rect.bottom };
+
+  return null;
+}
+
+/** The answer that writes the look on a band of its own: a whole column is a band, never four hundred cells (ADR-041). */
+function asBand(
+  spec: Projection,
+  sheet: CompiledSheet,
+  span: Span,
+  want: StyleSays,
+  read: Reading,
+): Candidate | null {
+  const how = normalize(want, spec.grid.styles);
+  if (how === null) return null;
+
+  const written = bandOfItsOwn(sheet, span, [['style', spell(how)]], read);
+  if (written === null) return null;
+
+  const moves = inSpan(sheet, span).map((at) => ({ sheet: sheet.name, at }));
+  const many = span.last - span.first + 1;
+  const what = `Write it on the ${span.axis}${many === 1 ? '' : 's'} \`${spelled(span)}\``;
+
+  return {
+    id: 'ofItsOwn',
+    what,
+    moves,
+    alone: false,
+    intent: {
+      kind: 'edit',
+      file: written.found.file,
+      patch: { ops: [written.op] },
+      expects: {
+        cells: new Set(moves.map((one) => qualified(one.sheet, one.at))),
+        beyond: 'ask',
+      },
+    },
+  };
+}
+
+/** Every address the sheet holds a cell at inside the span, which is what a band there would move. */
+function inSpan(sheet: CompiledSheet, span: Span): A1Addr[] {
+  const inside = (at: A1Addr) => {
+    const cell = cellOf(at);
+    const one = span.axis === 'column' ? cell.col : cell.row;
+    return one >= span.first && one <= span.last;
+  };
+
+  return [...sheet.cells.keys()].map((key) => key as A1Addr).filter(inside);
+}
+
 /** The answers where every cell of the rectangle takes the look from the same place. */
 function fromOne(
   spec: Projection,
   sheet: CompiledSheet,
-  where: { sheet: SheetName; rect: Rect },
+  where: Over,
   supplier: StyleLayer | null,
   want: StyleSays,
   read: Reading,
 ): readonly Candidate[] {
   const answers: Candidate[] = [];
-  if (supplier === null || !excepted(supplier)) {
+  const span = spanning(where);
+
+  if (span !== null) {
+    const band = asBand(spec, sheet, span, want, read);
+    if (band !== null) answers.push(band);
+  } else if (supplier === null || !excepted(supplier)) {
     const own = onCells(spec, sheet, where.sheet, everyone(spread(where.rect), want), read);
     if (own !== null) answers.push(own);
   }
@@ -103,7 +181,7 @@ function origins(
 function apart(
   spec: Projection,
   sheet: CompiledSheet,
-  where: { sheet: SheetName; rect: Rect },
+  where: Over,
   from: readonly Origin[],
   want: StyleSays,
   read: Reading,
@@ -113,6 +191,14 @@ function apart(
   const hidden = from.some((one) => one.layer !== null && excepted(one.layer));
   const alike = hidden ? null : onEvery(spec, sheet, where.sheet, wants, read);
   const split = splitting(spec, sheet, where.sheet, from, want, read);
+
+  // Over a whole column the band is the answer, and the two below would write a
+  // cell entry per row of the sheet — which is not what any of them meant.
+  const span = spanning(where);
+  if (span !== null) {
+    const band = asBand(spec, sheet, span, want, read);
+    return band === null ? [] : [band];
+  }
 
   const answers: Candidate[] = [];
   if (alike !== null && alike.ops.length > 0) {

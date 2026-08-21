@@ -34,6 +34,7 @@ function asks(): Asks {
     wornWith: vi.fn(),
     freeze: vi.fn(),
     openMenu: vi.fn(),
+    takeBand: vi.fn(),
   };
 }
 
@@ -83,28 +84,28 @@ function drawing(of: Partial<Drawing> = {}): Drawing {
   };
 }
 
+function showingOf(of: Partial<Showing> = {}): Showing {
+  return {
+    drawing: drawing(),
+    sheet: 0,
+    selected: null,
+    anchor: null,
+    sources: null,
+    reached: null,
+    refused: null,
+    said: null,
+    copied: null,
+    looking: null,
+    editable: null,
+    line: 'thin',
+    menu: null,
+    ...of,
+  };
+}
+
 function shown(of: Partial<Showing> = {}, on: Asks = asks()): HTMLElement {
   const into = document.createElement('div');
-  draw(
-    into,
-    {
-      drawing: drawing(),
-      sheet: 0,
-      selected: null,
-      anchor: null,
-      sources: null,
-      reached: null,
-      refused: null,
-      said: null,
-      copied: null,
-      looking: null,
-      editable: null,
-      line: 'thin',
-      menu: null,
-      ...of,
-    },
-    on,
-  );
+  draw(into, showingOf(of), on);
   return into;
 }
 
@@ -319,6 +320,64 @@ describe('a sheet with frozen panes', () => {
   it('holds nothing where the sheet freezes nothing', () => {
     const into = shown({ drawing: drawing({ sheets: [sheet()] }) });
     expect(into.querySelectorAll('.stays')).toHaveLength(0);
+  });
+});
+
+describe('a heading a reader clicks', () => {
+  const wide = sheet({ rows: 2, columns: 2, of: { rows: 40, columns: 6 } });
+
+  it('asks for the whole column, and for the whole row from the numbers', () => {
+    const on = asks();
+    const into = shown({ drawing: drawing({ sheets: [wide] }) }, on);
+
+    into
+      .querySelector<HTMLElement>('thead th[data-col="2"]')
+      ?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    expect(on.takeBand).toHaveBeenCalledWith('column', 2, false);
+
+    into
+      .querySelector<HTMLElement>('tbody th[data-row="1"]')
+      ?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    expect(on.takeBand).toHaveBeenCalledWith('row', 1, false);
+  });
+
+  it('reaches rather than takes where `Shift` is down, or the pointer is dragged over it', () => {
+    const on = asks();
+    const into = shown({ drawing: drawing({ sheets: [wide] }) }, on);
+    const heading = into.querySelector<HTMLElement>('thead th[data-col="1"]');
+
+    heading?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, shiftKey: true }));
+    expect(on.takeBand).toHaveBeenCalledWith('column', 1, true);
+
+    heading?.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true, buttons: 1 }));
+    expect(on.takeBand).toHaveBeenLastCalledWith('column', 1, true);
+  });
+
+  it('sizes rather than selects where the grip is what was pressed', () => {
+    const on = asks();
+    const into = shown({ drawing: drawing({ sheets: [wide] }) }, on);
+
+    into
+      .querySelector<HTMLElement>('thead th[data-col="1"] .grip')
+      ?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    expect(on.takeBand).not.toHaveBeenCalled();
+  });
+
+  it('lights the headings the selection reaches, and puts them out when it moves', () => {
+    const into = document.createElement('div');
+    const state = (at: Showing['selected'], to: Showing['anchor'] = null): Showing => ({
+      ...showingOf({ drawing: drawing({ sheets: [wide] }) }),
+      selected: at,
+      anchor: to,
+    });
+    const lit = () => [...into.querySelectorAll('th.selected')].map((one) => one.textContent);
+
+    // Column B is the one reached; the window draws two rows of the forty taken.
+    draw(into, state({ row: 1, col: 2 }, { row: 40, col: 3 }), asks());
+    expect(lit()).toEqual(['B', '1', '2']);
+
+    restate(into, state({ row: 1, col: 1 }, { row: 1, col: 1 }), asks());
+    expect(lit()).toEqual(['A', '1']);
   });
 });
 
