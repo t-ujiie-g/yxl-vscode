@@ -272,10 +272,18 @@ export interface Resized {
   readonly size: number;
 }
 
-/** A look asked for over a rectangle: the properties the reader changed, and nothing else. */
+/**
+ * A look asked for over a rectangle: the properties the reader changed, and
+ * nothing else. `whole` is how the rectangle was taken — a heading takes every
+ * cell of a column, which is a band rather than four hundred cells (ADR-041).
+ */
 export interface Worn extends Ranged {
   readonly want: StyleSays;
+  readonly whole: Whole;
 }
+
+/** What a selection was made of: cells, or every cell of some columns or rows. */
+export type Whole = 'columns' | 'rows' | null;
 
 /** A rectangle of the grid a gesture names, in the row and column numbers the view draws. */
 export interface Ranged {

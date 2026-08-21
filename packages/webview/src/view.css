@@ -423,6 +423,15 @@ body {
   z-index: 7;
 }
 
+/* The heading of a row or column the selection reaches, as both spreadsheets
+   light it. After the frozen-pane rules, so a heading that is both still does. */
+.grid th.selected,
+.grid thead th.stays.selected {
+  background: #d6dce4;
+  color: #000000;
+  font-weight: 600;
+}
+
 .grid td.filled {
   color: #616161;
   font-style: italic;

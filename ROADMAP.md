@@ -432,9 +432,10 @@ not a date.
 | Fill, text colour, borders, alignment, number format | ✅ — from the same toolbar, colour and borders in the menus a reader of Sheets expects |
 | Drag a column wider, a row taller | ✅ — written as a band, and a band over more than the one dragged is a question |
 | Freeze the heading rows | ✅ — honoured wherever the reader has scrolled to, and set from the toolbar at the cell they are on |
-| Click a heading to take the whole row or column | **Phase 10** — promised in Phase 8 and not delivered there |
+| Click a heading to take the whole row or column | ✅ — drag or `Shift` across several; the headings light as they do in both spreadsheets |
 | The corner takes the whole sheet | **Phase 10** — `Cmd`+`A` is the only way today |
-| A width or a look over the columns selected, in one gesture | **Phase 10** — §4.4's tables over a span rather than one column |
+| A look over the columns selected, in one gesture | ✅ — one band through the normalizer, never four hundred cells (ADR-041) |
+| A width over the columns selected | **Phase 10** — `setSize` still takes one column at a time |
 | Double-click the heading edge to fit the column to its contents | **Phase 10** |
 | Hide and unhide a row or a column | **Phase 10** — `hidden:` is drawn already, and cannot be set |
 | Group rows or columns, and collapse the group | **Phase 10** — `group:` is read and then dropped before the view; nothing of an outline is drawn |
@@ -1085,19 +1086,32 @@ what a reader of Excel or Sheets tries within the first minute and finds
 missing. It comes before structural edits because insert and delete are
 gestures on a *heading*, and the headings are not selectors yet.
 
-- [ ] **The row and column headings select.** Click one to take the whole row or
+- [x] **The row and column headings select.** Click one to take the whole row or
       column, drag or `Shift`+click across several, and `Cmd`+click nothing —
       one rectangle at a time, as everywhere else here. Promised in Phase 8's
       first item and not delivered there; carried here 2026-08-21 rather than
       left ticked.
+      **In.** A heading takes its whole run out to the sheet's own extent, the
+      pointer dragged across the headings reaches, and the headings the
+      selection touches are lit as both spreadsheets light them. The grip keeps
+      its own gesture: pressing the edge sizes, pressing the heading selects.
+      What the view sends with the *look* that follows is how the selection was
+      taken (**ADR-041**), because a look over a whole column is a band.
 - [ ] **The corner takes the sheet**, which is the button every spreadsheet
       keeps there — so **the address box moves into a formula bar** and stops
       squatting where *select all* belongs.
-- [ ] **A size or a look over what is selected, in one gesture.** §4.4's
-      `setSize` and `setStyle` answered over a *span* of columns rather than one:
-      the same rows of the table, with the count taken over the span, and one
-      band written where the spec would write one. This is the row a heading
-      selection makes reachable, and the reason it comes first.
+- [x] **A look over what is selected, in one gesture.** §4.4's `setStyle`
+      answered over a *span* of columns rather than a rectangle of cells.
+      **In**: a look asked for over whole columns or rows is **one band**, put
+      through the normalizer like every other style write (ADR-008), claiming
+      the cells it moves and no more. The per-cell answers are not offered
+      there at all — over four hundred rows they are not what anybody meant
+      (ADR-041) — and where something already supplies the look, that answer is
+      offered beside the band as it always was.
+- [ ] **A size over what is selected**, which is the other half: dragging one
+      edge of several selected columns sizes all of them. `setSize` takes one
+      column today, and the answers over a span are the same rows of §4.4's
+      table with the count taken over the span.
 - [ ] **Double-click the heading edge and the column fits what is in it.** The
       width is *measured* — the view knows the font each cell wears; the host
       knows every cell there is (§8 Q17) — and lands through `setSize` like a
@@ -2133,6 +2147,40 @@ the fixture in `tests/fixtures/deferred` says so. A sheet already carrying a
 not modeled here, and taking out a construct we do not draw is not a choice a
 reader can weigh in a preview.
 
+### ADR-041 — The view says *how* a selection was taken, and a look over a whole column is a band
+**Accepted.** Clicking a column heading selects every cell of that column. What
+follows from it is not the selection but the *write*: bold over `B1:B400` is
+four hundred `cells:` entries under §4.4's `setStyle`, and one `columns:` band
+under Excel's own reading of the same gesture. The second is what a spec would
+have been written with, so it is what the editor writes.
+
+*The rectangle cannot say which it was.* A sheet has no last row in the spec —
+the grid draws a window and some room past it (ADR-019) — so `B1:B400` and "the
+whole of B" are the same rectangle, and inferring one from the other would be
+the guess ADR-001 forbids. The **gesture** knows, so the gesture carries it: the
+view holds how the selection was taken beside the selection itself, and sends it
+with the look. One more field, `whole: 'columns' | 'rows' | null`, and no
+inference anywhere.
+
+*Over a span the per-cell answers are not offered at all.* This is the one place
+the resolution table drops an answer rather than ranking it: writing a look on
+four hundred cells is not a thing a reader chooses between, it is a thing that
+happens to them. §4.4 already makes the argument for a *width* — "a size is a
+band, never forty cells" — and the argument is about the gesture, not about the
+property. What is still offered beside the band is whatever already supplies the
+look, because changing that reaches beyond the column and the reader should say
+so first.
+
+*The band is written through the normalizer* like every other style write
+(ADR-008, ADR-037): a declaration that already says it, a variant extending the
+nearest one, or the look itself, in that order. `style: strong` where `strong`
+exists, `style: { font: { bold: true } }` where it does not.
+
+*What it claims is what it moves.* A new band over `B` changes how every cell in
+B looks, so `expects.cells` is the cells the sheet **holds** there — not the
+four hundred addresses the rectangle covered, most of which nothing writes. The
+count the reader is shown is that number too.
+
 ## 8. Open questions
 
 - **Q1 — `cells:` A1 keys and row insertion.** Inserting a row rewrites every
@@ -2396,6 +2444,34 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-22 — The headings select, and a look over a column is a band
+Phase 10's first item, and the half of its third that the first one makes
+reachable. **ADR-041.**
+
+- **A heading takes its whole run.** Click a column heading and every cell of
+  that column is selected, out to the extent the sheet is drawn to; drag or
+  `Shift`+click across the headings and it reaches. The headings the selection
+  touches are lit, as they are in Excel and Sheets — which is also how a reader
+  can tell a whole-column selection from a tall one.
+- **The grip keeps its own gesture.** Pressing the *edge* of a heading sizes it
+  and pressing the heading selects it, which is one `event.target` check and
+  the reason the two never fight.
+- **A look over a whole column is one band.** Bold over the whole of B writes
+  `- at: B, style: { font: { bold: true } }` — through the normalizer, so a
+  declaration that already says it is reused — and not four hundred `cells:`
+  entries. The per-cell answers are not offered there at all: §4.4 already
+  says a *size* is a band and never forty cells, and the argument was about
+  the gesture rather than about the property.
+- **The rectangle cannot say which it was**, so the gesture says it. A sheet
+  has no last row in the spec, so `B1:B400` and "the whole of B" are one
+  rectangle; the view holds how the selection was taken and sends it with the
+  look. Inferring it from the shape would have been the guess ADR-001 forbids.
+- **What it claims is what it moves**: the cells the sheet *holds* in the span,
+  not the four hundred addresses the rectangle covered. That is the count the
+  reader is shown, and it is what the checker is given.
+- 1597 → 1614 tests. Comment shape: exports 457 blocks / 978 lines (avg 2.1),
+  private 317 / 337 (1.1), inline 61 / 82 (1.3), 9 over the limit.
 
 ### 2026-08-21 — Refactoring pass over the whole tree, and a phase that was missing from the plan
 Six findings, and a plan that now says what a reader of Excel or Sheets finds
