@@ -102,7 +102,13 @@ export function addedBlock(
   const prefix = indentOf(source, last.span.start);
   const step = stepOf(source);
   const break_ = lineBreak(source);
-  const written = `${prefix}${renderScalar(op.key)}:${break_}${item(op.source, `${prefix}${step}`)}${break_}`;
+  // A flow collection of one line stays on the key's line, as a person writes
+  // one; a block entry or a sequence item cannot, whatever its length.
+  const flow = op.source.startsWith('{') || op.source.startsWith('[');
+  const beside = flow && !op.source.includes('\n');
+  const written = beside
+    ? `${prefix}${renderScalar(op.key)}: ${op.source}${break_}`
+    : `${prefix}${renderScalar(op.key)}:${break_}${item(op.source, `${prefix}${step}`)}${break_}`;
 
   const at = lineEnd(source, last.span.end);
   return { span: span(at, at), text: written };
