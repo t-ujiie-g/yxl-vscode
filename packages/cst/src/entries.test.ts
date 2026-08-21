@@ -361,6 +361,30 @@ describe('entries of a collection', () => {
       expect(diagnostics[0]?.code).toBe(CODE.itemMarker);
     });
 
+    it("keeps a flow value on the key's own line, as a person writes one", () => {
+      const after = text('sheets:\n  - name: S\n    columns:\n      - at: A\n', {
+        op: 'addSource',
+        path: ['sheets', 0, 'columns', 0],
+        key: 'style',
+        source: '{ font: { bold: true } }',
+      });
+
+      expect(after).toBe(
+        'sheets:\n  - name: S\n    columns:\n      - at: A\n        style: { font: { bold: true } }\n',
+      );
+    });
+
+    it('puts a block entry under the key, since it cannot share the line', () => {
+      const after = text('sheets:\n  - name: S\n', {
+        op: 'addSource',
+        path: ['sheets', 0],
+        key: 'cells',
+        source: 'A1: Region',
+      });
+
+      expect(after).toBe('sheets:\n  - name: S\n    cells:\n      A1: Region\n');
+    });
+
     it('refuses a key that is already there', () => {
       const { diagnostics } = edit('cells:\n  A1: x\n', {
         op: 'add',

@@ -2455,6 +2455,25 @@ than widening it silently.
 
 ## 11. Living changelog
 
+### 2026-08-22 — A band already over the span is the band
+From the real window, on the gesture that shipped yesterday: bold the whole
+sheet, then unbold it, and the file carried **two** bands over `A-K` — one
+saying `bold: true` and one saying `bold: false`.
+
+- **A band over exactly that span is the band of its own**, so the look goes
+  *into* it. Two entries with one `at` are one band said twice, and the second
+  one only wins because it is later.
+- **Put on and taken off leaves the file where it started.** What the band would
+  say is what it says now with the ask over it, minus whatever the bands under
+  it already say — the rule ADR-038 gives a cell, given to a band. Unbolding
+  what only that band made bold takes the `style:` key out; a band left holding
+  nothing but its `at` goes too, and takes the `columns:` key with it where it
+  was the only band under it.
+- **A flow value stays on its key's line.** `addSource` put every value on a
+  line of its own, so a look added to a band read `style:\n  { font: ... }`.
+  A one-line flow collection sits beside its key now; a block entry or a
+  sequence item still cannot, whatever its length.
+- 1621 → 1627 tests.
 ### 2026-08-22 — A bar over the grid, and the corner takes the sheet
 Phase 10's second item, which could not be done without its eighth: the address
 box had to move somewhere, and the only right place is a formula bar.
@@ -2482,7 +2501,7 @@ box had to move somewhere, and the only right place is a formula bar.
 - **The heading row is still 24px**, measured after the address box left it:
   the row's own height is the whole story now rather than a description of what
   the box made it, and the frozen panes are placed against that number.
-- 1614 → 1618 tests.
+- 1614 → 1621 tests.
 
 ### 2026-08-22 — The headings select, and a look over a column is a band
 Phase 10's first item, and the half of its third that the first one makes

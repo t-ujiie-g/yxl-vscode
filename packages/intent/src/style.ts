@@ -1,4 +1,5 @@
 import {
+  type CompiledBand,
   type CompiledSheet,
   type FullAddr,
   type StyleLayer,
@@ -19,7 +20,7 @@ import {
 import { bandOfItsOwn, type Span, spelled } from './bands';
 import type { Reading } from './direct';
 import type { Candidate } from './resolve';
-import { atSupplier, onEvery, type Projection, type Wanted, type Writing } from './writes';
+import { atSupplier, onBand, onEvery, type Projection, type Wanted, type Writing } from './writes';
 
 export type { Projection } from './writes';
 
@@ -65,7 +66,7 @@ function spanning(where: Over): Span | null {
   return null;
 }
 
-/** The answer that writes the look on a band of its own: a whole column is a band, never four hundred cells (ADR-041). */
+/** The answer that writes the look on a band: a whole column is a band, never four hundred cells (ADR-041). */
 function asBand(
   spec: Projection,
   sheet: CompiledSheet,
@@ -73,15 +74,20 @@ function asBand(
   want: StyleSays,
   read: Reading,
 ): Candidate | null {
-  const how = normalize(want, spec.grid.styles);
-  if (how === null) return null;
-
-  const written = bandOfItsOwn(sheet, span, [['style', spell(how)]], read);
-  if (written === null) return null;
-
   const moves = inSpan(sheet, span).map((at) => ({ sheet: sheet.name, at }));
   const many = span.last - span.first + 1;
   const what = `Write it on the ${span.axis}${many === 1 ? '' : 's'} \`${spelled(span)}\``;
+
+  const bands = span.axis === 'column' ? sheet.columns : sheet.rows;
+  const over = bands.findLast((band) => band.first === span.first && band.last === span.last);
+
+  // A band already over exactly this span *is* the band of its own, so the look
+  // goes into it — two entries with one `at` would be one band said twice.
+  const writing =
+    over === undefined
+      ? ofItsOwn(spec, sheet, span, want, read)
+      : onBand(spec, others(bands, over, span), over, read, want);
+  if (writing === null || writing.ops.length === 0) return null;
 
   return {
     id: 'ofItsOwn',
@@ -90,14 +96,40 @@ function asBand(
     alone: false,
     intent: {
       kind: 'edit',
-      file: written.found.file,
-      patch: { ops: [written.op] },
+      file: writing.file,
+      patch: { ops: writing.ops },
       expects: {
         cells: new Set(moves.map((one) => qualified(one.sheet, one.at))),
         beyond: 'ask',
       },
     },
   };
+}
+
+/** The layers still under a band once it is taken out: the other bands of that axis over the same span. */
+function others(
+  bands: readonly CompiledBand[],
+  over: CompiledBand,
+  span: Span,
+): readonly StyleLayer[] {
+  return bands
+    .filter((band) => band !== over && band.first <= span.first && band.last >= span.last)
+    .flatMap((band) => band.style);
+}
+
+/** The answer where no band covers the span yet: one written for it, through the normalizer. */
+function ofItsOwn(
+  spec: Projection,
+  sheet: CompiledSheet,
+  span: Span,
+  want: StyleSays,
+  read: Reading,
+): Writing | null {
+  const how = normalize(want, spec.grid.styles);
+  if (how === null) return null;
+
+  const written = bandOfItsOwn(sheet, span, [['style', spell(how)]], read);
+  return written === null ? null : { file: written.found.file, ops: [written.op], moves: [] };
 }
 
 /** Every address the sheet holds a cell at inside the span, which is what a band there would move. */

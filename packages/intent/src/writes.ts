@@ -1,4 +1,5 @@
 import {
+  type CompiledBand,
   type CompiledGrid,
   type CompiledSheet,
   cellAt,
@@ -9,7 +10,7 @@ import {
   type StyleLayer,
   styleAt,
 } from '@yxl-vscode/compile';
-import { holds, type Node, type Op, type Path, renderScalar } from '@yxl-vscode/cst';
+import { holds, type Node, nodeAt, type Op, type Path, renderScalar } from '@yxl-vscode/cst';
 import { normalize, written } from '@yxl-vscode/normalize';
 import {
   ordered,
@@ -233,6 +234,58 @@ function newCell(
         : { op: 'addSource', path: found.path, key: CELLS, source: `${at}:\n  ${body}` },
     ],
   };
+}
+
+/**
+ * The look a band would carry: what it says now with the ask over it, dropped
+ * where the layers under it already say the same, and through the normalizer
+ * (ADR-008). A band left saying nothing goes, and takes its entry with it.
+ */
+export function onBand(
+  spec: Projection,
+  under: readonly StyleLayer[],
+  band: CompiledBand,
+  read: Reading,
+  want: StyleSays,
+): Writing | null {
+  const found = located(band.node, read);
+  if (found.kind === 'refused' || found.node.kind !== 'map') return null;
+
+  const kept = beyond({ ...resolve(band.style), ...want }, resolve(under), {});
+  const how = propertiesOf(kept).length === 0 ? null : normalize(kept, spec.grid.styles);
+  const held = holds(found.node, STYLE);
+
+  const ops = bandOps(found, how === null ? null : written(how), held, read);
+  return { file: found.file, ops, moves: reaches(spec.grid, band.node) };
+}
+
+/** The ops that put a band's `style:` where it goes, take it out, or take the band with it. */
+function bandOps(
+  found: Found & { kind: 'found' },
+  source: string | null,
+  held: boolean,
+  read: Reading,
+): readonly Op[] {
+  if (source !== null) {
+    return held
+      ? [{ op: 'write', path: [...found.path, STYLE], source }]
+      : [{ op: 'addSource', path: found.path, key: STYLE, source }];
+  }
+  if (!held) return [];
+
+  // A band written for its look alone goes when the look does, and takes the
+  // `columns:` key with it where it was the only band under it.
+  const rest = found.node.kind === 'map' ? found.node.entries.length : 0;
+  if (rest > 2) return [{ op: 'remove', path: [...found.path, STYLE] }];
+
+  return [{ op: 'remove', path: only(found, read) ? found.path.slice(0, -1) : found.path }];
+}
+
+/** Whether the band is the only one under its key: taking it out takes the key, since a sequence cannot be empty. */
+function only(found: Found & { kind: 'found' }, read: Reading): boolean {
+  const tree = read.parsed(found.file);
+  const under = tree?.root == null ? null : nodeAt(tree.root, found.path.slice(0, -1));
+  return under?.kind === 'seq' && under.items.length === 1;
 }
 
 /** What changing one supplying layer would be, over every cell that reads it. */

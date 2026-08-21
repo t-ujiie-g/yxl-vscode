@@ -618,3 +618,50 @@ describe('a look over a column whose cells take it from different places', () =>
     expect(answers.map((one) => one.id)).toEqual(['all']);
   });
 });
+
+describe('a look over a column that a band already covers', () => {
+  const BAND = `${SALES}    columns:\n      - at: A-K\n        style: { font: { bold: true } }\n    cells:\n      A1: 1\n`;
+  const WHOLE = at(1, 1, 40, 11);
+
+  it('goes into that band rather than writing a second one over the same span', () => {
+    const answers = offered(BAND, WHOLE, { 'font.italic': true }, 'columns');
+    const [answer] = answers.filter((one) => one.id === 'ofItsOwn');
+    if (answer === undefined) throw new Error('nothing was offered');
+
+    expect(taken(BAND, answer)).toBe(
+      `${SALES}    columns:\n      - at: A-K\n        style: { font: { bold: true, italic: true } }\n    cells:\n      A1: 1\n`,
+    );
+  });
+
+  it('takes the band away again when the look it was written for goes', () => {
+    // Bold, then not bold: the file is where it started rather than carrying
+    // `bold: false` under a band nothing else says anything about.
+    const answers = offered(BAND, WHOLE, { 'font.bold': false }, 'columns');
+    const [answer] = answers.filter((one) => one.id === 'ofItsOwn');
+    if (answer === undefined) throw new Error('nothing was offered');
+
+    expect(taken(BAND, answer)).toBe(`${SALES}    cells:\n      A1: 1\n`);
+  });
+
+  it('leaves the band where it says something else as well', () => {
+    const sized = `${SALES}    columns:\n      - at: A-K\n        width: 12\n        style: { font: { bold: true } }\n    cells:\n      A1: 1\n`;
+    const [answer] = offered(sized, WHOLE, { 'font.bold': false }, 'columns').filter(
+      (one) => one.id === 'ofItsOwn',
+    );
+    if (answer === undefined) throw new Error('nothing was offered');
+
+    expect(taken(sized, answer)).toBe(
+      `${SALES}    columns:\n      - at: A-K\n        width: 12\n    cells:\n      A1: 1\n`,
+    );
+  });
+
+  it('writes into a band that covers the span and says nothing about the look', () => {
+    const sized = `${SALES}    columns:\n      - at: A-K\n        width: 12\n    cells:\n      A1: 1\n`;
+    const [answer] = offered(sized, WHOLE, BOLD, 'columns').filter((one) => one.id === 'ofItsOwn');
+    if (answer === undefined) throw new Error('nothing was offered');
+
+    expect(taken(sized, answer)).toContain(
+      '      - at: A-K\n        width: 12\n        style: { font: { bold: true } }\n',
+    );
+  });
+});
