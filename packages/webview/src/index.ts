@@ -237,6 +237,19 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       said = null;
       host.postMessage({ kind: 'freeze', sheet: named(), at });
     },
+    takeAll: () => {
+      const of = drawing?.sheets[sheet];
+      if (of === undefined) return;
+
+      // Whole columns, so a look over the sheet is bands rather than a cell
+      // entry per address the grid happens to be drawing (ADR-041).
+      anchor = { row: of.of.rows, col: of.of.columns };
+      selected = { row: 1, col: 1 };
+      taken = 'columns';
+      sources = null;
+      host.postMessage({ kind: 'inspect', sheet: named(), row: 1, col: 1 });
+      restated();
+    },
     takeBand: (axis, at, extend) => {
       const of = drawing?.sheets[sheet];
       if (of === undefined) return;

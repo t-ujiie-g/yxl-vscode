@@ -35,6 +35,7 @@ function asks(): Asks {
     freeze: vi.fn(),
     openMenu: vi.fn(),
     takeBand: vi.fn(),
+    takeAll: vi.fn(),
   };
 }
 
@@ -363,6 +364,14 @@ describe('a heading a reader clicks', () => {
     expect(on.takeBand).not.toHaveBeenCalled();
   });
 
+  it('asks for the whole sheet from the corner, which is the button that lives there', () => {
+    const on = asks();
+    const into = shown({ drawing: drawing({ sheets: [wide] }) }, on);
+
+    into.querySelector<HTMLButtonElement>('.corner .all')?.click();
+    expect(on.takeAll).toHaveBeenCalled();
+  });
+
   it('lights the headings the selection reaches, and puts them out when it moves', () => {
     const into = document.createElement('div');
     const state = (at: Showing['selected'], to: Showing['anchor'] = null): Showing => ({
@@ -675,10 +684,11 @@ describe('moving about the grid with the keys', () => {
     const on = asks();
     const into = shown({ drawing: room() }, on);
 
-    at(into, 2, 2)?.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', metaKey: true }));
+    at(into, 2, 2)?.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'a', metaKey: true, bubbles: true }),
+    );
 
-    expect(on.select).toHaveBeenCalledWith(1, 1);
-    expect(on.reachTo).toHaveBeenCalledWith(4, 4);
+    expect(on.takeAll).toHaveBeenCalled();
   });
 
   it('draws the rectangle between the two corners, and only that', () => {

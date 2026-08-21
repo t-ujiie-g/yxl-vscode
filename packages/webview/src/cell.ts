@@ -95,7 +95,7 @@ export function typeInto(
 }
 
 /** What the spec holds for this cell, as a reader would type it. */
-function written(cell: DrawnCell | undefined): string {
+export function written(cell: DrawnCell | undefined): string {
   if (cell === undefined) return '';
   if (cell.formula !== null) return `=${cell.formula}`;
 

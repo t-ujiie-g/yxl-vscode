@@ -720,8 +720,9 @@ describe('looking for something in the sheet', () => {
   });
 });
 
-describe('the address box in the corner', () => {
-  const address = (into: HTMLElement) => into.querySelector<HTMLInputElement>('.corner .address');
+describe('the bar over the grid', () => {
+  const address = (into: HTMLElement) => into.querySelector<HTMLInputElement>('.formula .address');
+  const holds = (into: HTMLElement) => into.querySelector<HTMLInputElement>('.formula .holds');
 
   it('shows the address of the cell the reader is on', () => {
     const { into } = view();
@@ -752,5 +753,89 @@ describe('the address box in the corner', () => {
     box.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
 
     expect(into.querySelector('.under')?.textContent).toContain('is not an address');
+  });
+
+  it('shows what the cell holds, and nothing where no cell is selected', () => {
+    const { into } = view();
+    expect(holds(into)?.disabled).toBe(true);
+
+    at(into, 1, 1)?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    expect(holds(into)?.value).toBe('APAC');
+    expect(holds(into)?.disabled).toBe(false);
+  });
+
+  it('sends what is typed into it as an edit to that cell', () => {
+    const { into, sent } = view();
+
+    at(into, 1, 1)?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    const box = holds(into);
+    if (box === null) throw new Error('nothing to type into');
+
+    box.value = '=SUM(B1:B2)';
+    box.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+
+    expect(sent.filter((one) => one.kind === 'edit')).toEqual([
+      { kind: 'edit', sheet: 'Sales', row: 1, col: 1, text: '=SUM(B1:B2)' },
+    ]);
+  });
+
+  it('puts back what the cell holds on `Esc`, having sent nothing', () => {
+    const { into, sent } = view();
+
+    at(into, 1, 1)?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    const box = holds(into);
+    if (box === null) throw new Error('nothing to type into');
+
+    box.value = 'gone';
+    box.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+
+    expect(box.value).toBe('APAC');
+    expect(sent.filter((one) => one.kind === 'edit')).toEqual([]);
+  });
+
+  it('takes the whole sheet on `Cmd`+`A` wherever the keyboard is, and not the panel round it', () => {
+    const { into, sent } = view();
+    const event = new KeyboardEvent('keydown', {
+      key: 'a',
+      metaKey: true,
+      bubbles: true,
+      cancelable: true,
+    });
+
+    // On the corner button, which is where the reader's keyboard is after
+    // clicking it — and where the browser's own select-all took the panel.
+    into.querySelector<HTMLButtonElement>('.corner .all')?.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(sent.filter((one) => one.kind === 'inspect').at(-1)).toMatchObject({ row: 1, col: 1 });
+  });
+
+  it('leaves `Cmd`+`A` to the box the reader is typing in', () => {
+    const { into } = view();
+    const box = into.querySelector<HTMLInputElement>('.formula .holds');
+    const event = new KeyboardEvent('keydown', {
+      key: 'a',
+      metaKey: true,
+      bubbles: true,
+      cancelable: true,
+    });
+
+    box?.dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(false);
+  });
+
+  it('takes the whole sheet from the corner, as whole columns', () => {
+    const { into, sent } = view();
+
+    into.querySelector<HTMLButtonElement>('.corner .all')?.click();
+    into.querySelector<HTMLButtonElement>('button.look.bold')?.click();
+
+    expect(sent.filter((one) => one.kind === 'wear').at(-1)).toMatchObject({
+      top: 1,
+      left: 1,
+      bottom: 2,
+      right: 2,
+      whole: 'columns',
+    });
   });
 });

@@ -113,6 +113,7 @@ export interface Asks {
   readonly openMenu: (name: string | null) => void;
   readonly resize: (axis: Axis, at: number, size: number) => void;
   readonly takeBand: (axis: Axis, at: number, extend: boolean) => void;
+  readonly takeAll: () => void;
   readonly freeze: (at: At | null) => void;
   readonly resizedWith: (resized: Resized, choice: string) => void;
   readonly wornWith: (worn: Worn, choice: string) => void;

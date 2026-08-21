@@ -2,7 +2,7 @@ import type { Axis } from '@yxl-vscode/spec';
 import { columnLabel } from '@yxl-vscode/units';
 import { corner } from './boxes';
 import { drawCell, typeInto } from './cell';
-import { copying, going, looking as lookingFor, pasting, takingAll, undoing } from './keys';
+import { copying, going, looking as lookingFor, pasting, undoing } from './keys';
 import type { DrawnCell, DrawnMerge, DrawnSheet } from './protocol';
 import {
   type Asks,
@@ -120,7 +120,7 @@ function headings(sheet: DrawnSheet, showing: Showing, asks: Asks): HTMLElement 
   const head = document.createElement('thead');
   const line = document.createElement('tr');
   line.style.height = `${HEADING}px`;
-  line.append(corner(showing, asks));
+  line.append(corner(asks));
 
   for (const one of columnsOf(sheet)) {
     if ('pad' in one) {
@@ -345,13 +345,6 @@ function line(
       // key sets off, and the view decides there which paste this is.
       if (pasting(event)) {
         asks.paste(row, col);
-        return;
-      }
-
-      if (takingAll(event)) {
-        event.preventDefault();
-        asks.select(1, 1);
-        asks.reachTo(sheet.of.rows, sheet.of.columns);
         return;
       }
 

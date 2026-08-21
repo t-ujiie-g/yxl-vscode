@@ -1,4 +1,5 @@
-import { findBar, told } from './boxes';
+import { findBar, formulaBar, told } from './boxes';
+import { takingAll } from './keys';
 import { fit } from './menus';
 import {
   inspector,
@@ -43,6 +44,7 @@ export function draw(into: HTMLElement, showing: Showing, asks: Asks): void {
   if (drawing.params.length > 0) into.append(parameters(drawing, asks));
   if (drawing.sheets.length > 1) into.append(tabs(drawing, showing.sheet, asks.showSheet));
   into.append(toolbar(showing, asks));
+  into.append(formulaBar(showing, asks));
 
   const sheet = drawing.sheets[Math.min(showing.sheet, drawing.sheets.length - 1)];
   if (sheet !== undefined) {
@@ -58,8 +60,20 @@ export function draw(into: HTMLElement, showing: Showing, asks: Asks): void {
   into.append(under);
   say(under, showing, asks);
   fit(into);
+  into.addEventListener('keydown', (event) => taking(event, asks));
 
   if (held) focusCell(into, showing);
+}
+
+/**
+ * `Cmd`+`A` anywhere in the preview but a box being typed in. Without it the
+ * browser's own select-all runs beside ours and paints the whole panel blue.
+ */
+function taking(event: KeyboardEvent, asks: Asks): void {
+  if (!takingAll(event) || event.target instanceof HTMLInputElement) return;
+
+  event.preventDefault();
+  asks.takeAll();
 }
 
 /** The keyboard on the cell the reader has selected, where there is one. */
@@ -112,7 +126,7 @@ export function restate(into: HTMLElement, showing: Showing, asks: Asks): void {
   into.querySelector('.toolbar')?.replaceWith(toolbar(showing, asks));
 
   say(under, showing, asks);
-  told(into, showing);
+  told(into, showing, asks);
   fit(into);
 }
 

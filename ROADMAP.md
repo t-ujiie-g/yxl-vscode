@@ -433,13 +433,13 @@ not a date.
 | Drag a column wider, a row taller | ✅ — written as a band, and a band over more than the one dragged is a question |
 | Freeze the heading rows | ✅ — honoured wherever the reader has scrolled to, and set from the toolbar at the cell they are on |
 | Click a heading to take the whole row or column | ✅ — drag or `Shift` across several; the headings light as they do in both spreadsheets |
-| The corner takes the whole sheet | **Phase 10** — `Cmd`+`A` is the only way today |
+| The corner takes the whole sheet | ✅ — and takes it as whole columns, so a look over it is a band |
 | A look over the columns selected, in one gesture | ✅ — one band through the normalizer, never four hundred cells (ADR-041) |
 | A width over the columns selected | **Phase 10** — `setSize` still takes one column at a time |
 | Double-click the heading edge to fit the column to its contents | **Phase 10** |
 | Hide and unhide a row or a column | **Phase 10** — `hidden:` is drawn already, and cannot be set |
 | Group rows or columns, and collapse the group | **Phase 10** — `group:` is read and then dropped before the view; nothing of an outline is drawn |
-| A formula bar over the grid | **Phase 10** — what the cell *holds* is legible only inside the cell today |
+| A formula bar over the grid | ✅ — what the cell holds, editable there, never what it computes to |
 | What the selection comes to — count, sum, average | **Phase 10** — every spreadsheet's status bar |
 | `Cmd`+`B` / `I` / `U` | **Phase 10** — the toolbar has them, the keyboard does not |
 | The font face and size | **Phase 10** — `docs/spec.md` §6 has both and the toolbar offers neither |
@@ -1097,9 +1097,13 @@ gestures on a *heading*, and the headings are not selectors yet.
       its own gesture: pressing the edge sizes, pressing the heading selects.
       What the view sends with the *look* that follows is how the selection was
       taken (**ADR-041**), because a look over a whole column is a band.
-- [ ] **The corner takes the sheet**, which is the button every spreadsheet
+- [x] **The corner takes the sheet**, which is the button every spreadsheet
       keeps there — so **the address box moves into a formula bar** and stops
       squatting where *select all* belongs.
+      **In**, with the bar it needed. What the corner takes is *whole columns*
+      (ADR-041), so a look over the sheet is a band over its columns rather
+      than a `cells:` entry per address the grid happens to be drawing — which
+      is what `Cmd`+`A` and then bold would have written before today.
 - [x] **A look over what is selected, in one gesture.** §4.4's `setStyle`
       answered over a *span* of columns rather than a rectangle of cells.
       **In**: a look asked for over whole columns or rows is **one band**, put
@@ -1135,10 +1139,16 @@ gestures on a *heading*, and the headings are not selectors yet.
       alone.
       The corner's level buttons (`1` `2` `3`, collapse everything at a level)
       are a bulk write over every band at once and are **not** in this slice.
-- [ ] **A formula bar.** What the cell *holds* — the formula, not what it comes
+- [x] **A formula bar.** What the cell *holds* — the formula, not what it comes
       to (ADR-014) — legible without opening the cell, and editable there
       through the same intent path typing into the cell takes. The address box
       sits beside it, as in both spreadsheets.
+      **In**: address, `fx`, and what the cell holds, above the grid. `Enter`
+      sends the same edit typing into the cell sends, so every refusal and
+      every answer is the one the cell would have given; `Esc` puts back what
+      was there. The bar is *rebuilt* on every restate rather than written
+      into, because what it sends is about the cell selected now — unless the
+      reader is typing in it, whose text is theirs until they leave.
 - [ ] **What the selection comes to**, under the grid: count, sum, average of
       the rectangle, from the evaluated values and unreachable from any write
       (ADR-014).
@@ -2444,6 +2454,35 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-22 — A bar over the grid, and the corner takes the sheet
+Phase 10's second item, which could not be done without its eighth: the address
+box had to move somewhere, and the only right place is a formula bar.
+
+- **The bar is address, `fx`, and what the cell holds.** What it shows is what
+  the *spec* holds — the formula, never what it comes to (ADR-014) — which is
+  the same text the cell's own edit box seeds with, so the two can never
+  disagree. `Enter` sends the edit typing into the cell sends: same intent,
+  same answers, same refusals. `Esc` puts back what was there.
+- **It is rebuilt rather than written into.** A bar built once closes over the
+  selection it was built with, and sends an edit about whichever cell was
+  selected *then* — which is a bug that only shows once the reader clicks
+  elsewhere first. Every restate replaces it, except while the reader is typing
+  in it, whose text is theirs until they leave.
+- **The corner is the button it is everywhere else.** It takes the whole sheet
+  — as *whole columns*, so bolding everything writes a band over the columns
+  rather than a `cells:` entry per address the grid was drawing (ADR-041).
+  `Cmd`+`A` is the same gesture and now goes the same way; before today it was
+  a rectangle of eight thousand addresses and an answer nobody would take.
+- **`Cmd`+`A` is caught where the preview can see it.** It was handled on the
+  cell, so with the keyboard anywhere else — the corner button, having just
+  clicked it — the browser's own select-all ran instead and painted the whole
+  panel blue. It is one listener at the root of the view now, and the box a
+  reader is typing in keeps its own `Cmd`+`A`.
+- **The heading row is still 24px**, measured after the address box left it:
+  the row's own height is the whole story now rather than a description of what
+  the box made it, and the frozen panes are placed against that number.
+- 1614 → 1618 tests.
 
 ### 2026-08-22 — The headings select, and a look over a column is a band
 Phase 10's first item, and the half of its third that the first one makes
