@@ -1,5 +1,5 @@
 import { sheetOf } from '@yxl-vscode/compile';
-import type { Op, Path } from '@yxl-vscode/cst';
+import { holds, type Op, type Path } from '@yxl-vscode/cst';
 import { type A1Addr, cellOf, type SheetName } from '@yxl-vscode/units';
 import { type Intent, located, type Reading, refused } from './direct';
 import type { Projection } from './writes';
@@ -28,16 +28,13 @@ export function setFreeze(spec: Projection, frozen: Frozen, read: Reading): Inte
   if (found.kind === 'refused') return found;
   if (found.node.kind !== 'map') return refused(`\`${frozen.sheet}\` is not written as a sheet`);
 
-  const entries = found.node.entries;
-  const has = (key: string): boolean => entries.some((entry) => entry.key.value === key);
-
-  if (has('split')) {
+  if (holds(found.node, 'split')) {
     return refused(
       `\`${frozen.sheet}\` is split, and a sheet cannot have both a \`split\` and a \`freeze\``,
     );
   }
 
-  const op = written(found.path, at, has('freeze'));
+  const op = written(found.path, at, holds(found.node, 'freeze'));
   if (op === null) return refused(`\`${frozen.sheet}\` freezes nothing to take off`);
 
   return {

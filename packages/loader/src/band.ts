@@ -1,5 +1,6 @@
 import type { Node, Path } from '@yxl-vscode/cst';
 import {
+  BAND_KEYS,
   type ColumnBand,
   MODELED_KEYS,
   type RowBand,
@@ -34,7 +35,7 @@ export function readColumnBands(ctx: Ctx, node: Node, path: Path): ColumnBand[] 
     const at = readSelector(band, what, COLUMN);
     if (at === null) return null;
 
-    const body = readBandBody(band, what, 'width', MODELED_KEYS.columnBand);
+    const body = readBandBody(band, what, BAND_KEYS.column.size, MODELED_KEYS.columnBand);
     return { ...identify(band.ctx, band.path, band.node.span), at, width: body.size, ...body.rest };
   });
 }
@@ -50,7 +51,7 @@ export function readRowBands(ctx: Ctx, node: Node, path: Path): RowBand[] {
     const at = readSelector(band, what, ROW);
     if (at === null) return null;
 
-    const body = readBandBody(band, what, 'height', MODELED_KEYS.rowBand);
+    const body = readBandBody(band, what, BAND_KEYS.row.size, MODELED_KEYS.rowBand);
     return {
       ...identify(band.ctx, band.path, band.node.span),
       at,

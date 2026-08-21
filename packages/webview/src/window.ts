@@ -1,3 +1,4 @@
+import type { Axis } from '@yxl-vscode/spec';
 import type { DrawnSheet, Sized } from './protocol';
 
 /** Excel's own units, as CSS: a character width is about 7px, a point is 4/3 of one. */
@@ -11,7 +12,7 @@ const LEAST = { column: 1, row: 6 };
  * A dragged size in the units a spec writes it in — character units across,
  * points down (`docs/spec.md` §4) — to the two places a reader would read.
  */
-export function sizeOf(axis: 'column' | 'row', px: number): number {
+export function sizeOf(axis: Axis, px: number): number {
   const size = px / (axis === 'column' ? PER_CHARACTER : PER_POINT);
   return Math.max(LEAST[axis], Math.round(size * 100) / 100);
 }

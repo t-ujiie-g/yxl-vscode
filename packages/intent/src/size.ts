@@ -1,12 +1,10 @@
 import { type CompiledBand, type CompiledSheet, sheetOf } from '@yxl-vscode/compile';
-import type { Node, Op } from '@yxl-vscode/cst';
+import { entryOf, holds, type Node, type Op } from '@yxl-vscode/cst';
+import { type Axis, BAND_KEYS } from '@yxl-vscode/spec';
 import { columnLabel, type SheetName } from '@yxl-vscode/units';
 import { type Found, located, type Reading } from './direct';
 import type { Candidate } from './resolve';
 import type { Projection } from './writes';
-
-/** Which way a band runs, which decides the key a size is written under (`docs/spec.md` §4). */
-export type Axis = 'column' | 'row';
 
 /** A column dragged to a width in character units, or a row to a height in points. */
 export interface Dragged {
@@ -53,9 +51,9 @@ function ofItsOwn(sheet: CompiledSheet, dragged: Dragged, read: Reading): Candid
   const found = located(sheet.node, read);
   if (found.kind === 'refused' || found.node.kind !== 'map') return null;
 
-  const key = dragged.axis === 'column' ? 'columns' : 'rows';
-  const body = `at: ${spelled(dragged.at, dragged.at, dragged.axis)}\n${sizeKey(dragged.axis)}: ${dragged.size}`;
-  const held = found.node.entries.find((entry) => entry.key.value === key)?.value;
+  const key = BAND_KEYS[dragged.axis].at;
+  const body = `at: ${spelled(dragged.at, dragged.at, dragged.axis)}\n${BAND_KEYS[dragged.axis].size}: ${dragged.size}`;
+  const held = entryOf(found.node, key)?.value;
 
   const op: Op =
     held?.kind === 'seq'
@@ -70,8 +68,8 @@ function theBand(band: CompiledBand, dragged: Dragged, read: Reading): Candidate
   const found = located(band.node, read);
   if (found.kind === 'refused' || found.node.kind !== 'map') return null;
 
-  const key = sizeKey(dragged.axis);
-  if (!found.node.entries.some((entry) => entry.key.value === key)) return null;
+  const key = BAND_KEYS[dragged.axis].size;
+  if (!holds(found.node, key)) return null;
 
   const many = band.last - band.first + 1;
   const what =
@@ -103,7 +101,7 @@ function apart(band: CompiledBand, dragged: Dragged, read: Reading): Candidate |
     const own = run.first === dragged.at && run.last === dragged.at;
     const said = respelled(source, found.node, [
       ['at', at],
-      ...(own ? [[sizeKey(dragged.axis), String(dragged.size)] as const] : []),
+      ...(own ? [[BAND_KEYS[dragged.axis].size, String(dragged.size)] as const] : []),
     ]);
     if (said === null) return null;
 
@@ -167,9 +165,7 @@ function respelled(
   changes: readonly (readonly [string, string])[],
 ): string | null {
   const from = node.span.start;
-  const spans = changes.map(
-    ([key, value]) => [node.entries.find((entry) => entry.key.value === key), value] as const,
-  );
+  const spans = changes.map(([key, value]) => [entryOf(node, key), value] as const);
   if (spans.some(([entry]) => entry === undefined)) return null;
 
   let said = source.slice(from, node.span.end);
@@ -205,12 +201,8 @@ function spelled(first: number, last: number, axis: Axis): string {
   return first === last ? said(first) : `${said(first)}-${said(last)}`;
 }
 
-function sizeKey(axis: Axis): string {
-  return axis === 'column' ? 'width' : 'height';
-}
-
 /** One key of a mapping as the spec spells it, for a comparison against what it resolved to. */
 function spelt(node: Node & { kind: 'map' }, key: string): string | null {
-  const held = node.entries.find((entry) => entry.key.value === key)?.value;
+  const held = entryOf(node, key)?.value;
   return held?.kind === 'scalar' ? String(held.value) : null;
 }

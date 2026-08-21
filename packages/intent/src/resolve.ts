@@ -10,8 +10,8 @@ import {
   reaches,
   sheetOf,
 } from '@yxl-vscode/compile';
-import { type Node, type Op, type Path, renderScalar } from '@yxl-vscode/cst';
-import type { ScalarValue } from '@yxl-vscode/spec';
+import { entryOf, holds, type Node, type Op, type Path, renderScalar } from '@yxl-vscode/cst';
+import { REF_KEY, type ScalarValue } from '@yxl-vscode/spec';
 import {
   type A1Addr,
   addrAt,
@@ -192,13 +192,10 @@ export function detachment(
 function reference(found: Found): { file: FilePath; path: Path } | null {
   if (found.kind === 'refused' || found.node.kind !== 'map') return null;
 
-  const refs = (node: Node): boolean =>
-    node.kind === 'map' && node.entries.some((entry) => entry.key.value === '$ref');
+  if (holds(found.node, REF_KEY)) return { file: found.file, path: found.path };
 
-  if (refs(found.node)) return { file: found.file, path: found.path };
-
-  const held = found.node.entries.find((entry) => entry.key.value === 'value');
-  return held !== undefined && refs(held.value)
+  const held = entryOf(found.node, 'value');
+  return held !== undefined && holds(held.value, REF_KEY)
     ? { file: found.file, path: [...found.path, 'value'] }
     : null;
 }
@@ -230,10 +227,10 @@ function newCell(
   const found = located(sheet.node, read);
   if (found.kind === 'refused' || found.node.kind !== 'map') return null;
 
-  const holds = found.node.entries.some((entry) => entry.key.value === 'cells');
+  const written = holds(found.node, 'cells');
   const op = entryOp(
-    holds ? [...found.path, 'cells'] : found.path,
-    holds,
+    written ? [...found.path, 'cells'] : found.path,
+    written,
     where.at,
     holding(typed),
   );
@@ -304,7 +301,7 @@ function filledRange(
 
   const found = located(origin.node, read);
   if (found.kind === 'refused' || found.node.kind !== 'map') return [];
-  if (!found.node.entries.some((entry) => entry.key.value === 'formula')) return [];
+  if (!holds(found.node, 'formula')) return [];
 
   const fill = sheet.fills.find((one) => one.node === origin.node);
   if (fill === undefined) return [];
@@ -412,7 +409,7 @@ function split(
 function spelt(node: Node, key: string): string | null {
   if (node.kind !== 'map') return null;
 
-  const held = node.entries.find((entry) => entry.key.value === key)?.value;
+  const held = entryOf(node, key)?.value;
   return held?.kind === 'scalar' ? String(held.value) : null;
 }
 

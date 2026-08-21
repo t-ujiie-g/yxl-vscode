@@ -13,35 +13,6 @@ import {
   type Showing,
 } from './showing';
 
-export { type Kept, sheetAgain } from './again';
-export { draw, restate } from './draw';
-export type {
-  Drawing,
-  DrawnCell,
-  DrawnDiagnostic,
-  DrawnMerge,
-  DrawnRun,
-  DrawnSheet,
-  Editable,
-  FromView,
-  Highlighted,
-  Inspected,
-  Pasted,
-  Refused,
-  Sized,
-  Source,
-  ToView,
-  Typed,
-  Uncomputed,
-} from './protocol';
-export type {
-  Asks,
-  Copied,
-  Looking,
-  Reached,
-  Showing,
-} from './showing';
-
 /** The bridge VS Code puts in a webview, and the only way out of one. */
 declare function acquireVsCodeApi(): { postMessage: (message: FromView) => void };
 

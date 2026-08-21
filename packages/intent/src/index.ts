@@ -22,7 +22,7 @@ export {
   type Standing,
 } from './paste';
 export { type Candidate, candidates, type Resolving } from './resolve';
-export { type Axis, type Dragged, setSize } from './size';
+export { type Dragged, setSize } from './size';
 export { type Projection, setStyle } from './style';
 export { tabular } from './tabular';
 export { type Meaning, meaning } from './typed';

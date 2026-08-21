@@ -6,7 +6,11 @@ export const REF_KEY = '$ref';
 /** The mapping key that stands for the contents of another file. */
 export const INCLUDE_KEY = '$include';
 
-const CELL_KEYS = ['value', 'formula', 'rich', 'type', 'format', 'style'] as const;
+/** The keys a cell says what it *holds* in, against the ones it says how it *looks* in. */
+export const CELL_HOLDS: ReadonlySet<string> = keySet(['value', 'formula', 'rich', 'type']);
+export const CELL_WEARS: ReadonlySet<string> = keySet(['format', 'style']);
+
+const CELL_KEYS = [...CELL_HOLDS, ...CELL_WEARS];
 
 /**
  * The keys each construct is read from; a key not here is kept verbatim and
