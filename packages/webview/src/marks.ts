@@ -35,16 +35,17 @@ export const ACROSS = [2, 5.6, 9.2, 12.8];
 export const DOWN = [0, 2.8, 5.6];
 export const RAGGED = [12, 8, 12, 8];
 
-/** The box a frozen pane is marked by: a faint frame, with the two edges the panes are split along. */
-export function split(): Bar[] {
+/** The mark a frozen pane wears: the corner that stays, filled in, and the two edges it is split along. */
+export function frozen(): Bar[] {
   return [
     ...framed([]),
-    { x: 1, y: 5.6, width: 14, height: 1.6 },
-    { x: 5.6, y: 1, width: 1.6, height: 14 },
+    { x: 2, y: 2, width: 4, height: 4, faint: true },
+    { x: 1, y: 6, width: 14, height: 1.6 },
+    { x: 6, y: 1, width: 1.6, height: 14 },
   ];
 }
 
-/** The box a border mark is drawn in, with the edges it puts a line on standing out. */
+/** The box a border mark is drawn in, with the edges it puts a line on drawn heavier than the rest. */
 export function framed(sides: readonly string[]): Bar[] {
   const box = {
     top: { x: 1, y: 1, width: 14, height: 1 },
@@ -53,5 +54,10 @@ export function framed(sides: readonly string[]): Bar[] {
     right: { x: 14, y: 1, width: 1, height: 14 },
   };
 
-  return BORDER_EDGES.map((side) => ({ ...box[side], faint: !sides.includes(side) }));
+  return BORDER_EDGES.map((side) => {
+    const lit = sides.includes(side);
+    const thick = side === 'top' || side === 'bottom' ? { height: lit ? 2.2 : 1 } : {};
+    const wide = side === 'left' || side === 'right' ? { width: lit ? 2.2 : 1 } : {};
+    return { ...box[side], ...thick, ...wide, faint: !lit };
+  });
 }

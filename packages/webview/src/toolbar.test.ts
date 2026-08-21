@@ -420,3 +420,13 @@ describe('where the sheet is frozen', () => {
     expect(button(toolbar(showing({}), asksFreeze()), true)?.disabled).toBe(true);
   });
 });
+
+describe('how the bar is laid out', () => {
+  it('rules the groups apart, so a bar that wrapped still reads as groups', () => {
+    const bar = toolbar(showing({ selected: { row: 1, col: 1 } }), asks());
+    const kinds = [...bar.children].map((one) => (one.className === 'divider' ? '|' : '.'));
+
+    // Font, colour, alignment across, alignment down, number, borders, panes.
+    expect(kinds.join('').split('|')).toHaveLength(7);
+  });
+});

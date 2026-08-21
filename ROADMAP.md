@@ -2292,6 +2292,29 @@ than widening it silently.
 
 ## 11. Living changelog
 
+### 2026-08-21 — A toolbar that fits the panel it is in
+From opening the preview in a real window: at a 400px panel — which is what a
+preview beside the text actually gets — the bar ran off the right edge and the
+controls at that end could not be reached at all.
+
+- **It wraps rather than overflows.** A control the reader cannot see is a
+  control they do not have, so the bar breaks onto a second row instead of
+  running past the edge, and its buttons no longer squash to fit: 2 rows at
+  780px, 3 at 420px, nothing hidden at either.
+- **The groups are ruled apart** the way every spreadsheet rules them, which a
+  wrapped bar needs more than a straight one — without it a second row reads as
+  one undifferentiated run of icons. The two alignment axes are two groups now,
+  not six buttons in a row.
+- **A border button shows which edge it draws.** At 16px an edge that was only
+  *lit* read as a plain box, so all six looked alike; the named edge is drawn
+  heavier than the rest and they tell apart at a glance.
+- **The freeze button stopped looking like a seventh border button.** It sits
+  next to them, and a frame with two crossing lines is a frame; it has the
+  corner that stays filled in now.
+- Measured at 360, 420, 520 and 780px under headless Chrome, on the view's own
+  markup rather than a hand-written copy of it.
+- 1582 → 1585 tests.
+
 ### 2026-08-21 — Panes that stay put
 Phase 9's last item, and the first thing the preview honours that is about the
 *sheet* rather than about a cell. **ADR-040.**

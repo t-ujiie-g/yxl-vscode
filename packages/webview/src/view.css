@@ -48,14 +48,19 @@ body {
   border-color: var(--vscode-focusBorder);
 }
 
+/* Wraps rather than overflows: the preview is often a narrow panel beside the
+   text, and a control the reader cannot see is a control they do not have. */
 .toolbar {
   display: flex;
-  gap: 0.25rem;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.2rem;
   margin-bottom: 0.4rem;
 }
 
 .look {
   display: inline-flex;
+  flex: none;
   align-items: center;
   justify-content: center;
   width: 1.9rem;
@@ -121,13 +126,25 @@ body {
   opacity: 0.3;
 }
 
-.gap {
-  width: 0.5rem;
+/* The line between one group of controls and the next, as every spreadsheet
+   draws it; without it a wrapped row reads as one long undifferentiated run. */
+.divider {
+  flex: none;
+  align-self: stretch;
+  width: 1px;
+  margin: 0.15rem 0.3rem;
+  background: var(--vscode-panel-border);
 }
 
-.look.numbers {
+.look.numbers,
+.look.lines {
   width: auto;
+  max-width: 7.5rem;
   padding: 0.1rem 0.2rem;
+}
+
+.look.lines {
+  max-width: 5.5rem;
 }
 
 .pick {

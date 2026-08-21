@@ -12,7 +12,7 @@ import {
 import { addrAt, type Color, parseColor, type Rect } from '@yxl-vscode/units';
 import { underFormat } from './cell';
 import { between } from './keys';
-import { ACROSS, type Bar, DOWN, framed, marked, RAGGED, split } from './marks';
+import { ACROSS, type Bar, DOWN, framed, frozen, marked, RAGGED } from './marks';
 import type { DrawnCell } from './protocol';
 import type { Asks, Showing } from './showing';
 
@@ -22,17 +22,20 @@ export function toolbar(showing: Showing, asks: Asks): HTMLElement {
   bar.className = 'toolbar';
 
   for (const one of TOGGLES) bar.append(toggle(one, showing, asks));
-  bar.append(gap());
+  bar.append(divider());
   for (const one of INKS) bar.append(...ink(one, showing, asks));
-  bar.append(gap());
-  for (const one of PICKS) bar.append(pick(one, showing, asks));
+  bar.append(divider());
+  for (const one of PICKS) {
+    if (one.key === 'align.vertical' && one.value === 'top') bar.append(divider());
+    bar.append(pick(one, showing, asks));
+  }
   bar.append(toggle(WRAP, showing, asks));
-  bar.append(gap());
+  bar.append(divider());
   bar.append(numbers(showing, asks));
-  bar.append(gap());
+  bar.append(divider());
   for (const one of EDGES) bar.append(edge(one, showing, asks));
   bar.append(lines(showing, asks));
-  bar.append(gap());
+  bar.append(divider());
   bar.append(...panes(showing, asks));
 
   return bar;
@@ -41,8 +44,8 @@ export function toolbar(showing: Showing, asks: Asks): HTMLElement {
 /** Where the sheet's panes are frozen: at the selected cell, and the button that takes the freeze off. */
 function panes(showing: Showing, asks: Asks): HTMLElement[] {
   const at = showing.selected;
-  const frozen = showing.drawing.sheets[showing.sheet]?.freeze ?? null;
-  const here = at !== null && frozen?.row === at.row && frozen.col === at.col;
+  const stays = showing.drawing.sheets[showing.sheet]?.freeze ?? null;
+  const here = at !== null && stays?.row === at.row && stays.col === at.col;
 
   const freeze = document.createElement('button');
   freeze.type = 'button';
@@ -53,7 +56,7 @@ function panes(showing: Showing, asks: Asks): HTMLElement[] {
       : `Freeze the rows above and the columns left of ${addrAt(at)}`;
   freeze.disabled = at === null || (at.row === 1 && at.col === 1);
   freeze.setAttribute('aria-pressed', here ? 'true' : 'false');
-  freeze.append(marked(split()));
+  freeze.append(marked(frozen()));
   freeze.addEventListener('click', () => asks.freeze(at));
 
   const off = document.createElement('button');
@@ -61,16 +64,16 @@ function panes(showing: Showing, asks: Asks): HTMLElement[] {
   off.className = 'look off freeze';
   off.textContent = '×';
   off.title = 'Unfreeze';
-  off.disabled = frozen === null;
+  off.disabled = stays === null;
   off.addEventListener('click', () => asks.freeze(null));
 
   return [freeze, off];
 }
 
-/** The space between one group of controls and the next. */
-function gap(): HTMLElement {
+/** The rule between one group of controls and the next. */
+function divider(): HTMLElement {
   const span = document.createElement('span');
-  span.className = 'gap';
+  span.className = 'divider';
   return span;
 }
 
@@ -321,7 +324,7 @@ function drawn(of: Edge, line: BorderStyle): StyleSays {
 function lines(showing: Showing, asks: Asks): HTMLElement {
   const box = document.createElement('select');
 
-  box.className = 'look numbers';
+  box.className = 'look lines';
   box.title = 'The line a border is drawn with';
   box.disabled = showing.selected === null;
 
