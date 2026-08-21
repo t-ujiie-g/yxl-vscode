@@ -27,6 +27,7 @@ function showing(of: {
   cells?: DrawnCell[];
   selected?: { row: number; col: number };
   freeze?: DrawnSheet['freeze'];
+  menu?: string;
 }): Showing {
   const sheet: DrawnSheet = {
     name: 'Sales',
@@ -64,10 +65,11 @@ function showing(of: {
     looking: null,
     editable: 'direct',
     line: 'thin',
+    menu: of.menu ?? null,
   };
 }
 
-const asks = (wear = vi.fn()): Asks => ({ wear }) as unknown as Asks;
+const asks = (wear = vi.fn()): Asks => ({ wear, openMenu: vi.fn() }) as unknown as Asks;
 
 /** The rectangle the one selected cell of these fixtures names. */
 const ONE = { top: 1, left: 1, bottom: 1, right: 1 };
@@ -77,14 +79,17 @@ describe('the switches a reader reaches for first', () => {
     const bar = toolbar(showing({}), asks());
     const buttons = [...bar.querySelectorAll('button')];
 
-    expect(buttons.every((one) => one.disabled)).toBe(true);
+    // Freezing is not a look: it wants a cell, but taking a freeze off does not.
+    expect(buttons.filter((one) => one.title !== 'Freeze panes').every((one) => one.disabled)).toBe(
+      true,
+    );
     expect(buttons.map((one) => one.title)).toEqual([
       'Bold',
       'Italic',
       'Underline',
       'Strikethrough',
-      'Automatic text colour',
-      'No fill',
+      'Text colour',
+      'Fill',
       'Align left',
       'Align centre',
       'Align right',
@@ -92,16 +97,9 @@ describe('the switches a reader reaches for first', () => {
       'Align middle',
       'Align bottom',
       'Wrap text',
-      'All borders',
-      'Top border',
-      'Bottom border',
-      'Left border',
-      'Right border',
-      'No borders',
+      'Borders',
       'Freeze panes',
-      'Unfreeze',
     ]);
-    expect([...bar.querySelectorAll('input')].every((one) => one.disabled)).toBe(true);
   });
 
   it('asks for the other of what the selected cell wears', () => {
@@ -117,7 +115,7 @@ describe('the switches a reader reaches for first', () => {
     const cells = [cell({ style: { 'font.italic': true } })];
     const bar = toolbar(showing({ cells, selected: { row: 1, col: 1 } }), asks());
 
-    const on = [...bar.querySelectorAll('button.look:not(.off)')]
+    const on = [...bar.querySelectorAll('button.look')]
       .slice(0, 4)
       .map((one) => one.classList.contains('on'));
     expect(on).toEqual([false, true, false, false]);
@@ -127,50 +125,83 @@ describe('the switches a reader reaches for first', () => {
 describe('the colours a reader picks', () => {
   const NAVY = parseColor('1F3864') as Color;
   const RED = parseColor('FF0000') as Color;
-  const ink = (bar: HTMLElement) => bar.querySelector<HTMLInputElement>('.look.ink .pick');
-  const fill = (bar: HTMLElement) => bar.querySelector<HTMLInputElement>('.look.fill .pick');
+  const opened = (key: 'ink' | 'fill', of: Parameters<typeof showing>[0], on = vi.fn()) =>
+    toolbar(showing({ ...of, menu: key }), asks(on));
 
-  it('opens on what the selected cell wears', () => {
-    const cells = [cell({ style: { fill: NAVY } })];
-    const bar = toolbar(showing({ cells, selected: { row: 1, col: 1 } }), asks());
+  it('is a palette under the button, which is where a spreadsheet keeps one', () => {
+    const bar = opened('fill', { cells: [cell({})], selected: { row: 1, col: 1 } });
 
-    expect(fill(bar)?.value).toBe('#1f3864');
-    expect(ink(bar)?.value).toBe('#000000');
+    expect(bar.querySelectorAll('.panel .swatch')).toHaveLength(20);
+    expect(bar.querySelector('.panel .entry.clears')?.textContent).toBe('No fill');
   });
 
-  it('asks for the colour picked, in the spelling a spec writes', () => {
+  it('says which of the standards the cell already wears', () => {
+    const cells = [cell({ style: { fill: NAVY } })];
+    const navy = opened('fill', { cells, selected: { row: 1, col: 1 } });
+    const black = opened('ink', { cells, selected: { row: 1, col: 1 } });
+
+    expect(navy.querySelector('.panel .swatch.here')).toBeNull();
+    expect(black.querySelector('.panel .swatch.here')).toBeNull();
+
+    const red = opened('ink', {
+      cells: [cell({ style: { 'font.color': RED } })],
+      selected: { row: 1, col: 1 },
+    });
+    expect(red.querySelector('.panel .swatch.here')?.getAttribute('title')).toBe('#FF0000');
+  });
+
+  it('asks for the standard picked, in the spelling a spec writes', () => {
     const wear = vi.fn();
-    const bar = toolbar(showing({ cells: [cell({})], selected: { row: 1, col: 1 } }), asks(wear));
+    const bar = opened('fill', { cells: [cell({})], selected: { row: 1, col: 1 } }, wear);
 
-    const pick = fill(bar);
+    bar.querySelector<HTMLButtonElement>('.panel .swatch[title="#FF9900"]')?.click();
+    expect(wear).toHaveBeenCalledWith({ fill: 'FF9900' }, ONE);
+  });
+
+  it('opens the picker on what the cell wears, for a colour the standards do not have', () => {
+    const wear = vi.fn();
+    const cells = [cell({ style: { fill: NAVY } })];
+    const bar = opened('fill', { cells, selected: { row: 1, col: 1 } }, wear);
+
+    const pick = bar.querySelector<HTMLInputElement>('.panel .custom .pick');
     if (pick === null) throw new Error('there is no picker');
-    pick.value = '#1f3864';
-    pick.dispatchEvent(new Event('change'));
+    expect(pick.value).toBe('#1f3864');
 
-    expect(wear).toHaveBeenCalledWith({ fill: '1F3864' }, ONE);
+    pick.value = '#4a86e8';
+    pick.dispatchEvent(new Event('change'));
+    expect(wear).toHaveBeenCalledWith({ fill: '4A86E8' }, ONE);
   });
 
   it('asks for it off, which is a look the schema says by leaving it out', () => {
     const wear = vi.fn();
     const cells = [cell({ style: { 'font.color': RED } })];
-    const bar = toolbar(showing({ cells, selected: { row: 1, col: 1 } }), asks(wear));
+    const bar = opened('ink', { cells, selected: { row: 1, col: 1 } }, wear);
 
-    bar.querySelector<HTMLButtonElement>('button.off.ink')?.click();
+    bar.querySelector<HTMLButtonElement>('.panel .entry.clears')?.click();
     expect(wear).toHaveBeenCalledWith({ 'font.color': null }, ONE);
   });
 
   it('cannot be taken off where the cell has none', () => {
     const cells = [cell({ style: { fill: NAVY } })];
-    const bar = toolbar(showing({ cells, selected: { row: 1, col: 1 } }), asks());
+    const fill = opened('fill', { cells, selected: { row: 1, col: 1 } });
+    const ink = opened('ink', { cells, selected: { row: 1, col: 1 } });
 
-    expect(bar.querySelector<HTMLButtonElement>('button.off.fill')?.disabled).toBe(false);
-    expect(bar.querySelector<HTMLButtonElement>('button.off.ink')?.disabled).toBe(true);
+    expect(fill.querySelector<HTMLButtonElement>('.panel .entry.clears')?.disabled).toBe(false);
+    expect(ink.querySelector<HTMLButtonElement>('.panel .entry.clears')?.disabled).toBe(true);
+  });
+
+  it('shows the colour on the button, so the bar says what is set without opening', () => {
+    const cells = [cell({ style: { fill: NAVY } })];
+    const bar = toolbar(showing({ cells, selected: { row: 1, col: 1 } }), asks());
+    const swatch = bar.querySelector<HTMLElement>('.look.fill .letter');
+
+    expect(swatch?.style.borderBottomColor).toBe('rgb(31, 56, 100)');
   });
 });
 
 describe('where the text sits', () => {
   const marks = (bar: HTMLElement) =>
-    [...bar.querySelectorAll('button.look:not(.edge):not(.freeze)')].filter(
+    [...bar.querySelectorAll('button.look:not(.opener)')].filter(
       (one) => one.querySelector('svg') !== null,
     );
 
@@ -307,11 +338,20 @@ describe('a number under a format', () => {
 
 describe('a border a reader draws', () => {
   const drawn = (bar: HTMLElement, name: string) =>
-    bar.querySelector<HTMLButtonElement>(`button.edge.${name}`);
+    bar.querySelector<HTMLButtonElement>(`.panel button.edge.${name}`);
+  const opened = (of: Parameters<typeof showing>[0], on: Asks) =>
+    toolbar(showing({ ...of, menu: 'borders' }), on);
+
+  it('is one button that opens the edges, as Sheets and Excel both keep it', () => {
+    const bar = toolbar(showing({ cells: [cell({})], selected: { row: 1, col: 1 } }), asks());
+
+    expect(bar.querySelectorAll('button.edge')).toHaveLength(0);
+    expect(bar.querySelector<HTMLButtonElement>('button.borders')?.title).toBe('Borders');
+  });
 
   it('puts the line the toolbar is set to on the edges it names', () => {
     const wear = vi.fn();
-    const bar = toolbar(showing({ cells: [cell({})], selected: { row: 1, col: 1 } }), asks(wear));
+    const bar = opened({ cells: [cell({})], selected: { row: 1, col: 1 } }, asks(wear));
 
     drawn(bar, 'bottom')?.click();
     expect(wear).toHaveBeenCalledWith({ 'border.bottom.style': 'thin' }, ONE);
@@ -330,7 +370,10 @@ describe('a border a reader draws', () => {
 
   it('draws with the line the reader chose, not the one it started on', () => {
     const wear = vi.fn();
-    const at = { ...showing({ cells: [cell({})], selected: { row: 1, col: 1 } }), line: 'double' };
+    const at = {
+      ...showing({ cells: [cell({})], selected: { row: 1, col: 1 }, menu: 'borders' }),
+      line: 'double',
+    };
     const bar = toolbar(at as Showing, asks(wear));
 
     drawn(bar, 'top')?.click();
@@ -339,12 +382,12 @@ describe('a border a reader draws', () => {
 
   it('asks for the line style the reader picked, which is the view own setting', () => {
     const drawWith = vi.fn();
-    const bar = toolbar(showing({ cells: [cell({})], selected: { row: 1, col: 1 } }), {
+    const bar = opened({ cells: [cell({})], selected: { row: 1, col: 1 } }, {
       drawWith,
     } as unknown as Asks);
 
-    const box = [...bar.querySelectorAll('select')][1];
-    if (box === undefined) throw new Error('there is no line box');
+    const box = bar.querySelector<HTMLSelectElement>('.panel select.lines');
+    if (box === null) throw new Error('there is no line box');
     box.value = 'medium';
     box.dispatchEvent(new Event('change'));
 
@@ -353,7 +396,7 @@ describe('a border a reader draws', () => {
 
   it('takes every edge off, since that is the unit the schema has (ADR-039)', () => {
     const wear = vi.fn();
-    const bar = toolbar(showing({ cells: [cell({})], selected: { row: 1, col: 1 } }), asks(wear));
+    const bar = opened({ cells: [cell({})], selected: { row: 1, col: 1 } }, asks(wear));
 
     drawn(bar, 'none')?.click();
     expect(wear).toHaveBeenCalledWith(
@@ -373,7 +416,7 @@ describe('a border a reader draws', () => {
 
   it('is never lit, since drawing a border is a thing done rather than worn', () => {
     const cells = [cell({ style: { 'border.top.style': 'thin' } })];
-    const bar = toolbar(showing({ cells, selected: { row: 1, col: 1 } }), asks());
+    const bar = opened({ cells, selected: { row: 1, col: 1 } }, asks());
 
     const lit = [...bar.querySelectorAll('button.edge')].some((one) =>
       one.classList.contains('on'),
@@ -383,41 +426,43 @@ describe('a border a reader draws', () => {
 });
 
 describe('where the sheet is frozen', () => {
-  const asksFreeze = (freeze = vi.fn()): Asks => ({ freeze }) as unknown as Asks;
-  const button = (bar: HTMLElement, off = false) =>
-    bar.querySelector<HTMLButtonElement>(`button.freeze${off ? '.off' : ':not(.off)'}`);
+  const asksFreeze = (freeze = vi.fn()): Asks => ({ freeze, openMenu: vi.fn() }) as unknown as Asks;
+  const opened = (of: Parameters<typeof showing>[0], on: Asks) =>
+    toolbar(showing({ ...of, menu: 'freeze' }), on);
+  const entries = (bar: HTMLElement) => [
+    ...bar.querySelectorAll<HTMLButtonElement>('.panel .entry'),
+  ];
 
-  it('asks for a freeze at the cell the reader has selected', () => {
+  it('is one button that opens what a spreadsheet keeps under View', () => {
+    const bar = toolbar(showing({ selected: { row: 2, col: 2 } }), asksFreeze());
+    expect(bar.querySelector<HTMLButtonElement>('button.freeze')?.title).toBe('Freeze panes');
+  });
+
+  it('freezes up to the cell the reader has selected, and says which', () => {
     const freeze = vi.fn();
-    const bar = toolbar(showing({ selected: { row: 2, col: 2 } }), asksFreeze(freeze));
+    const bar = opened({ selected: { row: 2, col: 2 } }, asksFreeze(freeze));
 
-    expect(button(bar)?.title).toBe('Freeze the rows above and the columns left of B2');
-    button(bar)?.click();
+    expect(entries(bar).map((one) => one.textContent)).toEqual([
+      'Freeze up to B2',
+      'No frozen panes',
+    ]);
+
+    entries(bar)[0]?.click();
     expect(freeze).toHaveBeenCalledWith({ row: 2, col: 2 });
   });
 
-  it('is lit where the sheet is frozen at the selected cell, and not where it is frozen elsewhere', () => {
-    const at = { row: 2, col: 2 };
-    expect(
-      button(toolbar(showing({ selected: at, freeze: at }), asksFreeze()))?.className,
-    ).toContain('on');
-
-    const other = showing({ selected: at, freeze: { row: 4, col: 1 } });
-    expect(button(toolbar(other, asksFreeze()))?.className).not.toContain('on');
-  });
-
   it('cannot freeze at A1, which would freeze nothing (`docs/spec.md` §2)', () => {
-    const bar = toolbar(showing({ selected: { row: 1, col: 1 } }), asksFreeze());
-    expect(button(bar)?.disabled).toBe(true);
+    const bar = opened({ selected: { row: 1, col: 1 } }, asksFreeze());
+    expect(entries(bar)[0]?.disabled).toBe(true);
   });
 
   it('takes the freeze off, and offers that only where there is one', () => {
     const freeze = vi.fn();
-    const bar = toolbar(showing({ freeze: { row: 2, col: 2 } }), asksFreeze(freeze));
+    const bar = opened({ freeze: { row: 2, col: 2 } }, asksFreeze(freeze));
 
-    button(bar, true)?.click();
+    entries(bar)[1]?.click();
     expect(freeze).toHaveBeenCalledWith(null);
-    expect(button(toolbar(showing({}), asksFreeze()), true)?.disabled).toBe(true);
+    expect(entries(opened({}, asksFreeze()))[1]?.disabled).toBe(true);
   });
 });
 
@@ -426,7 +471,7 @@ describe('how the bar is laid out', () => {
     const bar = toolbar(showing({ selected: { row: 1, col: 1 } }), asks());
     const kinds = [...bar.children].map((one) => (one.className === 'divider' ? '|' : '.'));
 
-    // Font, colour, alignment across, alignment down, number, borders, panes.
-    expect(kinds.join('').split('|')).toHaveLength(7);
+    // Font, colour, alignment across, alignment down, number, and the two menus.
+    expect(kinds.join('').split('|')).toHaveLength(6);
   });
 });

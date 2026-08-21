@@ -31,6 +31,9 @@ export interface Showing {
   /** The line a border button draws with, which is the toolbar's own setting. */
   readonly line: BorderStyle;
 
+  /** Which of the toolbar's menus is open, by name; the view's own, like the line. */
+  readonly menu: string | null;
+
   /** Whether the selected cell can be typed into, where one is selected. */
   readonly editable: Editable | null;
 }
@@ -80,6 +83,7 @@ export interface Asks {
   readonly emptiedWith: (ranged: Ranged, choice: string) => void;
   readonly wear: (want: StyleSays, over: Rect) => void;
   readonly drawWith: (line: BorderStyle) => void;
+  readonly openMenu: (name: string | null) => void;
   readonly resize: (axis: 'column' | 'row', at: number, size: number) => void;
   readonly freeze: (at: At | null) => void;
   readonly resizedWith: (resized: Resized, choice: string) => void;

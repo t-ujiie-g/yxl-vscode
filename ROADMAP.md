@@ -2292,6 +2292,30 @@ than widening it silently.
 
 ## 11. Living changelog
 
+### 2026-08-21 — The bar reads as a spreadsheet's
+The other half of the panel-width problem, and the shape a reader of Sheets or
+Excel is already carrying: the controls that have *choices* are menus.
+
+- **Colour is a palette, not a swatch and an ×.** Text colour and fill each open
+  a panel holding the way to take the colour off, the two rows of standards
+  Sheets and Excel both offer, and *Custom…* for the picker — which is where
+  everyone looks for "no fill", and the `×` beside the swatch was not.
+- **The six border buttons are one button.** They and the line style live in the
+  panel it opens, as they do in Sheets. That is 200px of bar returned.
+- **Freeze is the menu it is everywhere else.** One button opening *Freeze up to
+  B2* and *No frozen panes*, named in words rather than an icon and an ×, and
+  reachable with no cell selected — taking a freeze off is about the sheet.
+- **What that bought:** the bar is **one row at 780px and two at 420px**, where
+  it was two and three. A panel that would hang past the edge of the view is
+  pulled back onto it, so a menu at the right end of a narrow panel still opens
+  where it can be read.
+- **A click anywhere else closes an open panel**, which is what the scrim under
+  it is for; `Esc` closes it too. Which menu is open is the view's own state,
+  like the border line, so a redraw arriving under an open palette does not
+  shut it.
+- 1585 → 1590 tests. Comment shape: exports 443 blocks / 960 lines (avg 2.2),
+  private 317 / 337 (1.1), inline 59 / 79 (1.3), 9 over the limit.
+
 ### 2026-08-21 — A toolbar that fits the panel it is in
 From opening the preview in a real window: at a 400px panel — which is what a
 preview beside the text actually gets — the bar ran off the right edge and the

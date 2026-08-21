@@ -33,6 +33,7 @@ function asks(): Asks {
     wear: vi.fn(),
     wornWith: vi.fn(),
     freeze: vi.fn(),
+    openMenu: vi.fn(),
   };
 }
 
@@ -99,6 +100,7 @@ function shown(of: Partial<Showing> = {}, on: Asks = asks()): HTMLElement {
       looking: null,
       editable: null,
       line: 'thin',
+      menu: null,
       ...of,
     },
     on,
@@ -225,6 +227,7 @@ describe('a sheet larger than the window drawn of it', () => {
       looking: null,
       editable: null,
       line: 'thin',
+      menu: null,
     });
 
     draw(into, showing(tall), on);
@@ -251,6 +254,7 @@ describe('a sheet larger than the window drawn of it', () => {
       looking: null,
       editable: null,
       line: 'thin',
+      menu: null,
     });
 
     draw(into, showing(0), on);
@@ -677,6 +681,7 @@ describe('what changes without redrawing the grid', () => {
       looking: null,
       editable: null,
       line: 'thin',
+      menu: null,
       ...of,
     };
   }
@@ -922,16 +927,20 @@ describe('the switches over the grid', () => {
     looking: null,
     editable: null,
     line: 'thin',
+    menu: null,
   });
 
   it('follow the selection, which arrives after the grid was drawn', () => {
     const into = document.createElement('div');
-    const switches = () => [...into.querySelectorAll<HTMLButtonElement>('button.look:not(.off)')];
+    // Every switch but the freeze menu, which opens with no cell selected because
+    // taking a freeze off is about the sheet rather than about a cell.
+    const switches = () => [
+      ...into.querySelectorAll<HTMLButtonElement>('button.look:not(.freeze)'),
+    ];
 
     draw(into, state(null), asks());
     expect(switches().every((one) => one.disabled)).toBe(true);
 
-    // B2, not A1: freezing at A1 would freeze nothing, and that switch stays off there.
     restate(into, state({ row: 2, col: 2 }), asks());
     expect(switches().some((one) => one.disabled)).toBe(false);
   });

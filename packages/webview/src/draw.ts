@@ -11,6 +11,7 @@ import {
   undoing,
   within,
 } from './keys';
+import { fit } from './menus';
 import {
   inspector,
   note,
@@ -67,6 +68,7 @@ export function draw(into: HTMLElement, showing: Showing, asks: Asks): void {
   under.className = 'under';
   into.append(under);
   say(under, showing, asks);
+  fit(into);
 
   if (held) focusCell(into, showing);
 }
@@ -116,6 +118,7 @@ export function restate(into: HTMLElement, showing: Showing, asks: Asks): void {
 
   say(under, showing, asks);
   told(into, showing);
+  fit(into);
 }
 
 /** Everything said under the grid, which is rebuilt on its own. */

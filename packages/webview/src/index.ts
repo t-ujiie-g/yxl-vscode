@@ -62,6 +62,8 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
   /** Where a range was started from, which stays put while the selection moves. */
   let anchor: Showing['anchor'] = null;
   let line: Showing['line'] = 'thin';
+  /** Which of the toolbar's menus the reader has open, which no redraw closes. */
+  let menu: Showing['menu'] = null;
   let sources: readonly Source[] | null = null;
   let reached: Reached | null = null;
   let refused: Refused | null = null;
@@ -85,6 +87,7 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
     selected,
     anchor,
     line,
+    menu,
     sources,
     reached,
     refused,
@@ -239,6 +242,10 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
     },
     drawWith: (chosen) => {
       line = chosen;
+      restated();
+    },
+    openMenu: (name) => {
+      menu = name;
       restated();
     },
     freeze: (at) => {

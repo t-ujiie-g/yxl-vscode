@@ -13,6 +13,7 @@ import { addrAt, type Color, parseColor, type Rect } from '@yxl-vscode/units';
 import { underFormat } from './cell';
 import { between } from './keys';
 import { ACROSS, type Bar, DOWN, framed, frozen, marked, RAGGED } from './marks';
+import { entry, opens } from './menus';
 import type { DrawnCell } from './protocol';
 import type { Asks, Showing } from './showing';
 
@@ -23,7 +24,7 @@ export function toolbar(showing: Showing, asks: Asks): HTMLElement {
 
   for (const one of TOGGLES) bar.append(toggle(one, showing, asks));
   bar.append(divider());
-  for (const one of INKS) bar.append(...ink(one, showing, asks));
+  for (const one of INKS) bar.append(ink(one, showing, asks));
   bar.append(divider());
   for (const one of PICKS) {
     if (one.key === 'align.vertical' && one.value === 'top') bar.append(divider());
@@ -33,41 +34,40 @@ export function toolbar(showing: Showing, asks: Asks): HTMLElement {
   bar.append(divider());
   bar.append(numbers(showing, asks));
   bar.append(divider());
-  for (const one of EDGES) bar.append(edge(one, showing, asks));
-  bar.append(lines(showing, asks));
-  bar.append(divider());
-  bar.append(...panes(showing, asks));
+  bar.append(borders(showing, asks));
+  bar.append(panes(showing, asks));
 
   return bar;
 }
 
-/** Where the sheet's panes are frozen: at the selected cell, and the button that takes the freeze off. */
-function panes(showing: Showing, asks: Asks): HTMLElement[] {
+/** Where the sheet's panes are frozen, as the menu every spreadsheet keeps it in. */
+function panes(showing: Showing, asks: Asks): HTMLElement {
   const at = showing.selected;
   const stays = showing.drawing.sheets[showing.sheet]?.freeze ?? null;
-  const here = at !== null && stays?.row === at.row && stays.col === at.col;
 
-  const freeze = document.createElement('button');
-  freeze.type = 'button';
-  freeze.className = `look freeze${here ? ' on' : ''}`;
-  freeze.title =
-    at === null || (at.row === 1 && at.col === 1)
-      ? 'Freeze panes'
-      : `Freeze the rows above and the columns left of ${addrAt(at)}`;
-  freeze.disabled = at === null || (at.row === 1 && at.col === 1);
-  freeze.setAttribute('aria-pressed', here ? 'true' : 'false');
-  freeze.append(marked(frozen()));
-  freeze.addEventListener('click', () => asks.freeze(at));
+  return opens(
+    { name: 'freeze', title: 'Freeze panes', disabled: false, marks: [marked(frozen())] },
+    showing,
+    asks,
+    () => {
+      const panel = document.createElement('div');
+      const upTo = at === null ? 'the selected cell' : addrAt(at);
+      const taken = (to: typeof at) => {
+        asks.openMenu(null);
+        asks.freeze(to);
+      };
 
-  const off = document.createElement('button');
-  off.type = 'button';
-  off.className = 'look off freeze';
-  off.textContent = '×';
-  off.title = 'Unfreeze';
-  off.disabled = stays === null;
-  off.addEventListener('click', () => asks.freeze(null));
-
-  return [freeze, off];
+      panel.append(
+        entry(
+          `Freeze up to ${upTo}`,
+          { disabled: at === null || (at.row === 1 && at.col === 1) },
+          () => taken(at),
+        ),
+        entry('No frozen panes', { disabled: stays === null }, () => taken(null)),
+      );
+      return panel;
+    },
+  );
 }
 
 /** The rule between one group of controls and the next. */
@@ -157,41 +157,92 @@ const INKS: readonly Ink[] = [
   },
 ];
 
-/** A colour, as the swatch the selected cell wears and the button that takes it off. */
-function ink(of: Ink, showing: Showing, asks: Asks): HTMLElement[] {
-  const now = wornBy(showing)[of.key] ?? null;
-  const nowhere = showing.selected === null;
+/** The colours a palette offers: the two rows of standards a reader of Sheets or Excel knows. */
+const PALETTE: readonly string[] = [
+  '000000',
+  '434343',
+  '666666',
+  '999999',
+  'B7B7B7',
+  'CCCCCC',
+  'D9D9D9',
+  'EFEFEF',
+  'F3F3F3',
+  'FFFFFF',
+  '980000',
+  'FF0000',
+  'FF9900',
+  'FFFF00',
+  '00FF00',
+  '00FFFF',
+  '4A86E8',
+  '0000FF',
+  '9900FF',
+  'FF00FF',
+];
 
-  const swatch = document.createElement('label');
-  swatch.className = `look ${of.name}`;
-  swatch.title = of.says;
-  swatch.append(of.mark);
-  swatch.style.setProperty('border-bottom-color', now === null ? 'transparent' : picked(now));
+/** A colour, as the swatch the selected cell wears over the palette that sets it. */
+function ink(of: Ink, showing: Showing, asks: Asks): HTMLElement {
+  const now = wornBy(showing)[of.key] ?? null;
+
+  const mark = document.createElement('span');
+  mark.className = 'letter';
+  mark.textContent = of.mark;
+  mark.style.setProperty('border-bottom-color', now === null ? 'transparent' : picked(now));
+
+  const menu = {
+    name: of.name,
+    title: of.says,
+    disabled: showing.selected === null,
+    marks: [mark],
+  };
+  return opens(menu, showing, asks, () => palette(of, now, showing, asks));
+}
+
+/** The panel a colour is picked from: the way to take it off, the standards, and one of your own. */
+function palette(of: Ink, now: Color | null, showing: Showing, asks: Asks): HTMLElement {
+  const panel = document.createElement('div');
+  const where = over(showing);
+  const wear = (colour: Color | null) => {
+    asks.openMenu(null);
+    asks.wear({ [of.key]: colour } as StyleSays, where);
+  };
+
+  panel.append(entry(of.clears, { disabled: now === null, className: 'clears' }, () => wear(null)));
+
+  const swatches = document.createElement('div');
+  swatches.className = 'swatches';
+  for (const digits of PALETTE) {
+    const colour = parseColor(digits);
+    if (colour === null) continue;
+
+    const one = document.createElement('button');
+    one.type = 'button';
+    const here = now !== null && picked(now).toLowerCase() === `#${digits.toLowerCase()}`;
+    one.className = `swatch${here ? ' here' : ''}`;
+    one.title = `#${digits}`;
+    one.style.background = `#${digits}`;
+    one.addEventListener('click', () => wear(colour));
+    swatches.append(one);
+  }
+  panel.append(swatches);
+
+  const custom = document.createElement('label');
+  custom.className = 'entry custom';
+  custom.append('Custom\u2026');
 
   const pick = document.createElement('input');
   pick.type = 'color';
   pick.className = 'pick';
   pick.value = now === null ? of.opens : picked(now);
-  pick.disabled = nowhere;
-  // The picker commits when it is dismissed, by which time the reader may have
-  // selected something else, so the rectangle is the one it was opened over.
-  const where = over(showing);
   pick.addEventListener('change', () => {
     // The picker says `#rrggbb`; a spec writes `RRGGBB` (`docs/spec.md` §6).
-    const colour = parseColor(pick.value.replace('#', '').toUpperCase());
-    if (colour !== null) asks.wear({ [of.key]: colour } as StyleSays, where);
+    wear(parseColor(pick.value.replace('#', '').toUpperCase()));
   });
-  swatch.append(pick);
 
-  const off = document.createElement('button');
-  off.type = 'button';
-  off.className = `look off ${of.name}`;
-  off.textContent = '×';
-  off.title = of.clears;
-  off.disabled = nowhere || now === null;
-  off.addEventListener('click', () => asks.wear({ [of.key]: null } as StyleSays, where));
-
-  return [swatch, off];
+  custom.append(pick);
+  panel.append(custom);
+  return panel;
 }
 
 /** One place the text can sit; pressing the one that already holds takes it off (ADR-039). */
@@ -292,6 +343,26 @@ const EDGES: readonly Edge[] = [
   { name: 'none', says: 'No borders', sides: [] },
 ];
 
+/** The borders, in the one menu Sheets and Excel both keep them in: the edges, and the line they are drawn with. */
+function borders(showing: Showing, asks: Asks): HTMLElement {
+  const menu = {
+    name: 'borders',
+    title: 'Borders',
+    disabled: showing.selected === null,
+    marks: [marked(framed(BORDER_EDGES))],
+  };
+
+  return opens(menu, showing, asks, () => {
+    const panel = document.createElement('div');
+    const edges = document.createElement('div');
+    edges.className = 'edges';
+
+    for (const one of EDGES) edges.append(edge(one, showing, asks));
+    panel.append(edges, lines(showing, asks));
+    return panel;
+  });
+}
+
 /** A border on the edges it names, with the line the toolbar is set to; these act rather than hold, so none is lit. */
 function edge(of: Edge, showing: Showing, asks: Asks): HTMLElement {
   const button = document.createElement('button');
@@ -301,7 +372,10 @@ function edge(of: Edge, showing: Showing, asks: Asks): HTMLElement {
   button.title = of.says;
   button.disabled = showing.selected === null;
   button.append(marked(framed(of.sides)));
-  button.addEventListener('click', () => asks.wear(drawn(of, showing.line), over(showing)));
+  button.addEventListener('click', () => {
+    asks.openMenu(null);
+    asks.wear(drawn(of, showing.line), over(showing));
+  });
 
   return button;
 }
@@ -322,11 +396,13 @@ function drawn(of: Edge, line: BorderStyle): StyleSays {
 
 /** The line the border buttons draw with, which is the reader's choice and not the cell's. */
 function lines(showing: Showing, asks: Asks): HTMLElement {
-  const box = document.createElement('select');
+  const label = document.createElement('label');
+  label.className = 'entry style';
+  label.append('Line');
 
-  box.className = 'look lines';
+  const box = document.createElement('select');
+  box.className = 'lines';
   box.title = 'The line a border is drawn with';
-  box.disabled = showing.selected === null;
 
   for (const style of BORDER_STYLES) {
     const option = document.createElement('option');
@@ -341,7 +417,8 @@ function lines(showing: Showing, asks: Asks): HTMLElement {
     if (chosen !== undefined) asks.drawWith(chosen);
   });
 
-  return box;
+  label.append(box);
+  return label;
 }
 
 /** The formats a toolbar offers, by their codes: what each is called depends on the cell. */

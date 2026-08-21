@@ -99,19 +99,6 @@ body {
   text-decoration: line-through;
 }
 
-.look.ink,
-.look.fill {
-  border-bottom-width: 3px;
-  border-bottom-style: solid;
-  position: relative;
-}
-
-.look.off {
-  width: 1.2rem;
-  margin-left: -1px;
-  opacity: 0.7;
-}
-
 .look svg {
   width: 1rem;
   height: 1rem;
@@ -126,6 +113,110 @@ body {
   opacity: 0.3;
 }
 
+/* A control that opens a panel under it. The scrim is what closes it: a click
+   anywhere else lands there first, as it does in every menu. */
+.menu {
+  position: relative;
+  display: inline-flex;
+}
+
+.look.opener {
+  width: 2.6rem;
+  gap: 1px;
+}
+
+.caret {
+  font-size: 0.6em;
+  opacity: 0.75;
+}
+
+.letter {
+  border-bottom: 3px solid transparent;
+  line-height: 1.1;
+}
+
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+}
+
+.panel {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0;
+  z-index: 41;
+  padding: 0.3rem;
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 4px;
+  background: var(--vscode-editorWidget-background, var(--vscode-editor-background));
+  box-shadow: 0 2px 8px rgb(0 0 0 / 35%);
+  white-space: nowrap;
+}
+
+.panel .entry {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+  padding: 0.25rem 0.4rem;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.panel .entry:hover:not(:disabled) {
+  background: var(--vscode-list-hoverBackground, var(--vscode-toolbar-activeBackground));
+}
+
+.panel .entry:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.panel .swatches {
+  display: grid;
+  grid-template-columns: repeat(10, 1rem);
+  gap: 2px;
+  padding: 0.25rem 0.4rem;
+}
+
+.panel .swatch {
+  width: 1rem;
+  height: 1rem;
+  padding: 0;
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.panel .swatch.here {
+  outline: 2px solid var(--vscode-focusBorder);
+  outline-offset: 1px;
+}
+
+.panel .custom {
+  position: relative;
+}
+
+.panel .edges {
+  display: flex;
+  gap: 0.2rem;
+  padding: 0.1rem 0.2rem 0.3rem;
+}
+
+.panel .lines {
+  margin-left: auto;
+  border: 1px solid var(--vscode-panel-border);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+
 /* The line between one group of controls and the next, as every spreadsheet
    draws it; without it a wrapped row reads as one long undifferentiated run. */
 .divider {
@@ -136,15 +227,10 @@ body {
   background: var(--vscode-panel-border);
 }
 
-.look.numbers,
-.look.lines {
+.look.numbers {
   width: auto;
   max-width: 7.5rem;
   padding: 0.1rem 0.2rem;
-}
-
-.look.lines {
-  max-width: 5.5rem;
 }
 
 .pick {
