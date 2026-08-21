@@ -1,6 +1,6 @@
-import type { BorderStyle, StyleSays } from '@yxl-vscode/spec';
+import type { Axis, BorderStyle, StyleSays } from '@yxl-vscode/spec';
 import type { Rect } from '@yxl-vscode/units';
-import type { At } from './keys';
+import { type At, within } from './keys';
 import type {
   Drawing,
   Editable,
@@ -61,6 +61,33 @@ export interface Reached {
   readonly cells: ReadonlySet<string>;
 }
 
+/** Whether this cell is inside the rectangle the reader has selected. */
+export function ranged(showing: Showing, at: At): boolean {
+  const { selected, anchor } = showing;
+  if (selected === null || anchor === null) return false;
+  if (selected.row === anchor.row && selected.col === anchor.col) return false;
+
+  return within(at, selected, anchor);
+}
+
+/** Whether this cell is one of those the search turned up. */
+export function lookedUp(showing: Showing, at: At): boolean {
+  return showing.looking?.cells.some((one) => one.row === at.row && one.col === at.col) === true;
+}
+
+/** Whether this cell is one of those the reader has copied, on the sheet they copied from. */
+export function copiedFrom(showing: Showing, at: At): boolean {
+  const { copied } = showing;
+  if (copied === null || copied.sheet !== showing.drawing.sheets[showing.sheet]?.name) return false;
+
+  return (
+    at.row >= copied.rect.top &&
+    at.row <= copied.rect.bottom &&
+    at.col >= copied.rect.left &&
+    at.col <= copied.rect.right
+  );
+}
+
 /** How a cell is named in the sets and maps a drawing is looked up in. */
 export function cellKey(col: number, row: number): string {
   return `${col}:${row}`;
@@ -84,7 +111,7 @@ export interface Asks {
   readonly wear: (want: StyleSays, over: Rect) => void;
   readonly drawWith: (line: BorderStyle) => void;
   readonly openMenu: (name: string | null) => void;
-  readonly resize: (axis: 'column' | 'row', at: number, size: number) => void;
+  readonly resize: (axis: Axis, at: number, size: number) => void;
   readonly freeze: (at: At | null) => void;
   readonly resizedWith: (resized: Resized, choice: string) => void;
   readonly wornWith: (worn: Worn, choice: string) => void;

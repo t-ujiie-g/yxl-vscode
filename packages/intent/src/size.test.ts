@@ -1,12 +1,13 @@
 import { compile } from '@yxl-vscode/compile';
 import { parse } from '@yxl-vscode/cst';
 import { type IncludeReader, load } from '@yxl-vscode/loader';
+import type { Axis } from '@yxl-vscode/spec';
 import { type FilePath, filePath, type SheetName } from '@yxl-vscode/units';
 import { type Ctx, checked } from '@yxl-vscode/verify';
 import { describe, expect, it } from 'vitest';
 import { reading } from './direct';
 import type { Candidate } from './resolve';
-import { type Axis, setSize } from './size';
+import { setSize } from './size';
 
 const ROOT = filePath('spec.yxl.yaml') ?? ('' as FilePath);
 const SALES = 'sheets:\n  - name: Sales\n';

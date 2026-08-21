@@ -9,7 +9,7 @@ import {
   type StyleLayer,
   styleAt,
 } from '@yxl-vscode/compile';
-import { type Node, type Op, type Path, renderScalar } from '@yxl-vscode/cst';
+import { holds, type Node, type Op, type Path, renderScalar } from '@yxl-vscode/cst';
 import { normalize, written } from '@yxl-vscode/normalize';
 import {
   ordered,
@@ -153,7 +153,7 @@ function intoCell(
 ): Op[] {
   if (found.node.kind !== 'map') return [];
 
-  const held = (key: string) => found.node.kind === 'map' && has(found.node.entries, key);
+  const held = (key: string) => holds(found.node, key);
   const gone = carries.filter((one) => one.source === null && held(one.key)).map((one) => one.key);
   const rest = found.node.entries.filter((entry) => !gone.includes(String(entry.key.value)));
   const only = rest.length === 1 && rest[0]?.key.value === 'value' ? rest[0] : undefined;
@@ -179,10 +179,6 @@ function intoCell(
         : ({ op: 'addSource', path: found.path, key: one.key, source: one.source } as Op),
     ];
   });
-}
-
-function has(entries: readonly { key: { value: unknown } }[], key: string): boolean {
-  return entries.some((entry) => entry.key.value === key);
 }
 
 /** The look narrowed to everything but one property, which is written somewhere else. */
@@ -225,14 +221,14 @@ function newCell(
   const found = located(sheet.node, read);
   if (found.kind === 'refused' || found.node.kind !== 'map') return null;
 
-  const holds = found.node.entries.some((entry) => entry.key.value === CELLS);
+  const already = holds(found.node, CELLS);
   const entry = written.map((one) => `${one.key}: ${one.source}`).join(', ');
   const body = written.length === 1 ? entry : `{ ${entry} }`;
 
   return {
     file: found.file,
     ops: [
-      holds
+      already
         ? { op: 'addSource', path: [...found.path, CELLS], key: at, source: body }
         : { op: 'addSource', path: found.path, key: CELLS, source: `${at}:\n  ${body}` },
     ],

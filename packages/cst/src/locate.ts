@@ -48,15 +48,25 @@ export function nodeAt(root: Node, path: Path): Node | null {
   return locate(root, path)?.node ?? null;
 }
 
-/** `sheets[0].name` — how a path reads in a diagnostic. */
 /** A path as one comparable string, so two of them can be asked whether they name the same place. */
 export function marked(path: Path): string {
   return JSON.stringify(path);
 }
 
+/** `sheets[0].name` — how a path reads in a diagnostic. */
 export function formatPath(path: Path): string {
   return path.reduce<string>((text, step) => {
     if (typeof step === 'number') return `${text}[${step}]`;
     return text === '' ? step : `${text}.${step}`;
   }, '');
+}
+
+/** The entry a mapping keys under this name, or nothing — from a node that may not be a mapping. */
+export function entryOf(node: Node, key: string): Entry | undefined {
+  return node.kind === 'map' ? node.entries.find((entry) => entry.key.value === key) : undefined;
+}
+
+/** Whether the mapping writes that key at all, which is not the same as what it holds there. */
+export function holds(node: Node, key: string): boolean {
+  return entryOf(node, key) !== undefined;
 }

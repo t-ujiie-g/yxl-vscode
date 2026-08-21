@@ -187,7 +187,7 @@ export function perOrigin(
 const EXCEPTED: readonly Stood[] = ['range', 'definition', 'parameter', 'file'];
 
 /** The answer that writes one group as an exception, by the group it names. */
-export const EXCEPT = 'except:';
+const EXCEPT = 'except:';
 
 /** Which group an answer names, or `null` where it is not one of those answers. */
 export function excepted(choice: string): Stood | null {

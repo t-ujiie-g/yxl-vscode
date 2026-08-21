@@ -1,4 +1,4 @@
-import type { Site } from './locate';
+import { entryOf, type Site } from './locate';
 import type { Mapping } from './node';
 import { renderScalar } from './write';
 
@@ -19,7 +19,7 @@ export function withEntry(
   const whole = target.span;
   const written = `${renderScalar(key)}: ${value}`;
 
-  const above = target.entries.find((entry) => entry.key.value === before);
+  const above = entryOf(target, before ?? '');
   if (above !== undefined) {
     return (
       source.slice(whole.start, above.span.start) +

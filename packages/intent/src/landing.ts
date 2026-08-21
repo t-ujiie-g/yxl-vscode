@@ -4,7 +4,8 @@ import {
   cellAt,
   type FacetOrigin,
 } from '@yxl-vscode/compile';
-import { type Op, type Path, renderScalar, type Value } from '@yxl-vscode/cst';
+import { holds, type Op, type Path, renderScalar, type Value } from '@yxl-vscode/cst';
+import { CELL_HOLDS } from '@yxl-vscode/spec';
 import {
   type A1Addr,
   type FilePath,
@@ -189,7 +190,7 @@ function entries(sheet: CompiledSheet, fresh: readonly Entry[], read: Reading): 
   if (found.kind === 'refused') return `these cells cannot be written: ${found.why}`;
   if (found.node.kind !== 'map') return 'these cells cannot be written: the sheet is not a mapping';
 
-  const has = found.node.entries.some((entry) => entry.key.value === 'cells');
+  const has = holds(found.node, 'cells');
   if (!has) {
     const source = fresh.map((one) => entryText(one.at, one.holds)).join('\n');
     return { file: found.file, ops: [{ op: 'addSource', path: found.path, key: 'cells', source }] };
@@ -231,7 +232,7 @@ function keys(found: Found & { kind: 'found' }, holds: Holds): Op[] {
 
   const written = found.node.entries.map((entry) => String(entry.key.value));
   const ops: Op[] = written
-    .filter((one) => HOLDS.has(one) && one !== key)
+    .filter((one) => CELL_HOLDS.has(one) && one !== key)
     .map((one) => ({ op: 'remove', path: [...found.path, one] }));
 
   ops.push(
@@ -249,6 +250,3 @@ function entered(path: Path, key: string, holds: Holds, before: string | null): 
     ? { op: 'add', path, key, value: holds.formula, before: null }
     : { op: 'add', path, key, value: holds.value, before };
 }
-
-/** What a cell holds, against what it wears — the same list emptying a cell works from. */
-const HOLDS = new Set(['value', 'formula', 'rich', 'type']);

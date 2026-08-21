@@ -1,5 +1,5 @@
 import type { Computed } from '@yxl-vscode/evaluate';
-import type { ScalarValue, StyleSays, StyleValues } from '@yxl-vscode/spec';
+import type { Axis, ScalarValue, StyleSays, StyleValues } from '@yxl-vscode/spec';
 
 /**
  * What the host sends the view, and all the view knows of a spec: a projection
@@ -267,7 +267,7 @@ export type FromView =
 /** A column dragged to a width in character units, or a row to a height in points (`docs/spec.md` §4). */
 export interface Resized {
   readonly sheet: string;
-  readonly axis: 'column' | 'row';
+  readonly axis: Axis;
   readonly at: number;
   readonly size: number;
 }

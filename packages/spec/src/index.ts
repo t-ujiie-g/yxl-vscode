@@ -1,4 +1,4 @@
-export type { ColumnBand, RowBand } from './band';
+export { type Axis, BAND_KEYS, type ColumnBand, type RowBand } from './band';
 export {
   CELL_TYPES,
   type Cell,
@@ -10,7 +10,7 @@ export {
 } from './cell';
 export type { DataBlock, DataRow, DataSource } from './data';
 export type { Defs, FormulaDef, Override, Param, SpecDoc, StyleDef, ValueDef } from './doc';
-export { INCLUDE_KEY, MODELED_KEYS, REF_KEY } from './keys';
+export { CELL_HOLDS, CELL_WEARS, INCLUDE_KEY, MODELED_KEYS, REF_KEY } from './keys';
 export type { Opaque, SpecNode, Template, Templated } from './node';
 export {
   ordered,

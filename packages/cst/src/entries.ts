@@ -2,7 +2,7 @@ import { type Span, span } from '@yxl-vscode/diag';
 import { CODE } from './codes';
 import { withEntry, withoutEntry } from './flow';
 import { aboveComments, lineBreak, lineEnd, lineStart } from './lines';
-import { formatPath, locate, type Site } from './locate';
+import { entryOf, formatPath, holds, locate, type Site } from './locate';
 import type { Mapping, Node, Sequence } from './node';
 import type { Edit, Op, Path, Refuse } from './op';
 import { renderScalar } from './write';
@@ -138,8 +138,7 @@ export function addition(
     return undefined;
   }
 
-  const above =
-    op.before === null ? undefined : target.entries.find((entry) => entry.key.value === op.before);
+  const above = op.before === null ? undefined : entryOf(target, op.before);
   if (op.before !== null && above === undefined) {
     refuse(CODE.noSuchKey, `nothing is keyed \`${op.before}\` here`, target.span);
     return undefined;
@@ -177,7 +176,7 @@ function mappingFor(
     refuse(CODE.notAMapping, `\`${formatPath(op.path)}\` is not a mapping`, target.span);
     return undefined;
   }
-  if (target.entries.some((entry) => entry.key.value === op.key)) {
+  if (holds(target, op.key)) {
     refuse(CODE.keyExists, `\`${op.key}\` is already there`, target.span);
     return undefined;
   }
@@ -361,12 +360,12 @@ function whereItWas(
     return last === undefined ? nothingLeft() : lineEnd(source, last.span.end);
   }
 
-  if (target.entries.some((entry) => entry.key.value === op.key)) {
+  if (holds(target, String(op.key))) {
     refuse(CODE.keyExists, `\`${op.key}\` is already there`, target.span);
     return undefined;
   }
 
-  const above = target.entries.find((entry) => entry.key.value === op.before);
+  const above = entryOf(target, op.before ?? '');
   if (above !== undefined) return aboveComments(source, lineStart(source, above.span.start));
   if (op.before !== null) {
     refuse(CODE.noSuchKey, `nothing is keyed \`${op.before}\` here`, target.span);

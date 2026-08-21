@@ -1,5 +1,6 @@
 import { type CompiledGrid, cellAt, sheetOf } from '@yxl-vscode/compile';
 import { marked, type Node, nodeAt, type Op, type Path } from '@yxl-vscode/cst';
+import { CELL_HOLDS, CELL_WEARS } from '@yxl-vscode/spec';
 import {
   type A1Addr,
   addrAt,
@@ -50,19 +51,15 @@ export function clearCell(
   };
 }
 
-/** What a cell holds, against what it wears. */
-const HOLDS = new Set(['value', 'formula', 'rich', 'type']);
-const WEARS = new Set(['format', 'style']);
-
 /** The keys the cell holds something in, or the whole entry where nothing else would be left. */
 function emptying(node: Node, path: Path): Op[] {
   if (node.kind !== 'map') return [{ op: 'remove', path }];
 
   const keys = node.entries.map((entry) => String(entry.key.value));
-  if (!keys.some((key) => WEARS.has(key))) return [{ op: 'remove', path }];
+  if (!keys.some((key) => CELL_WEARS.has(key))) return [{ op: 'remove', path }];
 
   return keys
-    .filter((key) => HOLDS.has(key))
+    .filter((key) => CELL_HOLDS.has(key))
     .map((key) => ({ op: 'remove', path: [...path, key] }));
 }
 

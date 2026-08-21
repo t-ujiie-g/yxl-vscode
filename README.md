@@ -81,6 +81,13 @@ direct-manipulable without giving up what made it text:
 Seeing where everything came from is the half that already works, and it is what
 the rest is built on.
 
+The everyday spreadsheet gestures it does **not** have yet are listed as
+plainly as the ones it does — heading selection, the select-all corner, fitting
+a column to its contents, hide and unhide, a formula bar, what a selection comes
+to, `Cmd`+`B`, the font face and size, and a right-click menu are all
+[`ROADMAP.md`](./ROADMAP.md) Phase 10; inserting and deleting rows come after
+them, because they are gestures on a heading.
+
 Excel still opens the result. `yxl build` still produces the `.xlsx`; this editor
 never writes one.
 

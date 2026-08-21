@@ -296,6 +296,17 @@ feels good:
 A band that sets no size does not size it: the first row is the answer there,
 and the two bands then say different things about the same column.
 
+`setSize` and `setStyle` are asked about **one** column or one rectangle today.
+Phase 10 asks them over a *span* — the columns a heading selection names — and
+the rows above are the same rows: what changes is that the count is taken over
+the span, and that "a band of its own" is one band over the span rather than one
+per column.
+
+**`setFreeze`** is not a table here and is deliberately not one: a sheet's panes
+have exactly one place to live, so there is nothing to enumerate and the gesture
+is an `Intent` rather than a list of answers (ADR-040). The same is true of any
+sheet-level key that the schema keeps once.
+
 **`insertRow` / `insertCol`** — enumerate consequences *before* running:
 `cells:` A1 keys shift (this is what bloats a diff), `data:` rectangles gain a
 blank row or move, `formulas:` ranges extend or move, `merges:`/`tables:`/charts
@@ -415,19 +426,33 @@ not a date.
 | Copy, cut and paste inside the grid | ✅ — values and formulas, whose references move; looks are Phase 9 (ADR-032) |
 | Copy out into Excel or Sheets | ✅ — the whole look into Sheets; Excel takes everything but the fill (ADR-033) |
 | Paste from Excel or Sheets | ✅ for the values; the looks wait on Phase 9's normalizer (ADR-034) |
-| A box to type an address into | ✅ — in the corner, where every spreadsheet keeps it |
+| A box to type an address into | ✅ — in the corner today, and moving to the formula bar in **Phase 10**, since the corner is where a spreadsheet keeps *select all* |
 | Find something in the sheet | ✅ — `Cmd`+`F`, `Cmd`+`G` through what it found |
 | Bold, italic, underline, strike | ✅ — from the toolbar, through the normalizer, with the ripple count where the look is shared |
-| Fill, text colour, borders, alignment, number format | ✅ — from the same toolbar, over a cell or a selection |
+| Fill, text colour, borders, alignment, number format | ✅ — from the same toolbar, colour and borders in the menus a reader of Sheets expects |
 | Drag a column wider, a row taller | ✅ — written as a band, and a band over more than the one dragged is a question |
 | Freeze the heading rows | ✅ — honoured wherever the reader has scrolled to, and set from the toolbar at the cell they are on |
-| Insert or delete a row or column | **Phase 10** |
-| Merge cells | **Phase 10** |
-| Fill down, and the drag handle | **Phase 10** (needs §8 Q2) |
-| Sort a block of rows | **Phase 10** |
-| See a chart, an image, a sparkline that the spec declares | **Phase 11** |
-| Insert a chart over a selection, place an image | **Phase 11** |
-| Edit a cell whose value comes from a CSV, a parameter, a definition | Phase 7 |
+| Click a heading to take the whole row or column | **Phase 10** — promised in Phase 8 and not delivered there |
+| The corner takes the whole sheet | **Phase 10** — `Cmd`+`A` is the only way today |
+| A width or a look over the columns selected, in one gesture | **Phase 10** — §4.4's tables over a span rather than one column |
+| Double-click the heading edge to fit the column to its contents | **Phase 10** |
+| Hide and unhide a row or a column | **Phase 10** — `hidden:` is drawn already, and cannot be set |
+| Group rows or columns, and collapse the group | **Phase 10** — `group:` is read and then dropped before the view; nothing of an outline is drawn |
+| A formula bar over the grid | **Phase 10** — what the cell *holds* is legible only inside the cell today |
+| What the selection comes to — count, sum, average | **Phase 10** — every spreadsheet's status bar |
+| `Cmd`+`B` / `I` / `U` | **Phase 10** — the toolbar has them, the keyboard does not |
+| The font face and size | **Phase 10** — `docs/spec.md` §6 has both and the toolbar offers neither |
+| Currency, percent, more and fewer decimals; clear formatting | **Phase 10** |
+| A right-click menu on a cell or a heading | **Phase 10** — and it is where Phase 11's insert and delete hang |
+| Insert or delete a row or column | **Phase 11** |
+| Merge cells | **Phase 11** |
+| Fill down, and the drag handle | **Phase 11** (needs §8 Q2) |
+| Sort a block of rows | **Phase 11** |
+| See a chart, an image, a sparkline that the spec declares | **Phase 12** |
+| Insert a chart over a selection, place an image | **Phase 12** |
+| Edit a cell whose value comes from a CSV, a parameter, a definition | ✅ Phase 7 |
+| A second selection with `Cmd`+click | **not planned** — every write here is about one rectangle, and §4.4's answers are counted over one |
+| Zoom, a format painter, freeze by dragging the pane edge | **not planned yet** — none of them is in the schema, and none is load-bearing |
 
 ### Phase 0 — Bootstrap
 - [x] pnpm workspace, TypeScript strict, the §4.2 package skeleton (empty but
@@ -843,9 +868,9 @@ Where it starts to feel like a spreadsheet.
       **`empty` ①** is in: typing into an address nothing reaches offers it as a
       new `cells:` entry, written where the sheet keeps its cells — and the
       `cells:` key itself where the sheet has none. ② (extend the `data:`
-      rectangle next to it) **is now a Phase 10 item**: it decides whether a
+      rectangle next to it) **is now a Phase 11 item**: it decides whether a
       spec grows a hundred `cells:` entries or a table, which is the same
-      judgement Phase 10's `data:` conversion offer has to make, and a row left
+      judgement Phase 11's `data:` conversion offer has to make, and a row left
       half-ticked here would keep §10 pointing at a phase with nothing in it to
       do.
       **`external` ①** is in for CSV, which is the row that reaches out of the
@@ -912,11 +937,14 @@ every one of them lands as an edit the resolver and the checker already gate —
 and all of them are what makes the difference between a viewer and a place to
 work.
 - [x] A selection that is a **range**: drag, `Shift`+click, `Shift`+arrows,
-      `Cmd`+`A`, and the row and column headers as selectors
-      **In**, apart from the headers: the view holds an anchor beside the cell
-      it has selected, and every gesture that reaches moves one and leaves the
-      other. Nothing else changed — the inspector still asks about the cell the
-      reader is *on*, which is what a spreadsheet answers about too.
+      `Cmd`+`A`
+      **In**: the view holds an anchor beside the cell it has selected, and
+      every gesture that reaches moves one and leaves the other. Nothing else
+      changed — the inspector still asks about the cell the reader is *on*,
+      which is what a spreadsheet answers about too. **The headings as
+      selectors was written on this line and never built**; it is Phase 10's
+      first item now (2026-08-21), because everything else about a heading
+      hangs off it.
 - [x] `Cmd`/`Ctrl`+arrow to the edge of a block, `Home` / `End`, and a box that
       takes an address and goes there
       **The keys are in**, over the cells the host has drawn: along a run to its
@@ -1050,11 +1078,75 @@ whether the spec survives contact with a GUI (ADR-008).
       a sheet written with a `split:` is refused rather than rewritten, since
       the schema cannot hold both and the split is not ours to drop.
 
-### Phase 10 — Structural edits
+### Phase 10 — The headings, the bar, and the keys
+Everything a reader reaches for that is **not a cell**. None of it is new
+authority — every write still lands through §4.4 and §4.6 — and all of it is
+what a reader of Excel or Sheets tries within the first minute and finds
+missing. It comes before structural edits because insert and delete are
+gestures on a *heading*, and the headings are not selectors yet.
+
+- [ ] **The row and column headings select.** Click one to take the whole row or
+      column, drag or `Shift`+click across several, and `Cmd`+click nothing —
+      one rectangle at a time, as everywhere else here. Promised in Phase 8's
+      first item and not delivered there; carried here 2026-08-21 rather than
+      left ticked.
+- [ ] **The corner takes the sheet**, which is the button every spreadsheet
+      keeps there — so **the address box moves into a formula bar** and stops
+      squatting where *select all* belongs.
+- [ ] **A size or a look over what is selected, in one gesture.** §4.4's
+      `setSize` and `setStyle` answered over a *span* of columns rather than one:
+      the same rows of the table, with the count taken over the span, and one
+      band written where the spec would write one. This is the row a heading
+      selection makes reachable, and the reason it comes first.
+- [ ] **Double-click the heading edge and the column fits what is in it.** The
+      width is *measured* — the view knows the font each cell wears; the host
+      knows every cell there is (§8 Q17) — and lands through `setSize` like a
+      drag, so the answer is a band and a shared band is still a question.
+- [ ] **Hide and unhide** (`docs/spec.md` §4 `hidden:`). The preview honours it
+      already and cannot set it; a hidden run also needs the marker between the
+      headings that says something is there.
+- [ ] **Grouping**, which is the same band and nearly the same gesture
+      (`docs/spec.md` §4 `group:`, outline level 0–7). The preview does not draw
+      it *at all* today — `group` is read, compiled onto the band, and then
+      dropped at the protocol, so a spec that Excel opens with an outline shows
+      here as plain columns. Three parts, in this order:
+      **drawn** — the bracket over the run and the `−` at its end, in a gutter
+      outside the headings, nested where the levels nest;
+      **collapsed and expanded** from that control — which is a *write*, not a
+      view state: `group` plus `hidden: true` is what the schema calls a
+      collapsed group, and there is nowhere else to keep it (ADR-015 leaves the
+      editor no sidecar, and ADR-001 leaves the grid no state of its own);
+      **set** over the columns or rows selected, which is §4.4's band rows once
+      more — change the band that groups them, or split it so this run stands
+      alone.
+      The corner's level buttons (`1` `2` `3`, collapse everything at a level)
+      are a bulk write over every band at once and are **not** in this slice.
+- [ ] **A formula bar.** What the cell *holds* — the formula, not what it comes
+      to (ADR-014) — legible without opening the cell, and editable there
+      through the same intent path typing into the cell takes. The address box
+      sits beside it, as in both spreadsheets.
+- [ ] **What the selection comes to**, under the grid: count, sum, average of
+      the rectangle, from the evaluated values and unreachable from any write
+      (ADR-014).
+- [ ] **The keys a look has**: `Cmd`/`Ctrl`+`B`, `I`, `U` — the toolbar has
+      them and the keyboard does not.
+- [ ] **The rest of the bar a reader expects**: the font face and size
+      (`docs/spec.md` §6 has both, the toolbar offers neither), the quick number
+      formats Sheets keeps beside the menu — currency, percent, more and fewer
+      decimals — and *clear formatting*, which is `setStyle` asked to take
+      everything off at once.
+- [ ] **A right-click menu**, on a cell and on a heading. It is where a
+      spreadsheet keeps what there is no room for on a bar, and it is where
+      Phase 11's insert and delete will hang.
+
+Deliberately **not** here: a second selection with `Cmd`+click (every answer in
+§4.4 is counted over one rectangle), zoom, and a format painter.
+
+### Phase 11 — Structural edits
 - [ ] `insertRow` / `insertCol` / `deleteRow` / `deleteCol`, with the
       consequence enumeration and the expected-diff-size preview (§4.4). The
-      row *header* is where a reader reaches for this, so the headers becoming
-      selectors (Phase 8) is the gesture it hangs off
+      row *header* is where a reader reaches for this, so the headings becoming
+      selectors (Phase 10) is the gesture it hangs off
 - [ ] `rekeyMap` for bulk A1 shifts in `cells:`
 - [ ] `merge` / `unmerge`, and band creation
 - [ ] The "convert this rectangle to `data:`" offer, at the moment a `cells:`
@@ -1067,7 +1159,7 @@ whether the spec survives contact with a GUI (ADR-008).
       translation, and waits on §8 Q2
 - [ ] Sorting a `data:` rectangle: its rows rewritten, and nothing else touched
 
-### Phase 11 — What sits on the sheet
+### Phase 12 — What sits on the sheet
 Charts, images, sparklines and shapes — all four are in the spec already
 (`docs/spec.md` §12, §13, §18, §19). This editor carries them through untouched
 (ADR-011) and draws nothing of them, which is the largest hole in the preview.
@@ -1079,9 +1171,9 @@ Charts, images, sparklines and shapes — all four are in the spec already
       anchor rather than to a picture
 - [ ] What is still unmodelled stays opaque and byte-identical while it waits
 
-### Phase 12 — Deterministic refactors
+### Phase 13 — Deterministic refactors
 Everything here is detectable by analysis. **No model involved** — which is the
-point, and is why it precedes Phase 10.
+point, and is why it precedes Phase 11.
 - [ ] Identical resolved styles at N sites → extract to `defs.styles`
 - [ ] Homogeneous `cells:` rectangles → `data:` with inline `values:`
 - [ ] Columns of translated formulas → a `formulas:` range
@@ -1090,7 +1182,7 @@ point, and is why it precedes Phase 10.
       changes one rendered cell is rejected, automatically (ADR-009)
 - [ ] Presented as reviewable proposals with a diff, never applied silently
 
-### Phase 13 — Assistant
+### Phase 14 — Assistant
 - [ ] Proposal-only interface: output is a `Patch`, constrained to its JSON
       schema, and passes §4.6 like anything else
 - [ ] Naming: `style_7` → a role name, from the evidence of where it is used
@@ -1102,7 +1194,7 @@ point, and is why it precedes Phase 10.
 - [ ] Provider behind a seam; works with a local model, since correctness comes
       from §4.6 rather than from the model
 
-### Phase 14 — Beyond VS Code
+### Phase 15 — Beyond VS Code
 - [ ] Tauri shell reusing `webview` unchanged; only `extension` is replaced
 - [ ] Standalone `.yxl.yaml` file association for people who do not use VS Code
 
@@ -1926,7 +2018,7 @@ means, is what the ninth and tenth find in step 1.
 
 *What it leaves open:* repetition among looks written inline. Ten *distinct*
 one-off looks are ten inline mappings and should be; ten *identical* ones are a
-spec that wants a declaration, and folding them into one is Phase 12's first
+spec that wants a declaration, and folding them into one is Phase 13's first
 refactor proposal — reviewable, `expectedDiff: empty`, and it rewrites the sites
 the reader did not touch, which is exactly why it is a proposal rather than a
 consequence of typing.
@@ -2049,7 +2141,7 @@ reader can weigh in a preview.
   which is the right answer for most cases — so the structural phase should
   *steer* toward conversion rather than optimize the shift. Remaining question:
   is anchor-relative addressing in `cells:` worth proposing upstream for the
-  scattered case? Decide before Phase 10, and note that a paste of two hundred
+  scattered case? Decide before Phase 11, and note that a paste of two hundred
   rows (Phase 8) asks the same question first.
 - **Q2 — How much formula translation do we do?** ✅ *Answered 2026-08-16
   (ADR-031).* As much as Excel does to a shared formula, and no more: relative
@@ -2138,7 +2230,7 @@ reader can weigh in a preview.
   YAML support — in a project that has no other. Whether the *extension* should
   contribute the mapping itself, so a reader gets it without configuring
   anything, is a question for the release phase and is asked there.
-- **Q8 — Tauri.** Phase 14. Nothing in the architecture blocks it (ADR-004); the
+- **Q8 — Tauri.** Phase 15. Nothing in the architecture blocks it (ADR-004); the
   question is whether the demand exists.
 - **Q9 — `overrides:` must exist upstream.** ✅ **Answered: it does.** Filed as
   [yxl#66](https://github.com/t-ujiie-g/yxl/issues/66) (2026-08-14) and shipped
@@ -2192,7 +2284,7 @@ reader can weigh in a preview.
 - **Q13 — What draws a chart's sketch?** ADR-029 needs an outline, a title, a
   legend box and a series list — which is hand-written SVG, not a chart library,
   unless the sketch turns out to want axes. No runtime dependency without an ADR
-  (ADR-013); decide when Phase 11 starts, with a spike over `charts.yxl.yaml`
+  (ADR-013); decide when Phase 12 starts, with a spike over `charts.yxl.yaml`
   and `sparklines.yxl.yaml`, which are already in the corpus.
 - **Q14 — What does one question about a rectangle look like?** ✅ *Answered
   2026-08-19.* *The origins grouped, a count against each* came first: a
@@ -2206,6 +2298,19 @@ reader can weigh in a preview.
   that origin allows — and leaves the others out. The answer carries the group
   it names rather than the whole rectangle, which is the machinery the question
   was really about.
+
+- **Q17 — What does *fit the column to its contents* measure?** Excel measures
+  every cell in the column; this editor has the two halves in different places.
+  The **view** knows how wide a string is in the font that cell wears, and holds
+  only a window of the sheet (ADR-019); the **host** knows every cell there is
+  and nothing about fonts. Three answers, in the order they cost: measure what
+  is drawn and say so — which makes the width depend on where the reader had
+  scrolled to, and is the wrong kind of surprise; measure in the view against
+  metrics it takes once and asks the host to apply over the whole column, which
+  needs the host to send the column's *text* rather than its cells; or give the
+  host a table of character widths per font and let it measure, which is a
+  second implementation of what the browser already does. Decide with Phase 10's
+  fourth item, not before.
 
 ## 9. Risks
 
@@ -2291,6 +2396,54 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-21 — Refactoring pass over the whole tree, and a phase that was missing from the plan
+Six findings, and a plan that now says what a reader of Excel or Sheets finds
+missing on their first minute in the grid.
+
+- **§8.1 — the cell keys were spelled three times** and the axis vocabulary
+  five. `CELL_HOLDS` / `CELL_WEARS` and `Axis` / `BAND_KEYS` live in `spec`,
+  which is where the schema's own words belong; `MODELED_KEYS.cell` is derived
+  from the first pair rather than listed beside it.
+- **§8.2 — "the entry under this key" was written 21 times in four shapes.**
+  `cst` owns the tree, so it owns `entryOf` and `holds`. The view's barrel
+  re-exported twenty-five names nothing imports — the extension takes
+  `@yxl-vscode/webview/protocol` and never the barrel — and `EXCEPT` was
+  exported with no caller outside its file.
+- **§8.3 — `draw.ts` was 530 lines doing three jobs.** The page is `draw.ts`
+  (146), everything inside the scroller is `table.ts` (367), and the three
+  "is this cell selected / copied / found" predicates sit with the rest of the
+  view's own state in `showing.ts` — which is what both files were reaching
+  for. `draw.test.ts` covers both and was **kept whole**: splitting it needs a
+  fixture seam that would cost more than the split buys, which is a decision to
+  revisit when the next gesture lands in `table.ts`.
+- **§8.4 — `menus.ts` shipped without tests.** It has them, `fit` included:
+  pulling a panel back onto a narrow view is arithmetic that cannot be seen in
+  jsdom and is exactly what a test should hold.
+- **§8.5 — a ticked box was not true.** Phase 8's first item said "and the row
+  and column headers as selectors" and shipped without them, admitting it in
+  its own note. That half is Phase 10's first item now.
+- **§8.9 — `@types/vscode` had drifted eight months past the engine.** The
+  manifest says `^1.104.0` and the caret had resolved to 1.125, so an API the
+  oldest supported VS Code does not have would have compiled here. Pinned.
+- **A phase went in between.** Everything a reader reaches for that is *not a
+  cell* — heading selection, the select-all corner, autofit on a double-click,
+  hide and unhide, **grouping**, a formula bar, the selection's count and sum,
+  `Cmd`+`B`, the font face and size, a right-click menu — is **Phase 10**, and
+  structural edits moved to 11. Insert and delete are gestures on a heading, so the
+  headings had to become selectors first. **§8 gains Q17**, which is the one
+  real question in it: what *fit to contents* measures, when the fonts are in
+  the view and the cells are on the host.
+- **Grouping was the gap nothing had written down.** `group:` (`docs/spec.md`
+  §4) is read by the loader and carried onto the compiled band, and then
+  *dropped at the protocol* — so an outline a spec declares is invisible here,
+  and no ticked box ever claimed otherwise because none of them mentioned it.
+  It sits beside hide-and-unhide in Phase 10, because the schema makes them one
+  gesture: `group` with `hidden: true` **is** a collapsed group, so the `−` on
+  the bracket is a write to the file rather than a state of the view.
+- 1590 → 1597 tests. Comment shape: exports 451 blocks / 968 lines (avg 2.1,
+  down from 2.2), private 312 / 332 (1.1), inline 59 / 79 (1.3), 9 over the
+  limit — the same nine as the last pass.
 
 ### 2026-08-21 — The bar reads as a spreadsheet's
 The other half of the panel-width problem, and the shape a reader of Sheets or

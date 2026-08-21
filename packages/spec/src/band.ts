@@ -25,3 +25,12 @@ export interface RowBand extends BandBase {
   readonly at: Templated<RowSpan>;
   readonly height: number | null;
 }
+
+/** Which way a band runs, which is the only thing that differs between the two (`docs/spec.md` §4). */
+export type Axis = 'column' | 'row';
+
+/** What each axis calls its sequence and the size it writes there. */
+export const BAND_KEYS: Readonly<Record<Axis, { readonly at: string; readonly size: string }>> = {
+  column: { at: 'columns', size: 'width' },
+  row: { at: 'rows', size: 'height' },
+};

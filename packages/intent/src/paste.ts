@@ -1,5 +1,5 @@
 import { type CompiledGrid, type CompiledSheet, cellAt, sheetOf } from '@yxl-vscode/compile';
-import { type Op, renderScalar } from '@yxl-vscode/cst';
+import { entryOf, type Op, renderScalar } from '@yxl-vscode/cst';
 import type { ScalarValue, SpecDoc } from '@yxl-vscode/spec';
 import {
   type A1Addr,
@@ -237,7 +237,7 @@ function block(
     ),
   ].join('\n');
 
-  const already = found.node.entries.find((entry) => entry.key.value === 'data')?.value;
+  const already = entryOf(found.node, 'data')?.value;
   const op: Op =
     already !== undefined && already.kind === 'seq'
       ? {

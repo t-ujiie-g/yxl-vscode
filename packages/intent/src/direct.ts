@@ -6,6 +6,7 @@ import {
   sheetOf,
 } from '@yxl-vscode/compile';
 import {
+  holds,
   type Node,
   nodeAt,
   type Op,
@@ -141,7 +142,7 @@ export function setFormula(
   if (written.kind === 'refused') return written;
 
   const at = written.node;
-  if (at.kind !== 'map' || !at.entries.some((entry) => entry.key.value === 'formula')) {
+  if (at.kind !== 'map' || !holds(at, 'formula')) {
     return refused(`\`${where.at}\` is written as a value, not as a formula`);
   }
 
@@ -178,15 +179,12 @@ function valuePath(origin: FacetOrigin, sheet: CompiledSheet, at: A1Addr, read: 
 
   if (written.node.kind !== 'map') return written;
 
-  const holds = (key: string): boolean =>
-    written.node.kind === 'map' && written.node.entries.some((entry) => entry.key.value === key);
-
   // A `value:` beside a `formula:` is Excel's cached result (`docs/spec.md` §3).
-  if (holds('formula')) {
+  if (holds(written.node, 'formula')) {
     return refused(`\`${at}\` holds a formula — type a formula to change it, starting with \`=\``);
   }
 
-  if (holds('value')) return { ...written, path: [...written.path, 'value'] };
+  if (holds(written.node, 'value')) return { ...written, path: [...written.path, 'value'] };
 
   return { ...written, add: true };
 }
