@@ -49,6 +49,21 @@ describe('a compiled grid', () => {
   });
 });
 
+describe('a frozen sheet', () => {
+  it('carries the cell the panes are frozen at', () => {
+    expect(sheet(`${SALES}    freeze: B2\n`).freeze).toBe('B2');
+  });
+
+  it('is not frozen where the spec says nothing', () => {
+    expect(sheet(SALES).freeze).toBeNull();
+  });
+
+  it('resolves a freeze written as a parameter', () => {
+    const spec = `params:\n  corner: C3\n${SALES}    freeze: \${corner}\n`;
+    expect(sheet(spec).freeze).toBe('C3');
+  });
+});
+
 describe('a definition', () => {
   const spec = `sheets:\n  - name: Sales\n    cells:\n      D2: { $ref: tax_rate }\n      D3: { formula: { $ref: subtotal } }\ndefs:\n  values:\n    tax_rate: 0.085\n  formulas:\n    subtotal: "SUM(B2:B10)"\n`;
 

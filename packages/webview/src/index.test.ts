@@ -33,6 +33,7 @@ function sheet(of: Partial<DrawnSheet> = {}): DrawnSheet {
     cells: [cell()],
     merges: [],
     problems: [],
+    freeze: null,
     ...of,
   };
 }
@@ -99,18 +100,12 @@ describe('what the view sends', () => {
     ]);
   });
 
-  it('sends a colour to the cells the picker was opened over, not to what is selected since', () => {
+  it('sends the colour picked to the cells the palette was opened over', () => {
     const { into, sent } = view();
 
     at(into, 1, 1)?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
-    const pick = into.querySelector<HTMLInputElement>('.look.fill .pick');
-    if (pick === null) throw new Error('there is no picker');
-
-    // A colour input commits when it is dismissed, and the click that dismissed
-    // it has already moved the selection by then.
-    at(into, 2, 2)?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
-    pick.value = '#1f3864';
-    pick.dispatchEvent(new Event('change'));
+    into.querySelector<HTMLButtonElement>('button.look.fill')?.click();
+    into.querySelector<HTMLButtonElement>('.panel .swatch[title="#FF9900"]')?.click();
 
     expect(sent.filter((one) => one.kind === 'wear')).toEqual([
       {
@@ -120,9 +115,20 @@ describe('what the view sends', () => {
         left: 1,
         bottom: 1,
         right: 1,
-        want: { fill: '1F3864' },
+        want: { fill: 'FF9900' },
       },
     ]);
+  });
+
+  it('closes an open panel on the click that lands anywhere else', () => {
+    const { into } = view();
+
+    at(into, 1, 1)?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    into.querySelector<HTMLButtonElement>('button.look.fill')?.click();
+    expect(into.querySelector('.panel')).not.toBeNull();
+
+    into.querySelector('.scrim')?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    expect(into.querySelector('.panel')).toBeNull();
   });
 
   it('sends a column dragged by its edge, in the units a spec writes widths in', () => {

@@ -32,6 +32,7 @@ describe('the upstream specs', () => {
       data: true,
       defs: true,
       formulas: true,
+      freeze: true,
       includes: true,
       merges: true,
       opaque: true,
@@ -86,6 +87,7 @@ function seen(docs: readonly SpecDoc[]): Record<string, boolean> {
     data: sheets.some((sheet) => sheet.data.length > 0),
     defs: docs.some((doc) => doc.defs.styles.length + doc.defs.values.length > 0),
     formulas: sheets.some((sheet) => sheet.formulas.length > 0),
+    freeze: sheets.some((sheet) => sheet.freeze !== null),
     // A node whose file is not the document's own came through an `$include`.
     includes: docs.some((doc) => filesIn(doc).some((file) => file !== doc.file)),
     merges: sheets.some((sheet) => sheet.merges.length > 0),

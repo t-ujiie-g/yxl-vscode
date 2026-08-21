@@ -34,6 +34,7 @@ function sheet(cells: readonly DrawnCell[], of: Partial<DrawnSheet> = {}): Drawn
     cells,
     merges: [],
     problems: [],
+    freeze: null,
     ...of,
   };
 }

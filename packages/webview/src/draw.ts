@@ -11,6 +11,7 @@ import {
   undoing,
   within,
 } from './keys';
+import { fit } from './menus';
 import {
   inspector,
   note,
@@ -22,7 +23,7 @@ import {
   uncomputed,
 } from './panels';
 import type { DrawnCell, DrawnMerge, DrawnSheet } from './protocol';
-import { type Asks, cellKey, GUTTER, type Showing } from './showing';
+import { type Asks, cellKey, GUTTER, HEADING, type Showing } from './showing';
 import { toolbar } from './toolbar';
 import { across, down, heightOf, sizeOf, type Where, wanted, widthOf } from './window';
 
@@ -67,6 +68,7 @@ export function draw(into: HTMLElement, showing: Showing, asks: Asks): void {
   under.className = 'under';
   into.append(under);
   say(under, showing, asks);
+  fit(into);
 
   if (held) focusCell(into, showing);
 }
@@ -116,6 +118,7 @@ export function restate(into: HTMLElement, showing: Showing, asks: Asks): void {
 
   say(under, showing, asks);
   told(into, showing);
+  fit(into);
 }
 
 /** Everything said under the grid, which is rebuilt on its own. */
@@ -165,10 +168,17 @@ function grid(sheet: DrawnSheet, showing: Showing, asks: Asks): HTMLElement {
   const merged = mergedIn(sheet);
   const problems = markedBy(sheet);
 
-  const before = down(sheet, sheet.at.row);
+  const stays = (sheet.freeze?.row ?? 1) - 1;
+  for (let row = 1; row <= stays; row += 1) {
+    if (heightOf(sheet, row) === 0) continue;
+    body.append(line(sheet, row, held, merged, problems, showing, asks));
+  }
+
+  const from = Math.max(sheet.at.row, stays + 1);
+  const before = down(sheet, from) - down(sheet, stays + 1);
   if (before > 0) body.append(gap(sheet, before));
 
-  for (let row = sheet.at.row; row < sheet.at.row + sheet.rows; row += 1) {
+  for (let row = from; row < sheet.at.row + sheet.rows; row += 1) {
     if (heightOf(sheet, row) === 0) continue;
     body.append(line(sheet, row, held, merged, problems, showing, asks));
   }
@@ -275,27 +285,58 @@ interface Merged {
 function headings(sheet: DrawnSheet, showing: Showing, asks: Asks): HTMLElement {
   const head = document.createElement('thead');
   const line = document.createElement('tr');
+  line.style.height = `${HEADING}px`;
   line.append(corner(showing, asks));
 
-  const before = across(sheet, sheet.at.col);
-  if (before > 0) line.append(pad(before));
+  for (const one of columnsOf(sheet)) {
+    if ('pad' in one) {
+      if (one.pad > 0) line.append(pad(one.pad));
+      continue;
+    }
 
-  for (let col = sheet.at.col; col < sheet.at.col + sheet.columns; col += 1) {
-    const wide = widthOf(sheet, col);
+    const wide = widthOf(sheet, one.at);
     if (wide === 0) continue;
 
     const heading = document.createElement('th');
-    heading.textContent = columnLabel(col);
+    heading.textContent = columnLabel(one.at);
     heading.style.width = `${wide}px`;
-    heading.append(grip('column', col, wide, asks));
+    if (one.stays) stay(sheet, heading, { col: one.at });
+    heading.append(grip('column', one.at, wide, asks));
     line.append(heading);
   }
 
-  const after = across(sheet, sheet.of.columns + 1) - across(sheet, sheet.at.col + sheet.columns);
-  if (after > 0) line.append(pad(after));
-
   head.append(line);
   return head;
+}
+
+/** One place along a line: a column to draw, or the width of those the window left out. */
+type Along = { readonly at: number; readonly stays: boolean } | { readonly pad: number };
+
+/** What a line is drawn from across: the frozen columns, then the window's own, the rest as width. */
+function columnsOf(sheet: DrawnSheet): Along[] {
+  const stays = (sheet.freeze?.col ?? 1) - 1;
+  const along: Along[] = [];
+  for (let col = 1; col <= stays; col += 1) along.push({ at: col, stays: true });
+
+  const from = Math.max(sheet.at.col, stays + 1);
+  along.push({ pad: across(sheet, from) - across(sheet, stays + 1) });
+  for (let col = from; col < sheet.at.col + sheet.columns; col += 1) {
+    along.push({ at: col, stays: false });
+  }
+
+  along.push({
+    pad: across(sheet, sheet.of.columns + 1) - across(sheet, sheet.at.col + sheet.columns),
+  });
+  return along;
+}
+
+/** A cell of a frozen band, put where it stays: under the headings, or right of the row numbers. */
+function stay(sheet: DrawnSheet, cell: HTMLElement, at: { row?: number; col?: number }): void {
+  if (at.row !== undefined) cell.style.top = `${HEADING + down(sheet, at.row)}px`;
+  if (at.col === undefined) return;
+
+  cell.classList.add('stays');
+  cell.style.left = `${GUTTER + across(sheet, at.col)}px`;
 }
 
 /** The edge of a heading, dragged to size what it heads; sent once on the way up, since every step would be an edit. */
@@ -368,14 +409,18 @@ function line(
   number.append(grip('row', row, heightOf(sheet, row), asks));
   line.append(number);
 
-  const before = across(sheet, sheet.at.col);
-  if (before > 0) line.append(pad(before));
+  for (const one of columnsOf(sheet)) {
+    if ('pad' in one) {
+      if (one.pad > 0) line.append(pad(one.pad));
+      continue;
+    }
 
-  for (let col = sheet.at.col; col < sheet.at.col + sheet.columns; col += 1) {
+    const col = one.at;
     if (merged.covered.has(cellKey(col, row)) || widthOf(sheet, col) === 0) continue;
 
     const drawn = drawCell(held.get(cellKey(col, row)), merged.anchored.get(cellKey(col, row)));
     drawn.setAttribute('data-at', cellKey(col, row));
+    if (one.stays) stay(sheet, drawn, { col });
     if (showing.selected?.row === row && showing.selected.col === col) {
       drawn.classList.add('selected');
     }
@@ -472,6 +517,13 @@ function line(
       }
     });
     line.append(drawn);
+  }
+
+  if (row < (sheet.freeze?.row ?? 1)) {
+    line.classList.add('frozen');
+    for (const cell of line.children) {
+      if (cell instanceof HTMLElement) stay(sheet, cell, { row });
+    }
   }
 
   return line;

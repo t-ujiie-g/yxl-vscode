@@ -3,9 +3,10 @@ import { parse } from '@yxl-vscode/cst';
 import { type IncludeReader, load } from '@yxl-vscode/loader';
 import { did, type History, nothing } from '@yxl-vscode/patch';
 import { type FilePath, filePath, parseColor } from '@yxl-vscode/units';
-import type { Choice, Resized, Typed, Worn } from '@yxl-vscode/webview/protocol';
+import type { Choice, Frozen, Resized, Typed, Worn } from '@yxl-vscode/webview/protocol';
 import { describe, expect, it } from 'vitest';
 import { wear } from './look';
+import { freeze } from './panes';
 import { resize } from './size';
 import { emptied, empty, type Port, resolve, type Spec, write, writeOverride } from './write';
 
@@ -514,6 +515,48 @@ describe('a column or a row dragged to a size', () => {
 
     await resize(spec, dragged({ sheet: 'Nowhere' }), port);
     expect(refusals[0]).toContain('nothing here can say how wide that column is');
+  });
+});
+
+describe('a sheet frozen from the preview', () => {
+  const frozen = (of: Partial<Frozen> = {}): Frozen => ({
+    sheet: 'Sales',
+    at: { row: 2, col: 2 },
+    ...of,
+  });
+
+  it('writes the key on the sheet, and says so', async () => {
+    const spec = `${SALES}    cells:\n      A1: 1\n`;
+    const { spec: read, port, files, told } = editor({ [ROOT]: spec });
+
+    await freeze(read, frozen(), port);
+    expect(files[ROOT]).toBe(`${spec}    freeze: B2\n`);
+    expect(told).toEqual(['Sales is frozen at B2.']);
+  });
+
+  it('takes the key out again where the reader asks for no freeze', async () => {
+    const spec = `${SALES}    cells:\n      A1: 1\n    freeze: B2\n`;
+    const { spec: read, port, files, told } = editor({ [ROOT]: spec });
+
+    await freeze(read, frozen({ at: null }), port);
+    expect(files[ROOT]).toBe(`${SALES}    cells:\n      A1: 1\n`);
+    expect(told).toEqual(['Sales is no longer frozen.']);
+  });
+
+  it('refuses a sheet that is split, rather than taking the split off', async () => {
+    const spec = `${SALES}    cells:\n      A1: 1\n    split: { x: 120, y: 60 }\n`;
+    const { spec: read, port, files, refusals } = editor({ [ROOT]: spec });
+
+    await freeze(read, frozen(), port);
+    expect(refusals[0]).toContain('cannot have both');
+    expect(files[ROOT]).toBe(spec);
+  });
+
+  it('refuses a sheet name no sheet can have', async () => {
+    const { spec, port, refusals } = editor({ [ROOT]: `${SALES}    cells:\n      A1: 1\n` });
+
+    await freeze(spec, frozen({ sheet: '' }), port);
+    expect(refusals[0]).toContain('is not a name a sheet can have');
   });
 });
 

@@ -61,6 +61,7 @@ export function compileSheet(ctx: Ctx, sheet: Sheet): Drafted {
       columns: sheet.columns.map((band) => columnBand(ctx, band)).filter((band) => band !== null),
       rows: sheet.rows.map((band) => rowBand(ctx, band)).filter((band) => band !== null),
       merges: sheet.merges.map((one) => mergedRegion(ctx, one)).filter((one) => one !== null),
+      freeze: sheet.freeze === null ? null : address(ctx, sheet.freeze, sheet),
     },
     cells,
   };

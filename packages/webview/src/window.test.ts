@@ -14,6 +14,7 @@ function sheet(of: Partial<DrawnSheet> = {}): DrawnSheet {
     cells: [],
     merges: [],
     problems: [],
+    freeze: null,
     ...of,
   };
 }

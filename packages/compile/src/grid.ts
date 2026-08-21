@@ -22,7 +22,11 @@ export interface DeclaredStyle {
   readonly node: NodeId;
 }
 
-/** One sheet, held sparse: `cellAt` answers for an address whichever construct holds it. */
+/**
+ * One sheet, held sparse: `cellAt` answers for an address whichever construct
+ * holds it. `freeze` is the cell the rows above and columns left of stay put
+ * at, and `A1` there freezes nothing (`docs/spec.md` §2).
+ */
 export interface CompiledSheet {
   readonly name: SheetName;
   readonly node: NodeId;
@@ -31,6 +35,7 @@ export interface CompiledSheet {
   readonly columns: readonly CompiledBand[];
   readonly rows: readonly CompiledBand[];
   readonly merges: readonly CompiledMerge[];
+  readonly freeze: A1Addr | null;
 }
 
 /** One `formulas:` range, kept as a range: `D2:D1048576` is two words, not a million cells (ADR-019). */

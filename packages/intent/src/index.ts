@@ -10,6 +10,7 @@ export {
   setValue,
   type Text,
 } from './direct';
+export { type Frozen, setFreeze } from './freeze';
 export { overridable, override, type Says } from './override';
 export {
   couldBlock,

@@ -202,6 +202,24 @@ describe('a drawn spec', () => {
     expect([sheet.at.row, sheet.rows]).toEqual([241, 200]);
   });
 
+  it('says where the panes are frozen, so the view can keep them where they are', () => {
+    expect(drawn(`${SALES}    freeze: B2\n`).freeze).toEqual({ row: 2, col: 2 });
+    expect(drawn(SALES).freeze).toBeNull();
+  });
+
+  it('draws the frozen rows whatever window the reader has scrolled to', () => {
+    // The pane is the point: a reader at row 300 is reading it against row 1.
+    const source = `${TALL}    freeze: A3\n`;
+    const sheet = drawn(source, new Map([['Sales', { row: 240, col: 1 }]]));
+
+    expect(sheet.cells.filter((cell) => cell.row < 3).map((cell) => cell.row)).toEqual([1, 2]);
+    expect(sheet.at.row).toBe(240);
+  });
+
+  it('leaves a freeze deeper than half a window scrolling, since that is no pane', () => {
+    expect(drawn(`${TALL}    freeze: A180\n`).freeze).toBeNull();
+  });
+
   it('draws a window of a sheet too small to fill one', () => {
     const sheet = drawn(
       `${SALES}    cells:\n      B2: x\n`,

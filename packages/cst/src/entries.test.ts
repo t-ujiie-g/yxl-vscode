@@ -324,6 +324,43 @@ describe('entries of a collection', () => {
       expect(after).toBe('cells:\n  A1: x\n  A2: "007"\n');
     });
 
+    it('writes into a mapping that opens a sequence item without repeating its dash', () => {
+      const source = 'sheets:\n  - name: Sales\n    cells:\n      A1: 1\n';
+      const after = text(source, {
+        op: 'add',
+        path: ['sheets', 0],
+        key: 'freeze',
+        value: 'B2',
+        before: null,
+      });
+
+      expect(after).toBe(`${source}    freeze: B2\n`);
+    });
+
+    it('takes the layout from the one entry a sequence item has, dash and all', () => {
+      const after = text('sheets:\n  - name: Sales\n', {
+        op: 'add',
+        path: ['sheets', 0],
+        key: 'freeze',
+        value: 'B2',
+        before: null,
+      });
+
+      expect(after).toBe('sheets:\n  - name: Sales\n    freeze: B2\n');
+    });
+
+    it('refuses to write above the entry the `- ` opens, which would move the dash', () => {
+      const { diagnostics } = edit('sheets:\n  - name: Sales\n', {
+        op: 'add',
+        path: ['sheets', 0],
+        key: 'freeze',
+        value: 'B2',
+        before: 'name',
+      });
+
+      expect(diagnostics[0]?.code).toBe(CODE.itemMarker);
+    });
+
     it('refuses a key that is already there', () => {
       const { diagnostics } = edit('cells:\n  A1: x\n', {
         op: 'add',

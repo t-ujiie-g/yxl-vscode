@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { describe, expect, it } from 'vitest';
-import { ACROSS, framed, marked, RAGGED } from './marks';
+import { ACROSS, framed, frozen, marked, RAGGED } from './marks';
 
 describe('a mark drawn as bars', () => {
   it('is one rectangle per bar, in a box a button can hold', () => {
@@ -40,6 +40,23 @@ describe('the box a border mark is drawn in', () => {
 
   it('stands none out where none is named, which is the box a border comes off', () => {
     expect(faint([])).toEqual([true, true, true, true]);
+  });
+
+  it('draws the edge it names heavier, since at 16px an edge that is only lit reads as a box', () => {
+    const [left] = framed(['left']);
+    const [faintLeft] = framed([]);
+
+    expect(left?.width).toBe(2.2);
+    expect(faintLeft?.width).toBe(1);
+  });
+});
+
+describe('the mark a frozen pane wears', () => {
+  it('is the border box with the corner that stays and the two edges it splits along', () => {
+    const bars = frozen();
+
+    expect(bars).toHaveLength(7);
+    expect(bars.filter((bar) => bar.faint !== true)).toHaveLength(2);
   });
 });
 

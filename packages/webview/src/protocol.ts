@@ -33,7 +33,7 @@ export interface DrawnParam {
 /**
  * One sheet: the window drawn (`at`, `rows`, `columns`) out of how far the
  * sheet reaches (`of`), so the grid never holds more than a page however large
- * the sheet.
+ * the sheet. `freeze` is the first cell that scrolls (`docs/spec.md` §2).
  */
 export interface DrawnSheet {
   readonly name: string;
@@ -46,6 +46,13 @@ export interface DrawnSheet {
   readonly cells: readonly DrawnCell[];
   readonly merges: readonly DrawnMerge[];
   readonly problems: readonly MarkedCell[];
+  readonly freeze: { readonly row: number; readonly col: number } | null;
+}
+
+/** Where a sheet's panes are asked to be frozen, or `null` to take the freeze off. */
+export interface Frozen {
+  readonly sheet: string;
+  readonly at: { readonly row: number; readonly col: number } | null;
 }
 
 /** A diagnostic on the cell it is about; one that reaches no cell stays in the list under the grid. */
@@ -245,6 +252,7 @@ export type FromView =
   | ({ readonly kind: 'pastedText'; readonly choice: string } & PastedText)
   | ({ readonly kind: 'wear' } & Worn)
   | ({ readonly kind: 'worn'; readonly choice: string } & Worn)
+  | ({ readonly kind: 'freeze' } & Frozen)
   | ({ readonly kind: 'resize' } & Resized)
   | ({ readonly kind: 'resized'; readonly choice: string } & Resized)
   | ({ readonly kind: 'resolve'; readonly choice: string } & Typed)
