@@ -437,6 +437,7 @@ not a date.
 | A width or a look over the columns selected, in one gesture | **Phase 10** — §4.4's tables over a span rather than one column |
 | Double-click the heading edge to fit the column to its contents | **Phase 10** |
 | Hide and unhide a row or a column | **Phase 10** — `hidden:` is drawn already, and cannot be set |
+| Group rows or columns, and collapse the group | **Phase 10** — `group:` is read and then dropped before the view; nothing of an outline is drawn |
 | A formula bar over the grid | **Phase 10** — what the cell *holds* is legible only inside the cell today |
 | What the selection comes to — count, sum, average | **Phase 10** — every spreadsheet's status bar |
 | `Cmd`+`B` / `I` / `U` | **Phase 10** — the toolbar has them, the keyboard does not |
@@ -1104,6 +1105,22 @@ gestures on a *heading*, and the headings are not selectors yet.
 - [ ] **Hide and unhide** (`docs/spec.md` §4 `hidden:`). The preview honours it
       already and cannot set it; a hidden run also needs the marker between the
       headings that says something is there.
+- [ ] **Grouping**, which is the same band and nearly the same gesture
+      (`docs/spec.md` §4 `group:`, outline level 0–7). The preview does not draw
+      it *at all* today — `group` is read, compiled onto the band, and then
+      dropped at the protocol, so a spec that Excel opens with an outline shows
+      here as plain columns. Three parts, in this order:
+      **drawn** — the bracket over the run and the `−` at its end, in a gutter
+      outside the headings, nested where the levels nest;
+      **collapsed and expanded** from that control — which is a *write*, not a
+      view state: `group` plus `hidden: true` is what the schema calls a
+      collapsed group, and there is nowhere else to keep it (ADR-015 leaves the
+      editor no sidecar, and ADR-001 leaves the grid no state of its own);
+      **set** over the columns or rows selected, which is §4.4's band rows once
+      more — change the band that groups them, or split it so this run stands
+      alone.
+      The corner's level buttons (`1` `2` `3`, collapse everything at a level)
+      are a bulk write over every band at once and are **not** in this slice.
 - [ ] **A formula bar.** What the cell *holds* — the formula, not what it comes
       to (ADR-014) — legible without opening the cell, and editable there
       through the same intent path typing into the cell takes. The address box
@@ -2411,12 +2428,19 @@ missing on their first minute in the grid.
   oldest supported VS Code does not have would have compiled here. Pinned.
 - **A phase went in between.** Everything a reader reaches for that is *not a
   cell* — heading selection, the select-all corner, autofit on a double-click,
-  hide and unhide, a formula bar, the selection's count and sum, `Cmd`+`B`, the
-  font face and size, a right-click menu — is **Phase 10**, and structural
-  edits moved to 11. Insert and delete are gestures on a heading, so the
+  hide and unhide, **grouping**, a formula bar, the selection's count and sum,
+  `Cmd`+`B`, the font face and size, a right-click menu — is **Phase 10**, and
+  structural edits moved to 11. Insert and delete are gestures on a heading, so the
   headings had to become selectors first. **§8 gains Q17**, which is the one
   real question in it: what *fit to contents* measures, when the fonts are in
   the view and the cells are on the host.
+- **Grouping was the gap nothing had written down.** `group:` (`docs/spec.md`
+  §4) is read by the loader and carried onto the compiled band, and then
+  *dropped at the protocol* — so an outline a spec declares is invisible here,
+  and no ticked box ever claimed otherwise because none of them mentioned it.
+  It sits beside hide-and-unhide in Phase 10, because the schema makes them one
+  gesture: `group` with `hidden: true` **is** a collapsed group, so the `−` on
+  the bracket is a write to the file rather than a state of the view.
 - 1590 → 1597 tests. Comment shape: exports 451 blocks / 968 lines (avg 2.1,
   down from 2.2), private 312 / 332 (1.1), inline 59 / 79 (1.3), 9 over the
   limit — the same nine as the last pass.
