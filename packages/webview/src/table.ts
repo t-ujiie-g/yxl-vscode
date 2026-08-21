@@ -2,7 +2,7 @@ import type { Axis } from '@yxl-vscode/spec';
 import { columnLabel } from '@yxl-vscode/units';
 import { corner } from './boxes';
 import { drawCell, typeInto } from './cell';
-import { copying, going, looking as lookingFor, pasting, takingAll, undoing } from './keys';
+import { copying, going, looking as lookingFor, pasting, undoing } from './keys';
 import type { DrawnCell, DrawnMerge, DrawnSheet } from './protocol';
 import {
   type Asks,
@@ -345,12 +345,6 @@ function line(
       // key sets off, and the view decides there which paste this is.
       if (pasting(event)) {
         asks.paste(row, col);
-        return;
-      }
-
-      if (takingAll(event)) {
-        event.preventDefault();
-        asks.takeAll();
         return;
       }
 

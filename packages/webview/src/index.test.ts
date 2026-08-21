@@ -793,6 +793,37 @@ describe('the bar over the grid', () => {
     expect(sent.filter((one) => one.kind === 'edit')).toEqual([]);
   });
 
+  it('takes the whole sheet on `Cmd`+`A` wherever the keyboard is, and not the panel round it', () => {
+    const { into, sent } = view();
+    const event = new KeyboardEvent('keydown', {
+      key: 'a',
+      metaKey: true,
+      bubbles: true,
+      cancelable: true,
+    });
+
+    // On the corner button, which is where the reader's keyboard is after
+    // clicking it — and where the browser's own select-all took the panel.
+    into.querySelector<HTMLButtonElement>('.corner .all')?.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(sent.filter((one) => one.kind === 'inspect').at(-1)).toMatchObject({ row: 1, col: 1 });
+  });
+
+  it('leaves `Cmd`+`A` to the box the reader is typing in', () => {
+    const { into } = view();
+    const box = into.querySelector<HTMLInputElement>('.formula .holds');
+    const event = new KeyboardEvent('keydown', {
+      key: 'a',
+      metaKey: true,
+      bubbles: true,
+      cancelable: true,
+    });
+
+    box?.dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(false);
+  });
+
   it('takes the whole sheet from the corner, as whole columns', () => {
     const { into, sent } = view();
 

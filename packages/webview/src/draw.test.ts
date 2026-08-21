@@ -684,7 +684,9 @@ describe('moving about the grid with the keys', () => {
     const on = asks();
     const into = shown({ drawing: room() }, on);
 
-    at(into, 2, 2)?.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', metaKey: true }));
+    at(into, 2, 2)?.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'a', metaKey: true, bubbles: true }),
+    );
 
     expect(on.takeAll).toHaveBeenCalled();
   });

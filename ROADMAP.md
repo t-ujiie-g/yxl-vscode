@@ -2474,6 +2474,11 @@ box had to move somewhere, and the only right place is a formula bar.
   rather than a `cells:` entry per address the grid was drawing (ADR-041).
   `Cmd`+`A` is the same gesture and now goes the same way; before today it was
   a rectangle of eight thousand addresses and an answer nobody would take.
+- **`Cmd`+`A` is caught where the preview can see it.** It was handled on the
+  cell, so with the keyboard anywhere else — the corner button, having just
+  clicked it — the browser's own select-all ran instead and painted the whole
+  panel blue. It is one listener at the root of the view now, and the box a
+  reader is typing in keeps its own `Cmd`+`A`.
 - **The heading row is still 24px**, measured after the address box left it:
   the row's own height is the whole story now rather than a description of what
   the box made it, and the frozen panes are placed against that number.
