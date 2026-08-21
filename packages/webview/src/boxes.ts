@@ -1,41 +1,97 @@
 import { addrAt } from '@yxl-vscode/units';
+import { written } from './cell';
 import { looking as lookingFor } from './keys';
-import { type Asks, GUTTER, HEADING, type Looking, type Showing } from './showing';
+import { type Asks, GUTTER, type Looking, type Showing } from './showing';
 
-/** The two boxes outside the grid, said again: the address the reader is on, and how far through a search. */
-export function told(into: HTMLElement, showing: Showing): void {
-  const address = into.querySelector<HTMLInputElement>('.corner .address');
-  if (address !== null && document.activeElement !== address) {
-    address.value = showing.selected === null ? '' : addrAt(showing.selected);
+/**
+ * The boxes outside the grid, said again. The bar is *rebuilt* rather than
+ * written into, because what it sends is about the cell selected now — unless
+ * the reader is typing in it, whose text is theirs until they leave.
+ */
+export function told(into: HTMLElement, showing: Showing, asks: Asks): void {
+  const bar = into.querySelector('.formula');
+  if (bar !== null && !bar.contains(document.activeElement)) {
+    bar.replaceWith(formulaBar(showing, asks));
   }
 
   const count = into.querySelector('.looking .count');
   if (count !== null && showing.looking !== null) count.textContent = counted(showing.looking);
 }
 
-/** The corner above the row numbers, which is where every spreadsheet keeps the address box. */
-export function corner(showing: Showing, asks: Asks): HTMLElement {
+/** The corner above the row numbers: the button that takes the whole sheet, as everywhere else. */
+export function corner(asks: Asks): HTMLElement {
   const cell = document.createElement('th');
   cell.className = 'corner';
   cell.style.width = `${GUTTER}px`;
 
-  const box = document.createElement('input');
-  box.type = 'text';
-  box.className = 'address';
-  // The box is what makes the heading row as tall as it is, and a frozen row is
-  // put under that; the other pixel is the line beneath the headings.
-  box.style.height = `${HEADING - 1}px`;
-  box.value = showing.selected === null ? '' : addrAt(showing.selected);
-  box.title = 'Go to an address';
-  box.setAttribute('aria-label', 'Go to an address');
-  box.addEventListener('keydown', (event) => {
+  const all = document.createElement('button');
+  all.type = 'button';
+  all.className = 'all';
+  all.title = 'Select the whole sheet';
+  all.setAttribute('aria-label', 'Select the whole sheet');
+  all.addEventListener('click', () => asks.takeAll());
+
+  cell.append(all);
+  return cell;
+}
+
+/**
+ * The bar above the grid: where the reader is, and what that cell *holds* —
+ * the formula rather than what it comes to (ADR-014), typed into here as it is
+ * typed into the cell.
+ */
+export function formulaBar(showing: Showing, asks: Asks): HTMLElement {
+  const bar = document.createElement('div');
+  bar.className = 'formula';
+
+  const at = document.createElement('input');
+  at.type = 'text';
+  at.className = 'address';
+  at.value = showing.selected === null ? '' : addrAt(showing.selected);
+  at.title = 'Go to an address';
+  at.setAttribute('aria-label', 'Go to an address');
+  at.addEventListener('keydown', (event) => {
     event.stopPropagation();
-    if (event.key === 'Enter') asks.goTo(box.value);
-    if (event.key === 'Escape') box.blur();
+    if (event.key === 'Enter') asks.goTo(at.value);
+    if (event.key === 'Escape') at.blur();
   });
 
-  cell.append(box);
-  return cell;
+  const mark = document.createElement('span');
+  mark.className = 'fx';
+  mark.textContent = 'fx';
+
+  const holds = document.createElement('input');
+  const cell = cellOf(showing);
+  holds.type = 'text';
+  holds.className = 'holds';
+  holds.value = written(cell);
+  holds.disabled = showing.selected === null;
+  holds.title = 'What this cell holds';
+  holds.setAttribute('aria-label', 'What this cell holds');
+  holds.addEventListener('keydown', (event) => {
+    event.stopPropagation();
+    const where = showing.selected;
+    if (event.key === 'Enter' && where !== null) {
+      asks.edit(where.row, where.col, holds.value);
+      holds.blur();
+    }
+    if (event.key === 'Escape') {
+      holds.value = written(cell);
+      holds.blur();
+    }
+  });
+
+  bar.append(at, mark, holds);
+  return bar;
+}
+
+/** The cell the reader is on, where the drawing holds one. */
+function cellOf(showing: Showing) {
+  const at = showing.selected;
+  if (at === null) return undefined;
+
+  const cells = showing.drawing.sheets[showing.sheet]?.cells ?? [];
+  return cells.find((one) => one.row === at.row && one.col === at.col);
 }
 
 /** The bar `Cmd`+`F` opens: what is being looked for, how much of it there is, and the way through it. */

@@ -120,7 +120,7 @@ function headings(sheet: DrawnSheet, showing: Showing, asks: Asks): HTMLElement 
   const head = document.createElement('thead');
   const line = document.createElement('tr');
   line.style.height = `${HEADING}px`;
-  line.append(corner(showing, asks));
+  line.append(corner(asks));
 
   for (const one of columnsOf(sheet)) {
     if ('pad' in one) {
@@ -350,8 +350,7 @@ function line(
 
       if (takingAll(event)) {
         event.preventDefault();
-        asks.select(1, 1);
-        asks.reachTo(sheet.of.rows, sheet.of.columns);
+        asks.takeAll();
         return;
       }
 

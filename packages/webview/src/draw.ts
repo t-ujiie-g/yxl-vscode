@@ -1,4 +1,4 @@
-import { findBar, told } from './boxes';
+import { findBar, formulaBar, told } from './boxes';
 import { fit } from './menus';
 import {
   inspector,
@@ -43,6 +43,7 @@ export function draw(into: HTMLElement, showing: Showing, asks: Asks): void {
   if (drawing.params.length > 0) into.append(parameters(drawing, asks));
   if (drawing.sheets.length > 1) into.append(tabs(drawing, showing.sheet, asks.showSheet));
   into.append(toolbar(showing, asks));
+  into.append(formulaBar(showing, asks));
 
   const sheet = drawing.sheets[Math.min(showing.sheet, drawing.sheets.length - 1)];
   if (sheet !== undefined) {
@@ -112,7 +113,7 @@ export function restate(into: HTMLElement, showing: Showing, asks: Asks): void {
   into.querySelector('.toolbar')?.replaceWith(toolbar(showing, asks));
 
   say(under, showing, asks);
-  told(into, showing);
+  told(into, showing, asks);
   fit(into);
 }
 

@@ -36,6 +36,7 @@ body {
 /* Outside the grid the panel's palette applies; inside it the sheet's does. */
 .boxes input,
 .looking .for,
+.formula input,
 .reason {
   padding: 1px 4px;
   border: 1px solid var(--vscode-input-border, var(--vscode-panel-border));
@@ -266,6 +267,56 @@ body {
   background: var(--vscode-tab-activeBackground);
   border-bottom-color: transparent;
   font-weight: 600;
+}
+
+/* Where the reader is, and what that cell holds — above the grid, as both
+   spreadsheets keep it, and outside the sheet so it wears the panel's theme. */
+.formula {
+  display: flex;
+  align-items: stretch;
+  gap: 0.3rem;
+  margin-bottom: 0.4rem;
+}
+
+.formula .address {
+  width: 6rem;
+  flex: none;
+  text-align: center;
+}
+
+.formula .fx {
+  display: flex;
+  align-items: center;
+  padding: 0 0.2rem;
+  color: var(--vscode-descriptionForeground);
+  font-style: italic;
+}
+
+.formula .holds {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--vscode-editor-font-family, monospace);
+}
+
+/* The corner takes the whole sheet, as the button in every spreadsheet does. */
+.corner .all {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.corner .all::after {
+  content: "";
+  display: block;
+  width: 0;
+  height: 0;
+  margin: auto 0 0 auto;
+  border: 5px solid transparent;
+  border-bottom-color: #9a9a9a;
+  border-right-color: #9a9a9a;
 }
 
 /* The sheet is a workbook, not a panel (ADR-024): paper white, ink black, and
