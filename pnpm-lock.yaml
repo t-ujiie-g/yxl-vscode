@@ -119,8 +119,8 @@ importers:
         version: link:../webview
     devDependencies:
       '@types/vscode':
-        specifier: ^1.104.0
-        version: 1.125.0
+        specifier: ~1.104.0
+        version: 1.104.0
       esbuild:
         specifier: ^0.28.2
         version: 0.28.2
@@ -702,8 +702,8 @@ packages:
   '@types/node@26.2.0':
     resolution: {integrity: sha512-5IviulTZeRNp2vAJ514cc/HUlY5nZ9fCbq9DMyC52BrhFZACo3nI0R7qBxhQmo/d27NFe96ur/b7Wwxklda+kg==}
 
-  '@types/vscode@1.125.0':
-    resolution: {integrity: sha512-0icm/ZQAaism87P0ekHqi4/Ju9du+Tm0RUW+y7vqRsxY2cY0FNRX1nAnaW7nT6npPt2tfHiheZ55Zm9UhqonFA==}
+  '@types/vscode@1.104.0':
+    resolution: {integrity: sha512-0KwoU2rZ2ecsTGFxo4K1+f+AErRsYW0fsp6A0zufzGuhyczc2IoKqYqcwXidKXmy2u8YB2GsYsOtiI9Izx3Tig==}
 
   '@typescript/typescript-aix-ppc64@7.0.2':
     resolution: {integrity: sha512-MTKKkWB7p/0E9xi1d1tHtZ5PiLkGEMIq88pK2CubZjOsLtYTLqhgIgi6zepFa+9GHZ6h05NMCkQxGKiPXMxXtQ==}
@@ -1639,7 +1639,7 @@ snapshots:
     dependencies:
       undici-types: 8.3.0
 
-  '@types/vscode@1.125.0': {}
+  '@types/vscode@1.104.0': {}
 
   '@typescript/typescript-aix-ppc64@7.0.2':
     optional: true

@@ -87,7 +87,7 @@
     "@yxl-vscode/webview": "workspace:*"
   },
   "devDependencies": {
-    "@types/vscode": "^1.104.0",
+    "@types/vscode": "~1.104.0",
     "esbuild": "^0.28.2"
   }
 }
