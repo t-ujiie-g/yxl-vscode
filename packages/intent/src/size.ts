@@ -7,47 +7,65 @@ import { type Found, located, type Reading } from './direct';
 import type { Candidate } from './resolve';
 import type { Projection } from './writes';
 
-/** A column dragged to a width in character units, or a row to a height in points. */
+/**
+ * Columns dragged to a width in character units, or rows to a height in points.
+ * The span is what the reader had selected, and one column where they had not.
+ */
 export interface Dragged {
   readonly sheet: SheetName;
   readonly axis: Axis;
-  readonly at: number;
+  readonly first: number;
+  readonly last: number;
   readonly size: number;
 }
 
 /**
- * Every way of making a column that wide — `ROADMAP.md` §4.4's `setSize` table.
- * A size is a band, never forty cells, so a band that reaches past the one
- * dragged is a question rather than an answer.
+ * Every way of making those columns that wide — `ROADMAP.md` §4.4's `setSize`
+ * table, over a span. A size is a band, never forty cells, so a band that
+ * reaches past what was dragged is a question rather than an answer.
  */
 export function setSize(spec: Projection, dragged: Dragged, read: Reading): readonly Candidate[] {
   const sheet = sheetOf(spec.grid, dragged.sheet);
-  if (sheet === null || dragged.at < 1 || dragged.size < 0) return [];
+  if (sheet === null || dragged.first < 1 || dragged.last < dragged.first || dragged.size < 0) {
+    return [];
+  }
 
+  const span = spanOf(dragged);
   const bands = dragged.axis === 'column' ? sheet.columns : sheet.rows;
-  const over = bands.findLast((band) => sizes(band, dragged.at)) ?? null;
 
-  if (over === null) {
+  // A band already over exactly this span is the band of its own, whether or
+  // not it is what sizes them today (ADR-042).
+  const exact = bands.findLast((band) => band.first === span.first && band.last === span.last);
+  if (exact !== undefined) {
+    const one = theBand(exact, dragged, read);
+    return one === null ? [] : [{ ...one, alone: true }];
+  }
+
+  const over = bands.filter((band) => sizes(band, span));
+  if (over.length === 0) {
     const own = ofItsOwn(sheet, dragged, read);
     return own === null ? [] : [{ ...own, alone: true }];
   }
 
-  if (over.first === over.last) {
-    const one = theBand(over, dragged, read);
-    return one === null ? [] : [{ ...one, alone: true }];
+  // Several bands size what was dragged, and each of them reaches past it: one
+  // band over the span layers over them all, which is the only tidy answer.
+  const one = over.length === 1 ? over[0] : undefined;
+  if (one === undefined) {
+    const own = ofItsOwn(sheet, dragged, read);
+    return own === null ? [] : [{ ...own, alone: true }];
   }
 
-  return [theBand(over, dragged, read), apart(over, dragged, read)].filter(
-    (one): one is Candidate => one !== null,
+  return [theBand(one, dragged, read), apart(one, dragged, read)].filter(
+    (band): band is Candidate => band !== null,
   );
 }
 
-/** Whether the band is what gives this column its width, which a band setting no width does not. */
-function sizes(band: CompiledBand, at: number): boolean {
-  return band.size !== null && band.first <= at && at <= band.last;
+/** Whether the band is what gives any of them its size, which a band setting no size does not. */
+function sizes(band: CompiledBand, span: Span): boolean {
+  return band.size !== null && band.first <= span.last && band.last >= span.first;
 }
 
-/** The answer that writes a band for this one column, where nothing sizes it yet. */
+/** The answer that writes a band for what was dragged, where nothing sizes it yet. */
 function ofItsOwn(sheet: CompiledSheet, dragged: Dragged, read: Reading): Candidate | null {
   const written = bandOfItsOwn(
     sheet,
@@ -57,12 +75,18 @@ function ofItsOwn(sheet: CompiledSheet, dragged: Dragged, read: Reading): Candid
   );
   if (written === null) return null;
 
-  return answer('ofItsOwn', `Write a ${dragged.axis} of its own`, written.found, [written.op]);
+  const many = dragged.last - dragged.first + 1;
+  const what =
+    many === 1
+      ? `Write a ${dragged.axis} of its own`
+      : `Write one ${dragged.axis} band over \`${spelled(spanOf(dragged))}\``;
+
+  return answer('ofItsOwn', what, written.found, [written.op]);
 }
 
-/** The one column or row a drag names, as a span. */
+/** The columns or rows a drag names, as a span. */
 function spanOf(dragged: Dragged): Span {
-  return { axis: dragged.axis, first: dragged.at, last: dragged.at };
+  return { axis: dragged.axis, first: dragged.first, last: dragged.last };
 }
 
 /** The answer that changes the band the size comes from, every column of it included. */
@@ -71,17 +95,17 @@ function theBand(band: CompiledBand, dragged: Dragged, read: Reading): Candidate
   if (found.kind === 'refused' || found.node.kind !== 'map') return null;
 
   const key = BAND_KEYS[dragged.axis].size;
-  if (!holds(found.node, key)) return null;
-
   const many = band.last - band.first + 1;
   const what =
     many === 1
       ? `Change the band over \`${spelled({ axis: dragged.axis, first: band.first, last: band.last })}\``
       : `Change the band over \`${spelled({ axis: dragged.axis, first: band.first, last: band.last })}\`, which is ${many} ${dragged.axis}s`;
 
-  return answer('band', what, found, [
-    { op: 'set', path: [...found.path, key], value: dragged.size },
-  ]);
+  const op: Op = holds(found.node, key)
+    ? { op: 'set', path: [...found.path, key], value: dragged.size }
+    : { op: 'add', path: found.path, key, value: dragged.size, before: null };
+
+  return answer('band', what, found, [op]);
 }
 
 /** The answer that splits the band so the one dragged stands alone, keeping every key it had. */
@@ -101,9 +125,9 @@ function apart(band: CompiledBand, dragged: Dragged, read: Reading): Candidate |
     return null;
 
   const pieces: string[] = [];
-  for (const run of around(band, dragged.at)) {
+  for (const run of around(band, spanOf(dragged))) {
     const at = spelled({ axis: dragged.axis, first: run.first, last: run.last });
-    const own = run.first === dragged.at && run.last === dragged.at;
+    const own = run.first === dragged.first && run.last === dragged.last;
     const said = respelled(source, found.node, [
       ['at', at],
       ...(own ? [[BAND_KEYS[dragged.axis].size, String(dragged.size)] as const] : []),
@@ -154,11 +178,11 @@ function answer(
   };
 }
 
-/** The runs a band falls into once the one dragged is taken out of it. */
-function around(band: CompiledBand, at: number): { first: number; last: number }[] {
-  const runs = [{ first: at, last: at }];
-  if (band.first < at) runs.unshift({ first: band.first, last: at - 1 });
-  if (at < band.last) runs.push({ first: at + 1, last: band.last });
+/** The runs a band falls into once the span dragged is taken out of it. */
+function around(band: CompiledBand, span: Span): { first: number; last: number }[] {
+  const runs = [{ first: span.first, last: span.last }];
+  if (band.first < span.first) runs.unshift({ first: band.first, last: span.first - 1 });
+  if (span.last < band.last) runs.push({ first: span.last + 1, last: band.last });
 
   return runs;
 }

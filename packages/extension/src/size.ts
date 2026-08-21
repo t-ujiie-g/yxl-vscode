@@ -24,7 +24,7 @@ export async function resize(
   const answers = setSize({ grid: spec.grid }, { ...resized, sheet }, read);
 
   if (answers.length === 0) {
-    port.refuse(`nothing here can say how wide that ${resized.axis} is`, null);
+    port.refuse(`nothing here can say how wide ${many(resized)} is`, null);
     return;
   }
 
@@ -50,10 +50,18 @@ export async function resize(
     from: taken.id,
     typed: null,
   });
-  if (done) port.said(`${resized.axis === 'column' ? 'Column' : 'Row'} ${resized.at} resized.`);
+  if (done) port.said(`${many(resized)} resized.`.replace(/^./, (one) => one.toUpperCase()));
 }
 
-/** Why a drag is a question: the band it takes its size from is about more than the one dragged. */
+/** Why a drag is a question: the band it takes its size from is about more than what was dragged. */
 function comes(resized: Resized): string {
-  return `that ${resized.axis} takes its size from a band over more than one, so there is more than one way to change it`;
+  return `${many(resized)} takes its size from a band over more than that, so there is more than one way to change it`;
+}
+
+/** What was dragged, as the reader is told about it: one column, or the run they had selected. */
+function many(resized: Resized): string {
+  const run = resized.last - resized.first + 1;
+  const one = resized.axis === 'column' ? 'column' : 'row';
+
+  return run === 1 ? `${one} ${resized.first}` : `${one}s ${resized.first}-${resized.last}`;
 }

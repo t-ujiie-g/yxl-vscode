@@ -205,8 +205,43 @@ describe('what the view sends', () => {
     document.dispatchEvent(new MouseEvent('mouseup'));
 
     expect(sent.filter((one) => one.kind === 'resize')).toEqual([
-      { kind: 'resize', sheet: 'Sales', axis: 'column', at: 1, size: 12 },
+      { kind: 'resize', sheet: 'Sales', axis: 'column', first: 1, last: 1, size: 12 },
     ]);
+  });
+
+  it('sizes every column the reader took by its heading, when one of them is dragged', () => {
+    const { into, sent } = view();
+    const at = (col: number) => into.querySelector<HTMLElement>(`thead th[data-col="${col}"]`);
+
+    at(1)?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    at(2)?.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true, buttons: 1 }));
+
+    const grip = at(2)?.querySelector('.grip.column');
+    grip?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, clientX: 100 }));
+    document.dispatchEvent(new MouseEvent('mousemove', { clientX: 114 }));
+    document.dispatchEvent(new MouseEvent('mouseup'));
+
+    expect(sent.filter((one) => one.kind === 'resize').at(-1)).toMatchObject({
+      first: 1,
+      last: 2,
+    });
+  });
+
+  it('sizes the one dragged where it is outside what was selected', () => {
+    const { into, sent } = view();
+    const at = (col: number) => into.querySelector<HTMLElement>(`thead th[data-col="${col}"]`);
+
+    at(1)?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+
+    const grip = at(2)?.querySelector('.grip.column');
+    grip?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, clientX: 100 }));
+    document.dispatchEvent(new MouseEvent('mousemove', { clientX: 114 }));
+    document.dispatchEvent(new MouseEvent('mouseup'));
+
+    expect(sent.filter((one) => one.kind === 'resize').at(-1)).toMatchObject({
+      first: 2,
+      last: 2,
+    });
   });
 
   it('sends nothing where the edge was pressed and let go without moving', () => {
@@ -228,7 +263,7 @@ describe('what the view sends', () => {
     document.dispatchEvent(new MouseEvent('mouseup'));
 
     expect(sent.filter((one) => one.kind === 'resize')).toEqual([
-      { kind: 'resize', sheet: 'Sales', axis: 'row', at: 1, size: 30 },
+      { kind: 'resize', sheet: 'Sales', axis: 'row', first: 1, last: 1, size: 30 },
     ]);
   });
 

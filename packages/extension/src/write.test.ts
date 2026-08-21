@@ -469,7 +469,8 @@ describe('a column or a row dragged to a size', () => {
   const dragged = (of: Partial<Resized> = {}): Resized => ({
     sheet: 'Sales',
     axis: 'column',
-    at: 4,
+    first: 4,
+    last: 4,
     size: 20,
     ...of,
   });
@@ -487,7 +488,7 @@ describe('a column or a row dragged to a size', () => {
     const spec = `${SALES}    columns:\n      - at: D-F\n        width: 12\n    cells:\n      A1: 1\n`;
     const { spec: read, port, answers, refusals, files } = editor({ [ROOT]: spec });
 
-    await resize(read, dragged({ at: 5 }), port);
+    await resize(read, dragged({ first: 5, last: 5 }), port);
     expect(refusals[0]).toContain('more than one way to change it');
     expect(answers[0]?.map((one) => one.id)).toEqual(['band', 'apart']);
     expect(files[ROOT]).toBe(spec);
@@ -497,10 +498,19 @@ describe('a column or a row dragged to a size', () => {
     const spec = `${SALES}    columns:\n      - at: D-F\n        width: 12\n    cells:\n      A1: 1\n`;
     const { spec: read, port, files } = editor({ [ROOT]: spec });
 
-    await resize(read, dragged({ at: 5 }), port, 'apart');
+    await resize(read, dragged({ first: 5, last: 5 }), port, 'apart');
     expect(files[ROOT]).toContain(
       '      - at: D\n        width: 12\n      - at: E\n        width: 20\n      - at: F\n        width: 12\n',
     );
+  });
+
+  it('sizes every column the reader had selected, and says which', async () => {
+    const spec = `${SALES}    cells:\n      A1: 1\n`;
+    const { spec: read, port, files, told } = editor({ [ROOT]: spec });
+
+    await resize(read, dragged({ first: 2, last: 4 }), port);
+    expect(files[ROOT]).toContain('    columns:\n      - at: B-D\n        width: 20\n');
+    expect(told).toEqual(['Columns 2-4 resized.']);
   });
 
   it('refuses a sheet that is not one', async () => {
@@ -514,7 +524,7 @@ describe('a column or a row dragged to a size', () => {
     const { spec, port, refusals } = editor({ [ROOT]: `${SALES}    cells:\n      A1: 1\n` });
 
     await resize(spec, dragged({ sheet: 'Nowhere' }), port);
-    expect(refusals[0]).toContain('nothing here can say how wide that column is');
+    expect(refusals[0]).toContain('nothing here can say how wide column 4 is');
   });
 });
 

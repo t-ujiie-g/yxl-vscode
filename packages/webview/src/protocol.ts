@@ -264,11 +264,16 @@ export type FromView =
       readonly col: number;
     };
 
-/** A column dragged to a width in character units, or a row to a height in points (`docs/spec.md` §4). */
+/**
+ * Columns dragged to a width in character units, or rows to a height in points
+ * (`docs/spec.md` §4). The run is what the reader had selected by its headings,
+ * and the one dragged where they had not (ADR-042).
+ */
 export interface Resized {
   readonly sheet: string;
   readonly axis: Axis;
-  readonly at: number;
+  readonly first: number;
+  readonly last: number;
   readonly size: number;
 }
 
