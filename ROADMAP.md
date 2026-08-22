@@ -293,14 +293,18 @@ feels good:
 | a band over that one alone | change its `width` / `height` *(auto)* |
 | a band over several | ① change the band *(with how many it spans)* ② split it so this one stands alone, every other key it had kept |
 
-A band that sets no size does not size it: the first row is the answer there,
-and the two bands then say different things about the same column.
+A band already over exactly what was dragged **is** the band of its own, and
+takes the size whether or not it said anything about size before (ADR-042,
+superseding the note that stood here: two entries with one `at` are one band
+said twice, and layering is for spans that *differ*). Where several bands size
+the run and each reaches past it, one band over the run layers over them all,
+which is the only answer that leaves the columns outside it alone.
 
-`setSize` and `setStyle` are asked about **one** column or one rectangle today.
-Phase 10 asks them over a *span* — the columns a heading selection names — and
-the rows above are the same rows: what changes is that the count is taken over
-the span, and that "a band of its own" is one band over the span rather than one
-per column.
+`setSize` and `setStyle` are asked over a **span** — the columns or rows a
+heading selection names — as well as over one column or one rectangle. The rows
+above are the same rows: what changes is that the count is taken over the span,
+and that "a band of its own" is one band over the span rather than one per
+column (ADR-041, ADR-042).
 
 **`setFreeze`** is not a table here and is deliberately not one: a sheet's panes
 have exactly one place to live, so there is nothing to enumerate and the gesture
@@ -435,7 +439,7 @@ not a date.
 | Click a heading to take the whole row or column | ✅ — drag or `Shift` across several; the headings light as they do in both spreadsheets |
 | The corner takes the whole sheet | ✅ — and takes it as whole columns, so a look over it is a band |
 | A look over the columns selected, in one gesture | ✅ — one band through the normalizer, never four hundred cells (ADR-041) |
-| A width over the columns selected | **Phase 10** — `setSize` still takes one column at a time |
+| A width over the columns selected | ✅ — drag one edge of the run and all of them take it |
 | Double-click the heading edge to fit the column to its contents | **Phase 10** |
 | Hide and unhide a row or a column | **Phase 10** — `hidden:` is drawn already, and cannot be set |
 | Group rows or columns, and collapse the group | **Phase 10** — `group:` is read and then dropped before the view; nothing of an outline is drawn |
@@ -1112,10 +1116,13 @@ gestures on a *heading*, and the headings are not selectors yet.
       there at all — over four hundred rows they are not what anybody meant
       (ADR-041) — and where something already supplies the look, that answer is
       offered beside the band as it always was.
-- [ ] **A size over what is selected**, which is the other half: dragging one
+- [x] **A size over what is selected**, which is the other half: dragging one
       edge of several selected columns sizes all of them. `setSize` takes one
       column today, and the answers over a span are the same rows of §4.4's
       table with the count taken over the span.
+      **In** (**ADR-042**), and it took one of §4.4's own notes with it: a band
+      already over exactly what was dragged takes the size, rather than a
+      second band being written beside it.
 - [ ] **Double-click the heading edge and the column fits what is in it.** The
       width is *measured* — the view knows the font each cell wears; the host
       knows every cell there is (§8 Q17) — and lands through `setSize` like a
@@ -2191,6 +2198,34 @@ B looks, so `expects.cells` is the cells the sheet **holds** there — not the
 four hundred addresses the rectangle covered, most of which nothing writes. The
 count the reader is shown is that number too.
 
+### ADR-042 — A band over exactly what was dragged is that band, and a run is dragged as one
+**Accepted**, superseding the last paragraph of §4.4's `setSize` table.
+
+*A run of headings drags as one.* Select columns B to D and drag any of their
+edges and all three take that width, as they do in Excel. The view knows the run
+— it is the selection it already holds — so the gesture carries `first` and
+`last` where it carried one `at`, and one column dragged outside the selection
+is the run `D–D`. Nothing infers a span from a rectangle (ADR-041 makes the same
+argument for a look).
+
+*The band that is already there takes the size.* §4.4 used to say that a band
+setting no size does not size the column, so dragging it writes a *second* band
+beside the first — "the two bands then say different things about the same
+column, which is what layering is for". That was true about layering and wrong
+about this: `- at: D, style: header` and `- at: D, width: 20` are one band
+written twice, and a reader who wanted two entries would not have written the
+same `at` on both. Layering is for spans that **differ**. So a band whose span is
+exactly the run takes the size, and gains a `width:` where it had none. This is
+the rule #92 arrived at for looks, applied where it came from.
+
+*Several bands, each reaching past the run, get one band over the run.* Splitting
+three overlapping bands to make room is a bigger rewrite than the gesture asked
+for, and the layered answer is one line: a band over exactly the run, written
+last, wins for the columns inside it and says nothing about the ones outside.
+Where a **single** band reaches past the run, the two answers §4.4 already had
+still stand — change it, or split it so the run stands alone — and the split now
+takes the whole run out in one piece rather than one column.
+
 ## 8. Open questions
 
 - **Q1 — `cells:` A1 keys and row insertion.** Inserting a row rewrites every
@@ -2454,6 +2489,26 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-22 — A run of headings drags as one
+Phase 10's fourth item, and the half of the third that was left. **ADR-042.**
+
+- **Select B to D, drag any of their edges, and all three take that width.**
+  The view already holds the run — it is the selection — so the gesture carries
+  `first` and `last` where it carried one `at`, and a column dragged outside the
+  selection is still just itself.
+- **A band already over exactly the run takes the size**, which supersedes a
+  note §4.4 had carried since the drag shipped: a band setting no size did not
+  size the column, so dragging wrote a *second* band beside the first. That was
+  right about layering and wrong about this — `- at: D, style: header` and
+  `- at: D, width: 20` are one band written twice. Layering is for spans that
+  differ.
+- **Several bands, each reaching past the run, get one band over the run**,
+  which wins for what is inside it and says nothing about what is outside.
+  Splitting three overlapping bands is a bigger rewrite than a drag asked for.
+- **A single band reaching past the run still asks**, and its split now takes
+  the whole run out in one piece rather than one column of it.
+- 1627 → 1634 tests.
 
 ### 2026-08-22 — A band already over the span is the band
 From the real window, on the gesture that shipped yesterday: bold the whole

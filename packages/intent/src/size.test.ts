@@ -21,10 +21,12 @@ function files(source: string) {
   return { grid: compile(doc, { read: includes }), read: reading(() => source), includes };
 }
 
-/** The answers a drag has, over the column or row named. */
-function offered(source: string, at: number, size: number, axis: Axis = 'column') {
+/** The answers a drag has, over the column or row named — or the run of them selected. */
+function offered(source: string, at: number, size: number, axis: Axis = 'column', last = at) {
   const { grid, read } = files(source);
-  return setSize({ grid }, { sheet: 'Sales' as SheetName, axis, at, size }, read);
+  const where = { sheet: 'Sales' as SheetName, axis, first: at, last, size };
+
+  return setSize({ grid }, where, read);
 }
 
 /** The chosen answer, taken all the way through the checker. */
@@ -76,9 +78,15 @@ describe('a column nothing sizes', () => {
     expect(taken(spec, answer)).toContain('    rows:\n      - at: 3\n        height: 28\n');
   });
 
-  it('does not count a band that sizes nothing as sizing it', () => {
+  it('takes the size into a band already over it, which said nothing about size (ADR-042)', () => {
     const spec = `${SALES}    columns:\n      - at: D\n        style: { font: { bold: true } }\n${CELLS}`;
-    expect(offered(spec, 4, 20).map((one) => one.id)).toEqual(['ofItsOwn']);
+    const [answer] = offered(spec, 4, 20);
+    if (answer === undefined) throw new Error('nothing was offered');
+
+    expect(answer.id).toBe('band');
+    expect(taken(spec, answer)).toContain(
+      '      - at: D\n        style: { font: { bold: true } }\n        width: 20\n',
+    );
   });
 });
 
@@ -156,12 +164,62 @@ describe('a column a band over several sizes', () => {
 describe('what a size will not do', () => {
   it('says nothing about a sheet that is not there', () => {
     const { grid, read } = files(`${SALES}${CELLS}`);
-    const where = { sheet: 'Nowhere' as SheetName, axis: 'column' as Axis, at: 1, size: 12 };
+    const where = {
+      sheet: 'Nowhere' as SheetName,
+      axis: 'column' as Axis,
+      first: 1,
+      last: 1,
+      size: 12,
+    };
 
     expect(setSize({ grid }, where, read)).toEqual([]);
   });
 
   it('says nothing about a column that is not one', () => {
     expect(offered(`${SALES}${CELLS}`, 0, 20)).toEqual([]);
+  });
+});
+
+describe('a run of columns dragged by one of their edges', () => {
+  it('writes one band over the run where nothing sizes any of them', () => {
+    const spec = `${SALES}${CELLS}`;
+    const [answer] = offered(spec, 2, 20, 'column', 4);
+    if (answer === undefined) throw new Error('nothing was offered');
+
+    expect([answer.id, answer.alone]).toEqual(['ofItsOwn', true]);
+    expect(answer.what).toBe('Write one column band over `B-D`');
+    expect(taken(spec, answer)).toContain('    columns:\n      - at: B-D\n        width: 20\n');
+  });
+
+  it('changes the band that is already over exactly the run', () => {
+    const spec = `${SALES}    columns:\n      - at: B-D\n        width: 12\n${CELLS}`;
+    const [answer] = offered(spec, 2, 20, 'column', 4);
+    if (answer === undefined) throw new Error('nothing was offered');
+
+    expect([answer.id, answer.alone]).toEqual(['band', true]);
+    expect(taken(spec, answer)).toContain('      - at: B-D\n        width: 20\n');
+  });
+
+  it('asks where one band reaches past the run, and splits it around the whole run', () => {
+    const spec = `${SALES}    columns:\n      - at: A-F\n        width: 12\n${CELLS}`;
+    const answers = offered(spec, 2, 20, 'column', 4);
+
+    expect(answers.map((one) => one.id)).toEqual(['band', 'apart']);
+    expect(answers[1]?.what).toBe('Split it so `B-D` stands alone');
+
+    const [, split] = answers;
+    if (split === undefined) throw new Error('nothing to split');
+    expect(taken(spec, split)).toContain(
+      '      - at: A\n        width: 12\n      - at: B-D\n        width: 20\n      - at: E-F\n        width: 12\n',
+    );
+  });
+
+  it('lays one band over the run where several bands size it', () => {
+    const spec = `${SALES}    columns:\n      - at: B\n        width: 12\n      - at: C-D\n        width: 14\n${CELLS}`;
+    const [answer] = offered(spec, 2, 20, 'column', 4);
+    if (answer === undefined) throw new Error('nothing was offered');
+
+    expect([answer.id, answer.alone]).toEqual(['ofItsOwn', true]);
+    expect(taken(spec, answer)).toContain('      - at: B-D\n        width: 20\n');
   });
 });

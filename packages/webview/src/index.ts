@@ -1,3 +1,4 @@
+import type { Axis } from '@yxl-vscode/spec';
 import { cellOf, parseA1Addr, type Rect } from '@yxl-vscode/units';
 import { sheetAgain } from './again';
 import { flavours, onto } from './clipboard';
@@ -121,6 +122,18 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
   const seen = (at: { row: number; col: number }): void => {
     const cell = into.querySelector<HTMLElement>(`td[data-at="${cellKey(at.col, at.row)}"]`);
     cell?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+  };
+
+  /** What a drag sizes: the run taken by its headings where the one dragged is inside it (ADR-042). */
+  const dragging = (axis: Axis, at: number): { first: number; last: number } => {
+    const along = axis === 'column' ? 'columns' : 'rows';
+    if (taken !== along || selected === null || anchor === null) return { first: at, last: at };
+
+    const one = axis === 'column' ? selected.col : selected.row;
+    const than = axis === 'column' ? anchor.col : anchor.row;
+    const run = { first: Math.min(one, than), last: Math.max(one, than) };
+
+    return at >= run.first && at <= run.last ? run : { first: at, last: at };
   };
 
   /** The rectangle selected, read live: the grid restates rather than redraws on a selection. */
@@ -269,7 +282,7 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
     resize: (axis, at, size) => {
       refused = null;
       said = null;
-      host.postMessage({ kind: 'resize', sheet: named(), axis, at, size });
+      host.postMessage({ kind: 'resize', sheet: named(), axis, ...dragging(axis, at), size });
     },
     resizedWith: (resized, choice) => {
       refused = null;
