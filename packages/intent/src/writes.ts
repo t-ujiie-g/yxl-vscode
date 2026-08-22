@@ -10,7 +10,7 @@ import {
   type StyleLayer,
   styleAt,
 } from '@yxl-vscode/compile';
-import { holds, type Node, nodeAt, type Op, type Path, renderScalar } from '@yxl-vscode/cst';
+import { holds, type Node, type Op, type Path, renderScalar } from '@yxl-vscode/cst';
 import { normalize, written } from '@yxl-vscode/normalize';
 import {
   ordered,
@@ -20,6 +20,7 @@ import {
   type StyleValues,
 } from '@yxl-vscode/spec';
 import type { A1Addr, FilePath, NodeId, SheetName } from '@yxl-vscode/units';
+import { soleBand } from './bands';
 import { type Found, located, type Reading } from './direct';
 
 /** What a write needs of the spec: what it draws, which carries the looks and the bands it declares. */
@@ -278,14 +279,7 @@ function bandOps(
   const rest = found.node.kind === 'map' ? found.node.entries.length : 0;
   if (rest > 2) return [{ op: 'remove', path: [...found.path, STYLE] }];
 
-  return [{ op: 'remove', path: only(found, read) ? found.path.slice(0, -1) : found.path }];
-}
-
-/** Whether the band is the only one under its key: taking it out takes the key, since a sequence cannot be empty. */
-function only(found: Found & { kind: 'found' }, read: Reading): boolean {
-  const tree = read.parsed(found.file);
-  const under = tree?.root == null ? null : nodeAt(tree.root, found.path.slice(0, -1));
-  return under?.kind === 'seq' && under.items.length === 1;
+  return [{ op: 'remove', path: soleBand(found, read) ? found.path.slice(0, -1) : found.path }];
 }
 
 /** What changing one supplying layer would be, over every cell that reads it. */

@@ -81,3 +81,39 @@ function caret(): HTMLElement {
   mark.textContent = '▾';
   return mark;
 }
+
+/**
+ * The menu a heading opens on a right-click, where a spreadsheet keeps what
+ * there is no room for on a bar. It is put at the pointer and closed by the
+ * same scrim a toolbar menu uses.
+ */
+export function pointedAt(
+  showing: Showing,
+  asks: Asks,
+  entries: readonly HTMLElement[],
+): HTMLElement | null {
+  const at = showing.pointed;
+  if (at === null || entries.length === 0) return null;
+
+  const box = document.createElement('div');
+  box.className = 'menu pointed';
+
+  const scrim = document.createElement('div');
+  scrim.className = 'scrim';
+  scrim.addEventListener('mousedown', () => asks.pointAt(null));
+
+  const panel = document.createElement('div');
+  panel.className = 'panel';
+  panel.style.left = `${at.x}px`;
+  panel.style.top = `${at.y}px`;
+  panel.append(...entries);
+
+  box.append(scrim, panel);
+  box.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape') return;
+    event.stopPropagation();
+    asks.pointAt(null);
+  });
+
+  return box;
+}

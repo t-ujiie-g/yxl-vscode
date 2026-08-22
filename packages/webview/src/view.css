@@ -218,6 +218,37 @@ body {
   font: inherit;
 }
 
+/* A menu asked for at the pointer, which is placed against the page rather
+   than under a control. */
+.menu.pointed .panel {
+  position: fixed;
+}
+
+/* Where a run is hidden, on the heading that comes after it — the only thing
+   that says something is there, and the way back to it. A heading is already
+   positioned, by being sticky, so the mark needs no `relative` of its own —
+   and giving it one would take the heading out of its own frozen band. */
+.grid th.hides .hiding {
+  position: absolute;
+  z-index: 2;
+  background: var(--vscode-focusBorder, #0078d4);
+  cursor: pointer;
+}
+
+.grid .hiding.column {
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 4px;
+}
+
+.grid .hiding.row {
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 4px;
+}
+
 /* The line between one group of controls and the next, as every spreadsheet
    draws it; without it a wrapped row reads as one long undifferentiated run. */
 .divider {

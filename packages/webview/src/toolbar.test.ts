@@ -66,6 +66,7 @@ function showing(of: {
     editable: 'direct',
     line: 'thin',
     menu: of.menu ?? null,
+    pointed: null,
   };
 }
 

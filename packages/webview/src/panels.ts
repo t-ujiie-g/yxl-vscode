@@ -97,6 +97,7 @@ function taken(about: About, choice: string, asks: Asks): void {
   if (about.is === 'text') asks.pastedTextWith(about.text, choice);
   if (about.is === 'worn') asks.wornWith(about.worn, choice);
   if (about.is === 'resized') asks.resizedWith(about.resized, choice);
+  if (about.is === 'hidden') asks.hiddenWith(about.hidden, choice);
 }
 
 /** What a choice would move, as a count a reader can act on and a few names; nothing where it moves no cell. */

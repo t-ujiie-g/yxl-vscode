@@ -11,6 +11,7 @@ export {
   type Text,
 } from './direct';
 export { type Frozen, setFreeze } from './freeze';
+export { type Hiding, setHidden } from './hidden';
 export { overridable, override, type Says } from './override';
 export {
   couldBlock,

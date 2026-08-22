@@ -4,6 +4,7 @@ import { type At, within } from './keys';
 import type {
   Drawing,
   Editable,
+  Hidden,
   Pasted,
   PastedText,
   Ranged,
@@ -33,6 +34,9 @@ export interface Showing {
 
   /** Which of the toolbar's menus is open, by name; the view's own, like the line. */
   readonly menu: string | null;
+
+  /** The heading a reader has asked for a menu on, and where they asked. */
+  readonly pointed: Pointed | null;
 
   /** Whether the selected cell can be typed into, where one is selected. */
   readonly editable: Editable | null;
@@ -88,6 +92,14 @@ export function copiedFrom(showing: Showing, at: At): boolean {
   );
 }
 
+/** A heading a menu was asked for on, and the point on the page it was asked at. */
+export interface Pointed {
+  readonly axis: Axis;
+  readonly at: number;
+  readonly x: number;
+  readonly y: number;
+}
+
 /** How a cell is named in the sets and maps a drawing is looked up in. */
 export function cellKey(col: number, row: number): string {
   return `${col}:${row}`;
@@ -115,6 +127,9 @@ export interface Asks {
   readonly takeBand: (axis: Axis, at: number, extend: boolean) => void;
   readonly takeAll: () => void;
   readonly fit: (axis: Axis, at: number) => void;
+  readonly hide: (axis: Axis, first: number, last: number, hidden: boolean) => void;
+  readonly hiddenWith: (hidden: Hidden, choice: string) => void;
+  readonly pointAt: (at: Pointed | null) => void;
   readonly freeze: (at: At | null) => void;
   readonly resizedWith: (resized: Resized, choice: string) => void;
   readonly wornWith: (worn: Worn, choice: string) => void;

@@ -5,6 +5,7 @@ import { did, type History, nothing } from '@yxl-vscode/patch';
 import { type FilePath, filePath, parseColor } from '@yxl-vscode/units';
 import type { Choice, Frozen, Resized, Typed, Worn } from '@yxl-vscode/webview/protocol';
 import { describe, expect, it } from 'vitest';
+import { hide } from './hidden';
 import { wear } from './look';
 import { freeze } from './panes';
 import { resize } from './size';
@@ -481,7 +482,7 @@ describe('a column or a row dragged to a size', () => {
 
     await resize(read, dragged(), port);
     expect(files[ROOT]).toContain('    columns:\n      - at: D\n        width: 20\n');
-    expect(told).toEqual(['Column 4 resized.']);
+    expect(told).toEqual(['Column D resized.']);
   });
 
   it('asks where the band it takes its size from is about more than it', async () => {
@@ -510,7 +511,7 @@ describe('a column or a row dragged to a size', () => {
 
     await resize(read, dragged({ first: 2, last: 4 }), port);
     expect(files[ROOT]).toContain('    columns:\n      - at: B-D\n        width: 20\n');
-    expect(told).toEqual(['Columns 2-4 resized.']);
+    expect(told).toEqual(['Columns B-D resized.']);
   });
 
   it('refuses a sheet that is not one', async () => {
@@ -524,7 +525,7 @@ describe('a column or a row dragged to a size', () => {
     const { spec, port, refusals } = editor({ [ROOT]: `${SALES}    cells:\n      A1: 1\n` });
 
     await resize(spec, dragged({ sheet: 'Nowhere' }), port);
-    expect(refusals[0]).toContain('nothing here can say how wide column 4 is');
+    expect(refusals[0]).toContain('nothing here can say how wide column D is');
   });
 });
 
@@ -545,6 +546,52 @@ describe('a look over a whole column', () => {
       `${spec}    columns:\n      - at: B\n        style: { font: { bold: true } }\n`,
     );
     expect(told).toEqual(['2 cells restyled.']);
+  });
+});
+
+describe('columns hidden from the preview', () => {
+  const hiding = (of: Partial<Parameters<typeof hide>[1]> = {}) => ({
+    sheet: 'Sales' as const,
+    axis: 'column' as const,
+    first: 2,
+    last: 3,
+    hidden: true,
+    ...of,
+  });
+
+  it('writes a band of their own, and says which', async () => {
+    const spec = `${SALES}    cells:\n      A1: 1\n`;
+    const { spec: read, port, files, told } = editor({ [ROOT]: spec });
+
+    await hide(read, hiding(), port);
+    expect(files[ROOT]).toBe(`${spec}    columns:\n      - at: B-C\n        hidden: true\n`);
+    expect(told).toEqual(['columns B-C hidden.']);
+  });
+
+  it('shows them again by taking the band away', async () => {
+    const spec = `${SALES}    cells:\n      A1: 1\n    columns:\n      - at: B-C\n        hidden: true\n`;
+    const { spec: read, port, files, told } = editor({ [ROOT]: spec });
+
+    await hide(read, hiding({ hidden: false }), port);
+    expect(files[ROOT]).toBe(`${SALES}    cells:\n      A1: 1\n`);
+    expect(told).toEqual(['columns B-C shown again.']);
+  });
+
+  it('asks where what hides them says it about more', async () => {
+    const spec = `${SALES}    cells:\n      A1: 1\n    columns:\n      - at: A-F\n        hidden: true\n`;
+    const { spec: read, port, answers, refusals, files } = editor({ [ROOT]: spec });
+
+    await hide(read, hiding({ hidden: false }), port);
+    expect(refusals[0]).toContain('more than one way to change it');
+    expect(answers[0]?.map((one) => one.id)).toEqual(['band', 'apart']);
+    expect(files[ROOT]).toBe(spec);
+  });
+
+  it('says so where nothing hides them', async () => {
+    const { spec, port, refusals } = editor({ [ROOT]: `${SALES}    cells:\n      A1: 1\n` });
+
+    await hide(spec, hiding({ hidden: false }), port);
+    expect(refusals[0]).toContain('nothing hides columns B-C');
   });
 });
 
