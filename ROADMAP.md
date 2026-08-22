@@ -2592,6 +2592,42 @@ than widening it silently.
 
 ## 11. Living changelog
 
+### 2026-08-22 — Refactoring pass over the whole tree (`AGENTS.md` §8)
+After the seven slices of Phase 10, which is where the debt was: three gestures
+that write a band arrived one at a time, and each brought a copy of the same
+algorithm.
+
+- **§8.2 — `hidden.ts` and `group.ts` were one algorithm with a different key.**
+  A hundred and twenty lines each, differing in four places: the key, the value,
+  what counts as *off*, and the wording. `setBandKey` in `bands.ts` is that
+  algorithm once — the band already over the run takes it, a run nothing covers
+  gets a band of its own, a band saying it about more than was named is a
+  question — and the two callers are 43 and 55 lines of vocabulary.
+  **The duplication was hiding an inconsistency**: hiding wrote `hidden: false`
+  where another band still hid the run, and grouping took its key out
+  regardless, leaving a wider band still grouping them. Sharing the answer fixed
+  it, and there is a test that says so.
+- **§8.3 — `table.ts` was 605 lines doing two subjects.** The outline is
+  `outline.ts` now (138 lines: the levels, the gutter cells, the bracket, the
+  controls, and the mark a hidden run leaves), and the table is what draws a
+  table.
+- **§8.3 — `preview.ts` answered seventeen messages with seventeen branches**
+  that differed only in which function they called. They are one table keyed by
+  the message kind; adding a gesture is a line rather than a branch, and the
+  method that dispatches is nine lines. 507 → 463.
+- **§8.3 — `draw.test.ts` was the largest file in the tree** at 1229 lines, and
+  had been since the source it tests was split in two. It is `draw.test.ts`
+  (303) and `table.test.ts` (810), with the fixtures in `harness.ts` — the
+  convention `compile` already uses for exactly this.
+- **§8.2 — `respelled` and `deindented`** were left exported when `splitBand`
+  took over as their only caller. Private again.
+- **§8.7 — checked rather than assumed**: no package imports upward, both
+  `port.put` call sites still go through `checked`, nothing on a write path
+  reads a computed value, and the grid still holds no state of its own.
+- 1681 → 1682 tests. Comment shape: exports 503 blocks / 1086 lines (avg 2.2),
+  private 342 / 370 (1.1), inline 70 / 100 (1.4), 9 over the limit — the same
+  nine.
+
 ### 2026-08-22 — The outline gets its gutter, and a right-click stops taking the heading
 Both from the real window, on the slice above.
 

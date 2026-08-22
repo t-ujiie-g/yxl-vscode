@@ -134,3 +134,13 @@ describe('rows', () => {
     expect(taken(spec, answer)).toContain('    rows:\n      - at: 3-5\n        group: 1\n');
   });
 });
+
+describe('columns two bands group', () => {
+  it('says level 0 rather than taking the key out, since the wider band would still group them', () => {
+    const two = `${SALES}    columns:\n      - at: A-F\n        group: 1\n      - at: B-D\n        group: 2\n${CELLS}`;
+    const [answer] = offered(two, 2, 4, 0);
+    if (answer === undefined) throw new Error('nothing was offered');
+
+    expect(taken(two, answer)).toContain('      - at: B-D\n        group: 0\n');
+  });
+});

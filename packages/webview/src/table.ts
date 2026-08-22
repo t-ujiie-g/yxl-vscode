@@ -3,7 +3,20 @@ import { columnLabel } from '@yxl-vscode/units';
 import { corner } from './boxes';
 import { drawCell, typeInto } from './cell';
 import { copying, going, looking as lookingFor, pasting, undoing } from './keys';
-import type { DrawnCell, DrawnMerge, DrawnSheet, Sized } from './protocol';
+import {
+  behind,
+  drawOutline,
+  groupOver,
+  groupsOf,
+  gutterOf,
+  held,
+  hidden,
+  levelsOf,
+  opening,
+  outline,
+  type Span,
+} from './outline';
+import type { DrawnCell, DrawnMerge, DrawnSheet } from './protocol';
 import {
   type Asks,
   cellKey,
@@ -166,7 +179,7 @@ function headings(sheet: DrawnSheet, showing: Showing, asks: Asks): HTMLElement 
 }
 
 /** One level of the column outline: a row above the headings, aligned with them (ADR-045). */
-function above(sheet: DrawnSheet, level: number, asks: Asks): HTMLElement {
+export function above(sheet: DrawnSheet, level: number, asks: Asks): HTMLElement {
   const line = document.createElement('tr');
   line.className = 'outline column';
   line.style.height = `${OUTLINE}px`;
@@ -250,139 +263,6 @@ function takes(heading: HTMLElement, axis: Axis, at: number, showing: Showing, a
   heading.addEventListener('mouseenter', (event) => {
     if ((event.buttons & 1) === 1) asks.takeBand(axis, at, true);
   });
-}
-
-/** How many levels of outline this axis has, which is how wide its gutter is (ADR-045). */
-export function levelsOf(sheet: DrawnSheet, axis: Axis): number {
-  const runs = axis === 'column' ? sheet.widths : sheet.heights;
-  return runs.reduce((deepest, run) => Math.max(deepest, run.group ?? 0), 0);
-}
-
-/** How much room the outline gutter takes on that axis, in pixels. */
-export function gutterOf(sheet: DrawnSheet, axis: Axis): number {
-  return levelsOf(sheet, axis) * OUTLINE;
-}
-
-/** The cells that stand in the row outline's gutter, at the start of a line: one per level. */
-function outline(
-  sheet: DrawnSheet,
-  row: number | null,
-  asks: Asks,
-  gone: Span | null = null,
-): HTMLElement[] {
-  const levels = levelsOf(sheet, 'row');
-  const runs = groupsOf(sheet, 'row');
-  const over = gone === null ? null : groupOver(sheet, 'row', gone);
-
-  return Array.from({ length: levels }, (_, at) => {
-    const level = at + 1;
-    const cell = document.createElement('th');
-    cell.className = 'outline row';
-    cell.style.width = `${OUTLINE}px`;
-    cell.style.left = `${at * OUTLINE}px`;
-
-    const run =
-      row === null ? undefined : runs.find((one) => one.group === level && held(one, row));
-    if (run !== undefined && row !== null) drawOutline(cell, 'row', run, row, asks);
-    if (over !== null && over.group === level) opening(cell, 'row', over, asks);
-
-    return cell;
-  });
-}
-
-/** Whether the run reaches this row or column, drawn or not. */
-function held(run: Grouped, at: number): boolean {
-  return run.first <= at && at <= run.last;
-}
-
-/** The bracket and the control one level of an outline puts in its gutter. */
-function drawOutline(cell: HTMLElement, axis: Axis, run: Grouped, at: number, asks: Asks): void {
-  if (run.hidden) return;
-
-  cell.classList.add('in');
-  if (at === run.first) cell.classList.add('opens');
-  if (at === run.last) cell.append(control(axis, run, false, asks));
-}
-
-/** The control that opens a collapsed group, in the gutter beside the seam its run is hidden at. */
-function opening(cell: HTMLElement, axis: Axis, run: Grouped, asks: Asks): void {
-  cell.classList.add('opening');
-  cell.append(control(axis, run, true, asks));
-}
-
-/** The `−` that collapses a group, or the `+` that opens it — which is a write either way (ADR-044). */
-function control(axis: Axis, run: Grouped, open: boolean, asks: Asks): HTMLElement {
-  const drawn = document.createElement('button');
-  drawn.type = 'button';
-  drawn.className = `grouping ${axis} control`;
-  drawn.style.setProperty(
-    axis === 'column' ? 'top' : 'left',
-    `${((run.group ?? 1) - 1) * LEVEL}px`,
-  );
-  drawn.textContent = open ? '+' : '\u2212';
-  drawn.title = `${open ? 'Open' : 'Collapse'} ${spanSaid(axis, run.first, run.last)}`;
-  drawn.addEventListener('mousedown', (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    asks.hide(axis, run.first, run.last, !open);
-  });
-
-  return drawn;
-}
-
-/** How far apart the levels of an outline sit, which is what makes a nested one legible. */
-const LEVEL = 4;
-
-/** A run a band groups, which is the runs `docs/spec.md` §4 gives an outline level above zero. */
-type Grouped = Sized & { readonly group: number };
-
-/** Every run of this axis that a band groups. */
-function groupsOf(sheet: DrawnSheet, axis: Axis): Grouped[] {
-  const runs = axis === 'column' ? sheet.widths : sheet.heights;
-  return runs.filter((run): run is Grouped => (run.group ?? 0) > 0);
-}
-
-/** The group a hidden run belongs to, whose own control is the way back rather than the plain mark. */
-function groupOver(sheet: DrawnSheet, axis: Axis, run: Span): Grouped | null {
-  const over = groupsOf(sheet, axis).filter(
-    (one) => one.hidden && one.first <= run.first && one.last >= run.last,
-  );
-
-  return over[over.length - 1] ?? null;
-}
-
-/** The mark that says a run is hidden behind this heading, and is the way back to it. */
-function hidden(heading: HTMLElement, axis: Axis, run: Span, asks: Asks): void {
-  const mark = document.createElement('span');
-  mark.className = `hiding ${axis}`;
-  mark.title = `Show ${spanSaid(axis, run.first, run.last)} again`;
-  mark.addEventListener('mousedown', (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    asks.hide(axis, run.first, run.last, false);
-  });
-
-  heading.classList.add('hides');
-  heading.append(mark);
-}
-
-/** A run of columns or rows as the reader sees it named: `column B`, `rows 3-7`. */
-export function spanSaid(axis: Axis, first: number, last: number): string {
-  const said = (at: number) => (axis === 'column' ? columnLabel(at) : String(at));
-  const one = axis === 'column' ? 'column' : 'row';
-
-  return first === last ? `${one} ${said(first)}` : `${one}s ${said(first)}-${said(last)}`;
-}
-
-/** A run of rows or columns the sheet is not drawing, because something hides them. */
-interface Span {
-  readonly first: number;
-  readonly last: number;
-}
-
-/** The run hidden between the last one drawn and this one, where there is one. */
-function behind(drawn: number | null, at: number): Span | null {
-  return drawn !== null && at > drawn + 1 ? { first: drawn + 1, last: at - 1 } : null;
 }
 
 /** Whether the selection reaches this row or column, which is what lights its heading. */
