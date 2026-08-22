@@ -1146,11 +1146,12 @@ gestures on a *heading*, and the headings are not selectors yet.
       left.
 - [x] **Grouping**, which is the same band and nearly the same gesture
       (`docs/spec.md` §4 `group:`, outline level 0–7).
-      **In**, all three parts. **Drawn**: a bar along the outer edge of every
-      heading in the run, one level in from the last, with the control at the
-      end of it — *on* the heading rather than in a gutter of its own, because a
-      gutter moves the grid's origin and the frozen panes are measured from it
-      (**ADR-044**). **Collapsed and opened** from that control, which is the
+      **In**, all three parts. **Drawn** in a gutter of its own, as both
+      spreadsheets keep it: a row above the headings per column level, a column
+      left of the row numbers per row level, with the bracket over the run and
+      the control at its end (**ADR-045**, superseding ADR-044 — the origin
+      every other measurement is taken from moves with the gutter, and is a
+      function of the sheet now rather than a constant). **Collapsed and opened** from that control, which is the
       `hidden:` write the last slice built: `group` plus `hidden: true` is what
       the schema calls a collapsed group, and the `+` that opens one sits on the
       heading the run is behind, where the plain hidden mark would otherwise be.
@@ -2270,7 +2271,7 @@ the file this way.
 sends no width rather than a wrong one, and the column is left as it was.
 
 ### ADR-044 — The outline is drawn on the heading, not in a gutter of its own
-**Accepted.**
+**Superseded by ADR-045.**
 
 *Excel and Sheets both put the outline in a gutter*, outside the headings: a
 strip above the column letters, another left of the row numbers. Ours is a bar
@@ -2296,6 +2297,32 @@ so a reader sees one control rather than two marks about the same thing.
 ADR-015 leaves the editor no sidecar and ADR-001 leaves the grid no state of its
 own. So the `−` writes `hidden: true` through the same band rows the hide
 gesture uses, and the `+` takes it out again.
+
+### ADR-045 — The outline gets the gutter after all, and the origin moves with it
+**Accepted**, superseding **ADR-044** the day it was written.
+
+*ADR-044 weighed a four-pixel strip against threading a second origin through
+the geometry, and chose the strip.* Shown the result, the reader asked for the
+gutter — which is the right call and the one this project's own rule points at:
+a spreadsheet's reader knows where the outline lives, and "it was cheaper" is
+not a reason they should have to hear. ADR-044's *reasoning* stands and is worth
+keeping visible: the cost was real, and it is now paid.
+
+*What it cost.* One gutter row per column level above the headings, one gutter
+column per row level left of the row numbers, and everything measured from the
+grid's top-left moved by them: the table's declared width, the `left` a frozen
+column is pinned at, the `top` a frozen row is pinned at, the row numbers' own
+sticky `left`, the corner's, and the span a gap row covers. Each is now written
+as `gutterOf(sheet, axis) + …` rather than as a constant, which is the honest
+shape — the origin *is* a function of the sheet.
+
+*The gutter cells are part of the frozen band.* They stick with the row numbers,
+because an outline that scrolled away from the rows it brackets would be worse
+than none.
+
+*A collapsed run's control stays on the heading.* Its own gutter cells are not
+drawn — the run is hidden — so the `+` sits where the plain hidden mark would,
+as ADR-044 already had it. That part needed no changing.
 
 ## 8. Open questions
 
@@ -2557,6 +2584,26 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-22 — The outline gets its gutter, and a right-click stops taking the heading
+Both from the real window, on the slice above.
+
+- **The outline moved outside the headings**, where a reader of Excel or Sheets
+  looks for it: a row above the headings per column level, a column left of the
+  row numbers per row level. ADR-044 had weighed that against threading a second
+  origin through the geometry and chosen the cheaper side; shown it, the reader
+  asked for the gutter, which is the right call. **ADR-045** supersedes it and
+  says what it cost: the table's width, the `left` a frozen column is pinned at,
+  the `top` a frozen row is pinned at, the row numbers' own sticky left, the
+  corner's, and a gap row's span are all `gutterOf(sheet, axis) + …` now. The
+  origin is a function of the sheet, which is what it always was.
+- **A right-click no longer throws away the selection.** `mousedown` fires for
+  the right button too, so the heading under the pointer was being taken before
+  the menu opened — and a menu about *these five columns* became a menu about
+  one. The primary button alone selects now, and the right button takes a
+  heading only where it lands outside what is already selected, which is what
+  both spreadsheets do.
+- 1679 → 1681 tests.
 
 ### 2026-08-22 — The outline, drawn and written
 Phase 10's seventh item. `group:` was read by the loader, carried onto the

@@ -432,16 +432,21 @@ describe('a heading a reader clicks', () => {
     });
     const into = shown({ drawing: drawing({ sheets: [outlined] }) }, on);
 
-    // Five headings in the outer run, three of them also in the inner one.
-    expect(into.querySelectorAll('thead .grouping:not(.control)')).toHaveLength(8);
+    // One gutter row per level, above the headings and aligned with them.
+    const rows = [...into.querySelectorAll<HTMLElement>('thead tr.outline.column')];
+    expect(rows).toHaveLength(2);
+
+    // Five columns in the outer run, three in the inner one.
+    expect(rows[0]?.querySelectorAll('.outline.in')).toHaveLength(5);
+    expect(rows[1]?.querySelectorAll('.outline.in')).toHaveLength(3);
 
     const controls = [...into.querySelectorAll<HTMLButtonElement>('thead .grouping.control')];
     expect(controls.map((one) => one.title)).toEqual([
-      'Collapse columns C-E',
       'Collapse columns B-F',
+      'Collapse columns C-E',
     ]);
 
-    controls[1]?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    controls[0]?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
     expect(on.hide).toHaveBeenCalledWith('column', 2, 6, true);
   });
 
@@ -463,6 +468,45 @@ describe('a heading a reader clicks', () => {
 
     control?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
     expect(on.hide).toHaveBeenCalledWith('column', 2, 3, false);
+  });
+
+  it('keeps the run selected when the menu is asked for inside it', () => {
+    const on = asks();
+    const into = shown(
+      {
+        drawing: drawing({ sheets: [wide] }),
+        selected: { row: 1, col: 1 },
+        anchor: { row: 40, col: 2 },
+      },
+      on,
+    );
+    const at = into.querySelector<HTMLElement>('thead th[data-col="2"]');
+
+    // The right button never takes a heading: `mousedown` fires for it too, and
+    // taking the one under it would throw away the run the menu is for.
+    at?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 2 }));
+    at?.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+
+    expect(on.takeBand).not.toHaveBeenCalled();
+    expect(on.pointAt).toHaveBeenCalledWith({ axis: 'column', at: 2, x: 0, y: 0 });
+  });
+
+  it('takes the one under the pointer where the menu is asked for outside the run', () => {
+    const on = asks();
+    const into = shown(
+      {
+        drawing: drawing({ sheets: [wide] }),
+        selected: { row: 1, col: 1 },
+        anchor: { row: 40, col: 1 },
+      },
+      on,
+    );
+
+    into
+      .querySelector<HTMLElement>('thead th[data-col="2"]')
+      ?.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+
+    expect(on.takeBand).toHaveBeenCalledWith('column', 2, false);
   });
 
   it('opens a menu on a heading, which hides what the reader has selected', () => {

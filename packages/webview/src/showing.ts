@@ -150,3 +150,6 @@ export const GUTTER = 44;
 
 /** How tall the row of column headings is, which is not a row of the sheet; a frozen row sits under it. */
 export const HEADING = 24;
+
+/** How much room one level of an outline takes, in the gutter outside the headings (ADR-045). */
+export const OUTLINE = 12;
