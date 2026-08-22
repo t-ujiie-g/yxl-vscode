@@ -2320,9 +2320,16 @@ shape — the origin *is* a function of the sheet.
 because an outline that scrolled away from the rows it brackets would be worse
 than none.
 
-*A collapsed run's control stays on the heading.* Its own gutter cells are not
-drawn — the run is hidden — so the `+` sits where the plain hidden mark would,
-as ADR-044 already had it. That part needed no changing.
+*A collapsed run's control stays in the gutter too.* Its own gutter cells are
+not drawn — the run is hidden — so the `+` goes in the gutter cell of the next
+one along, pulled back onto the seam its run is hidden at. ADR-044 had put it on
+the heading, which is where the plain hidden mark goes; a control inside a
+heading reads as part of the heading, and the reader said so. The plain mark
+stands aside for it either way, so one run never wears two marks.
+
+*The controls are big enough to hit.* Nine pixels was what the heading had room
+for; a gutter has as much room as it takes, so a level is 18px and the control
+13px — which is what makes a `+` legible beside a column letter.
 
 ## 8. Open questions
 
@@ -2597,6 +2604,12 @@ Both from the real window, on the slice above.
   the `top` a frozen row is pinned at, the row numbers' own sticky left, the
   corner's, and a gap row's span are all `gutterOf(sheet, axis) + …` now. The
   origin is a function of the sheet, which is what it always was.
+- **The outline's controls are legible and outside the headings.** Nine pixels
+  was what a heading had room for and it was too small to see or hit; a gutter
+  has as much room as it takes, so a level is 18px and the control 13px. The
+  `+` that opens a collapsed run went in the gutter too, at the seam its run is
+  hidden at, rather than inside the heading — where it read as part of the
+  heading.
 - **A right-click no longer throws away the selection.** `mousedown` fires for
   the right button too, so the heading under the pointer was being taken before
   the menu opened — and a menu about *these five columns* became a menu about

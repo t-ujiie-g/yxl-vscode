@@ -460,10 +460,14 @@ describe('a heading a reader clicks', () => {
     });
     const into = shown({ drawing: drawing({ sheets: [collapsed] }) }, on);
 
-    // The group's own control, rather than the plain mark a hidden run leaves.
+    // The group's own control, rather than the plain mark a hidden run leaves —
+    // and in the gutter at the seam, not on the heading (ADR-045).
     expect(into.querySelectorAll('thead .hiding')).toHaveLength(0);
+    expect(into.querySelectorAll('thead th .grouping.control')).toHaveLength(0);
 
-    const control = into.querySelector<HTMLButtonElement>('thead .grouping.control');
+    const control = into.querySelector<HTMLButtonElement>(
+      'thead .outline.opening .grouping.control',
+    );
     expect([control?.textContent, control?.title]).toEqual(['+', 'Open columns B-C']);
 
     control?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));

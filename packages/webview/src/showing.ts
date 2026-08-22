@@ -152,4 +152,4 @@ export const GUTTER = 44;
 export const HEADING = 24;
 
 /** How much room one level of an outline takes, in the gutter outside the headings (ADR-045). */
-export const OUTLINE = 12;
+export const OUTLINE = 18;

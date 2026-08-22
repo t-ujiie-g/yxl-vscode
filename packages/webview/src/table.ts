@@ -154,8 +154,7 @@ function headings(sheet: DrawnSheet, showing: Showing, asks: Asks): HTMLElement 
 
     const run = behind(drawn, one.at);
     const over = run === null ? null : groupOver(sheet, 'column', run);
-    if (over !== null) opening(heading, 'column', over, asks);
-    else if (run !== null) hidden(heading, 'column', run, asks);
+    if (over === null && run !== null) hidden(heading, 'column', run, asks);
 
     heading.append(grip('column', one.at, wide, asks));
     line.append(heading);
@@ -179,19 +178,30 @@ function above(sheet: DrawnSheet, level: number, asks: Asks): HTMLElement {
   line.append(...outline(sheet, null, asks), blank);
 
   const runs = groupsOf(sheet, 'column').filter((run) => run.group === level);
+  let drawn: number | null = null;
+
   for (const one of columnsOf(sheet)) {
     if ('pad' in one) {
-      if (one.pad > 0) line.append(pad(one.pad));
+      if (one.pad > 0) {
+        line.append(pad(one.pad));
+        drawn = null;
+      }
       continue;
     }
     if (widthOf(sheet, one.at) === 0) continue;
 
     const cell = document.createElement('td');
     cell.className = 'outline column';
+
     const run = runs.find((each) => held(each, one.at));
     if (run !== undefined) drawOutline(cell, 'column', run, one.at, asks);
 
+    const gone = behind(drawn, one.at);
+    const over = gone === null ? null : groupOver(sheet, 'column', gone);
+    if (over !== null && over.group === level) opening(cell, 'column', over, asks);
+
     line.append(cell);
+    drawn = one.at;
   }
 
   return line;
@@ -254,9 +264,15 @@ export function gutterOf(sheet: DrawnSheet, axis: Axis): number {
 }
 
 /** The cells that stand in the row outline's gutter, at the start of a line: one per level. */
-function outline(sheet: DrawnSheet, row: number | null, asks: Asks): HTMLElement[] {
+function outline(
+  sheet: DrawnSheet,
+  row: number | null,
+  asks: Asks,
+  gone: Span | null = null,
+): HTMLElement[] {
   const levels = levelsOf(sheet, 'row');
   const runs = groupsOf(sheet, 'row');
+  const over = gone === null ? null : groupOver(sheet, 'row', gone);
 
   return Array.from({ length: levels }, (_, at) => {
     const level = at + 1;
@@ -268,6 +284,7 @@ function outline(sheet: DrawnSheet, row: number | null, asks: Asks): HTMLElement
     const run =
       row === null ? undefined : runs.find((one) => one.group === level && held(one, row));
     if (run !== undefined && row !== null) drawOutline(cell, 'row', run, row, asks);
+    if (over !== null && over.group === level) opening(cell, 'row', over, asks);
 
     return cell;
   });
@@ -287,10 +304,10 @@ function drawOutline(cell: HTMLElement, axis: Axis, run: Grouped, at: number, as
   if (at === run.last) cell.append(control(axis, run, false, asks));
 }
 
-/** The control that opens a collapsed group, on the heading its run sits behind. */
-function opening(heading: HTMLElement, axis: Axis, run: Grouped, asks: Asks): void {
-  heading.classList.add('hides');
-  heading.append(control(axis, run, true, asks));
+/** The control that opens a collapsed group, in the gutter beside the seam its run is hidden at. */
+function opening(cell: HTMLElement, axis: Axis, run: Grouped, asks: Asks): void {
+  cell.classList.add('opening');
+  cell.append(control(axis, run, true, asks));
 }
 
 /** The `−` that collapses a group, or the `+` that opens it — which is a write either way (ADR-044). */
@@ -463,15 +480,14 @@ function line(
   const line = document.createElement('tr');
   line.style.height = `${heightOf(sheet, row)}px`;
 
-  line.append(...outline(sheet, row, asks));
+  const over = behind === null ? null : groupOver(sheet, 'row', behind);
+  line.append(...outline(sheet, row, asks, behind));
 
   const number = document.createElement('th');
   number.textContent = String(row);
   number.style.left = `${gutterOf(sheet, 'row')}px`;
   takes(number, 'row', row, showing, asks);
-  const over = behind === null ? null : groupOver(sheet, 'row', behind);
-  if (over !== null) opening(number, 'row', over, asks);
-  else if (behind !== null) hidden(number, 'row', behind, asks);
+  if (over === null && behind !== null) hidden(number, 'row', behind, asks);
   number.append(grip('row', row, heightOf(sheet, row), asks));
   line.append(number);
 
