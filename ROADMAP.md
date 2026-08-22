@@ -440,7 +440,7 @@ not a date.
 | The corner takes the whole sheet | ✅ — and takes it as whole columns, so a look over it is a band |
 | A look over the columns selected, in one gesture | ✅ — one band through the normalizer, never four hundred cells (ADR-041) |
 | A width over the columns selected | ✅ — drag one edge of the run and all of them take it |
-| Double-click the heading edge to fit the column to its contents | **Phase 10** |
+| Double-click the heading edge to fit the column to its contents | ✅ — measured in the font each cell wears, not counted in characters |
 | Hide and unhide a row or a column | **Phase 10** — `hidden:` is drawn already, and cannot be set |
 | Group rows or columns, and collapse the group | **Phase 10** — `group:` is read and then dropped before the view; nothing of an outline is drawn |
 | A formula bar over the grid | ✅ — what the cell holds, editable there, never what it computes to |
@@ -1123,10 +1123,15 @@ gestures on a *heading*, and the headings are not selectors yet.
       **In** (**ADR-042**), and it took one of §4.4's own notes with it: a band
       already over exactly what was dragged takes the size, rather than a
       second band being written beside it.
-- [ ] **Double-click the heading edge and the column fits what is in it.** The
+- [x] **Double-click the heading edge and the column fits what is in it.** The
       width is *measured* — the view knows the font each cell wears; the host
       knows every cell there is (§8 Q17) — and lands through `setSize` like a
       drag, so the answer is a band and a shared band is still a question.
+      **In** (**ADR-043**): the host sends the run drawn as cells, the view
+      measures it against the font each wears, and what comes back is an
+      ordinary drag. One column at a time, which is what the gesture names — a
+      run of them fits each to a different width, and that is N writes rather
+      than one.
 - [ ] **Hide and unhide** (`docs/spec.md` §4 `hidden:`). The preview honours it
       already and cannot set it; a hidden run also needs the marker between the
       headings that says something is there.
@@ -2226,6 +2231,37 @@ Where a **single** band reaches past the run, the two answers §4.4 already had
 still stand — change it, or split it so the run stands alone — and the split now
 takes the whole run out in one piece rather than one column.
 
+### ADR-043 — The host sends the run, the view measures it
+**Accepted**, answering §8 Q17.
+
+*Fitting a column to its contents needs two things this editor keeps apart.*
+Every cell of the column is on the **host** — the view is drawn a window of the
+sheet and nothing more (ADR-019) — and the font each cell wears, with something
+to measure text in, is in the **view**. So the gesture is a round trip: the view
+asks to fit, the host answers with that run drawn as cells, and the view measures
+and sends back an ordinary drag.
+
+*A count of characters is not a width*, which is what ruled out letting the host
+measure. `東京第一倉庫` is six characters and 88px in the grid's own face;
+`Revenue` is seven characters and 57.7px. Any answer that counted, or that
+multiplied an average character by a length, would have been wrong for every
+spec with CJK text in it — which is the specs this editor is being written for.
+Giving the host a table of per-font character widths is the same answer with
+more machinery, and a second implementation of what the browser already has.
+
+*Measuring only what is drawn was the other way*, and it is worse than it looks:
+the width would depend on where the reader had scrolled to, so the same
+double-click would give two answers on the same file. A gesture whose result
+moves with the scrollbar is not one a reader can trust.
+
+*What comes back is a drag.* The measured width goes through `setSize` like any
+other, so the answers are §4.4's — the band over the run, or the question a
+shared band asks — and a fit is undone by the same undo. Nothing new can reach
+the file this way.
+
+*The view answers with nothing where it cannot measure.* A shell with no canvas
+sends no width rather than a wrong one, and the column is left as it was.
+
 ## 8. Open questions
 
 - **Q1 — `cells:` A1 keys and row insertion.** Inserting a row rewrites every
@@ -2392,19 +2428,16 @@ takes the whole run out in one piece rather than one column.
   it names rather than the whole rectangle, which is the machinery the question
   was really about.
 
-- **Q17 — What does *fit the column to its contents* measure?** Excel measures
-  every cell in the column; this editor has the two halves in different places.
-  The **view** knows how wide a string is in the font that cell wears, and holds
-  only a window of the sheet (ADR-019); the **host** knows every cell there is
-  and nothing about fonts. Three answers, in the order they cost: measure what
-  is drawn and say so — which makes the width depend on where the reader had
-  scrolled to, and is the wrong kind of surprise; measure in the view against
-  metrics it takes once and asks the host to apply over the whole column, which
-  needs the host to send the column's *text* rather than its cells; or give the
-  host a table of character widths per font and let it measure, which is a
-  second implementation of what the browser already does. Decide with Phase 10's
-  fourth item, not before.
-
+- **Q17 — What does *fit the column to its contents* measure?** ✅ *Answered
+  2026-08-22 by **ADR-043**.* The **host sends the run and the view measures
+  it**: the host has every cell of the column, the view has the font each is
+  drawn in and a canvas to measure with, and neither half is worth
+  reimplementing on the other side. What settled it is that a count of
+  characters is not a width — `東京第一倉庫` is six characters and 88px, and
+  `Revenue` is seven and 57.7px, both in the grid's own face — so any answer
+  that let the host measure was going to be wrong for half the specs this is
+  for. Measuring only what is drawn was the other rejected answer: a width that
+  depends on where the reader had scrolled to is the wrong kind of surprise.
 ## 9. Risks
 
 - **R1 — Schema drift between the two implementations.** The structural
@@ -2489,6 +2522,26 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-22 — Fit the column to what is in it
+Phase 10's fifth item, and the answer to the one open question the phase had.
+**ADR-043**, closing **§8 Q17**.
+
+- **Double-click the edge of a heading and the column takes the width of its
+  widest cell.** The host sends that run drawn as cells; the view measures each
+  in the font it wears and sends back an ordinary drag, so the answers are
+  §4.4's and the undo is the one every other write has.
+- **A count of characters is not a width**, and measuring it settled the
+  question the plan had left open. `東京第一倉庫` is six characters and 88px in
+  the grid's own face; `Revenue` is seven and 57.7px. Anything that counted
+  would have been wrong for every spec with Japanese in it — which is the specs
+  this is being written for.
+- **Measuring only what is drawn was the other candidate**, and it would have
+  made the width depend on where the reader had scrolled to: the same
+  double-click, two answers, same file.
+- **A shell that cannot measure sends nothing back** rather than a width of
+  nothing, and the column is left as it was.
+- 1634 → 1646 tests.
 
 ### 2026-08-22 — A run of headings drags as one
 Phase 10's fourth item, and the half of the third that was left. **ADR-042.**

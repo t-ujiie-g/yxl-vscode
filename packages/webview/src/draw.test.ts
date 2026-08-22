@@ -36,6 +36,7 @@ function asks(): Asks {
     openMenu: vi.fn(),
     takeBand: vi.fn(),
     takeAll: vi.fn(),
+    fit: vi.fn(),
   };
 }
 

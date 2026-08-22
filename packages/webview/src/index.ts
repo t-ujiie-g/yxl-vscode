@@ -4,6 +4,7 @@ import { sheetAgain } from './again';
 import { flavours, onto } from './clipboard';
 import { draw, focusCell, restate } from './draw';
 import { between } from './keys';
+import { ruler, widest } from './measure';
 import type {
   Drawing,
   DrawnSheet,
@@ -22,6 +23,7 @@ import {
   type Reached,
   type Showing,
 } from './showing';
+import { sizeOf } from './window';
 
 /** The bridge VS Code puts in a webview, and the only way out of one. */
 declare function acquireVsCodeApi(): { postMessage: (message: FromView) => void };
@@ -279,6 +281,11 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       host.postMessage({ kind: 'inspect', sheet: named(), row: near.row, col: near.col });
       restated();
     },
+    fit: (axis, at) => {
+      refused = null;
+      said = null;
+      host.postMessage({ kind: 'fit', sheet: named(), axis, at });
+    },
     resize: (axis, at, size) => {
       refused = null;
       said = null;
@@ -400,6 +407,17 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
 
       seen(went);
       if (looking !== null) into.querySelector<HTMLInputElement>('.looking .for')?.focus();
+      return;
+    }
+
+    if (sent.kind === 'fitting') {
+      // The host has every cell of the run; the view has the font each is drawn
+      // in, so the width is measured here and sent back as an ordinary drag.
+      const rule = ruler();
+      const wide = rule === null ? null : widest(sent.cells, rule);
+      if (wide !== null && sent.sheet === named()) {
+        asks.resize(sent.axis, sent.at, sizeOf(sent.axis, wide));
+      }
       return;
     }
 

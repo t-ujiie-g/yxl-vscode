@@ -1,6 +1,7 @@
 import { finds, reaches } from '@yxl-vscode/compile';
 import { type Engine, univerEngine } from '@yxl-vscode/evaluate';
 import { did, type History, nothing } from '@yxl-vscode/patch';
+import type { Axis } from '@yxl-vscode/spec';
 import { addrAt, cellOf, filePath } from '@yxl-vscode/units';
 import type { FromView, PastedAt } from '@yxl-vscode/webview/protocol';
 import * as vscode from 'vscode';
@@ -9,7 +10,7 @@ import { asOpen, put, reveal, textOf } from './documents';
 import { inspect, type Nodes, nodeUnder } from './inspect';
 import { wear } from './look';
 import { freeze } from './panes';
-import { type Projected, project, redraw, type Window } from './project';
+import { drawRun, type Projected, project, redraw, type Window } from './project';
 import { resize } from './size';
 import { goBack } from './undo';
 import {
@@ -200,6 +201,15 @@ export class Preview {
     void this.panel.webview.postMessage({ kind: 'found', sheet: name, text, cells });
   }
 
+  /** Every cell of a run, for the view to measure a fit against (ADR-043). */
+  private measuring(name: string, axis: Axis, at: number): void {
+    const sheet = this.drawn?.grid?.sheets.find((one) => one.name === name);
+    if (sheet === undefined) return;
+
+    const cells = drawRun(sheet, axis, at, this.drawn?.evaluation ?? null);
+    void this.panel.webview.postMessage({ kind: 'fitting', sheet: name, axis, at, cells });
+  }
+
   /** What the view asked for. */
   private answer(asked: FromView): void {
     if (asked.kind === 'reveal') {
@@ -315,6 +325,11 @@ export class Preview {
 
     if (asked.kind === 'find') {
       this.searched(asked.sheet, asked.text);
+      return;
+    }
+
+    if (asked.kind === 'fit') {
+      this.measuring(asked.sheet, asked.axis, asked.at);
       return;
     }
 

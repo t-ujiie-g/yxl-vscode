@@ -114,6 +114,7 @@ export interface Asks {
   readonly resize: (axis: Axis, at: number, size: number) => void;
   readonly takeBand: (axis: Axis, at: number, extend: boolean) => void;
   readonly takeAll: () => void;
+  readonly fit: (axis: Axis, at: number) => void;
   readonly freeze: (at: At | null) => void;
   readonly resizedWith: (resized: Resized, choice: string) => void;
   readonly wornWith: (worn: Worn, choice: string) => void;

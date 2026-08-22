@@ -219,13 +219,25 @@ export interface Found {
   readonly cells: readonly { readonly row: number; readonly col: number }[];
 }
 
+/**
+ * What a run of the sheet holds, sent because the view asked to fit a column to
+ * it: the host has every cell, the view has the font each is drawn in (ADR-043).
+ */
+export interface Fitting {
+  readonly kind: 'fitting';
+  readonly sheet: string;
+  readonly axis: Axis;
+  readonly at: number;
+  readonly cells: readonly DrawnCell[];
+}
+
 /** The keyboard back in the grid, after the host had to put it somewhere else. */
 export interface Focus {
   readonly kind: 'focus';
 }
 
 /** Everything the host sends the view. */
-export type ToView = Drawing | Inspected | Highlighted | Refused | Said | Focus | Found;
+export type ToView = Drawing | Fitting | Inspected | Highlighted | Refused | Said | Focus | Found;
 
 /**
  * Everything the view sends back. `edit`, `resolve` and `override` carry what
@@ -242,6 +254,7 @@ export type FromView =
     }
   | { readonly kind: 'setParam'; readonly name: string; readonly value: string }
   | { readonly kind: 'find'; readonly sheet: string; readonly text: string }
+  | { readonly kind: 'fit'; readonly sheet: string; readonly axis: Axis; readonly at: number }
   | ({ readonly kind: 'edit' } & Typed)
   | ({ readonly kind: 'empty' } & Ranged)
   | ({ readonly kind: 'emptied'; readonly choice: string } & Ranged)
