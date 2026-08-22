@@ -399,9 +399,9 @@ function line(
     const type = (seed?: string): void => {
       if (drawn.querySelector('.typing') !== null) return;
 
-      typeInto(drawn, held.get(cellKey(col, row)), seed, (text) => {
+      typeInto(drawn, held.get(cellKey(col, row)), seed, (text, went) => {
         asks.edit(row, col, text);
-        goTo(drawn, sheet, { row: row + 1, col }, asks);
+        goTo(drawn, sheet, { row: row + went.rows, col: col + went.cols }, asks);
       });
     };
 

@@ -416,6 +416,9 @@ body {
   flex: 1;
   min-width: 0;
   font-family: var(--vscode-editor-font-family, monospace);
+  resize: none;
+  overflow: hidden;
+  white-space: pre-wrap;
 }
 
 /* The corner takes the whole sheet, as the button in every spreadsheet does. */
@@ -610,16 +613,24 @@ body {
   padding: 0;
 }
 
+/* The box a cell is typed into, over the cell and growing down past it where
+   what is being typed has more than one line in it. */
 .typing {
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: 0;
+  z-index: 4;
   width: 100%;
+  min-height: 100%;
   box-sizing: border-box;
   border: 2px solid #107c41;
   padding: 0 3px;
   background: #ffffff;
   color: #000000;
   font: inherit;
+  resize: none;
+  overflow: hidden;
+  white-space: pre-wrap;
 }
 
 .grid td.overridden::after {

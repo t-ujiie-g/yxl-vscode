@@ -15,8 +15,13 @@ export function drawCell(
 
   if (cell === undefined) return drawn;
 
-  if (cell.rich === null) drawn.textContent = shown(cell);
+  const text = cell.rich === null ? shown(cell) : '';
+  if (cell.rich === null) drawn.textContent = text;
   else drawn.append(...cell.rich.map(run));
+
+  // A value that holds a line break is drawn with it, wrapped or not: the break
+  // is what the spec says, and `nowrap` would eat it (`docs/spec.md` §3).
+  if (text.includes('\n')) drawn.style.setProperty('white-space', 'pre-wrap');
 
   if (cell.formula !== null) drawn.title = told(cell);
   if (cell.overridden) drawn.classList.add('overridden');
@@ -59,11 +64,11 @@ export function typeInto(
   cell: HTMLTableCellElement,
   drawn: DrawnCell | undefined,
   seed: string | undefined,
-  done: (text: string) => void,
+  done: (text: string, went: Went) => void,
 ): void {
-  const box = document.createElement('input');
-  box.type = 'text';
+  const box = document.createElement('textarea');
   box.className = 'typing';
+  box.rows = 1;
   box.value = seed ?? written(drawn);
 
   let sent = false;
@@ -73,14 +78,25 @@ export function typeInto(
     cell.classList.remove('editing');
   };
 
+  box.addEventListener('input', () => grown(box));
   box.addEventListener('keydown', (event) => {
     event.stopPropagation();
 
-    if (event.key === 'Enter') {
+    const went = leaving(event);
+    if (went !== null) {
+      event.preventDefault();
       sent = true;
-      done(box.value);
+      done(box.value, went);
       leave();
+      return;
     }
+
+    if (breaking(event)) {
+      event.preventDefault();
+      broken(box);
+      return;
+    }
+
     if (event.key === 'Escape') leave();
   });
   box.addEventListener('blur', () => {
@@ -91,8 +107,47 @@ export function typeInto(
   cell.classList.add('editing');
   cell.append(box);
   box.focus({ preventScroll: true });
+  grown(box);
   if (seed === undefined) box.select();
 }
+
+/** Where the cell an edit was committed from leaves the reader, in cells from where they were. */
+export interface Went {
+  readonly rows: number;
+  readonly cols: number;
+}
+
+/** The keys that commit an edit, and where each leaves the reader — as both spreadsheets move. */
+export function leaving(event: KeyboardEvent): Went | null {
+  if (event.key === 'Enter' && !breaking(event)) {
+    return event.shiftKey ? { rows: -1, cols: 0 } : { rows: 1, cols: 0 };
+  }
+  if (event.key === 'Tab') return { rows: 0, cols: event.shiftKey ? -1 : 1 };
+
+  return null;
+}
+
+/** The keys that put a line break *inside* a cell rather than committing it (`docs/spec.md` §3). */
+export function breaking(event: KeyboardEvent): boolean {
+  return event.key === 'Enter' && (event.altKey || event.metaKey || event.ctrlKey);
+}
+
+/** A line break where the cursor is, which is what those keys are for. */
+function broken(box: HTMLTextAreaElement): void {
+  const at = box.selectionStart;
+  box.value = `${box.value.slice(0, at)}\n${box.value.slice(box.selectionEnd)}`;
+  box.selectionStart = at + 1;
+  box.selectionEnd = at + 1;
+  grown(box);
+}
+
+/** The box as tall as what is in it, since a cell that holds three lines has to show them. */
+function grown(box: HTMLTextAreaElement): void {
+  box.rows = Math.min(MOST, box.value.split('\n').length);
+}
+
+/** How far a box grows before it scrolls instead, so one long value cannot take the sheet. */
+const MOST = 8;
 
 /** What the spec holds for this cell, as a reader would type it. */
 export function written(cell: DrawnCell | undefined): string {

@@ -479,7 +479,7 @@ describe('what the view asks for', () => {
 
     at(into, 1, 1)?.dispatchEvent(new MouseEvent('dblclick'));
     const box = into.querySelector('.typing');
-    if (!(box instanceof HTMLInputElement)) throw new Error('nothing to type into');
+    if (!(box instanceof HTMLTextAreaElement)) throw new Error('nothing to type into');
 
     expect(box.value).toBe('APAC');
     box.value = 'EMEA';
@@ -495,7 +495,7 @@ describe('what the view asks for', () => {
     const into = shown({ drawing: drawing({ sheets: [sheet({ cells })] }) }, on);
 
     at(into, 1, 1)?.dispatchEvent(new MouseEvent('dblclick'));
-    expect(into.querySelector<HTMLInputElement>('.typing')?.value).toBe('=SUM(B1:B2)');
+    expect(into.querySelector<HTMLTextAreaElement>('.typing')?.value).toBe('=SUM(B1:B2)');
   });
 
   it('opens the cell on Enter, the way a spreadsheet does', () => {
@@ -504,7 +504,7 @@ describe('what the view asks for', () => {
     const into = shown({ drawing: drawing({ sheets: [sheet({ cells })] }) }, on);
 
     at(into, 1, 1)?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
-    expect(into.querySelector<HTMLInputElement>('.typing')?.value).toBe('APAC');
+    expect(into.querySelector<HTMLTextAreaElement>('.typing')?.value).toBe('APAC');
   });
 
   it('starts with the character typed, because typing over a cell replaces it', () => {
@@ -514,7 +514,7 @@ describe('what the view asks for', () => {
 
     at(into, 1, 1)?.dispatchEvent(new KeyboardEvent('keydown', { key: '4' }));
     const box = into.querySelector('.typing');
-    if (!(box instanceof HTMLInputElement)) throw new Error('nothing to type into');
+    if (!(box instanceof HTMLTextAreaElement)) throw new Error('nothing to type into');
 
     expect(box.value).toBe('4');
     box.value = '42';
@@ -551,7 +551,7 @@ describe('what the view asks for', () => {
 
     at(into, 1, 1)?.dispatchEvent(new KeyboardEvent('keydown', { key: 'E' }));
     const box = into.querySelector('.typing');
-    if (!(box instanceof HTMLInputElement)) throw new Error('nothing to type into');
+    if (!(box instanceof HTMLTextAreaElement)) throw new Error('nothing to type into');
 
     for (const key of ['M', 'E', 'A']) {
       const stroke = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
@@ -571,7 +571,7 @@ describe('what the view asks for', () => {
 
     at(into, 1, 1)?.dispatchEvent(new MouseEvent('dblclick'));
     const box = into.querySelector('.typing');
-    if (!(box instanceof HTMLInputElement)) throw new Error('nothing to type into');
+    if (!(box instanceof HTMLTextAreaElement)) throw new Error('nothing to type into');
 
     box.value = 'EMEA';
     box.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
@@ -587,7 +587,7 @@ describe('what the view asks for', () => {
 
     at(into, 1, 1)?.dispatchEvent(new MouseEvent('dblclick'));
     const box = into.querySelector('.typing');
-    if (!(box instanceof HTMLInputElement)) throw new Error('nothing to type into');
+    if (!(box instanceof HTMLTextAreaElement)) throw new Error('nothing to type into');
 
     box.value = 'never mind';
     box.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
@@ -700,7 +700,7 @@ describe('moving about the grid with the keys', () => {
 
     at(into, 2, 2)?.dispatchEvent(new MouseEvent('dblclick'));
     const box = into.querySelector('.typing');
-    if (!(box instanceof HTMLInputElement)) throw new Error('nothing to type into');
+    if (!(box instanceof HTMLTextAreaElement)) throw new Error('nothing to type into');
 
     box.value = 'EMEA';
     box.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
@@ -805,5 +805,95 @@ describe('moving about the grid with the keys', () => {
 
     press(into, 2, 2, 'x');
     expect(on.select).not.toHaveBeenCalled();
+  });
+});
+
+describe('a cell with more than one line in it', () => {
+  const into = () => {
+    const box = document.createElement('div');
+    draw(
+      box,
+      showingOf({ drawing: drawing({ sheets: [sheet({ cells: [cell(1, 1)] })] }) }),
+      asks(),
+    );
+    return box;
+  };
+
+  const typing = (box: HTMLElement) => box.querySelector<HTMLTextAreaElement>('.typing');
+
+  it('takes a line break from the keys both spreadsheets use, without committing', () => {
+    const on = asks();
+    const box = document.createElement('div');
+    draw(box, showingOf({ drawing: drawing({ sheets: [sheet({ cells: [cell(1, 1)] })] }) }), on);
+
+    at(box, 1, 1)?.dispatchEvent(new MouseEvent('dblclick'));
+    const typed = typing(box);
+    if (typed === null) throw new Error('nothing to type into');
+
+    typed.value = 'one';
+    typed.selectionStart = 3;
+    typed.selectionEnd = 3;
+    typed.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', altKey: true }));
+    typed.value = `${typed.value}two`;
+
+    expect(typed.value).toBe('one\ntwo');
+    expect(on.edit).not.toHaveBeenCalled();
+  });
+
+  it('commits it whole on `Enter`, line break and all', () => {
+    const on = asks();
+    const box = document.createElement('div');
+    draw(box, showingOf({ drawing: drawing({ sheets: [sheet({ cells: [cell(1, 1)] })] }) }), on);
+
+    at(box, 1, 1)?.dispatchEvent(new MouseEvent('dblclick'));
+    const typed = typing(box);
+    if (typed === null) throw new Error('nothing to type into');
+
+    typed.value = 'one\ntwo';
+    typed.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+
+    expect(on.edit).toHaveBeenCalledWith(1, 1, 'one\ntwo');
+  });
+
+  it('leaves the reader where each key leaves them, as both spreadsheets move', () => {
+    const on = asks();
+    const box = document.createElement('div');
+    const drawn = drawing({ sheets: [sheet({ rows: 3, columns: 3, cells: [cell(2, 2)] })] });
+    draw(box, showingOf({ drawing: drawn }), on);
+
+    at(box, 2, 2)?.dispatchEvent(new MouseEvent('dblclick'));
+    typing(box)?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', shiftKey: true }));
+    expect(on.select).toHaveBeenLastCalledWith(1, 2);
+
+    at(box, 2, 2)?.dispatchEvent(new MouseEvent('dblclick'));
+    typing(box)?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab' }));
+    expect(on.select).toHaveBeenLastCalledWith(2, 3);
+
+    at(box, 2, 2)?.dispatchEvent(new MouseEvent('dblclick'));
+    typing(box)?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true }));
+    expect(on.select).toHaveBeenLastCalledWith(2, 1);
+  });
+
+  it('is drawn with the break rather than with it eaten by `nowrap`', () => {
+    const box = document.createElement('div');
+    const lines = cell(1, 1, { value: 'one\ntwo' });
+    draw(box, showingOf({ drawing: drawing({ sheets: [sheet({ cells: [lines] })] }) }), asks());
+
+    expect(at(box, 1, 1)?.style.whiteSpace).toBe('pre-wrap');
+    expect(at(box, 2, 1)?.style.whiteSpace).toBe('');
+  });
+
+  it('opens the box on what the cell holds, breaks and all', () => {
+    const box = document.createElement('div');
+    const lines = cell(1, 1, { value: 'one\ntwo' });
+    draw(box, showingOf({ drawing: drawing({ sheets: [sheet({ cells: [lines] })] }) }), asks());
+
+    at(box, 1, 1)?.dispatchEvent(new MouseEvent('dblclick'));
+    expect(typing(box)?.value).toBe('one\ntwo');
+    expect(typing(box)?.rows).toBe(2);
+  });
+
+  it('draws nothing of the sort where the value has no break in it', () => {
+    expect(typing(into())).toBeNull();
   });
 });
