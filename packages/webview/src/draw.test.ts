@@ -40,6 +40,8 @@ function asks(): Asks {
     hide: vi.fn(),
     hiddenWith: vi.fn(),
     pointAt: vi.fn(),
+    group: vi.fn(),
+    groupedWith: vi.fn(),
   };
 }
 
@@ -385,7 +387,7 @@ describe('a heading a reader clicks', () => {
       rows: 2,
       columns: 4,
       of: { rows: 40, columns: 4 },
-      widths: [{ first: 2, last: 3, size: null, hidden: true }],
+      widths: [{ first: 2, last: 3, size: null, hidden: true, group: null }],
     });
     const into = shown({ drawing: drawing({ sheets: [hides] }) }, on);
     const marks = [...into.querySelectorAll<HTMLElement>('thead .hiding')];
@@ -406,7 +408,7 @@ describe('a heading a reader clicks', () => {
       columns: 4,
       of: { rows: 40, columns: 4 },
       freeze: { row: 3, col: 2 },
-      widths: [{ first: 2, last: 2, size: null, hidden: true }],
+      widths: [{ first: 2, last: 2, size: null, hidden: true, group: null }],
     });
     const into = shown({ drawing: drawing({ sheets: [frozen] }) }, on);
 
@@ -415,6 +417,100 @@ describe('a heading a reader clicks', () => {
 
     mark?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
     expect(on.hide).toHaveBeenCalledWith('column', 2, 2, false);
+  });
+
+  it('draws the outline a group puts on the headings, one bar per level it is in', () => {
+    const on = asks();
+    const outlined = sheet({
+      rows: 2,
+      columns: 8,
+      of: { rows: 40, columns: 8 },
+      widths: [
+        { first: 2, last: 6, size: null, hidden: false, group: 1 },
+        { first: 3, last: 5, size: null, hidden: false, group: 2 },
+      ],
+    });
+    const into = shown({ drawing: drawing({ sheets: [outlined] }) }, on);
+
+    // One gutter row per level, above the headings and aligned with them.
+    const rows = [...into.querySelectorAll<HTMLElement>('thead tr.outline.column')];
+    expect(rows).toHaveLength(2);
+
+    // Five columns in the outer run, three in the inner one.
+    expect(rows[0]?.querySelectorAll('.outline.in')).toHaveLength(5);
+    expect(rows[1]?.querySelectorAll('.outline.in')).toHaveLength(3);
+
+    const controls = [...into.querySelectorAll<HTMLButtonElement>('thead .grouping.control')];
+    expect(controls.map((one) => one.title)).toEqual([
+      'Collapse columns B-F',
+      'Collapse columns C-E',
+    ]);
+
+    controls[0]?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    expect(on.hide).toHaveBeenCalledWith('column', 2, 6, true);
+  });
+
+  it('puts the way back on the heading a collapsed group sits behind', () => {
+    const on = asks();
+    const collapsed = sheet({
+      rows: 2,
+      columns: 5,
+      of: { rows: 40, columns: 5 },
+      widths: [{ first: 2, last: 3, size: null, hidden: true, group: 1 }],
+    });
+    const into = shown({ drawing: drawing({ sheets: [collapsed] }) }, on);
+
+    // The group's own control, rather than the plain mark a hidden run leaves —
+    // and in the gutter at the seam, not on the heading (ADR-045).
+    expect(into.querySelectorAll('thead .hiding')).toHaveLength(0);
+    expect(into.querySelectorAll('thead th .grouping.control')).toHaveLength(0);
+
+    const control = into.querySelector<HTMLButtonElement>(
+      'thead .outline.opening .grouping.control',
+    );
+    expect([control?.textContent, control?.title]).toEqual(['+', 'Open columns B-C']);
+
+    control?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    expect(on.hide).toHaveBeenCalledWith('column', 2, 3, false);
+  });
+
+  it('keeps the run selected when the menu is asked for inside it', () => {
+    const on = asks();
+    const into = shown(
+      {
+        drawing: drawing({ sheets: [wide] }),
+        selected: { row: 1, col: 1 },
+        anchor: { row: 40, col: 2 },
+      },
+      on,
+    );
+    const at = into.querySelector<HTMLElement>('thead th[data-col="2"]');
+
+    // The right button never takes a heading: `mousedown` fires for it too, and
+    // taking the one under it would throw away the run the menu is for.
+    at?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 2 }));
+    at?.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+
+    expect(on.takeBand).not.toHaveBeenCalled();
+    expect(on.pointAt).toHaveBeenCalledWith({ axis: 'column', at: 2, x: 0, y: 0 });
+  });
+
+  it('takes the one under the pointer where the menu is asked for outside the run', () => {
+    const on = asks();
+    const into = shown(
+      {
+        drawing: drawing({ sheets: [wide] }),
+        selected: { row: 1, col: 1 },
+        anchor: { row: 40, col: 1 },
+      },
+      on,
+    );
+
+    into
+      .querySelector<HTMLElement>('thead th[data-col="2"]')
+      ?.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+
+    expect(on.takeBand).toHaveBeenCalledWith('column', 2, false);
   });
 
   it('opens a menu on a heading, which hides what the reader has selected', () => {
@@ -437,9 +533,16 @@ describe('a heading a reader clicks', () => {
     );
     const entries = [...menu.querySelectorAll<HTMLElement>('.pointed .entry')];
 
-    expect(entries.map((one) => one.textContent)).toEqual(['Hide these 2 columns']);
+    expect(entries.map((one) => one.textContent)).toEqual([
+      'Hide these 2 columns',
+      'Group these 2 columns',
+    ]);
+
     entries[0]?.click();
     expect(on.hide).toHaveBeenCalledWith('column', 2, 3, true);
+
+    entries[1]?.click();
+    expect(on.group).toHaveBeenCalledWith('column', 2, 3, 1);
   });
 
   it('offers the way back where a run beside the heading is hidden', () => {
@@ -448,7 +551,7 @@ describe('a heading a reader clicks', () => {
       rows: 2,
       columns: 4,
       of: { rows: 40, columns: 4 },
-      widths: [{ first: 2, last: 3, size: null, hidden: true }],
+      widths: [{ first: 2, last: 3, size: null, hidden: true, group: null }],
     });
     const menu = shown(
       {
@@ -462,6 +565,7 @@ describe('a heading a reader clicks', () => {
     expect(entries.map((one) => one.textContent)).toEqual([
       'Hide this column',
       'Show columns B-C again',
+      'Group this column',
     ]);
   });
 

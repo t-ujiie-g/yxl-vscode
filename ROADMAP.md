@@ -442,7 +442,7 @@ not a date.
 | A width over the columns selected | ✅ — drag one edge of the run and all of them take it |
 | Double-click the heading edge to fit the column to its contents | ✅ — measured in the font each cell wears, not counted in characters |
 | Hide and unhide a row or a column | ✅ — from the heading's own menu, with a mark on the heading a hidden run sits behind |
-| Group rows or columns, and collapse the group | **Phase 10** — `group:` is read and then dropped before the view; nothing of an outline is drawn |
+| Group rows or columns, and collapse the group | ✅ — the outline is drawn on the headings, and the control writes the collapse |
 | A formula bar over the grid | ✅ — what the cell holds, editable there, never what it computes to |
 | What the selection comes to — count, sum, average | **Phase 10** — every spreadsheet's status bar |
 | `Cmd`+`B` / `I` / `U` | **Phase 10** — the toolbar has them, the keyboard does not |
@@ -1144,20 +1144,18 @@ gestures on a *heading*, and the headings are not selectors yet.
       mark is the way back. **The headings have a right-click menu now**, which
       is where the hide lives; a cell's is what the last item of this phase has
       left.
-- [ ] **Grouping**, which is the same band and nearly the same gesture
-      (`docs/spec.md` §4 `group:`, outline level 0–7). The preview does not draw
-      it *at all* today — `group` is read, compiled onto the band, and then
-      dropped at the protocol, so a spec that Excel opens with an outline shows
-      here as plain columns. Three parts, in this order:
-      **drawn** — the bracket over the run and the `−` at its end, in a gutter
-      outside the headings, nested where the levels nest;
-      **collapsed and expanded** from that control — which is a *write*, not a
-      view state: `group` plus `hidden: true` is what the schema calls a
-      collapsed group, and there is nowhere else to keep it (ADR-015 leaves the
-      editor no sidecar, and ADR-001 leaves the grid no state of its own);
-      **set** over the columns or rows selected, which is §4.4's band rows once
-      more — change the band that groups them, or split it so this run stands
-      alone.
+- [x] **Grouping**, which is the same band and nearly the same gesture
+      (`docs/spec.md` §4 `group:`, outline level 0–7).
+      **In**, all three parts. **Drawn** in a gutter of its own, as both
+      spreadsheets keep it: a row above the headings per column level, a column
+      left of the row numbers per row level, with the bracket over the run and
+      the control at its end (**ADR-045**, superseding ADR-044 — the origin
+      every other measurement is taken from moves with the gutter, and is a
+      function of the sheet now rather than a constant). **Collapsed and opened** from that control, which is the
+      `hidden:` write the last slice built: `group` plus `hidden: true` is what
+      the schema calls a collapsed group, and the `+` that opens one sits on the
+      heading the run is behind, where the plain hidden mark would otherwise be.
+      **Set** from the heading's own menu, through §4.4's band rows once more.
       The corner's level buttons (`1` `2` `3`, collapse everything at a level)
       are a bulk write over every band at once and are **not** in this slice.
 - [x] **A formula bar.** What the cell *holds* — the formula, not what it comes
@@ -2272,6 +2270,67 @@ the file this way.
 *The view answers with nothing where it cannot measure.* A shell with no canvas
 sends no width rather than a wrong one, and the column is left as it was.
 
+### ADR-044 — The outline is drawn on the heading, not in a gutter of its own
+**Superseded by ADR-045.**
+
+*Excel and Sheets both put the outline in a gutter*, outside the headings: a
+strip above the column letters, another left of the row numbers. Ours is a bar
+along the **outer edge of the heading itself**, one level in from the last, with
+the `−` at the end of the run.
+
+*The reason is the origin.* A gutter is a column added to the left of every row
+and a row added above every heading, which moves the grid's top-left — and the
+top-left is what everything else here is measured from: the table's declared
+width, the pad that stands for the columns the window left out, and the `left`
+each frozen column is pinned at (ADR-040). Adding a gutter means threading a
+second origin through all of it, for a strip four pixels wide. The bar says the
+same thing in the place the reader is already looking, and the geometry keeps
+its one origin.
+
+*A collapsed group's control cannot sit on its own run*, because that run is
+hidden and nothing of it is drawn. It goes where the plain hidden mark would go
+— on the heading the run sits behind — and the plain mark stands aside for it,
+so a reader sees one control rather than two marks about the same thing.
+
+*Collapsing is a write, not a view state.* `group` with `hidden: true` is what
+`docs/spec.md` §4 calls a collapsed group, and there is nowhere else to keep it:
+ADR-015 leaves the editor no sidecar and ADR-001 leaves the grid no state of its
+own. So the `−` writes `hidden: true` through the same band rows the hide
+gesture uses, and the `+` takes it out again.
+
+### ADR-045 — The outline gets the gutter after all, and the origin moves with it
+**Accepted**, superseding **ADR-044** the day it was written.
+
+*ADR-044 weighed a four-pixel strip against threading a second origin through
+the geometry, and chose the strip.* Shown the result, the reader asked for the
+gutter — which is the right call and the one this project's own rule points at:
+a spreadsheet's reader knows where the outline lives, and "it was cheaper" is
+not a reason they should have to hear. ADR-044's *reasoning* stands and is worth
+keeping visible: the cost was real, and it is now paid.
+
+*What it cost.* One gutter row per column level above the headings, one gutter
+column per row level left of the row numbers, and everything measured from the
+grid's top-left moved by them: the table's declared width, the `left` a frozen
+column is pinned at, the `top` a frozen row is pinned at, the row numbers' own
+sticky `left`, the corner's, and the span a gap row covers. Each is now written
+as `gutterOf(sheet, axis) + …` rather than as a constant, which is the honest
+shape — the origin *is* a function of the sheet.
+
+*The gutter cells are part of the frozen band.* They stick with the row numbers,
+because an outline that scrolled away from the rows it brackets would be worse
+than none.
+
+*A collapsed run's control stays in the gutter too.* Its own gutter cells are
+not drawn — the run is hidden — so the `+` goes in the gutter cell of the next
+one along, pulled back onto the seam its run is hidden at. ADR-044 had put it on
+the heading, which is where the plain hidden mark goes; a control inside a
+heading reads as part of the heading, and the reader said so. The plain mark
+stands aside for it either way, so one run never wears two marks.
+
+*The controls are big enough to hit.* Nine pixels was what the heading had room
+for; a gutter has as much room as it takes, so a level is 18px and the control
+13px — which is what makes a `+` legible beside a column letter.
+
 ## 8. Open questions
 
 - **Q1 — `cells:` A1 keys and row insertion.** Inserting a row rewrites every
@@ -2532,6 +2591,58 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-22 — The outline gets its gutter, and a right-click stops taking the heading
+Both from the real window, on the slice above.
+
+- **The outline moved outside the headings**, where a reader of Excel or Sheets
+  looks for it: a row above the headings per column level, a column left of the
+  row numbers per row level. ADR-044 had weighed that against threading a second
+  origin through the geometry and chosen the cheaper side; shown it, the reader
+  asked for the gutter, which is the right call. **ADR-045** supersedes it and
+  says what it cost: the table's width, the `left` a frozen column is pinned at,
+  the `top` a frozen row is pinned at, the row numbers' own sticky left, the
+  corner's, and a gap row's span are all `gutterOf(sheet, axis) + …` now. The
+  origin is a function of the sheet, which is what it always was.
+- **The outline's controls are legible and outside the headings.** Nine pixels
+  was what a heading had room for and it was too small to see or hit; a gutter
+  has as much room as it takes, so a level is 18px and the control 13px. The
+  `+` that opens a collapsed run went in the gutter too, at the seam its run is
+  hidden at, rather than inside the heading — where it read as part of the
+  heading.
+- **A right-click no longer throws away the selection.** `mousedown` fires for
+  the right button too, so the heading under the pointer was being taken before
+  the menu opened — and a menu about *these five columns* became a menu about
+  one. The primary button alone selects now, and the right button takes a
+  heading only where it lands outside what is already selected, which is what
+  both spreadsheets do.
+- 1679 → 1681 tests.
+
+### 2026-08-22 — The outline, drawn and written
+Phase 10's seventh item. `group:` was read by the loader, carried onto the
+compiled band, and then dropped at the protocol — so an outline a spec declares
+was invisible here. **ADR-044.**
+
+- **The outline is drawn on the headings**: a bar along the outer edge of every
+  heading in the run, one level in from the last, so a nested group reads as
+  nested. Excel keeps this in a gutter of its own; a gutter moves the grid's
+  origin, and the frozen panes, the pads and the table's own width are all
+  measured from that origin.
+- **The control at the end of the run collapses it**, which is a *write*:
+  `group` with `hidden: true` is what the schema calls a collapsed group, and
+  the editor has nowhere else to keep it (ADR-015, ADR-001). It goes through the
+  `hidden:` band rows the last slice built, so collapsing and hiding are one
+  path and one undo.
+- **The `+` that opens a collapsed group sits on the heading the run is behind**
+  — its own headings are not drawn — and the plain hidden mark stands aside for
+  it, so there is one control rather than two marks about the same run.
+- **Grouping is set from the heading's menu**, through §4.4's band rows: the
+  band already over the run takes the level, a run nothing covers gets a band of
+  its own, and a band that groups more than was named asks the question a wider
+  band always asks. Level `0` is the schema's own way of saying ungrouped, and
+  taking a run out of an outline writes it — or takes the key out where nothing
+  else needs it.
+- 1665 → 1679 tests.
 
 ### 2026-08-22 — Hide a column, and see that you did
 Phase 10's sixth item, and the heading menu it needed to be reachable from.

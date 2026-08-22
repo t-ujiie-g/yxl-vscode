@@ -224,6 +224,95 @@ body {
   position: fixed;
 }
 
+/* The outline a `group:` draws (`docs/spec.md` §4), in a gutter outside the
+   headings as both spreadsheets keep it: one row above them per level, one
+   column left of the row numbers per level (ADR-045). */
+.grid .outline {
+  padding: 0;
+  border: 0;
+  background: #f5f5f5;
+}
+
+.grid tr.outline {
+  background: #f5f5f5;
+}
+
+.grid th.outline {
+  position: sticky;
+  z-index: 2;
+}
+
+/* The bracket over the run: a line along the gutter, turned down at the end it
+   starts from, as Excel draws one. */
+.grid .outline.in {
+  position: relative;
+}
+
+.grid td.outline.column.in::after,
+.grid th.outline.row.in::after {
+  content: "";
+  position: absolute;
+  background: #7a7a7a;
+}
+
+.grid td.outline.column.in::after {
+  right: 0;
+  bottom: 3px;
+  left: 0;
+  height: 1px;
+}
+
+.grid td.outline.column.opens::after {
+  left: 3px;
+  bottom: 3px;
+  height: 5px;
+  width: 1px;
+}
+
+.grid th.outline.row.in::after {
+  top: 0;
+  right: 3px;
+  bottom: 0;
+  width: 1px;
+}
+
+.grid th.outline.row.opens::after {
+  top: 3px;
+  right: 3px;
+  width: 5px;
+  height: 1px;
+}
+
+.grid button.grouping.control {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 9px;
+  height: 9px;
+  padding: 0;
+  border: 1px solid #7a7a7a;
+  border-radius: 2px;
+  background: #ffffff;
+  color: #444444;
+  font: 700 8px / 1 var(--vscode-font-family);
+  cursor: pointer;
+}
+
+/* The one that opens a collapsed run sits on a heading rather than in the
+   gutter, since the run it belongs to is not drawn at all. */
+.grid th.hides .grouping.control {
+  top: 1px;
+  right: 1px;
+}
+
+.grid .outline.column .grouping.control,
+.grid .outline.row .grouping.control {
+  top: auto;
+  right: 1px;
+  bottom: 1px;
+}
+
 /* Where a run is hidden, on the heading that comes after it — the only thing
    that says something is there, and the way back to it. A heading is already
    positioned, by being sticky, so the mark needs no `relative` of its own —
@@ -450,12 +539,10 @@ body {
 
 .grid tbody th {
   position: sticky;
-  left: 0;
   z-index: 2;
 }
 
-.grid thead th:first-child {
-  left: 0;
+.grid thead th.corner {
   padding: 0;
   z-index: 8;
 }

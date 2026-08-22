@@ -3,7 +3,7 @@ import { columnLabel } from '@yxl-vscode/units';
 import { corner } from './boxes';
 import { drawCell, typeInto } from './cell';
 import { copying, going, looking as lookingFor, pasting, undoing } from './keys';
-import type { DrawnCell, DrawnMerge, DrawnSheet } from './protocol';
+import type { DrawnCell, DrawnMerge, DrawnSheet, Sized } from './protocol';
 import {
   type Asks,
   cellKey,
@@ -11,6 +11,7 @@ import {
   GUTTER,
   HEADING,
   lookedUp,
+  OUTLINE,
   ranged,
   type Showing,
 } from './showing';
@@ -21,7 +22,7 @@ export function grid(sheet: DrawnSheet, showing: Showing, asks: Asks): HTMLEleme
   const table = document.createElement('table');
   table.className = 'grid';
   // `table-layout: fixed` is inert without an explicit width.
-  table.style.width = `${GUTTER + across(sheet, sheet.of.columns + 1)}px`;
+  table.style.width = `${gutterOf(sheet, 'row') + GUTTER + across(sheet, sheet.of.columns + 1)}px`;
   table.append(headings(sheet, showing, asks));
 
   const body = document.createElement('tbody');
@@ -122,9 +123,13 @@ interface Merged {
 
 function headings(sheet: DrawnSheet, showing: Showing, asks: Asks): HTMLElement {
   const head = document.createElement('thead');
+  for (let level = 1; level <= levelsOf(sheet, 'column'); level += 1) {
+    head.append(above(sheet, level, asks));
+  }
+
   const line = document.createElement('tr');
   line.style.height = `${HEADING}px`;
-  line.append(corner(asks));
+  line.append(...outline(sheet, null, asks), corner(asks, gutterOf(sheet, 'row')));
 
   let drawn: number | null = null;
   for (const one of columnsOf(sheet)) {
@@ -148,7 +153,8 @@ function headings(sheet: DrawnSheet, showing: Showing, asks: Asks): HTMLElement 
     takes(heading, 'column', one.at, showing, asks);
 
     const run = behind(drawn, one.at);
-    if (run !== null) hidden(heading, 'column', run, asks);
+    const over = run === null ? null : groupOver(sheet, 'column', run);
+    if (over === null && run !== null) hidden(heading, 'column', run, asks);
 
     heading.append(grip('column', one.at, wide, asks));
     line.append(heading);
@@ -157,6 +163,48 @@ function headings(sheet: DrawnSheet, showing: Showing, asks: Asks): HTMLElement 
 
   head.append(line);
   return head;
+}
+
+/** One level of the column outline: a row above the headings, aligned with them (ADR-045). */
+function above(sheet: DrawnSheet, level: number, asks: Asks): HTMLElement {
+  const line = document.createElement('tr');
+  line.className = 'outline column';
+  line.style.height = `${OUTLINE}px`;
+
+  const blank = document.createElement('th');
+  blank.className = 'corner';
+  blank.style.width = `${GUTTER}px`;
+  blank.style.left = `${gutterOf(sheet, 'row')}px`;
+  line.append(...outline(sheet, null, asks), blank);
+
+  const runs = groupsOf(sheet, 'column').filter((run) => run.group === level);
+  let drawn: number | null = null;
+
+  for (const one of columnsOf(sheet)) {
+    if ('pad' in one) {
+      if (one.pad > 0) {
+        line.append(pad(one.pad));
+        drawn = null;
+      }
+      continue;
+    }
+    if (widthOf(sheet, one.at) === 0) continue;
+
+    const cell = document.createElement('td');
+    cell.className = 'outline column';
+
+    const run = runs.find((each) => held(each, one.at));
+    if (run !== undefined) drawOutline(cell, 'column', run, one.at, asks);
+
+    const gone = behind(drawn, one.at);
+    const over = gone === null ? null : groupOver(sheet, 'column', gone);
+    if (over !== null && over.group === level) opening(cell, 'column', over, asks);
+
+    line.append(cell);
+    drawn = one.at;
+  }
+
+  return line;
 }
 
 /** One place along a line: a column to draw, or the width of those the window left out. */
@@ -187,17 +235,120 @@ function takes(heading: HTMLElement, axis: Axis, at: number, showing: Showing, a
 
   heading.addEventListener('contextmenu', (event) => {
     event.preventDefault();
+    // Inside what is already selected the selection stands, as it does in both
+    // spreadsheets; outside it, the right button takes this one first.
+    if (!headed(showing, axis, at)) asks.takeBand(axis, at, false);
     asks.pointAt({ axis, at, x: event.clientX, y: event.clientY });
   });
 
   heading.addEventListener('mousedown', (event) => {
-    // Not the grip: dragging the edge sizes it, and that is a different gesture.
-    if (event.target !== heading) return;
+    // Not the grip, which sizes; not the right button, which is about to open a
+    // menu about a run this would throw away.
+    if (event.target !== heading || event.button !== 0) return;
     asks.takeBand(axis, at, event.shiftKey);
   });
   heading.addEventListener('mouseenter', (event) => {
     if ((event.buttons & 1) === 1) asks.takeBand(axis, at, true);
   });
+}
+
+/** How many levels of outline this axis has, which is how wide its gutter is (ADR-045). */
+export function levelsOf(sheet: DrawnSheet, axis: Axis): number {
+  const runs = axis === 'column' ? sheet.widths : sheet.heights;
+  return runs.reduce((deepest, run) => Math.max(deepest, run.group ?? 0), 0);
+}
+
+/** How much room the outline gutter takes on that axis, in pixels. */
+export function gutterOf(sheet: DrawnSheet, axis: Axis): number {
+  return levelsOf(sheet, axis) * OUTLINE;
+}
+
+/** The cells that stand in the row outline's gutter, at the start of a line: one per level. */
+function outline(
+  sheet: DrawnSheet,
+  row: number | null,
+  asks: Asks,
+  gone: Span | null = null,
+): HTMLElement[] {
+  const levels = levelsOf(sheet, 'row');
+  const runs = groupsOf(sheet, 'row');
+  const over = gone === null ? null : groupOver(sheet, 'row', gone);
+
+  return Array.from({ length: levels }, (_, at) => {
+    const level = at + 1;
+    const cell = document.createElement('th');
+    cell.className = 'outline row';
+    cell.style.width = `${OUTLINE}px`;
+    cell.style.left = `${at * OUTLINE}px`;
+
+    const run =
+      row === null ? undefined : runs.find((one) => one.group === level && held(one, row));
+    if (run !== undefined && row !== null) drawOutline(cell, 'row', run, row, asks);
+    if (over !== null && over.group === level) opening(cell, 'row', over, asks);
+
+    return cell;
+  });
+}
+
+/** Whether the run reaches this row or column, drawn or not. */
+function held(run: Grouped, at: number): boolean {
+  return run.first <= at && at <= run.last;
+}
+
+/** The bracket and the control one level of an outline puts in its gutter. */
+function drawOutline(cell: HTMLElement, axis: Axis, run: Grouped, at: number, asks: Asks): void {
+  if (run.hidden) return;
+
+  cell.classList.add('in');
+  if (at === run.first) cell.classList.add('opens');
+  if (at === run.last) cell.append(control(axis, run, false, asks));
+}
+
+/** The control that opens a collapsed group, in the gutter beside the seam its run is hidden at. */
+function opening(cell: HTMLElement, axis: Axis, run: Grouped, asks: Asks): void {
+  cell.classList.add('opening');
+  cell.append(control(axis, run, true, asks));
+}
+
+/** The `−` that collapses a group, or the `+` that opens it — which is a write either way (ADR-044). */
+function control(axis: Axis, run: Grouped, open: boolean, asks: Asks): HTMLElement {
+  const drawn = document.createElement('button');
+  drawn.type = 'button';
+  drawn.className = `grouping ${axis} control`;
+  drawn.style.setProperty(
+    axis === 'column' ? 'top' : 'left',
+    `${((run.group ?? 1) - 1) * LEVEL}px`,
+  );
+  drawn.textContent = open ? '+' : '\u2212';
+  drawn.title = `${open ? 'Open' : 'Collapse'} ${spanSaid(axis, run.first, run.last)}`;
+  drawn.addEventListener('mousedown', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    asks.hide(axis, run.first, run.last, !open);
+  });
+
+  return drawn;
+}
+
+/** How far apart the levels of an outline sit, which is what makes a nested one legible. */
+const LEVEL = 4;
+
+/** A run a band groups, which is the runs `docs/spec.md` §4 gives an outline level above zero. */
+type Grouped = Sized & { readonly group: number };
+
+/** Every run of this axis that a band groups. */
+function groupsOf(sheet: DrawnSheet, axis: Axis): Grouped[] {
+  const runs = axis === 'column' ? sheet.widths : sheet.heights;
+  return runs.filter((run): run is Grouped => (run.group ?? 0) > 0);
+}
+
+/** The group a hidden run belongs to, whose own control is the way back rather than the plain mark. */
+function groupOver(sheet: DrawnSheet, axis: Axis, run: Span): Grouped | null {
+  const over = groupsOf(sheet, axis).filter(
+    (one) => one.hidden && one.first <= run.first && one.last >= run.last,
+  );
+
+  return over[over.length - 1] ?? null;
 }
 
 /** The mark that says a run is hidden behind this heading, and is the way back to it. */
@@ -248,11 +399,13 @@ export function headed(showing: Showing, axis: Axis, at: number): boolean {
 
 /** A cell of a frozen band, put where it stays: under the headings, or right of the row numbers. */
 function stay(sheet: DrawnSheet, cell: HTMLElement, at: { row?: number; col?: number }): void {
-  if (at.row !== undefined) cell.style.top = `${HEADING + down(sheet, at.row)}px`;
+  if (at.row !== undefined) {
+    cell.style.top = `${gutterOf(sheet, 'column') + HEADING + down(sheet, at.row)}px`;
+  }
   if (at.col === undefined) return;
 
   cell.classList.add('stays');
-  cell.style.left = `${GUTTER + across(sheet, at.col)}px`;
+  cell.style.left = `${gutterOf(sheet, 'row') + GUTTER + across(sheet, at.col)}px`;
 }
 
 /** The edge of a heading, dragged to size what it heads; sent once on the way up, since every step would be an edit. */
@@ -309,7 +462,7 @@ function gap(sheet: DrawnSheet, height: number): HTMLElement {
   line.style.height = `${height}px`;
 
   const cell = document.createElement('td');
-  cell.colSpan = sheet.columns + 3;
+  cell.colSpan = sheet.columns + 3 + levelsOf(sheet, 'row');
   line.append(cell);
   return line;
 }
@@ -327,10 +480,14 @@ function line(
   const line = document.createElement('tr');
   line.style.height = `${heightOf(sheet, row)}px`;
 
+  const over = behind === null ? null : groupOver(sheet, 'row', behind);
+  line.append(...outline(sheet, row, asks, behind));
+
   const number = document.createElement('th');
   number.textContent = String(row);
+  number.style.left = `${gutterOf(sheet, 'row')}px`;
   takes(number, 'row', row, showing, asks);
-  if (behind !== null) hidden(number, 'row', behind, asks);
+  if (over === null && behind !== null) hidden(number, 'row', behind, asks);
   number.append(grip('row', row, heightOf(sheet, row), asks));
   line.append(number);
 

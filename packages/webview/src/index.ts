@@ -293,6 +293,16 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       said = null;
       host.postMessage({ kind: 'hide', sheet: named(), axis, first, last, hidden });
     },
+    group: (axis, first, last, level) => {
+      refused = null;
+      said = null;
+      host.postMessage({ kind: 'group', sheet: named(), axis, first, last, level });
+    },
+    groupedWith: (grouped, choice) => {
+      refused = null;
+      said = null;
+      host.postMessage({ ...grouped, choice, kind: 'grouped' });
+    },
     hiddenWith: (hidden, choice) => {
       refused = null;
       said = null;

@@ -91,6 +91,10 @@ function pointing(showing: Showing, asks: Asks): HTMLElement | null {
     asks.pointAt(null);
     asks.hide(at.axis, first, last, hidden);
   };
+  const group = (level: number) => () => {
+    asks.pointAt(null);
+    asks.group(at.axis, run.first, run.last, level);
+  };
 
   const entries = [
     entry(
@@ -107,6 +111,8 @@ function pointing(showing: Showing, asks: Asks): HTMLElement | null {
             hide(behind.first, behind.last, false),
           ),
         ]),
+    entry(many === 1 ? `Group this ${at.axis}` : `Group these ${many} ${at.axis}s`, {}, group(1)),
+    ...(grouping(sheet, at.axis, run) ? [entry('Take out of the outline', {}, group(0))] : []),
   ];
 
   return pointedAt(showing, asks, entries);
@@ -122,6 +128,12 @@ function about(showing: Showing, at: Pointed): { first: number; last: number } {
   const run = { first: Math.min(one, than), last: Math.max(one, than) };
 
   return at.at >= run.first && at.at <= run.last ? run : { first: at.at, last: at.at };
+}
+
+/** Whether anything already puts what the menu is about into an outline. */
+function grouping(sheet: DrawnSheet, axis: Axis, run: { first: number; last: number }): boolean {
+  const runs = axis === 'column' ? sheet.widths : sheet.heights;
+  return runs.some((one) => (one.group ?? 0) > 0 && one.first <= run.last && one.last >= run.first);
 }
 
 /** The run hidden either side of what the menu is about, which is what there is to show again. */

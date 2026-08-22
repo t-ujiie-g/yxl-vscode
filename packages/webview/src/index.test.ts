@@ -28,7 +28,7 @@ function sheet(of: Partial<DrawnSheet> = {}): DrawnSheet {
     columns: 2,
     at: { row: 1, col: 1 },
     of: { rows: 2, columns: 2 },
-    widths: [{ first: 1, last: 1, size: 10, hidden: false }],
+    widths: [{ first: 1, last: 1, size: 10, hidden: false, group: null }],
     heights: [],
     cells: [cell()],
     merges: [],

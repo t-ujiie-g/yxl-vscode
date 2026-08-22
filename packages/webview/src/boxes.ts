@@ -19,10 +19,11 @@ export function told(into: HTMLElement, showing: Showing, asks: Asks): void {
 }
 
 /** The corner above the row numbers: the button that takes the whole sheet, as everywhere else. */
-export function corner(asks: Asks): HTMLElement {
+export function corner(asks: Asks, left = 0): HTMLElement {
   const cell = document.createElement('th');
   cell.className = 'corner';
   cell.style.width = `${GUTTER}px`;
+  cell.style.left = `${left}px`;
 
   const all = document.createElement('button');
   all.type = 'button';

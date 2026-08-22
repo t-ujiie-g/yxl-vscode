@@ -27,8 +27,8 @@ describe('how big a sheet is on the page', () => {
 
   it('takes the size a run of rows or columns declares', () => {
     const sized = sheet({
-      heights: [{ first: 2, last: 3, size: 30, hidden: false }],
-      widths: [{ first: 2, last: 2, size: 10, hidden: false }],
+      heights: [{ first: 2, last: 3, size: 30, hidden: false, group: null }],
+      widths: [{ first: 2, last: 2, size: 10, hidden: false, group: null }],
     });
 
     expect([heightOf(sized, 2), heightOf(sized, 4)]).toEqual([40, 20]);
@@ -37,9 +37,9 @@ describe('how big a sheet is on the page', () => {
 
   it('puts a row and a column where the rows and columns before them end', () => {
     expect(down(sheet(), 11)).toBe(200);
-    expect(across(sheet({ widths: [{ first: 1, last: 2, size: 10, hidden: false }] }), 3)).toBe(
-      140,
-    );
+    expect(
+      across(sheet({ widths: [{ first: 1, last: 2, size: 10, hidden: false, group: null }] }), 3),
+    ).toBe(140);
   });
 
   it('answers which row and column a scroll position has reached', () => {

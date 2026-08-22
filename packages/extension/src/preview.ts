@@ -7,6 +7,7 @@ import type { FromView, PastedAt } from '@yxl-vscode/webview/protocol';
 import * as vscode from 'vscode';
 import { paste, pastedWith, pasteFrom, whose } from './clipboard';
 import { asOpen, put, reveal, textOf } from './documents';
+import { group } from './group';
 import { hide } from './hidden';
 import { inspect, type Nodes, nodeUnder } from './inspect';
 import { wear } from './look';
@@ -271,6 +272,18 @@ export class Preview {
     if (asked.kind === 'freeze') {
       const { kind, ...frozen } = asked;
       this.writing((spec, port) => freeze(spec, frozen, port));
+      return;
+    }
+
+    if (asked.kind === 'group') {
+      const { kind, ...grouped } = asked;
+      this.writing((spec, port) => group(spec, grouped, port));
+      return;
+    }
+
+    if (asked.kind === 'grouped') {
+      const { kind, choice, ...grouped } = asked;
+      this.writing((spec, port) => group(spec, grouped, port, choice));
       return;
     }
 
