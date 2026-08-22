@@ -244,6 +244,30 @@ describe('what the view sends', () => {
     });
   });
 
+  it('asks the host for what a column holds when its edge is double-clicked', () => {
+    const { into, sent } = view();
+
+    into
+      .querySelector('thead th[data-col="1"] .grip.column')
+      ?.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+
+    expect(sent.filter((one) => one.kind === 'fit')).toEqual([
+      { kind: 'fit', sheet: 'Sales', axis: 'column', at: 1 },
+    ]);
+  });
+
+  it('sends nothing back for a fit it cannot measure, rather than a width of nothing', () => {
+    // jsdom has no canvas, which is the same answer an old shell would give.
+    const { into, sent, told } = view();
+
+    into
+      .querySelector('thead th[data-col="1"] .grip.column')
+      ?.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+    told({ kind: 'fitting', sheet: 'Sales', axis: 'column', at: 1, cells: [] });
+
+    expect(sent.filter((one) => one.kind === 'resize')).toEqual([]);
+  });
+
   it('sends nothing where the edge was pressed and let go without moving', () => {
     const { into, sent } = view();
 

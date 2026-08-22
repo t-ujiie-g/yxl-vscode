@@ -4,7 +4,7 @@ import type { IncludeReader } from '@yxl-vscode/loader';
 import { filePath } from '@yxl-vscode/units';
 import type { DrawnSheet } from '@yxl-vscode/webview/protocol';
 import { describe, expect, it } from 'vitest';
-import { project, redraw, type Windows } from './project';
+import { drawRun, project, redraw, type Windows } from './project';
 
 const FILE = '/specs/report.yxl.yaml';
 
@@ -200,6 +200,26 @@ describe('a drawn spec', () => {
     const sheet = drawn(TALL, new Map([['Sales', { row: 9000, col: 1 }]]));
 
     expect([sheet.at.row, sheet.rows]).toEqual([241, 200]);
+  });
+
+  it('draws every cell of one column, which is what a fit is measured on', () => {
+    const source = `${SALES}    cells:\n      A1: Region\n      B1: Revenue\n      A9: Total\n`;
+    const sheet = project(source, FILE, read).grid?.sheets[0];
+    if (sheet === undefined) throw new Error('drew no sheet');
+
+    const run = drawRun(sheet, 'column', 1, null);
+    expect(run.map((one) => [one.row, one.value])).toEqual([
+      [1, 'Region'],
+      [9, 'Total'],
+    ]);
+  });
+
+  it('draws every cell of one row the same way', () => {
+    const source = `${SALES}    cells:\n      A1: Region\n      B1: Revenue\n      A9: Total\n`;
+    const sheet = project(source, FILE, read).grid?.sheets[0];
+    if (sheet === undefined) throw new Error('drew no sheet');
+
+    expect(drawRun(sheet, 'row', 1, null).map((one) => one.col)).toEqual([1, 2]);
   });
 
   it('says where the panes are frozen, so the view can keep them where they are', () => {

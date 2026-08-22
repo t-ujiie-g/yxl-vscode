@@ -206,6 +206,12 @@ function grip(axis: Axis, at: number, from: number, asks: Asks): HTMLElement {
   const held = document.createElement('span');
   held.className = `grip ${axis}`;
 
+  held.addEventListener('dblclick', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    asks.fit(axis, at);
+  });
+
   held.addEventListener('mousedown', (down: MouseEvent) => {
     down.preventDefault();
     down.stopPropagation();

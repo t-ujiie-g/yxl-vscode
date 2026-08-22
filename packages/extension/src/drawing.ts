@@ -13,7 +13,7 @@ import {
 } from '@yxl-vscode/compile';
 import type { Diagnostic } from '@yxl-vscode/diag';
 import type { Evaluation } from '@yxl-vscode/evaluate';
-import type { ScalarValue, SpecDoc } from '@yxl-vscode/spec';
+import type { Axis, ScalarValue, SpecDoc } from '@yxl-vscode/spec';
 import { addrAt, cellOf, qualified } from '@yxl-vscode/units';
 import type {
   Drawing,
@@ -229,6 +229,25 @@ function drawCells(
   }
 
   return drawn;
+}
+
+/**
+ * Every cell of one column or row, drawn as the view draws them — what a fit is
+ * measured on, since the host has the cells and the view has the fonts (ADR-043).
+ */
+export function drawRun(
+  sheet: CompiledSheet,
+  axis: Axis,
+  at: number,
+  evaluation: Evaluation | null,
+): DrawnCell[] {
+  const of = extent(sheet);
+  const window =
+    axis === 'column'
+      ? { at: { row: 1, col: at }, rows: of.rows, columns: 1 }
+      : { at: { row: at, col: 1 }, rows: 1, columns: of.columns };
+
+  return drawCells(sheet, { ...window, freeze: null }, evaluation);
 }
 
 /** The rows or columns drawn along one axis: the frozen band, which stays, and then the window. */

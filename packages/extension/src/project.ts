@@ -9,6 +9,7 @@ import { drawn, listed, type Windows } from './drawing';
 import { type Nodes, nodesOf } from './inspect';
 
 export type { Window, Windows } from './drawing';
+export { drawRun } from './drawing';
 
 /** A spec read and drawn, with the `doc` and `grid` the inspector answers from. */
 export interface Projected {
