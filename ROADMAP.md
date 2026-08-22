@@ -441,14 +441,15 @@ not a date.
 | A look over the columns selected, in one gesture | ✅ — one band through the normalizer, never four hundred cells (ADR-041) |
 | A width over the columns selected | ✅ — drag one edge of the run and all of them take it |
 | Double-click the heading edge to fit the column to its contents | ✅ — measured in the font each cell wears, not counted in characters |
-| Hide and unhide a row or a column | **Phase 10** — `hidden:` is drawn already, and cannot be set |
+| Hide and unhide a row or a column | ✅ — from the heading's own menu, with a mark on the heading a hidden run sits behind |
 | Group rows or columns, and collapse the group | **Phase 10** — `group:` is read and then dropped before the view; nothing of an outline is drawn |
 | A formula bar over the grid | ✅ — what the cell holds, editable there, never what it computes to |
 | What the selection comes to — count, sum, average | **Phase 10** — every spreadsheet's status bar |
 | `Cmd`+`B` / `I` / `U` | **Phase 10** — the toolbar has them, the keyboard does not |
 | The font face and size | **Phase 10** — `docs/spec.md` §6 has both and the toolbar offers neither |
 | Currency, percent, more and fewer decimals; clear formatting | **Phase 10** |
-| A right-click menu on a cell or a heading | **Phase 10** — and it is where Phase 11's insert and delete hang |
+| A right-click menu on a heading | ✅ — hide and show again live there |
+| A right-click menu on a cell | **Phase 10** — and it is where Phase 11's insert and delete hang |
 | Insert or delete a row or column | **Phase 11** |
 | Merge cells | **Phase 11** |
 | Fill down, and the drag handle | **Phase 11** (needs §8 Q2) |
@@ -1132,9 +1133,17 @@ gestures on a *heading*, and the headings are not selectors yet.
       ordinary drag. One column at a time, which is what the gesture names — a
       run of them fits each to a different width, and that is N writes rather
       than one.
-- [ ] **Hide and unhide** (`docs/spec.md` §4 `hidden:`). The preview honours it
+- [x] **Hide and unhide** (`docs/spec.md` §4 `hidden:`). The preview honours it
       already and cannot set it; a hidden run also needs the marker between the
       headings that says something is there.
+      **In**, through §4.4's band rows once more — the band already over the run
+      takes the key, nothing over it gets one of its own, and a band that hides
+      more than was named is the same question a wider band always asks. Showing
+      again takes the key out, and the band with it where that was all it said.
+      The run that is hidden is marked on the heading it sits behind, and the
+      mark is the way back. **The headings have a right-click menu now**, which
+      is where the hide lives; a cell's is what the last item of this phase has
+      left.
 - [ ] **Grouping**, which is the same band and nearly the same gesture
       (`docs/spec.md` §4 `group:`, outline level 0–7). The preview does not draw
       it *at all* today — `group` is read, compiled onto the band, and then
@@ -1171,9 +1180,10 @@ gestures on a *heading*, and the headings are not selectors yet.
       formats Sheets keeps beside the menu — currency, percent, more and fewer
       decimals — and *clear formatting*, which is `setStyle` asked to take
       everything off at once.
-- [ ] **A right-click menu**, on a cell and on a heading. It is where a
-      spreadsheet keeps what there is no room for on a bar, and it is where
-      Phase 11's insert and delete will hang.
+- [ ] **A right-click menu on a cell.** The headings have one (it came with
+      hide and unhide, which had nowhere else to live); a cell's is what is
+      left — cut, copy, paste and clear to begin with, and it is where Phase
+      11's insert and delete will hang.
 
 Deliberately **not** here: a second selection with `Cmd`+click (every answer in
 §4.4 is counted over one rectangle), zoom, and a format painter.
@@ -2522,6 +2532,33 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-22 — Hide a column, and see that you did
+Phase 10's sixth item, and the heading menu it needed to be reachable from.
+
+- **Hiding is §4.4's band rows once more**, with `hidden:` where a size would
+  be: the band already over the run takes the key, a run nothing covers gets a
+  band of its own, and a band that hides more than was named asks the question a
+  wider band always asks — change the whole band, or split it so the run alone
+  is shown.
+- **Showing again takes the key out**, and the band with it where that was all
+  it said, and the `columns:` key with *that* where it was the only band under
+  it. `hidden: false` is written only where another band still hides them, which
+  is the one case where saying nothing would not be enough.
+- **A hidden run is marked on the heading it sits behind**, which is the only
+  thing that says something is there — and pressing the mark is the way back.
+  Excel draws a doubled line; Sheets draws arrows; ours is a line down the edge
+  of the heading, and it says which run it is holding.
+- **The headings have a right-click menu**, because hiding had nowhere else to
+  live and a toolbar is not where anyone looks for it. It hides what the reader
+  has selected — one column, or the run of them — and offers the way back where
+  something beside it is hidden. A cell's menu is the last item of this phase.
+- **`intent/bands.ts` grew rather than `hidden.ts` copying it.** The split that
+  takes a run out of a band, the runs it falls into, the band's own text
+  respelled, the answer shape, and the rule that taking out the last band takes
+  the key with it are one implementation, used by the size, the look and the
+  hide alike. `size.ts` is 124 lines from 215.
+- 1646 → 1664 tests.
 
 ### 2026-08-22 — Fit the column to what is in it
 Phase 10's fifth item, and the answer to the one open question the phase had.

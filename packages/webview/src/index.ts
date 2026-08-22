@@ -61,6 +61,8 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
   let ours: string | null = null;
   /** How the selection was taken, which a heading changes and a cell puts back (ADR-041). */
   let taken: Whole = null;
+  /** The heading a menu was asked for on, which is the view's own like the rest of them. */
+  let pointed: Showing['pointed'] = null;
 
   /** Where the last edit was typed, so a refusal can put the reader back at it. */
   let typedAt: { row: number; col: number } | null = null;
@@ -73,6 +75,7 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
     anchor,
     line,
     menu,
+    pointed,
     sources,
     reached,
     refused,
@@ -280,6 +283,20 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       sources = null;
       host.postMessage({ kind: 'inspect', sheet: named(), row: near.row, col: near.col });
       restated();
+    },
+    pointAt: (at) => {
+      pointed = at;
+      redraw();
+    },
+    hide: (axis, first, last, hidden) => {
+      refused = null;
+      said = null;
+      host.postMessage({ kind: 'hide', sheet: named(), axis, first, last, hidden });
+    },
+    hiddenWith: (hidden, choice) => {
+      refused = null;
+      said = null;
+      host.postMessage({ ...hidden, choice, kind: 'hidden' });
     },
     fit: (axis, at) => {
       refused = null;

@@ -156,7 +156,8 @@ export type About =
   | { readonly is: 'pasted'; readonly pasted: Pasted }
   | { readonly is: 'text'; readonly text: PastedText }
   | { readonly is: 'worn'; readonly worn: Worn }
-  | { readonly is: 'resized'; readonly resized: Resized };
+  | { readonly is: 'resized'; readonly resized: Resized }
+  | { readonly is: 'hidden'; readonly hidden: Hidden };
 
 /**
  * `Cmd`+`V` in the grid: where it goes, what the grid holds of its own, and what
@@ -266,6 +267,8 @@ export type FromView =
   | ({ readonly kind: 'wear' } & Worn)
   | ({ readonly kind: 'worn'; readonly choice: string } & Worn)
   | ({ readonly kind: 'freeze' } & Frozen)
+  | ({ readonly kind: 'hide' } & Hidden)
+  | ({ readonly kind: 'hidden'; readonly choice: string } & Hidden)
   | ({ readonly kind: 'resize' } & Resized)
   | ({ readonly kind: 'resized'; readonly choice: string } & Resized)
   | ({ readonly kind: 'resolve'; readonly choice: string } & Typed)
@@ -288,6 +291,15 @@ export interface Resized {
   readonly first: number;
   readonly last: number;
   readonly size: number;
+}
+
+/** Columns or rows a reader asked to hide, or to show again (`docs/spec.md` §4). */
+export interface Hidden {
+  readonly sheet: string;
+  readonly axis: Axis;
+  readonly first: number;
+  readonly last: number;
+  readonly hidden: boolean;
 }
 
 /**

@@ -1,6 +1,7 @@
+import type { Axis } from '@yxl-vscode/spec';
 import { findBar, formulaBar, told } from './boxes';
 import { takingAll } from './keys';
-import { fit } from './menus';
+import { entry, fit, pointedAt } from './menus';
 import {
   inspector,
   note,
@@ -12,7 +13,15 @@ import {
   uncomputed,
 } from './panels';
 import type { DrawnSheet } from './protocol';
-import { type Asks, cellKey, copiedFrom, lookedUp, ranged, type Showing } from './showing';
+import {
+  type Asks,
+  cellKey,
+  copiedFrom,
+  lookedUp,
+  type Pointed,
+  ranged,
+  type Showing,
+} from './showing';
 import { grid, headed } from './table';
 import { toolbar } from './toolbar';
 import { type Where, wanted } from './window';
@@ -55,6 +64,9 @@ export function draw(into: HTMLElement, showing: Showing, asks: Asks): void {
     box.scrollLeft = kept.left;
   }
 
+  const menu = pointing(showing, asks);
+  if (menu !== null) into.append(menu);
+
   const under = document.createElement('div');
   under.className = 'under';
   into.append(under);
@@ -63,6 +75,70 @@ export function draw(into: HTMLElement, showing: Showing, asks: Asks): void {
   into.addEventListener('keydown', (event) => taking(event, asks));
 
   if (held) focusCell(into, showing);
+}
+
+/** What a heading's own menu holds today: hiding what is selected, and showing back what is not. */
+function pointing(showing: Showing, asks: Asks): HTMLElement | null {
+  const at = showing.pointed;
+  const sheet = showing.drawing.sheets[showing.sheet];
+  if (at === null || sheet === undefined) return null;
+
+  const run = about(showing, at);
+  const many = run.last - run.first + 1;
+  const said = at.axis === 'column' ? 'column' : 'row';
+  const behind = hiddenNear(sheet, at.axis, run);
+
+  const hide = (first: number, last: number, hidden: boolean) => () => {
+    asks.pointAt(null);
+    asks.hide(at.axis, first, last, hidden);
+  };
+
+  const entries = [
+    entry(
+      `Hide ${many === 1 ? `this ${said}` : `these ${many} ${said}s`}`,
+      {},
+      hide(run.first, run.last, true),
+    ),
+    ...(behind === null
+      ? []
+      : [
+          entry(
+            `Show ${said}s ${behind.first}-${behind.last} again`,
+            {},
+            hide(behind.first, behind.last, false),
+          ),
+        ]),
+  ];
+
+  return pointedAt(showing, asks, entries);
+}
+
+/** What a menu on a heading is about: the run the reader had selected, where this heading is in it. */
+function about(showing: Showing, at: Pointed): { first: number; last: number } {
+  const { selected, anchor } = showing;
+  if (selected === null || anchor === null) return { first: at.at, last: at.at };
+
+  const one = at.axis === 'column' ? selected.col : selected.row;
+  const than = at.axis === 'column' ? anchor.col : anchor.row;
+  const run = { first: Math.min(one, than), last: Math.max(one, than) };
+
+  return at.at >= run.first && at.at <= run.last ? run : { first: at.at, last: at.at };
+}
+
+/** The run hidden either side of what the menu is about, which is what there is to show again. */
+function hiddenNear(
+  sheet: DrawnSheet,
+  axis: Axis,
+  run: { first: number; last: number },
+): { first: number; last: number } | null {
+  const runs = axis === 'column' ? sheet.widths : sheet.heights;
+  const hides = runs.filter(
+    (one) => one.hidden && one.last >= run.first - 1 && one.first <= run.last + 1,
+  );
+  const first = Math.min(...hides.map((one) => one.first));
+  const last = Math.max(...hides.map((one) => one.last));
+
+  return hides.length === 0 ? null : { first, last };
 }
 
 /** `Cmd`+`A` anywhere but a box being typed in; without it the browser selects the panel as text. */

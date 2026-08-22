@@ -1,9 +1,9 @@
 import { type CompiledBand, type CompiledSheet, sheetOf } from '@yxl-vscode/compile';
-import { entryOf, holds, type Node, type Op } from '@yxl-vscode/cst';
+import { holds, type Op } from '@yxl-vscode/cst';
 import { type Axis, BAND_KEYS } from '@yxl-vscode/spec';
 import type { SheetName } from '@yxl-vscode/units';
-import { bandOfItsOwn, type Span, spelled } from './bands';
-import { type Found, located, type Reading } from './direct';
+import { answer, bandOfItsOwn, type Span, spelled, splitBand } from './bands';
+import { located, type Reading } from './direct';
 import type { Candidate } from './resolve';
 import type { Projection } from './writes';
 
@@ -108,124 +108,12 @@ function theBand(band: CompiledBand, dragged: Dragged, read: Reading): Candidate
   return answer('band', what, found, [op]);
 }
 
-/** The answer that splits the band so the one dragged stands alone, keeping every key it had. */
+/** The answer that splits the band so what was dragged stands alone, keeping every key it had. */
 function apart(band: CompiledBand, dragged: Dragged, read: Reading): Candidate | null {
-  const found = located(band.node, read);
-  if (found.kind === 'refused' || found.node.kind !== 'map') return null;
+  const span = spanOf(dragged);
+  const size = [[BAND_KEYS[dragged.axis].size, String(dragged.size)] as const];
+  const split = splitBand(band, span, size, read);
+  if (split === null) return null;
 
-  const index = found.path[found.path.length - 1];
-  const source = read.text(found.file);
-  if (typeof index !== 'number' || source === null) return null;
-
-  // Rewritten is the `at` as written: a `${...}` there would be written over
-  // with whatever it resolved to.
-  if (
-    spelt(found.node, 'at') !== spelled({ axis: dragged.axis, first: band.first, last: band.last })
-  )
-    return null;
-
-  const pieces: string[] = [];
-  for (const run of around(band, spanOf(dragged))) {
-    const at = spelled({ axis: dragged.axis, first: run.first, last: run.last });
-    const own = run.first === dragged.first && run.last === dragged.last;
-    const said = respelled(source, found.node, [
-      ['at', at],
-      ...(own ? [[BAND_KEYS[dragged.axis].size, String(dragged.size)] as const] : []),
-    ]);
-    if (said === null) return null;
-
-    pieces.push(said);
-  }
-
-  const [first, ...rest] = pieces;
-  if (first === undefined) return null;
-
-  // Items added at one place are spliced from the end, so the last laid down reads first.
-  const ops: Op[] = [
-    { op: 'write', path: found.path, source: first },
-    ...rest.reverse().map(
-      (piece): Op => ({
-        op: 'insertSource',
-        path: found.path.slice(0, -1),
-        index: index + 1,
-        source: deindented(piece),
-      }),
-    ),
-  ];
-
-  const what = `Split it so \`${spelled(spanOf(dragged))}\` stands alone`;
-  return answer('apart', what, found, ops);
-}
-
-/** An answer as the reader is offered it; a size moves no cell, so it claims none. */
-function answer(
-  id: string,
-  what: string,
-  found: Found & { kind: 'found' },
-  ops: readonly Op[],
-): Candidate {
-  return {
-    id,
-    what,
-    moves: [],
-    alone: false,
-    intent: {
-      kind: 'edit',
-      file: found.file,
-      patch: { ops },
-      expects: { cells: new Set(), beyond: 'refuse' },
-    },
-  };
-}
-
-/** The runs a band falls into once the span dragged is taken out of it. */
-function around(band: CompiledBand, span: Span): { first: number; last: number }[] {
-  const runs = [{ first: span.first, last: span.last }];
-  if (band.first < span.first) runs.unshift({ first: band.first, last: span.first - 1 });
-  if (span.last < band.last) runs.push({ first: span.last + 1, last: band.last });
-
-  return runs;
-}
-
-/** The band's own text with some of its values written over, so a piece keeps every key it had. */
-function respelled(
-  source: string,
-  node: Node & { kind: 'map' },
-  changes: readonly (readonly [string, string])[],
-): string | null {
-  const from = node.span.start;
-  const spans = changes.map(([key, value]) => [entryOf(node, key), value] as const);
-  if (spans.some(([entry]) => entry === undefined)) return null;
-
-  let said = source.slice(from, node.span.end);
-  for (const [entry, value] of [...spans].sort(
-    (one, than) => (than[0]?.value.span.start ?? 0) - (one[0]?.value.span.start ?? 0),
-  )) {
-    if (entry === undefined) return null;
-    said =
-      said.slice(0, entry.value.span.start - from) +
-      value +
-      said.slice(entry.value.span.end - from);
-  }
-
-  return said;
-}
-
-/** The same text with the indentation of a block taken off, since an insert puts its own back. */
-function deindented(said: string): string {
-  const [first, ...rest] = said.split('\n');
-  if (first === undefined || rest.length === 0) return said;
-
-  const indent = rest
-    .filter((line) => line.trim() !== '')
-    .map((line) => /^[ \t]*/.exec(line)?.[0].length ?? 0);
-  const off = Math.min(...indent);
-
-  return [first, ...rest.map((line) => line.slice(off))].join('\n');
-}
-
-/** One key of a mapping as the spec spells it, for a comparison against what it resolved to. */
-function spelt(node: Node & { kind: 'map' }, key: string): string | null {
-  const held = entryOf(node, key)?.value;
-  return held?.kind === 'scalar' ? String(held.value) : null;
+  return answer('apart', `Split it so \`${spelled(span)}\` stands alone`, split.found, split.ops);
 }

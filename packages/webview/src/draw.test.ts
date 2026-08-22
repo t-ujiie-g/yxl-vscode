@@ -37,6 +37,9 @@ function asks(): Asks {
     takeBand: vi.fn(),
     takeAll: vi.fn(),
     fit: vi.fn(),
+    hide: vi.fn(),
+    hiddenWith: vi.fn(),
+    pointAt: vi.fn(),
   };
 }
 
@@ -101,6 +104,7 @@ function showingOf(of: Partial<Showing> = {}): Showing {
     editable: null,
     line: 'thin',
     menu: null,
+    pointed: null,
     ...of,
   };
 }
@@ -231,6 +235,7 @@ describe('a sheet larger than the window drawn of it', () => {
       editable: null,
       line: 'thin',
       menu: null,
+      pointed: null,
     });
 
     draw(into, showing(tall), on);
@@ -258,6 +263,7 @@ describe('a sheet larger than the window drawn of it', () => {
       editable: null,
       line: 'thin',
       menu: null,
+      pointed: null,
     });
 
     draw(into, showing(0), on);
@@ -371,6 +377,72 @@ describe('a heading a reader clicks', () => {
 
     into.querySelector<HTMLButtonElement>('.corner .all')?.click();
     expect(on.takeAll).toHaveBeenCalled();
+  });
+
+  it('marks the heading a hidden run sits behind, and shows it again when the mark is pressed', () => {
+    const on = asks();
+    const hides = sheet({
+      rows: 2,
+      columns: 4,
+      of: { rows: 40, columns: 4 },
+      widths: [{ first: 2, last: 3, size: null, hidden: true }],
+    });
+    const into = shown({ drawing: drawing({ sheets: [hides] }) }, on);
+    const marks = [...into.querySelectorAll<HTMLElement>('thead .hiding')];
+
+    expect(marks).toHaveLength(1);
+    expect(marks[0]?.title).toBe('Show columns 2-3 again');
+
+    marks[0]?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    expect(on.hide).toHaveBeenCalledWith('column', 2, 3, false);
+  });
+
+  it('opens a menu on a heading, which hides what the reader has selected', () => {
+    const on = asks();
+    const into = shown({ drawing: drawing({ sheets: [wide] }) }, on);
+
+    into
+      .querySelector<HTMLElement>('thead th[data-col="2"]')
+      ?.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+    expect(on.pointAt).toHaveBeenCalledWith({ axis: 'column', at: 2, x: 0, y: 0 });
+
+    const menu = shown(
+      {
+        drawing: drawing({ sheets: [wide] }),
+        selected: { row: 1, col: 2 },
+        anchor: { row: 40, col: 3 },
+        pointed: { axis: 'column', at: 2, x: 10, y: 20 },
+      },
+      on,
+    );
+    const entries = [...menu.querySelectorAll<HTMLElement>('.pointed .entry')];
+
+    expect(entries.map((one) => one.textContent)).toEqual(['Hide these 2 columns']);
+    entries[0]?.click();
+    expect(on.hide).toHaveBeenCalledWith('column', 2, 3, true);
+  });
+
+  it('offers the way back where a run beside the heading is hidden', () => {
+    const on = asks();
+    const hides = sheet({
+      rows: 2,
+      columns: 4,
+      of: { rows: 40, columns: 4 },
+      widths: [{ first: 2, last: 3, size: null, hidden: true }],
+    });
+    const menu = shown(
+      {
+        drawing: drawing({ sheets: [hides] }),
+        pointed: { axis: 'column', at: 4, x: 10, y: 20 },
+      },
+      on,
+    );
+
+    const entries = [...menu.querySelectorAll<HTMLElement>('.pointed .entry')];
+    expect(entries.map((one) => one.textContent)).toEqual([
+      'Hide this column',
+      'Show columns 2-3 again',
+    ]);
   });
 
   it('lights the headings the selection reaches, and puts them out when it moves', () => {
@@ -752,6 +824,7 @@ describe('what changes without redrawing the grid', () => {
       editable: null,
       line: 'thin',
       menu: null,
+      pointed: null,
       ...of,
     };
   }
@@ -998,6 +1071,7 @@ describe('the switches over the grid', () => {
     editable: null,
     line: 'thin',
     menu: null,
+    pointed: null,
   });
 
   it('follow the selection, which arrives after the grid was drawn', () => {

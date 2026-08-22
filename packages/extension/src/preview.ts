@@ -7,6 +7,7 @@ import type { FromView, PastedAt } from '@yxl-vscode/webview/protocol';
 import * as vscode from 'vscode';
 import { paste, pastedWith, pasteFrom, whose } from './clipboard';
 import { asOpen, put, reveal, textOf } from './documents';
+import { hide } from './hidden';
 import { inspect, type Nodes, nodeUnder } from './inspect';
 import { wear } from './look';
 import { freeze } from './panes';
@@ -270,6 +271,18 @@ export class Preview {
     if (asked.kind === 'freeze') {
       const { kind, ...frozen } = asked;
       this.writing((spec, port) => freeze(spec, frozen, port));
+      return;
+    }
+
+    if (asked.kind === 'hide') {
+      const { kind, ...hidden } = asked;
+      this.writing((spec, port) => hide(spec, hidden, port));
+      return;
+    }
+
+    if (asked.kind === 'hidden') {
+      const { kind, choice, ...hidden } = asked;
+      this.writing((spec, port) => hide(spec, hidden, port, choice));
       return;
     }
 

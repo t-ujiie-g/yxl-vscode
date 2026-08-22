@@ -30,18 +30,22 @@ export function grid(sheet: DrawnSheet, showing: Showing, asks: Asks): HTMLEleme
   const problems = markedBy(sheet);
 
   const stays = (sheet.freeze?.row ?? 1) - 1;
+  let drawn: number | null = null;
   for (let row = 1; row <= stays; row += 1) {
     if (heightOf(sheet, row) === 0) continue;
-    body.append(line(sheet, row, held, merged, problems, showing, asks));
+    body.append(line(sheet, row, held, merged, problems, showing, asks, behind(drawn, row)));
+    drawn = row;
   }
 
   const from = Math.max(sheet.at.row, stays + 1);
   const before = down(sheet, from) - down(sheet, stays + 1);
   if (before > 0) body.append(gap(sheet, before));
+  if (before > 0) drawn = null;
 
   for (let row = from; row < sheet.at.row + sheet.rows; row += 1) {
     if (heightOf(sheet, row) === 0) continue;
-    body.append(line(sheet, row, held, merged, problems, showing, asks));
+    body.append(line(sheet, row, held, merged, problems, showing, asks, behind(drawn, row)));
+    drawn = row;
   }
 
   const after = down(sheet, sheet.of.rows + 1) - down(sheet, sheet.at.row + sheet.rows);
@@ -122,9 +126,11 @@ function headings(sheet: DrawnSheet, showing: Showing, asks: Asks): HTMLElement 
   line.style.height = `${HEADING}px`;
   line.append(corner(asks));
 
+  let drawn: number | null = null;
   for (const one of columnsOf(sheet)) {
     if ('pad' in one) {
       if (one.pad > 0) line.append(pad(one.pad));
+      drawn = null;
       continue;
     }
 
@@ -136,8 +142,13 @@ function headings(sheet: DrawnSheet, showing: Showing, asks: Asks): HTMLElement 
     heading.style.width = `${wide}px`;
     if (one.stays) stay(sheet, heading, { col: one.at });
     takes(heading, 'column', one.at, showing, asks);
+
+    const run = behind(drawn, one.at);
+    if (run !== null) hidden(heading, 'column', run, asks);
+
     heading.append(grip('column', one.at, wide, asks));
     line.append(heading);
+    drawn = one.at;
   }
 
   head.append(line);
@@ -170,6 +181,11 @@ function takes(heading: HTMLElement, axis: Axis, at: number, showing: Showing, a
   heading.setAttribute(axis === 'column' ? 'data-col' : 'data-row', String(at));
   if (headed(showing, axis, at)) heading.classList.add('selected');
 
+  heading.addEventListener('contextmenu', (event) => {
+    event.preventDefault();
+    asks.pointAt({ axis, at, x: event.clientX, y: event.clientY });
+  });
+
   heading.addEventListener('mousedown', (event) => {
     // Not the grip: dragging the edge sizes it, and that is a different gesture.
     if (event.target !== heading) return;
@@ -178,6 +194,32 @@ function takes(heading: HTMLElement, axis: Axis, at: number, showing: Showing, a
   heading.addEventListener('mouseenter', (event) => {
     if ((event.buttons & 1) === 1) asks.takeBand(axis, at, true);
   });
+}
+
+/** The mark that says a run is hidden behind this heading, and is the way back to it. */
+function hidden(heading: HTMLElement, axis: Axis, run: Span, asks: Asks): void {
+  const mark = document.createElement('span');
+  mark.className = `hiding ${axis}`;
+  mark.title = `Show ${axis === 'column' ? 'columns' : 'rows'} ${run.first}-${run.last} again`;
+  mark.addEventListener('mousedown', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    asks.hide(axis, run.first, run.last, false);
+  });
+
+  heading.classList.add('hides');
+  heading.append(mark);
+}
+
+/** A run of rows or columns the sheet is not drawing, because something hides them. */
+interface Span {
+  readonly first: number;
+  readonly last: number;
+}
+
+/** The run hidden between the last one drawn and this one, where there is one. */
+function behind(drawn: number | null, at: number): Span | null {
+  return drawn !== null && at > drawn + 1 ? { first: drawn + 1, last: at - 1 } : null;
 }
 
 /** Whether the selection reaches this row or column, which is what lights its heading. */
@@ -268,6 +310,7 @@ function line(
   problems: ReadonlyMap<string, readonly string[]>,
   showing: Showing,
   asks: Asks,
+  behind: Span | null = null,
 ): HTMLElement {
   const line = document.createElement('tr');
   line.style.height = `${heightOf(sheet, row)}px`;
@@ -275,6 +318,7 @@ function line(
   const number = document.createElement('th');
   number.textContent = String(row);
   takes(number, 'row', row, showing, asks);
+  if (behind !== null) hidden(number, 'row', behind, asks);
   number.append(grip('row', row, heightOf(sheet, row), asks));
   line.append(number);
 
