@@ -391,10 +391,30 @@ describe('a heading a reader clicks', () => {
     const marks = [...into.querySelectorAll<HTMLElement>('thead .hiding')];
 
     expect(marks).toHaveLength(1);
-    expect(marks[0]?.title).toBe('Show columns 2-3 again');
+    expect(marks[0]?.title).toBe('Show columns B-C again');
 
     marks[0]?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
     expect(on.hide).toHaveBeenCalledWith('column', 2, 3, false);
+  });
+
+  it('marks it beside a frozen band, where the empty pad used to break the run', () => {
+    // `freeze: B3` freezes column A and leaves a pad of no width behind it; the
+    // hidden B sits in that seam, which is where the mark went missing.
+    const on = asks();
+    const frozen = sheet({
+      rows: 2,
+      columns: 4,
+      of: { rows: 40, columns: 4 },
+      freeze: { row: 3, col: 2 },
+      widths: [{ first: 2, last: 2, size: null, hidden: true }],
+    });
+    const into = shown({ drawing: drawing({ sheets: [frozen] }) }, on);
+
+    const mark = into.querySelector<HTMLElement>('thead .hiding');
+    expect(mark?.title).toBe('Show column B again');
+
+    mark?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    expect(on.hide).toHaveBeenCalledWith('column', 2, 2, false);
   });
 
   it('opens a menu on a heading, which hides what the reader has selected', () => {
@@ -441,7 +461,7 @@ describe('a heading a reader clicks', () => {
     const entries = [...menu.querySelectorAll<HTMLElement>('.pointed .entry')];
     expect(entries.map((one) => one.textContent)).toEqual([
       'Hide this column',
-      'Show columns 2-3 again',
+      'Show columns B-C again',
     ]);
   });
 

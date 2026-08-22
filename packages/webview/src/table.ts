@@ -129,8 +129,12 @@ function headings(sheet: DrawnSheet, showing: Showing, asks: Asks): HTMLElement 
   let drawn: number | null = null;
   for (const one of columnsOf(sheet)) {
     if ('pad' in one) {
-      if (one.pad > 0) line.append(pad(one.pad));
-      drawn = null;
+      // Only a pad with width to it breaks the run: the empty one between the
+      // frozen band and the window has nothing between its two sides.
+      if (one.pad > 0) {
+        line.append(pad(one.pad));
+        drawn = null;
+      }
       continue;
     }
 
@@ -200,7 +204,7 @@ function takes(heading: HTMLElement, axis: Axis, at: number, showing: Showing, a
 function hidden(heading: HTMLElement, axis: Axis, run: Span, asks: Asks): void {
   const mark = document.createElement('span');
   mark.className = `hiding ${axis}`;
-  mark.title = `Show ${axis === 'column' ? 'columns' : 'rows'} ${run.first}-${run.last} again`;
+  mark.title = `Show ${spanSaid(axis, run.first, run.last)} again`;
   mark.addEventListener('mousedown', (event) => {
     event.preventDefault();
     event.stopPropagation();
@@ -209,6 +213,14 @@ function hidden(heading: HTMLElement, axis: Axis, run: Span, asks: Asks): void {
 
   heading.classList.add('hides');
   heading.append(mark);
+}
+
+/** A run of columns or rows as the reader sees it named: `column B`, `rows 3-7`. */
+export function spanSaid(axis: Axis, first: number, last: number): string {
+  const said = (at: number) => (axis === 'column' ? columnLabel(at) : String(at));
+  const one = axis === 'column' ? 'column' : 'row';
+
+  return first === last ? `${one} ${said(first)}` : `${one}s ${said(first)}-${said(last)}`;
 }
 
 /** A run of rows or columns the sheet is not drawing, because something hides them. */

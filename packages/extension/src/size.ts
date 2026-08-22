@@ -1,6 +1,7 @@
 import { reading, setSize } from '@yxl-vscode/intent';
 import { sheetName } from '@yxl-vscode/units';
 import type { Resized } from '@yxl-vscode/webview/protocol';
+import { spanSaid } from './said';
 import { applied, type Port, type Spec, shown } from './write';
 
 /**
@@ -60,8 +61,5 @@ function comes(resized: Resized): string {
 
 /** What was dragged, as the reader is told about it: one column, or the run they had selected. */
 function many(resized: Resized): string {
-  const run = resized.last - resized.first + 1;
-  const one = resized.axis === 'column' ? 'column' : 'row';
-
-  return run === 1 ? `${one} ${resized.first}` : `${one}s ${resized.first}-${resized.last}`;
+  return spanSaid(resized.axis, resized.first, resized.last);
 }

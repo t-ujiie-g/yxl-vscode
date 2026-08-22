@@ -2549,6 +2549,16 @@ Phase 10's sixth item, and the heading menu it needed to be reachable from.
   thing that says something is there — and pressing the mark is the way back.
   Excel draws a doubled line; Sheets draws arrows; ours is a line down the edge
   of the heading, and it says which run it is holding.
+- **The mark went missing beside a frozen band**, which is where it was first
+  looked for: the run of drawn headings was broken by *every* pad, including
+  the one of no width that always sits between the frozen columns and the
+  window, so a column hidden in that seam had nothing after it to mark. Only a
+  pad with width to it breaks the run now. The mark also asked its heading for
+  `position: relative`, which would have taken a frozen heading out of its own
+  band — a heading is already positioned by being sticky, and needed nothing.
+- **A column is said by its letter.** `column 2 hidden.` was what the reader
+  got, about a column whose heading says `B`. Both the hide and the drag say
+  `column B` and `columns B-D` now.
 - **The headings have a right-click menu**, because hiding had nowhere else to
   live and a toolbar is not where anyone looks for it. It hides what the reader
   has selected — one column, or the run of them — and offers the way back where
@@ -2558,7 +2568,7 @@ Phase 10's sixth item, and the heading menu it needed to be reachable from.
   respelled, the answer shape, and the rule that taking out the last band takes
   the key with it are one implementation, used by the size, the look and the
   hide alike. `size.ts` is 124 lines from 215.
-- 1646 → 1664 tests.
+- 1646 → 1665 tests.
 
 ### 2026-08-22 — Fit the column to what is in it
 Phase 10's fifth item, and the answer to the one open question the phase had.

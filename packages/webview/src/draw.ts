@@ -22,7 +22,7 @@ import {
   ranged,
   type Showing,
 } from './showing';
-import { grid, headed } from './table';
+import { grid, headed, spanSaid } from './table';
 import { toolbar } from './toolbar';
 import { type Where, wanted } from './window';
 
@@ -85,7 +85,6 @@ function pointing(showing: Showing, asks: Asks): HTMLElement | null {
 
   const run = about(showing, at);
   const many = run.last - run.first + 1;
-  const said = at.axis === 'column' ? 'column' : 'row';
   const behind = hiddenNear(sheet, at.axis, run);
 
   const hide = (first: number, last: number, hidden: boolean) => () => {
@@ -95,7 +94,7 @@ function pointing(showing: Showing, asks: Asks): HTMLElement | null {
 
   const entries = [
     entry(
-      `Hide ${many === 1 ? `this ${said}` : `these ${many} ${said}s`}`,
+      many === 1 ? `Hide this ${at.axis}` : `Hide these ${many} ${at.axis}s`,
       {},
       hide(run.first, run.last, true),
     ),
@@ -103,7 +102,7 @@ function pointing(showing: Showing, asks: Asks): HTMLElement | null {
       ? []
       : [
           entry(
-            `Show ${said}s ${behind.first}-${behind.last} again`,
+            `Show ${spanSaid(at.axis, behind.first, behind.last)} again`,
             {},
             hide(behind.first, behind.last, false),
           ),

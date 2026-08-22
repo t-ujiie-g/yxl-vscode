@@ -482,7 +482,7 @@ describe('a column or a row dragged to a size', () => {
 
     await resize(read, dragged(), port);
     expect(files[ROOT]).toContain('    columns:\n      - at: D\n        width: 20\n');
-    expect(told).toEqual(['Column 4 resized.']);
+    expect(told).toEqual(['Column D resized.']);
   });
 
   it('asks where the band it takes its size from is about more than it', async () => {
@@ -511,7 +511,7 @@ describe('a column or a row dragged to a size', () => {
 
     await resize(read, dragged({ first: 2, last: 4 }), port);
     expect(files[ROOT]).toContain('    columns:\n      - at: B-D\n        width: 20\n');
-    expect(told).toEqual(['Columns 2-4 resized.']);
+    expect(told).toEqual(['Columns B-D resized.']);
   });
 
   it('refuses a sheet that is not one', async () => {
@@ -525,7 +525,7 @@ describe('a column or a row dragged to a size', () => {
     const { spec, port, refusals } = editor({ [ROOT]: `${SALES}    cells:\n      A1: 1\n` });
 
     await resize(spec, dragged({ sheet: 'Nowhere' }), port);
-    expect(refusals[0]).toContain('nothing here can say how wide column 4 is');
+    expect(refusals[0]).toContain('nothing here can say how wide column D is');
   });
 });
 
@@ -565,7 +565,7 @@ describe('columns hidden from the preview', () => {
 
     await hide(read, hiding(), port);
     expect(files[ROOT]).toBe(`${spec}    columns:\n      - at: B-C\n        hidden: true\n`);
-    expect(told).toEqual(['columns 2-3 hidden.']);
+    expect(told).toEqual(['columns B-C hidden.']);
   });
 
   it('shows them again by taking the band away', async () => {
@@ -574,7 +574,7 @@ describe('columns hidden from the preview', () => {
 
     await hide(read, hiding({ hidden: false }), port);
     expect(files[ROOT]).toBe(`${SALES}    cells:\n      A1: 1\n`);
-    expect(told).toEqual(['columns 2-3 shown again.']);
+    expect(told).toEqual(['columns B-C shown again.']);
   });
 
   it('asks where what hides them says it about more', async () => {
@@ -591,7 +591,7 @@ describe('columns hidden from the preview', () => {
     const { spec, port, refusals } = editor({ [ROOT]: `${SALES}    cells:\n      A1: 1\n` });
 
     await hide(spec, hiding({ hidden: false }), port);
-    expect(refusals[0]).toContain('nothing hides columns 2-3');
+    expect(refusals[0]).toContain('nothing hides columns B-C');
   });
 });
 

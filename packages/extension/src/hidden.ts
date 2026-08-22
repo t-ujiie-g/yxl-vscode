@@ -1,6 +1,7 @@
 import { reading, setHidden } from '@yxl-vscode/intent';
 import { sheetName } from '@yxl-vscode/units';
 import type { Hidden } from '@yxl-vscode/webview/protocol';
+import { spanSaid } from './said';
 import { applied, type Port, type Spec, shown } from './write';
 
 /**
@@ -56,10 +57,7 @@ function comes(hidden: Hidden): string {
   return `${many(hidden)} take that from a band over more than them, so there is more than one way to change it`;
 }
 
-/** What was named, as the reader is told about it. */
+/** What was named, as the reader is told about it — by the letter on the heading, not by its number. */
 function many(hidden: Hidden): string {
-  const run = hidden.last - hidden.first + 1;
-  const one = hidden.axis === 'column' ? 'column' : 'row';
-
-  return run === 1 ? `${one} ${hidden.first}` : `${one}s ${hidden.first}-${hidden.last}`;
+  return spanSaid(hidden.axis, hidden.first, hidden.last);
 }
