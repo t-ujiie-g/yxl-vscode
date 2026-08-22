@@ -40,6 +40,8 @@ function asks(): Asks {
     hide: vi.fn(),
     hiddenWith: vi.fn(),
     pointAt: vi.fn(),
+    group: vi.fn(),
+    groupedWith: vi.fn(),
   };
 }
 
@@ -385,7 +387,7 @@ describe('a heading a reader clicks', () => {
       rows: 2,
       columns: 4,
       of: { rows: 40, columns: 4 },
-      widths: [{ first: 2, last: 3, size: null, hidden: true }],
+      widths: [{ first: 2, last: 3, size: null, hidden: true, group: null }],
     });
     const into = shown({ drawing: drawing({ sheets: [hides] }) }, on);
     const marks = [...into.querySelectorAll<HTMLElement>('thead .hiding')];
@@ -406,7 +408,7 @@ describe('a heading a reader clicks', () => {
       columns: 4,
       of: { rows: 40, columns: 4 },
       freeze: { row: 3, col: 2 },
-      widths: [{ first: 2, last: 2, size: null, hidden: true }],
+      widths: [{ first: 2, last: 2, size: null, hidden: true, group: null }],
     });
     const into = shown({ drawing: drawing({ sheets: [frozen] }) }, on);
 
@@ -415,6 +417,52 @@ describe('a heading a reader clicks', () => {
 
     mark?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
     expect(on.hide).toHaveBeenCalledWith('column', 2, 2, false);
+  });
+
+  it('draws the outline a group puts on the headings, one bar per level it is in', () => {
+    const on = asks();
+    const outlined = sheet({
+      rows: 2,
+      columns: 8,
+      of: { rows: 40, columns: 8 },
+      widths: [
+        { first: 2, last: 6, size: null, hidden: false, group: 1 },
+        { first: 3, last: 5, size: null, hidden: false, group: 2 },
+      ],
+    });
+    const into = shown({ drawing: drawing({ sheets: [outlined] }) }, on);
+
+    // Five headings in the outer run, three of them also in the inner one.
+    expect(into.querySelectorAll('thead .grouping:not(.control)')).toHaveLength(8);
+
+    const controls = [...into.querySelectorAll<HTMLButtonElement>('thead .grouping.control')];
+    expect(controls.map((one) => one.title)).toEqual([
+      'Collapse columns C-E',
+      'Collapse columns B-F',
+    ]);
+
+    controls[1]?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    expect(on.hide).toHaveBeenCalledWith('column', 2, 6, true);
+  });
+
+  it('puts the way back on the heading a collapsed group sits behind', () => {
+    const on = asks();
+    const collapsed = sheet({
+      rows: 2,
+      columns: 5,
+      of: { rows: 40, columns: 5 },
+      widths: [{ first: 2, last: 3, size: null, hidden: true, group: 1 }],
+    });
+    const into = shown({ drawing: drawing({ sheets: [collapsed] }) }, on);
+
+    // The group's own control, rather than the plain mark a hidden run leaves.
+    expect(into.querySelectorAll('thead .hiding')).toHaveLength(0);
+
+    const control = into.querySelector<HTMLButtonElement>('thead .grouping.control');
+    expect([control?.textContent, control?.title]).toEqual(['+', 'Open columns B-C']);
+
+    control?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    expect(on.hide).toHaveBeenCalledWith('column', 2, 3, false);
   });
 
   it('opens a menu on a heading, which hides what the reader has selected', () => {
@@ -437,9 +485,16 @@ describe('a heading a reader clicks', () => {
     );
     const entries = [...menu.querySelectorAll<HTMLElement>('.pointed .entry')];
 
-    expect(entries.map((one) => one.textContent)).toEqual(['Hide these 2 columns']);
+    expect(entries.map((one) => one.textContent)).toEqual([
+      'Hide these 2 columns',
+      'Group these 2 columns',
+    ]);
+
     entries[0]?.click();
     expect(on.hide).toHaveBeenCalledWith('column', 2, 3, true);
+
+    entries[1]?.click();
+    expect(on.group).toHaveBeenCalledWith('column', 2, 3, 1);
   });
 
   it('offers the way back where a run beside the heading is hidden', () => {
@@ -448,7 +503,7 @@ describe('a heading a reader clicks', () => {
       rows: 2,
       columns: 4,
       of: { rows: 40, columns: 4 },
-      widths: [{ first: 2, last: 3, size: null, hidden: true }],
+      widths: [{ first: 2, last: 3, size: null, hidden: true, group: null }],
     });
     const menu = shown(
       {
@@ -462,6 +517,7 @@ describe('a heading a reader clicks', () => {
     expect(entries.map((one) => one.textContent)).toEqual([
       'Hide this column',
       'Show columns B-C again',
+      'Group this column',
     ]);
   });
 

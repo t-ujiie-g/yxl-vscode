@@ -309,13 +309,15 @@ describe('a drawn spec', () => {
     // The view reads a size as a size; a `0` standing for "unsaid" draws a
     // column no cell can be seen in.
     const source = `${SALES}    columns:\n      - at: A\n        style: { font: { bold: true } }\n    cells:\n      A1: x\n`;
-    expect(drawn(source).widths).toEqual([{ first: 1, last: 1, size: null, hidden: false }]);
+    expect(drawn(source).widths).toEqual([
+      { first: 1, last: 1, size: null, hidden: false, group: null },
+    ]);
   });
 
   it('carries the sizes and merges a sheet declares', () => {
     const source = `${SALES}    columns:\n      - at: B\n        width: 18\n    merges: [A1:C1]\n    cells:\n      A1: wide\n`;
     const sheet = drawn(source);
-    expect(sheet.widths).toEqual([{ first: 2, last: 2, size: 18, hidden: false }]);
+    expect(sheet.widths).toEqual([{ first: 2, last: 2, size: 18, hidden: false, group: null }]);
     expect(sheet.merges).toEqual([{ top: 1, left: 1, bottom: 1, right: 3 }]);
   });
 });

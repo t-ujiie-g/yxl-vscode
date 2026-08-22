@@ -302,6 +302,7 @@ function sizedRun(band: CompiledSheet['columns'][number]): Sized {
     last: band.last,
     size: band.size ?? null,
     hidden: band.hidden ?? false,
+    group: band.group,
   };
 }
 

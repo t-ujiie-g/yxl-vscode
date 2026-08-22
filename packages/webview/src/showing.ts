@@ -4,6 +4,7 @@ import { type At, within } from './keys';
 import type {
   Drawing,
   Editable,
+  Grouped,
   Hidden,
   Pasted,
   PastedText,
@@ -129,6 +130,8 @@ export interface Asks {
   readonly fit: (axis: Axis, at: number) => void;
   readonly hide: (axis: Axis, first: number, last: number, hidden: boolean) => void;
   readonly hiddenWith: (hidden: Hidden, choice: string) => void;
+  readonly group: (axis: Axis, first: number, last: number, level: number) => void;
+  readonly groupedWith: (grouped: Grouped, choice: string) => void;
   readonly pointAt: (at: Pointed | null) => void;
   readonly freeze: (at: At | null) => void;
   readonly resizedWith: (resized: Resized, choice: string) => void;

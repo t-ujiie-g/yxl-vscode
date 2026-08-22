@@ -3,7 +3,7 @@ import { columnLabel } from '@yxl-vscode/units';
 import { corner } from './boxes';
 import { drawCell, typeInto } from './cell';
 import { copying, going, looking as lookingFor, pasting, undoing } from './keys';
-import type { DrawnCell, DrawnMerge, DrawnSheet } from './protocol';
+import type { DrawnCell, DrawnMerge, DrawnSheet, Sized } from './protocol';
 import {
   type Asks,
   cellKey,
@@ -148,7 +148,10 @@ function headings(sheet: DrawnSheet, showing: Showing, asks: Asks): HTMLElement 
     takes(heading, 'column', one.at, showing, asks);
 
     const run = behind(drawn, one.at);
-    if (run !== null) hidden(heading, 'column', run, asks);
+    const over = run === null ? null : groupOver(sheet, 'column', run);
+    if (over !== null) opening(heading, 'column', over, asks);
+    else if (run !== null) hidden(heading, 'column', run, asks);
+    grouped(heading, 'column', one.at, sheet, asks);
 
     heading.append(grip('column', one.at, wide, asks));
     line.append(heading);
@@ -198,6 +201,82 @@ function takes(heading: HTMLElement, axis: Axis, at: number, showing: Showing, a
   heading.addEventListener('mouseenter', (event) => {
     if ((event.buttons & 1) === 1) asks.takeBand(axis, at, true);
   });
+}
+
+/** The outline a `group:` puts on a heading: a bar per level, and the control at the run's end (ADR-044). */
+function grouped(
+  heading: HTMLElement,
+  axis: Axis,
+  at: number,
+  sheet: DrawnSheet,
+  asks: Asks,
+): void {
+  const runs = groupsOf(sheet, axis).filter(
+    (run) => !run.hidden && run.first <= at && at <= run.last,
+  );
+
+  for (const run of runs) {
+    heading.append(bar(axis, run.group ?? 1));
+    if (at === run.last) heading.append(control(axis, run, false, asks));
+  }
+
+  if (runs.length > 0) heading.classList.add('hides');
+}
+
+/** The control that opens a collapsed group, on the heading its run sits behind. */
+function opening(heading: HTMLElement, axis: Axis, run: Grouped, asks: Asks): void {
+  heading.classList.add('hides');
+  heading.append(control(axis, run, true, asks));
+}
+
+/** One level of the outline, drawn along the outer edge of the heading. */
+function bar(axis: Axis, level: number): HTMLElement {
+  const drawn = document.createElement('span');
+  drawn.className = `grouping ${axis}`;
+  drawn.style.setProperty(axis === 'column' ? 'top' : 'left', `${(level - 1) * LEVEL}px`);
+
+  return drawn;
+}
+
+/** The `−` that collapses a group, or the `+` that opens it — which is a write either way (ADR-044). */
+function control(axis: Axis, run: Grouped, open: boolean, asks: Asks): HTMLElement {
+  const drawn = document.createElement('button');
+  drawn.type = 'button';
+  drawn.className = `grouping ${axis} control`;
+  drawn.style.setProperty(
+    axis === 'column' ? 'top' : 'left',
+    `${((run.group ?? 1) - 1) * LEVEL}px`,
+  );
+  drawn.textContent = open ? '+' : '\u2212';
+  drawn.title = `${open ? 'Open' : 'Collapse'} ${spanSaid(axis, run.first, run.last)}`;
+  drawn.addEventListener('mousedown', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    asks.hide(axis, run.first, run.last, !open);
+  });
+
+  return drawn;
+}
+
+/** How far apart the levels of an outline sit, which is what makes a nested one legible. */
+const LEVEL = 4;
+
+/** A run a band groups, which is the runs `docs/spec.md` §4 gives an outline level above zero. */
+type Grouped = Sized & { readonly group: number };
+
+/** Every run of this axis that a band groups. */
+function groupsOf(sheet: DrawnSheet, axis: Axis): Grouped[] {
+  const runs = axis === 'column' ? sheet.widths : sheet.heights;
+  return runs.filter((run): run is Grouped => (run.group ?? 0) > 0);
+}
+
+/** The group a hidden run belongs to, whose own control is the way back rather than the plain mark. */
+function groupOver(sheet: DrawnSheet, axis: Axis, run: Span): Grouped | null {
+  const over = groupsOf(sheet, axis).filter(
+    (one) => one.hidden && one.first <= run.first && one.last >= run.last,
+  );
+
+  return over[over.length - 1] ?? null;
 }
 
 /** The mark that says a run is hidden behind this heading, and is the way back to it. */
@@ -330,7 +409,10 @@ function line(
   const number = document.createElement('th');
   number.textContent = String(row);
   takes(number, 'row', row, showing, asks);
-  if (behind !== null) hidden(number, 'row', behind, asks);
+  const over = behind === null ? null : groupOver(sheet, 'row', behind);
+  if (over !== null) opening(number, 'row', over, asks);
+  else if (behind !== null) hidden(number, 'row', behind, asks);
+  grouped(number, 'row', row, sheet, asks);
   number.append(grip('row', row, heightOf(sheet, row), asks));
   line.append(number);
 

@@ -71,12 +71,17 @@ export interface DrawnRun {
   readonly style: StyleValues;
 }
 
-/** A run of columns or rows a band declares; `size` in the spec's units, `null` where it set none. */
+/**
+ * A run of columns or rows a band declares; `size` in the spec's units, `null`
+ * where it set none. `group` is the outline level, `0` being ungrouped and
+ * `null` the key being absent (`docs/spec.md` §4).
+ */
 export interface Sized {
   readonly first: number;
   readonly last: number;
   readonly size: number | null;
   readonly hidden: boolean;
+  readonly group: number | null;
 }
 
 /**
@@ -157,7 +162,8 @@ export type About =
   | { readonly is: 'text'; readonly text: PastedText }
   | { readonly is: 'worn'; readonly worn: Worn }
   | { readonly is: 'resized'; readonly resized: Resized }
-  | { readonly is: 'hidden'; readonly hidden: Hidden };
+  | { readonly is: 'hidden'; readonly hidden: Hidden }
+  | { readonly is: 'grouped'; readonly grouped: Grouped };
 
 /**
  * `Cmd`+`V` in the grid: where it goes, what the grid holds of its own, and what
@@ -267,6 +273,8 @@ export type FromView =
   | ({ readonly kind: 'wear' } & Worn)
   | ({ readonly kind: 'worn'; readonly choice: string } & Worn)
   | ({ readonly kind: 'freeze' } & Frozen)
+  | ({ readonly kind: 'group' } & Grouped)
+  | ({ readonly kind: 'grouped'; readonly choice: string } & Grouped)
   | ({ readonly kind: 'hide' } & Hidden)
   | ({ readonly kind: 'hidden'; readonly choice: string } & Hidden)
   | ({ readonly kind: 'resize' } & Resized)
@@ -291,6 +299,15 @@ export interface Resized {
   readonly first: number;
   readonly last: number;
   readonly size: number;
+}
+
+/** Columns or rows a reader asked to group, or to take out of the outline (`docs/spec.md` §4). */
+export interface Grouped {
+  readonly sheet: string;
+  readonly axis: Axis;
+  readonly first: number;
+  readonly last: number;
+  readonly level: number;
 }
 
 /** Columns or rows a reader asked to hide, or to show again (`docs/spec.md` §4). */

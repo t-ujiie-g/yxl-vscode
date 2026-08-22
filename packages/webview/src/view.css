@@ -224,6 +224,56 @@ body {
   position: fixed;
 }
 
+/* The outline a `group:` draws (`docs/spec.md` §4): a bar along the outer edge
+   of every heading in the run, one level in from the last, and the control that
+   collapses or opens it at the end. Excel keeps this in a gutter of its own;
+   ours is on the heading, so the grid's origin stays where every other
+   measurement is taken from (ADR-044). */
+.grid .grouping {
+  position: absolute;
+  z-index: 3;
+  background: #7a7a7a;
+}
+
+.grid .grouping.column {
+  right: 0;
+  left: 0;
+  height: 2px;
+}
+
+.grid .grouping.row {
+  top: 0;
+  bottom: 0;
+  width: 2px;
+}
+
+.grid button.grouping.control {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 11px;
+  height: 11px;
+  padding: 0;
+  border: 1px solid #7a7a7a;
+  border-radius: 2px;
+  background: #ffffff;
+  color: #444444;
+  font: 700 9px / 1 var(--vscode-font-family);
+  cursor: pointer;
+}
+
+.grid button.grouping.column.control {
+  right: 0;
+  left: auto;
+  height: 11px;
+}
+
+.grid button.grouping.row.control {
+  top: auto;
+  bottom: 0;
+  width: 11px;
+}
+
 /* Where a run is hidden, on the heading that comes after it — the only thing
    that says something is there, and the way back to it. A heading is already
    positioned, by being sticky, so the mark needs no `relative` of its own —

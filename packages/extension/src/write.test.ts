@@ -5,6 +5,7 @@ import { did, type History, nothing } from '@yxl-vscode/patch';
 import { type FilePath, filePath, parseColor } from '@yxl-vscode/units';
 import type { Choice, Frozen, Resized, Typed, Worn } from '@yxl-vscode/webview/protocol';
 import { describe, expect, it } from 'vitest';
+import { group } from './group';
 import { hide } from './hidden';
 import { wear } from './look';
 import { freeze } from './panes';
@@ -592,6 +593,33 @@ describe('columns hidden from the preview', () => {
 
     await hide(spec, hiding({ hidden: false }), port);
     expect(refusals[0]).toContain('nothing hides columns B-C');
+  });
+});
+
+describe('columns grouped from the preview', () => {
+  it('writes the level on a band of their own, and says so', async () => {
+    const spec = `${SALES}    cells:\n      A1: 1\n`;
+    const { spec: read, port, files, told } = editor({ [ROOT]: spec });
+
+    await group(read, { sheet: 'Sales', axis: 'column', first: 2, last: 4, level: 1 }, port);
+
+    expect(files[ROOT]).toBe(`${spec}    columns:\n      - at: B-D\n        group: 1\n`);
+    expect(told).toEqual(['columns B-D grouped.']);
+  });
+
+  it('collapses by hiding the run, which is what the schema calls a collapsed group', async () => {
+    const spec = `${SALES}    cells:\n      A1: 1\n    columns:\n      - at: B-D\n        group: 1\n`;
+    const { spec: read, port, files } = editor({ [ROOT]: spec });
+
+    await hide(read, { sheet: 'Sales', axis: 'column', first: 2, last: 4, hidden: true }, port);
+    expect(files[ROOT]).toContain('      - at: B-D\n        group: 1\n        hidden: true\n');
+  });
+
+  it('says so where nothing groups them', async () => {
+    const { spec, port, refusals } = editor({ [ROOT]: `${SALES}    cells:\n      A1: 1\n` });
+
+    await group(spec, { sheet: 'Sales', axis: 'column', first: 2, last: 4, level: 0 }, port);
+    expect(refusals[0]).toContain('nothing groups columns B-D');
   });
 });
 
