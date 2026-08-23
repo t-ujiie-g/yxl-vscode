@@ -5,6 +5,7 @@ import { draw, restate } from './draw';
 import { asks, at, cell, drawing, scrolled, sheet, showingOf, shown } from './harness';
 import type { DrawnSheet } from './protocol';
 import type { Showing } from './showing';
+import { widthOf } from './window';
 
 describe('the grid', () => {
   it('draws a heading row of column names, and a number down the side', () => {
@@ -948,5 +949,44 @@ describe('a cell with more than one line in it', () => {
 
   it('draws nothing of the sort where the value has no break in it', () => {
     expect(typing(into())).toBeNull();
+  });
+});
+
+describe('text that does not fit its cell', () => {
+  const wide = (of: Partial<DrawnSheet> = {}) =>
+    drawing({ sheets: [sheet({ rows: 1, columns: 3, ...of })] });
+
+  it('runs over the empty cells beside it, as both spreadsheets let it', () => {
+    const held = wide({ cells: [cell(1, 1, { value: 'a very long heading indeed' })] });
+    const one = held.sheets[0];
+    const over = at(shown({ drawing: held }), 1, 1)?.querySelector<HTMLElement>('.spill');
+
+    expect(over?.textContent).toBe('a very long heading indeed');
+    if (one === undefined) throw new Error('no sheet');
+    expect(over?.style.maxWidth).toBe(`${widthOf(one, 1) + widthOf(one, 2) + widthOf(one, 3)}px`);
+  });
+
+  it('stops at the first cell that shows anything', () => {
+    const held = wide({
+      cells: [cell(1, 1, { value: 'a very long heading indeed' }), cell(1, 2, { value: 'stop' })],
+    });
+
+    expect(at(shown({ drawing: held }), 1, 1)?.querySelector('.spill')).toBeNull();
+  });
+
+  it('does not run where the cell wraps, which is what wrapping is for', () => {
+    const held = wide({
+      cells: [cell(1, 1, { value: 'a very long heading', style: { 'align.wrap': true } })],
+    });
+
+    expect(at(shown({ drawing: held }), 1, 1)?.querySelector('.spill')).toBeNull();
+  });
+
+  it('does not run where the text is not left-aligned, which would run the wrong way', () => {
+    const held = wide({
+      cells: [cell(1, 1, { value: 'a very long heading', style: { 'align.horizontal': 'right' } })],
+    });
+
+    expect(at(shown({ drawing: held }), 1, 1)?.querySelector('.spill')).toBeNull();
   });
 });

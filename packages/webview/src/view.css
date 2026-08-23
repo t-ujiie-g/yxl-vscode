@@ -622,6 +622,20 @@ body {
   border-color: transparent;
 }
 
+/* A cell whose text runs over the empty cells beside it, as both spreadsheets
+   let it: the cell keeps its width, and the text clips where the empty ones
+   end. */
+.grid td.spilling {
+  overflow: visible;
+}
+
+.spill {
+  display: inline-block;
+  overflow: hidden;
+  white-space: inherit;
+  vertical-align: inherit;
+}
+
 /* A cell's own borders sit over the grid's own lines rather than collapsing
    with them: at 1px they lose that tie to the cell on their left, and to the
    one above, which is every inner edge of the sheet. Inside the cell's own
