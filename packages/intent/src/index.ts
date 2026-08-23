@@ -13,6 +13,7 @@ export {
 export { type Frozen, setFreeze } from './freeze';
 export { type Grouping, setGroup } from './group';
 export { type Hiding, setHidden } from './hidden';
+export { drawLine } from './line';
 export { overridable, override, type Says } from './override';
 export {
   couldBlock,
