@@ -4,6 +4,7 @@ import { did, type History, nothing } from '@yxl-vscode/patch';
 import type { Axis } from '@yxl-vscode/spec';
 import { addrAt, cellOf, filePath } from '@yxl-vscode/units';
 import type {
+  Filled,
   FromView,
   Frozen,
   Grouped,
@@ -21,6 +22,7 @@ import type {
 import * as vscode from 'vscode';
 import { paste, pastedWith, pasteFrom, whose } from './clipboard';
 import { asOpen, put, reveal, textOf } from './documents';
+import { fill } from './fills';
 import { group } from './group';
 import { hide } from './hidden';
 import { inspect, type Nodes, nodeUnder } from './inspect';
@@ -64,6 +66,7 @@ const WRITES = {
   freeze: (spec: Spec, frozen: Frozen, port: Port) => freeze(spec, frozen, port),
   merge: (spec: Spec, one: Merged, port: Port) => merge(spec, one, port),
   table: (spec: Spec, one: Ranged, port: Port) => table(spec, one, port),
+  fill: (spec: Spec, one: Filled, port: Port, choice?: string) => fill(spec, one, port, choice),
   group: (spec: Spec, grouped: Grouped, port: Port, choice?: string) =>
     group(spec, grouped, port, choice),
   hide: (spec: Spec, one: Hidden, port: Port, choice?: string) => hide(spec, one, port, choice),

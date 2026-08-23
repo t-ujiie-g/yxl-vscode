@@ -1,3 +1,4 @@
+import type { Axis } from '@yxl-vscode/spec';
 import type { Rect } from '@yxl-vscode/units';
 import type { DrawnCell, DrawnSheet } from './protocol';
 
@@ -146,6 +147,14 @@ export function wearing(event: KeyboardEvent): 'bold' | 'italic' | 'underline' |
     default:
       return null;
   }
+}
+
+/** Which way a fill goes: `Cmd`+`D` down and `Cmd`+`R` right, as both spreadsheets have them. */
+export function filling(event: KeyboardEvent): Axis | null {
+  if (!(event.metaKey || event.ctrlKey) || event.altKey || event.shiftKey) return null;
+  if (event.key === 'd' || event.key === 'D') return 'row';
+
+  return event.key === 'r' || event.key === 'R' ? 'column' : null;
 }
 
 /** Whether this is the key that takes the whole sheet. */

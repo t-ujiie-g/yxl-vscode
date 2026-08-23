@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import {
   between,
   copying,
+  filling,
   going,
   looking,
   pasting,
@@ -166,6 +167,13 @@ describe('the keys a gesture is asked for by', () => {
   it('leaves the shifted and alted ones alone, which belong to somebody else', () => {
     expect(wearing(pressed('b', { metaKey: true, shiftKey: true }))).toBeNull();
     expect(wearing(pressed('i', { ctrlKey: true, altKey: true }))).toBeNull();
+  });
+
+  it('fills down on cmd-D and right on cmd-R', () => {
+    expect(filling(pressed('d', { metaKey: true }))).toBe('row');
+    expect(filling(pressed('R', { ctrlKey: true }))).toBe('column');
+    expect(filling(pressed('d'))).toBeNull();
+    expect(filling(pressed('d', { metaKey: true, shiftKey: true }))).toBeNull();
   });
 
   it('opens the search on cmd-F, and goes through it on cmd-G', () => {

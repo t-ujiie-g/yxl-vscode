@@ -454,7 +454,7 @@ not a date.
 | A right-click menu on a cell | ✅ — cut, copy, paste, clear; it is where Phase 11's insert and delete will hang |
 | Insert or delete a row or column | ✅ — from the heading, over the run selected, with what it moves in front of it |
 | Merge cells | ✅ — from the cell's own menu, and lossless: the covered values stay in the spec |
-| Fill down, and the drag handle | **Phase 11** (needs §8 Q2) |
+| Fill down, and the drag handle | ✅ — `Cmd`+`D` / `Cmd`+`R`, offered as a range or as cells; no drag handle |
 | Sort a block of rows | **Phase 11** |
 | See a chart, an image, a sparkline that the spec declares | **Phase 12** |
 | Insert a chart over a selection, place an image | **Phase 12** |
@@ -1343,8 +1343,16 @@ Deliberately **not** here: a second selection with `Cmd`+click (every answer in
       formula. The question was already being asked (the `newCell` answer has
       not been `alone` beside a block since Phase 7); it now has the second
       answer it was asking about.
-- [ ] Fill down and fill right, and the drag handle — which is reference
+- [x] Fill down and fill right, and the drag handle — which is reference
       translation, and waits on §8 Q2
+      **In**, on `Cmd`+`D` and `Cmd`+`R` and in the cell's own menu, as a
+      question with two answers: **one `formulas:` range** — which is what
+      Excel's own fill makes of a formula, and what a spec says in one line —
+      or **a cell each**, the references moved per row (ADR-031). The range is
+      not offered where the line holds values, or where anything is already
+      written under it, since a range may not cross a cell the sheet writes.
+      **The drag handle is not in**: the keys and the menu are the gesture, and
+      a handle is a second way to ask the same question.
 - [ ] Sorting a `data:` rectangle: its rows rewritten, and nothing else touched
 
 ### Phase 12 — What sits on the sheet
@@ -2821,6 +2829,28 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-23 — Fill down, fill right
+Phase 11's fifth item, and the one §8 Q2 was blocking until ADR-031 answered it.
+
+- **`Cmd`+`D` and `Cmd`+`R`**, and *Fill down* / *Fill right* in the cell's own
+  menu, over the rectangle selected — the first line is the source, as it is in
+  both spreadsheets.
+- **Two answers, and the reader picks.** One `formulas:` range, which is what
+  Excel's own fill makes of a formula and what a spec says in a line; or a cell
+  each with the references moved per row (ADR-031). Which one a spec wants is
+  the reader's judgement, not ours (ADR-001).
+- **The range is not offered where it would be wrong**: a line of values has no
+  formula for one to hold, and a run with something already written under it
+  cannot take one — a range may not cross a cell the sheet writes
+  (`docs/spec.md` §3).
+- **A cell each goes through the landing machinery** the clipboard already uses,
+  so a cell that cannot take what is coming refuses the whole fill and says
+  which — the same rule a paste follows.
+- **No drag handle.** The keys and the menu are the gesture; a handle is a
+  second way to ask the same question, and it can wait for a reader to ask for
+  it.
+- 1854 → 1867 tests.
 
 ### 2026-08-23 — A row onto the table beside it
 §4.4's `empty` ②, and the last thing Phase 7 left half-built.
