@@ -9,7 +9,7 @@ export {
 } from './band';
 export { type Color, parseColor } from './color';
 export { decimalsIn, MOST_DECIMALS, withDecimals } from './format';
-export { type Moved, moved, type Offset } from './formula';
+export { type Line, type Moved, moved, type Offset, shifted } from './formula';
 export {
   addrAt,
   type Band,
