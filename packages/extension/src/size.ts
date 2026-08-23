@@ -14,8 +14,7 @@ export function resize(spec: Spec, resized: Resized, port: Port, choice?: string
 
 const SIZE: Asking<Resized> = {
   about: (resized) => ({ ...resized, kind: 'resize' }),
-  answers: (spec, resized, sheet, read) =>
-    setSize({ grid: spec.grid }, { ...resized, sheet }, read),
+  answers: (spec, resized, sheet, read) => setSize(spec, { ...resized, sheet }, read),
   nothing: (resized) => `nothing here can say how wide ${many(resized)} is`,
   why: (resized) =>
     `${many(resized)} takes its size from a band over more than that, so there is more than one way to change it`,

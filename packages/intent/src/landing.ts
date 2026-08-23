@@ -29,8 +29,9 @@ import {
   stood,
 } from './direct';
 import { type Excepted, overrides } from './override';
-import type { Excepting, Standing } from './paste';
+import type { Standing } from './paste';
 import { detachment } from './resolve';
+import type { Projection } from './writes';
 
 /** One address a paste lands on, and what is going into it. */
 export interface Entry {
@@ -46,7 +47,7 @@ export interface Put {
 
 /** Every cell of a paste written where it lands; one that cannot take it refuses the whole unless `standing` says otherwise (ADR-032). */
 export function landed(
-  spec: Excepting,
+  spec: Projection,
   to: CompiledSheet,
   sheet: SheetName,
   going: readonly Entry[],
@@ -129,7 +130,7 @@ function into(
 
 /** The cells of one origin written as the exception it allows: a value of their own, or an override. */
 function excepted(
-  spec: Excepting,
+  spec: Projection,
   to: CompiledSheet,
   sheet: SheetName,
   these: readonly Entry[],
@@ -138,7 +139,7 @@ function excepted(
 ): Landed | string {
   if (by === 'definition') return detached(to, these, read);
 
-  const said = overrides(spec.doc, spec.grid, sheet, these.map(saying), read);
+  const said = overrides(spec, sheet, these.map(saying), read);
   if (said.kind === 'refused') return said.why;
   if (said.kind !== 'edit') return 'these cells cannot be written as overrides';
 

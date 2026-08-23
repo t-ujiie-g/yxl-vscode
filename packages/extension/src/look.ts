@@ -15,12 +15,7 @@ export function wear(spec: Spec, worn: Worn, port: Port, choice?: string): Promi
 const LOOK: Asking<Worn> = {
   about: (worn) => ({ ...worn, kind: 'wear' }),
   answers: (spec, worn, sheet, read) =>
-    setStyle(
-      { grid: spec.grid },
-      { sheet, rect: rectOf(worn), whole: worn.whole },
-      worn.want,
-      read,
-    ),
+    setStyle(spec, { sheet, rect: rectOf(worn), whole: worn.whole }, worn.want, read),
   nothing: () => 'nothing here can carry that look',
   why: (_worn, answers) => comes(answers),
   done: (_worn, taken) =>
@@ -29,6 +24,9 @@ const LOOK: Asking<Worn> = {
 
 /** Why a look is a question: something other than these cells says how they look. */
 function comes(answers: readonly Candidate[]): string {
+  if (answers.some((one) => one.id === 'exception')) {
+    return 'a formula range fills this cell, so a look on it is either an exception or the whole run';
+  }
   if (answers.some((one) => one.id === 'all' || one.id === 'split')) {
     return 'the cells here take that look from different places, so there is more than one way to change it';
   }

@@ -19,7 +19,7 @@ function files(sources: Record<string, string>) {
   const { doc } = load(parse(sources[ROOT] ?? '', { file: ROOT }), includes);
   if (doc === null) throw new Error('did not load');
 
-  return { grid: compile(doc, { read: includes }), text, read: reading(text), includes };
+  return { doc, grid: compile(doc, { read: includes }), text, read: reading(text), includes };
 }
 
 function emptied(source: string, at: string): Intent {

@@ -291,12 +291,11 @@ export async function writeOverride(
   const said = meant.is === 'formula' ? { formula: meant.body } : { value: value(meant) };
   const says: Says = { ...said, ...(reason === undefined ? {} : { reason }) };
 
-  const done = await applied(
-    spec,
-    override(spec.doc, spec.grid, { sheet, at }, says, reading(port.text)),
-    port,
-    { anyway: false, from: null, typed },
-  );
+  const done = await applied(spec, override(spec, { sheet, at }, says, reading(port.text)), port, {
+    anyway: false,
+    from: null,
+    typed,
+  });
   if (done) port.said(`${sheet}!${at} is now written as an override.`);
 }
 

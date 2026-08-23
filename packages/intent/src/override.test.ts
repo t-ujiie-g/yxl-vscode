@@ -40,7 +40,7 @@ function at(address: string) {
 
 function overriding(sources: Record<string, string>, address: string, says: Says) {
   const { doc, grid, read } = files(sources);
-  return override(doc, grid, at(address), says, read);
+  return override({ doc, grid }, at(address), says, read);
 }
 
 const SALES = 'sheets:\n  - name: Sales\n';
@@ -127,8 +127,7 @@ describe('what an override will not do', () => {
     const sources = { [ROOT]: `${SALES}    cells:\n      A1: APAC\n` };
     const { doc, grid, read } = files(sources);
     const intent = override(
-      doc,
-      grid,
+      { doc, grid },
       { sheet: 'Nowhere' as SheetName, at: 'A1' as A1Addr },
       { value: 1 },
       read,

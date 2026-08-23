@@ -16,11 +16,20 @@ import {
   qualified,
   type Rect,
   type SheetName,
+  within,
 } from '@yxl-vscode/units';
 import { bandOfItsOwn, type Span, spelled } from './bands';
 import type { Reading } from './direct';
 import type { Candidate } from './resolve';
-import { atSupplier, onBand, onEvery, type Projection, type Wanted, type Writing } from './writes';
+import {
+  asException,
+  atSupplier,
+  onBand,
+  onEvery,
+  type Projection,
+  type Wanted,
+  type Writing,
+} from './writes';
 
 export type { Projection } from './writes';
 
@@ -160,7 +169,8 @@ function fromOne(
     if (band !== null) answers.push(band);
   } else if (supplier === null || !excepted(supplier)) {
     const own = onCells(spec, sheet, where.sheet, everyone(spread(where.rect), want), read);
-    if (own !== null) answers.push(own);
+    if (own === null) answers.push(...inFill(spec, sheet, where, want, read));
+    else answers.push(own);
   }
 
   const shared = elsewhere(spec, supplier, want, read);
@@ -168,6 +178,52 @@ function fromOne(
 
   return answers;
 }
+
+/** The answers one cell inside a `formulas:` range has: an exception, or the whole run (§3, §23). */
+function inFill(
+  spec: Projection,
+  sheet: CompiledSheet,
+  where: Over,
+  want: StyleSays,
+  read: Reading,
+): readonly Candidate[] {
+  const [at, ...rest] = spread(where.rect);
+  if (at === undefined || rest.length > 0) return [];
+
+  const fill = sheet.fills.find((one) => within(cellOf(at), one.rect));
+  if (fill === undefined) return [];
+
+  const answers: Candidate[] = [];
+  const written = asException(spec, sheet, where.sheet, at, want, read);
+  if (written !== null) {
+    answers.push({
+      id: 'exception',
+      what: `Write it as an override on \`${at}\``,
+      moves: [{ sheet: sheet.name, at }],
+      alone: false,
+      intent: written,
+    });
+  }
+
+  const along = runsDown(fill.rect) ? column(at) : row(at);
+  const band = asBand(spec, sheet, along, want, read);
+  if (band !== null) answers.push(band);
+
+  return answers;
+}
+
+/** Which way a filled range runs, which is the band that reaches every cell of it. */
+function runsDown(rect: Rect): boolean {
+  return rect.bottom - rect.top >= rect.right - rect.left;
+}
+
+const column = (at: A1Addr): Span => ({
+  axis: 'column',
+  first: cellOf(at).col,
+  last: cellOf(at).col,
+});
+
+const row = (at: A1Addr): Span => ({ axis: 'row', first: cellOf(at).row, last: cellOf(at).row });
 
 /** One layer, the properties it supplies, and the cells that read them from it. */
 interface Origin {

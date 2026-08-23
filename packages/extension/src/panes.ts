@@ -16,7 +16,7 @@ export async function freeze(spec: Spec, frozen: Frozen, port: Port): Promise<vo
   }
 
   const at = frozen.at === null ? null : addrAt(frozen.at);
-  const intent = setFreeze({ grid: spec.grid }, { sheet, at }, reading(port.text));
+  const intent = setFreeze(spec, { sheet, at }, reading(port.text));
 
   const done = await applied(spec, intent, port, { anyway: false, from: 'freeze', typed: null });
   if (done)

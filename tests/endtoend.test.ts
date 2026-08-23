@@ -277,6 +277,25 @@ describe('the loop, closed', () => {
     expect(resolve(cell(grid, 'Sales', 'A9')?.style ?? [])['font.bold']).toBe(true);
   });
 
+  it('carries a look inside a filled range as an exception, and keeps the formula', async () => {
+    if (!QUICKSTART) return;
+    const { dir, root, port, spec, refusals } = opened(QUICKSTART);
+
+    // C2:C3 is one formula for two cells, and no `cells:` entry may overlap a
+    // range (`docs/spec.md` §3), so the look is an exception (§23).
+    const where = { sheet: 'Sales' as SheetName, rect: at(3, 3), whole: null };
+    const answers = setStyle(spec(), where, { 'font.bold': true }, reading(port.text));
+    const taken = answers.find((one) => one.id === 'exception');
+    if (taken === undefined) throw new Error('the exception was not offered');
+
+    await applied(spec(), taken.intent, port, { anyway: false, from: taken.id, typed: null });
+    expect(refusals).toEqual([]);
+
+    const { grid } = built(dir, root);
+    expect(cell(grid, 'Sales', 'C3')?.formula).toBe('B3*0.05');
+    expect(resolve(cell(grid, 'Sales', 'C3')?.style ?? [])['font.bold']).toBe(true);
+  });
+
   it('takes a cell back out of the workbook when it is emptied', async () => {
     if (!QUICKSTART) return;
     const { dir, root, port, spec, refusals } = opened(QUICKSTART);

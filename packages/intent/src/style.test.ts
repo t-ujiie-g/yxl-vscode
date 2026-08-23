@@ -25,7 +25,7 @@ function files(source: string) {
   const { doc } = load(parse(source, { file: ROOT }), includes);
   if (doc === null) throw new Error('did not load');
 
-  return { grid: compile(doc, { read: includes }), read: reading(() => source), includes };
+  return { doc, grid: compile(doc, { read: includes }), read: reading(() => source), includes };
 }
 
 const at = (top: number, left: number, bottom = top, right = left): Rect => ({
@@ -42,8 +42,8 @@ function offered(
   want: StyleSays,
   whole: 'columns' | 'rows' | null = null,
 ): readonly Candidate[] {
-  const { grid, read } = files(source);
-  return setStyle({ grid }, { sheet: 'Sales' as SheetName, rect, whole }, want, read);
+  const { doc, grid, read } = files(source);
+  return setStyle({ doc, grid }, { sheet: 'Sales' as SheetName, rect, whole }, want, read);
 }
 
 /** The chosen answer, taken all the way through the checker. */
@@ -130,6 +130,7 @@ describe('a look nothing else supplies', () => {
 });
 
 describe('a look on a cell something else fills', () => {
+  const RANGE = `${SALES}    cells:\n      A1: 2\n    formulas:\n      - at: C1:C2\n        formula: "A1*2"\n`;
   const DATA = `${SALES}    data:\n      - at: A2\n        values:\n          - [APAC, 1]\n          - [EMEA, 2]\n`;
 
   it('is a `cells:` entry of its own, since a data block carries no formatting', () => {
@@ -173,10 +174,26 @@ describe('a look on a cell something else fills', () => {
     );
   });
 
-  it('says nothing about a cell a formula range fills, which no cell may overlap', () => {
-    const range = `${SALES}    cells:\n      A1: 2\n    formulas:\n      - at: C1:C2\n        formula: "A1*2"\n`;
+  it('is an exception or the whole run, for a cell a formula range fills', () => {
+    const answers = offered(RANGE, at(2, 3), BOLD);
 
-    expect(offered(range, at(1, 3), BOLD)).toEqual([]);
+    expect(answers.map((one) => [one.id, one.what])).toEqual([
+      ['exception', 'Write it as an override on `C2`'],
+      ['ofItsOwn', 'Write it on the column `C`'],
+    ]);
+  });
+
+  it('writes the exception with the look and no value, since the facets are apart', () => {
+    const [answer] = offered(RANGE, at(2, 3), BOLD);
+    if (answer === undefined) throw new Error('nothing was offered');
+
+    expect(taken(RANGE, answer)).toContain(
+      'overrides:\n  - at: Sales!C2\n    style: { font: { bold: true } }\n',
+    );
+  });
+
+  it('offers only the run where the range keeps its formula, which is its top-left', () => {
+    expect(offered(RANGE, at(1, 3), BOLD).map((one) => one.id)).toEqual(['ofItsOwn']);
   });
 });
 
@@ -655,10 +672,10 @@ describe('what a look will not do', () => {
   });
 
   it('says nothing about a sheet that is not there', () => {
-    const { grid, read } = files(`${SALES}    cells:\n      A1: 1\n`);
+    const { doc, grid, read } = files(`${SALES}    cells:\n      A1: 1\n`);
     const where = { sheet: 'Nowhere' as SheetName, rect: at(1, 1) };
 
-    expect(setStyle({ grid }, where, BOLD, read)).toEqual([]);
+    expect(setStyle({ doc, grid }, where, BOLD, read)).toEqual([]);
   });
 });
 

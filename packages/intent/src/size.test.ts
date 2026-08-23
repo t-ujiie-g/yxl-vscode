@@ -18,15 +18,15 @@ function files(source: string) {
   const { doc } = load(parse(source, { file: ROOT }), includes);
   if (doc === null) throw new Error('did not load');
 
-  return { grid: compile(doc, { read: includes }), read: reading(() => source), includes };
+  return { doc, grid: compile(doc, { read: includes }), read: reading(() => source), includes };
 }
 
 /** The answers a drag has, over the column or row named — or the run of them selected. */
 function offered(source: string, at: number, size: number, axis: Axis = 'column', last = at) {
-  const { grid, read } = files(source);
+  const { doc, grid, read } = files(source);
   const where = { sheet: 'Sales' as SheetName, axis, first: at, last, size };
 
-  return setSize({ grid }, where, read);
+  return setSize({ doc, grid }, where, read);
 }
 
 /** The chosen answer, taken all the way through the checker. */
@@ -163,7 +163,7 @@ describe('a column a band over several sizes', () => {
 
 describe('what a size will not do', () => {
   it('says nothing about a sheet that is not there', () => {
-    const { grid, read } = files(`${SALES}${CELLS}`);
+    const { doc, grid, read } = files(`${SALES}${CELLS}`);
     const where = {
       sheet: 'Nowhere' as SheetName,
       axis: 'column' as Axis,
@@ -172,7 +172,7 @@ describe('what a size will not do', () => {
       size: 12,
     };
 
-    expect(setSize({ grid }, where, read)).toEqual([]);
+    expect(setSize({ doc, grid }, where, read)).toEqual([]);
   });
 
   it('says nothing about a column that is not one', () => {

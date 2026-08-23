@@ -19,7 +19,7 @@ function files(source: string) {
   const { doc } = load(parse(source, { file: ROOT }), includes);
   if (doc === null) throw new Error('did not load');
 
-  return { grid: compile(doc, { read: includes }), read: reading(() => source), includes };
+  return { doc, grid: compile(doc, { read: includes }), read: reading(() => source), includes };
 }
 
 /** The answers hiding — or showing — that run has. */
@@ -30,10 +30,10 @@ function offered(
   hidden: boolean,
   axis: Axis = 'column',
 ) {
-  const { grid, read } = files(source);
+  const { doc, grid, read } = files(source);
   const where = { sheet: 'Sales' as SheetName, axis, first, last, hidden };
 
-  return setHidden({ grid }, where, read);
+  return setHidden({ doc, grid }, where, read);
 }
 
 /** The chosen answer, taken all the way through the checker. */
@@ -142,7 +142,7 @@ describe('rows', () => {
 
 describe('what hiding will not do', () => {
   it('says nothing about a sheet that is not there', () => {
-    const { grid, read } = files(`${SALES}${CELLS}`);
+    const { doc, grid, read } = files(`${SALES}${CELLS}`);
     const where = {
       sheet: 'Nowhere' as SheetName,
       axis: 'column' as Axis,
@@ -151,7 +151,7 @@ describe('what hiding will not do', () => {
       hidden: true,
     };
 
-    expect(setHidden({ grid }, where, read)).toEqual([]);
+    expect(setHidden({ doc, grid }, where, read)).toEqual([]);
   });
 
   it('says nothing about a run that is not one', () => {

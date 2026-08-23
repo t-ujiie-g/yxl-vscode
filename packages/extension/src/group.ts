@@ -14,8 +14,7 @@ export function group(spec: Spec, grouped: Grouped, port: Port, choice?: string)
 
 const GROUP: Asking<Grouped> = {
   about: (grouped) => ({ ...grouped, kind: 'group' }),
-  answers: (spec, grouped, sheet, read) =>
-    setGroup({ grid: spec.grid }, { ...grouped, sheet }, read),
+  answers: (spec, grouped, sheet, read) => setGroup(spec, { ...grouped, sheet }, read),
   nothing: (grouped) =>
     grouped.level === 0
       ? `nothing groups ${many(grouped)}`

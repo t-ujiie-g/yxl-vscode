@@ -19,7 +19,7 @@ function files(source: string) {
   const { doc } = load(parse(source, { file: ROOT }), includes);
   if (doc === null) throw new Error('did not load');
 
-  return { grid: compile(doc, { read: includes }), read: reading(() => source), includes };
+  return { doc, grid: compile(doc, { read: includes }), read: reading(() => source), includes };
 }
 
 /** The answers grouping that run — or taking it out — has. */
@@ -30,10 +30,10 @@ function offered(
   level: number,
   axis: Axis = 'column',
 ) {
-  const { grid, read } = files(source);
+  const { doc, grid, read } = files(source);
   const where = { sheet: 'Sales' as SheetName, axis, first, last, level };
 
-  return setGroup({ grid }, where, read);
+  return setGroup({ doc, grid }, where, read);
 }
 
 /** The chosen answer, taken all the way through the checker. */
