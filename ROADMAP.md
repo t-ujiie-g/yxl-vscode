@@ -446,11 +446,11 @@ not a date.
 | Group rows or columns, and collapse the group | ✅ — the outline is drawn on the headings, and the control writes the collapse |
 | A formula bar over the grid | ✅ — what the cell holds, editable there, never what it computes to |
 | What the selection comes to — count, sum, average | ✅ — under the grid, over the values as computed |
-| `Cmd`+`B` / `I` / `U` | **Phase 10** — the toolbar has them, the keyboard does not |
-| The font face and size | **Phase 10** — `docs/spec.md` §6 has both and the toolbar offers neither |
-| Currency, percent, more and fewer decimals; clear formatting | **Phase 10** |
+| `Cmd`+`B` / `I` / `U` | ✅ — the key presses the switch the toolbar draws |
+| The font face and size | ✅ — a list of faces a spec may name, not the fonts this machine happens to have |
+| Currency, percent, more and fewer decimals; clear formatting | ✅ — the decimals are arithmetic on the format code, so the rest of it survives |
 | A right-click menu on a heading | ✅ — hide and show again live there |
-| A right-click menu on a cell | **Phase 10** — and it is where Phase 11's insert and delete hang |
+| A right-click menu on a cell | ✅ — cut, copy, paste, clear; it is where Phase 11's insert and delete will hang |
 | Insert or delete a row or column | **Phase 11** |
 | Merge cells | **Phase 11** |
 | Fill down, and the drag handle | **Phase 11** (needs §8 Q2) |
@@ -1216,10 +1216,16 @@ gestures on a *heading*, and the headings are not selectors yet.
       where it leaves something the declaration is still offered as a base — so
       taking one property off a cell that wears more still writes
       `{ extends: header, font: { bold: null } }`.
-- [ ] **A right-click menu on a cell.** The headings have one (it came with
+- [x] **A right-click menu on a cell.** The headings have one (it came with
       hide and unhide, which had nowhere else to live); a cell's is what is
       left — cut, copy, paste and clear to begin with, and it is where Phase
       11's insert and delete will hang.
+      **In**, with the key beside each entry as both spreadsheets write it, and
+      the selection kept where the right button lands inside it. **Paste is the
+      browser's to give**: it hands the clipboard to the keyboard and to
+      nothing else, so the entry acts only on what was copied inside the
+      preview and says why where it cannot. Both menus moved out of `draw.ts`
+      into `pointing.ts`, which is now where a menu at the pointer is built.
 
 Deliberately **not** here: a second selection with `Cmd`+click (every answer in
 §4.4 is counted over one rectangle), zoom, and a format painter.
@@ -2392,6 +2398,29 @@ VS Code's own keybinding does not match and the view's answer is the only one.
 The gesture stays in the view, where a shell that is not VS Code
 (`ROADMAP.md` Phase 15) will still have it.
 
+### ADR-047 — A listener built at draw time does not decide about the selection
+**Accepted** 2026-08-23.
+
+*The grid is drawn once and restated many times.* `restate` moves the selection
+without rebuilding a single cell, which is what makes arrow keys and dragging
+cheap (ADR-001). Every listener on a cell or a heading therefore closes over the
+`Showing` as it was **when the grid was last drawn**, and the reader has moved
+since.
+
+*So a listener reports the gesture and nothing more.* The right button asks for a
+menu at a place; whether that place is inside the selection — and so whether the
+selection stands or the run under the pointer is taken — is decided in the view,
+where the selection actually lives. The predicates are the same ones the drawing
+uses (`reaches`, `headed`), applied to the state of the moment.
+
+*Why it is worth an ADR.* The bug it fixes looked like three different bugs, and
+was reported twice: a run of columns lost on right-click, then a rectangle lost,
+then a `Shift`+arrow reach lost — each of them the same stale closure, each
+"fixed" by a guard that read the same stale value. The rule is what stops the
+fourth: **a listener may say what happened and where; it may not say what is
+selected.** Anything a listener needs to know about the selection is an argument
+the view passes in, or a question the view answers.
+
 ## 8. Open questions
 
 - **Q1 — `cells:` A1 keys and row insertion.** Inserting a row rewrites every
@@ -2652,6 +2681,25 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-23 — A right-click menu on a cell
+Phase 10's last item, and the phase with it.
+
+- **Cut, copy, paste and clear contents**, at the pointer, each with the key
+  that does it written on the right as both spreadsheets write it.
+- **The selection stands where the right button lands inside it**, and is taken
+  where it lands outside — which is what a reader who selected a rectangle and
+  reached for the menu meant. **Where that is decided matters** (**ADR-047**): a
+  listener on a cell was built when the grid was last drawn and cannot know
+  where the reader has got to, so it reports the gesture and the view answers
+  what it is about.
+- **Paste is the browser's to give.** It hands the clipboard to the keyboard and
+  to nothing else, so the entry acts on what was copied inside the preview and,
+  where there is none, says to press the key instead. Cut and copy have no such
+  trouble: they write in the gesture that asked.
+- **`pointing.ts` is now where a menu at the pointer is built**, both the
+  heading's and the cell's; `draw.ts` went back to being the page.
+- 1741 → 1751 tests.
 
 ### 2026-08-23 — A look taken all the way off
 The item the last change left behind, which turned out to be one line of

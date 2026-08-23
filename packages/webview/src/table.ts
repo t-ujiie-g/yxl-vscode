@@ -248,10 +248,7 @@ function takes(heading: HTMLElement, axis: Axis, at: number, showing: Showing, a
 
   heading.addEventListener('contextmenu', (event) => {
     event.preventDefault();
-    // Inside what is already selected the selection stands, as it does in both
-    // spreadsheets; outside it, the right button takes this one first.
-    if (!headed(showing, axis, at)) asks.takeBand(axis, at, false);
-    asks.pointAt({ axis, at, x: event.clientX, y: event.clientY });
+    asks.pointAt({ kind: 'heading', axis, at, x: event.clientX, y: event.clientY });
   });
 
   // Focusable so the page's keys reach it, as a cell is; not tab-reachable.
@@ -415,6 +412,10 @@ function line(
     // Focusable, so keys reach it; not tab-reachable, or the page cannot be left.
     drawn.tabIndex = -1;
     drawn.addEventListener('mousedown', (event) => {
+      // Not the right button, which fires this before the menu it is opening
+      // and would throw away the selection that menu is about.
+      if (event.button !== 0) return;
+
       if (event.shiftKey) asks.reachTo(row, col);
       else asks.select(row, col);
     });
@@ -422,6 +423,10 @@ function line(
       if ((event.buttons & 1) === 1) asks.reachTo(row, col);
     });
     drawn.addEventListener('dblclick', () => type());
+    drawn.addEventListener('contextmenu', (event) => {
+      event.preventDefault();
+      asks.pointAt({ kind: 'cell', row, col, x: event.clientX, y: event.clientY });
+    });
     drawn.addEventListener('keydown', (event) => {
       // The edit box is a child of the cell, so its keys bubble here.
       if (event.target !== drawn) return;

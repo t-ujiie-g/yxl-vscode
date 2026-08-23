@@ -208,6 +208,13 @@ body {
   cursor: pointer;
 }
 
+/* The shortcut beside a menu entry, held to the right as both spreadsheets keep it. */
+.panel .entry .chord {
+  margin-left: auto;
+  padding-left: 1.5rem;
+  opacity: 0.6;
+}
+
 .panel .entry:hover:not(:disabled) {
   background: var(--vscode-list-hoverBackground, var(--vscode-toolbar-activeBackground));
 }

@@ -370,10 +370,10 @@ describe('a heading a reader clicks', () => {
     at?.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
 
     expect(on.takeBand).not.toHaveBeenCalled();
-    expect(on.pointAt).toHaveBeenCalledWith({ axis: 'column', at: 2, x: 0, y: 0 });
+    expect(on.pointAt).toHaveBeenCalledWith({ kind: 'heading', axis: 'column', at: 2, x: 0, y: 0 });
   });
 
-  it('takes the one under the pointer where the menu is asked for outside the run', () => {
+  it('asks for a menu on the heading, leaving what it is about to the view', () => {
     const on = asks();
     const into = shown(
       {
@@ -388,7 +388,8 @@ describe('a heading a reader clicks', () => {
       .querySelector<HTMLElement>('thead th[data-col="2"]')
       ?.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
 
-    expect(on.takeBand).toHaveBeenCalledWith('column', 2, false);
+    expect(on.takeBand).not.toHaveBeenCalled();
+    expect(on.pointAt).toHaveBeenCalledWith({ kind: 'heading', axis: 'column', at: 2, x: 0, y: 0 });
   });
 
   it('opens a menu on a heading, which hides what the reader has selected', () => {
@@ -398,14 +399,14 @@ describe('a heading a reader clicks', () => {
     into
       .querySelector<HTMLElement>('thead th[data-col="2"]')
       ?.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
-    expect(on.pointAt).toHaveBeenCalledWith({ axis: 'column', at: 2, x: 0, y: 0 });
+    expect(on.pointAt).toHaveBeenCalledWith({ kind: 'heading', axis: 'column', at: 2, x: 0, y: 0 });
 
     const menu = shown(
       {
         drawing: drawing({ sheets: [wide] }),
         selected: { row: 1, col: 2 },
         anchor: { row: 40, col: 3 },
-        pointed: { axis: 'column', at: 2, x: 10, y: 20 },
+        pointed: { kind: 'heading', axis: 'column', at: 2, x: 10, y: 20 },
       },
       on,
     );
@@ -423,6 +424,27 @@ describe('a heading a reader clicks', () => {
     expect(on.group).toHaveBeenCalledWith('column', 2, 3, 1);
   });
 
+  it('asks for a cell’s own menu at the pointer, and takes nothing itself', () => {
+    const on = asks();
+    const into = shown(
+      {
+        drawing: drawing({ sheets: [wide] }),
+        selected: { row: 1, col: 1 },
+        anchor: { row: 2, col: 3 },
+      },
+      on,
+    );
+
+    // The button that opens the menu presses the cell first, as a mouse does.
+    at(into, 2, 2)?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 2 }));
+    at(into, 2, 2)?.dispatchEvent(
+      new MouseEvent('contextmenu', { bubbles: true, cancelable: true }),
+    );
+
+    expect(on.select).not.toHaveBeenCalled();
+    expect(on.pointAt).toHaveBeenCalledWith({ kind: 'cell', row: 2, col: 2, x: 0, y: 0 });
+  });
+
   it('offers the way back where a run beside the heading is hidden', () => {
     const on = asks();
     const hides = sheet({
@@ -434,7 +456,7 @@ describe('a heading a reader clicks', () => {
     const menu = shown(
       {
         drawing: drawing({ sheets: [hides] }),
-        pointed: { axis: 'column', at: 4, x: 10, y: 20 },
+        pointed: { kind: 'heading', axis: 'column', at: 4, x: 10, y: 20 },
       },
       on,
     );

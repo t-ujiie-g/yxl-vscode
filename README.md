@@ -87,9 +87,8 @@ Seeing where everything came from is the half that already works, and it is what
 the rest is built on.
 
 The everyday spreadsheet gestures it does **not** have yet are listed as
-plainly as the ones it does — a right-click menu on a cell is the last of
-[`ROADMAP.md`](./ROADMAP.md) Phase 10; inserting and deleting rows come after
-it, because they are gestures on a heading.
+plainly as the ones it does — inserting and deleting rows and columns are
+[`ROADMAP.md`](./ROADMAP.md) Phase 11, and merging cells comes with them.
 
 Excel still opens the result. `yxl build` still produces the `.xlsx`; this editor
 never writes one.

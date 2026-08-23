@@ -1036,6 +1036,50 @@ describe('the bar over the grid', () => {
     expect(sent.filter((one) => one.kind === 'wear')).toEqual([]);
   });
 
+  it('keeps a selection reached with `Shift`+arrow when the right button lands inside it', () => {
+    const { into } = view();
+
+    at(into, 1, 1)?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    at(into, 1, 1)?.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'ArrowRight', shiftKey: true, bubbles: true }),
+    );
+    expect(into.querySelectorAll('td.ranged')).toHaveLength(2);
+
+    // The grid was drawn before any of that, so only the view knows the reach.
+    at(into, 1, 2)?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 2 }));
+    at(into, 1, 2)?.dispatchEvent(
+      new MouseEvent('contextmenu', { bubbles: true, cancelable: true }),
+    );
+
+    expect(into.querySelector('.menu.pointed')).not.toBeNull();
+    expect(into.querySelectorAll('td.ranged')).toHaveLength(2);
+  });
+
+  it('takes the cell the right button lands on outside the selection', () => {
+    const { into, sent } = view();
+
+    at(into, 1, 1)?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    at(into, 2, 2)?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 2 }));
+    at(into, 2, 2)?.dispatchEvent(
+      new MouseEvent('contextmenu', { bubbles: true, cancelable: true }),
+    );
+
+    expect(sent.filter((one) => one.kind === 'inspect').at(-1)).toMatchObject({ row: 2, col: 2 });
+    expect(into.querySelector('td.selected')?.getAttribute('data-at')).toBe('2:2');
+  });
+
+  it('keeps a run of columns when the right button lands on one of their headings', () => {
+    const { into, sent } = view();
+    const heading = (col: number) => into.querySelector<HTMLElement>(`thead th[data-col="${col}"]`);
+
+    heading(1)?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    heading(2)?.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true, buttons: 1 }));
+    heading(2)?.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+
+    into.querySelector<HTMLButtonElement>('.pointed .entry')?.click();
+    expect(sent.filter((one) => one.kind === 'hide').at(-1)).toMatchObject({ first: 1, last: 2 });
+  });
+
   it('takes the whole sheet from the corner, as whole columns', () => {
     const { into, sent } = view();
 
