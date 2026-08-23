@@ -49,6 +49,19 @@ describe('a sheet', () => {
     expect(source.slice(opaque?.span.start, opaque?.span.end)).toBe('filter: A1:D1');
   });
 
+  it('reads where the sheet is split, an absent axis being unsplit', () => {
+    expect(sheet('name: S\n    split: { x: 120, y: 60 }\n').split).toEqual({ x: 120, y: 60 });
+    expect(sheet('name: S\n    split: { y: 60 }\n').split).toEqual({ x: 0, y: 60 });
+    expect(sheet('name: S\n').split).toBeNull();
+  });
+
+  it('refuses a split whose points are not numbers', () => {
+    const { diagnostics } = load(
+      parse('sheets:\n  - name: S\n    split: { x: wide }\n', { file: 'f' }),
+    );
+    expect(diagnostics.map((one) => one.code)).toEqual(['loader.not-a-number']);
+  });
+
   it('reads whether the sheet draws its own gridlines', () => {
     expect(sheet('name: S\n    gridlines: false\n').gridlines).toBe(false);
     expect(sheet('name: S\n').gridlines).toBeNull();

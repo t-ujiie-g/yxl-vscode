@@ -465,7 +465,7 @@ not a date.
 | Merge cells | ✅ — from the cell's own menu, and lossless: the covered values stay in the spec |
 | Fill down, and the drag handle | ✅ — `Cmd`+`D` / `Cmd`+`R`, offered as a range or as cells; no drag handle |
 | Sort a block of rows | ✅ — over a `data:` block, each row written where it goes exactly as it was |
-| Add, rename, delete, reorder a sheet; a tab colour; hide a sheet | **Phase 12** — the tabs switch today and do nothing else |
+| Add, rename, delete, reorder a sheet; a tab colour; hide a sheet | ✅ — all from the tab bar and the tab's own menu; `split:` is drawn read-only |
 | See that a sheet has an auto filter, and put one on | **Phase 13** — `filter:` is opaque today |
 | A note on a cell; a hyperlink; a dropdown list of allowed values | **Phase 13** — all three are opaque today |
 | Conditional formatting, applied in the drawing | **Phase 13** — over the evaluated values, display only |
@@ -1377,9 +1377,10 @@ Deliberately **not** here: a second selection with `Cmd`+click (every answer in
 
 ### Phase 12 — The sheets themselves
 A workbook is more than one sheet, and a spreadsheet user reaches for the tab bar
-before the toolbar. Today the tabs *switch*; they do nothing else, and the keys
-that say what a sheet is — `visibility`, `tab_color`, `gridlines`, `split` —
-are carried through untouched and shown as nothing (`docs/spec.md` §2).
+before the toolbar. **Complete.** The tab bar adds, renames, deletes, reorders,
+hides and colours a sheet and switches its gridlines, and every key that says
+what a sheet is — `visibility`, `tab_color`, `gridlines`, `split` — is modelled
+rather than carried through blind (`docs/spec.md` §2).
 - [x] **A new sheet**, from a `+` on the tab bar: one `- name:` entry at the end
       of `sheets:`, and the tab bar shown even for one sheet so there is
       somewhere to press
@@ -1429,8 +1430,11 @@ are carried through untouched and shown as nothing (`docs/spec.md` §2).
       the sheet's own lines, not a cell's borders (`docs/spec.md` §2). The
       switch takes the key out again where it goes back to Excel's default,
       rather than writing `gridlines: true`.
-- [ ] **`split:`** drawn as the splitter it is, read-only; the freeze gesture
-      already refuses a split sheet with the reason
+- [x] **`split:`** drawn as the splitter it is, read-only: Excel's own grey bar,
+      where the points say, on each axis the sheet splits. The panes do not
+      scroll apart and the bar does not move — a preview that let it be dragged
+      would be writing a key it cannot honestly place. The freeze gesture reads
+      the modelled `split` now rather than the CST key it stood in for.
 
 ### Phase 13 — What decorates a cell
 `docs/spec.md` §10 and §11: the constructs that sit *on* cells rather than fill
@@ -2949,6 +2953,23 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-23 — The splitter, drawn — Phase 12 complete
+The last of `docs/spec.md` §2's sheet keys, and the last item in the phase.
+
+- **`split: { x, y }` is drawn where it says**: Excel's grey bar, on each axis
+  the sheet splits, at the points the spec gives converted to pixels (a point is
+  four thirds of a CSS pixel). An axis at `0` draws nothing, which is what `0`
+  means.
+- **Read-only, and honestly so.** The panes do not scroll apart and the bar does
+  not move; a preview that let it be dragged would be writing a key it cannot
+  place to the pixel. The tooltip says as much.
+- **The freeze gesture reads the modelled `split`** rather than the CST key it
+  stood in for while `split` was opaque. Same refusal, one source.
+- **Phase 12 is complete.** The tab bar adds, renames, deletes, reorders, hides,
+  colours and switches gridlines, and every key §2 names is modelled rather than
+  carried through blind.
+- Comment shape: export 2.2, private 1.0, inline 1.5, 9 over the limit — held.
 
 ### 2026-08-23 — Gridlines, off
 The third of the tab's switches, and the smallest.

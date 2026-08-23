@@ -65,6 +65,7 @@ export function compileSheet(ctx: Ctx, sheet: Sheet): Drafted {
       visibility: sheet.visibility ?? 'visible',
       tabColor: sheet.tabColor === null ? null : colour(ctx, sheet.tabColor, sheet),
       gridlines: sheet.gridlines ?? true,
+      split: sheet.split,
     },
     cells,
   };

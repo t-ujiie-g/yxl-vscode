@@ -81,6 +81,7 @@ export function sheet(of: Partial<DrawnSheet> = {}): DrawnSheet {
     visibility: 'visible',
     tabColor: null,
     gridlines: true,
+    split: null,
     ...of,
   };
 }

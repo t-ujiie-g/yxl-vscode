@@ -557,11 +557,33 @@ body {
    there. Everything around the sheet keeps the theme, because that part is
    editor, not workbook. */
 .scroller {
+  position: relative;
   overflow: auto;
   max-height: 70vh;
   border: 1px solid var(--vscode-panel-border);
   background: #ffffff;
   color-scheme: light;
+}
+
+/* The splitter a sheet is written with, drawn where it sits: Excel's own bar,
+   thick and grey, over the cells it divides. */
+.split {
+  position: absolute;
+  z-index: 3;
+  background: #7a7a7a;
+  pointer-events: none;
+}
+
+.split.column {
+  top: 0;
+  bottom: 0;
+  width: 3px;
+}
+
+.split.row {
+  right: 0;
+  left: 0;
+  height: 3px;
 }
 
 /* Separate borders, each cell carrying its own right and bottom line: under

@@ -37,6 +37,7 @@ function sheet(of: Partial<DrawnSheet> = {}): DrawnSheet {
     visibility: 'visible',
     tabColor: null,
     gridlines: true,
+    split: null,
     ...of,
   };
 }
@@ -1240,6 +1241,20 @@ describe('the bar over the grid', () => {
       sheet: 'Notes',
       visibility: 'visible',
     });
+  });
+
+  it('draws the splitter where a sheet is split, and only on the axes it splits', () => {
+    const { into, told } = view();
+
+    told({ ...drawing, sheets: [sheet({ split: { x: 120, y: 0 } })] });
+    expect(into.querySelectorAll('.split.column')).toHaveLength(1);
+    expect(into.querySelectorAll('.split.row')).toHaveLength(0);
+
+    told({ ...drawing, sheets: [sheet({ split: { x: 0, y: 60 } })] });
+    expect(into.querySelectorAll('.split.row')).toHaveLength(1);
+
+    told({ ...drawing, sheets: [sheet({ split: null })] });
+    expect(into.querySelectorAll('.split')).toHaveLength(0);
   });
 
   it("turns a sheet's gridlines off from its menu, and draws them off", () => {

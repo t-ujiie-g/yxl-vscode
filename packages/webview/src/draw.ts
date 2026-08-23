@@ -1,6 +1,7 @@
 import { findBar, formulaBar, told } from './boxes';
 import { takingAll, wearing } from './keys';
-import { fit } from './menus';
+import { fit, says } from './menus';
+import { gutterOf } from './outline';
 import {
   comesTo,
   inspector,
@@ -14,7 +15,16 @@ import {
 } from './panels';
 import { pointing } from './pointing';
 import type { DrawnSheet } from './protocol';
-import { type Asks, cellKey, copiedFrom, lookedUp, ranged, type Showing } from './showing';
+import {
+  type Asks,
+  cellKey,
+  copiedFrom,
+  GUTTER,
+  HEADING,
+  lookedUp,
+  ranged,
+  type Showing,
+} from './showing';
 import { grid, headed } from './table';
 import { toolbar } from './toolbar';
 import { type Where, wanted } from './window';
@@ -179,10 +189,45 @@ function scroller(sheet: DrawnSheet, showing: Showing, asks: Asks): HTMLElement 
   box.setAttribute('data-of', looking(showing));
   box.append(grid(sheet, showing, asks));
 
+  const bars = splitter(sheet);
+  if (bars !== null) box.append(bars);
+
   box.addEventListener('scroll', () => {
     const at = wanted(sheet, { top: box.scrollTop, left: box.scrollLeft });
     if (at !== null) asks.showWindow(at.row, at.col);
   });
 
   return box;
+}
+
+/** A point as the page draws it: a spec says `split:` in points, CSS counts pixels. */
+function pixels(points: number): number {
+  return (points * 4) / 3;
+}
+
+/** The splitter, drawn where it sits: the panes do not scroll apart, and the bar does not move. */
+function splitter(sheet: DrawnSheet): HTMLElement | null {
+  const split = sheet.split;
+  if (split === null || (split.x <= 0 && split.y <= 0)) return null;
+
+  const bars = document.createElement('div');
+  bars.className = 'splits';
+
+  if (split.x > 0) {
+    const bar = document.createElement('div');
+    bar.className = 'split column';
+    bar.style.left = `${gutterOf(sheet, 'row') + GUTTER + pixels(split.x)}px`;
+    says(bar, 'This sheet is split here — the preview draws it, and does not move it');
+    bars.append(bar);
+  }
+
+  if (split.y > 0) {
+    const bar = document.createElement('div');
+    bar.className = 'split row';
+    bar.style.top = `${gutterOf(sheet, 'column') + HEADING + pixels(split.y)}px`;
+    says(bar, 'This sheet is split here — the preview draws it, and does not move it');
+    bars.append(bar);
+  }
+
+  return bars;
 }
