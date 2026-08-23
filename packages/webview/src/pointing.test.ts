@@ -33,8 +33,9 @@ describe('the menu a cell has of its own', () => {
       'Copy',
       'Paste',
       'Clear contents',
+      'Create a filter',
     ]);
-    expect(entries.map(said)).toEqual(['Ctrl+X', 'Ctrl+C', 'Ctrl+V', 'Delete']);
+    expect(entries.map(said)).toEqual(['Ctrl+X', 'Ctrl+C', 'Ctrl+V', 'Delete', null]);
   });
 
   it('cuts and copies the cell it was asked for, and shuts itself', () => {
@@ -80,5 +81,14 @@ describe('paste, which the browser hands to the keyboard and not to a menu', () 
 describe('what the menu is about', () => {
   it('is nothing at all where the reader has pointed at nothing', () => {
     expect(pointing(showingOf(), asks() as Asks)).toBeNull();
+  });
+});
+
+describe('the filter a sheet may hang off its header row', () => {
+  it('offers to create one where the sheet has none, over the selection header', () => {
+    const { on, entries } = at(1, 1);
+
+    entries[4]?.click();
+    expect(on.filter).toHaveBeenCalledWith(true);
   });
 });

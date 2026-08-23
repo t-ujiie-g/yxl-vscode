@@ -33,6 +33,7 @@ export function asks(): Asks {
     stopLooking: vi.fn(),
     wear: vi.fn(),
     freeze: vi.fn(),
+    filter: vi.fn(),
     openMenu: vi.fn(),
     takeBand: vi.fn(),
     takeAll: vi.fn(),
@@ -84,6 +85,7 @@ export function sheet(of: Partial<DrawnSheet> = {}): DrawnSheet {
     tabColor: null,
     gridlines: true,
     split: null,
+    filter: null,
     ...of,
   };
 }

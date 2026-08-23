@@ -10,7 +10,7 @@ import { group } from './group';
 import { hide } from './hidden';
 import { line } from './lines';
 import { wear } from './look';
-import { freeze } from './panes';
+import { filter, freeze } from './panes';
 import { add, move, remove, rename, tab } from './sheets';
 import { resize } from './size';
 import { sort } from './sorts';
@@ -677,6 +677,21 @@ describe('a sheet renamed from its tab', () => {
 
     await rename(spec, 'Sales', 'Notes', port);
     expect(refusals[0]).toBe('there is already a sheet named `Notes`');
+  });
+});
+
+describe('a sheet auto filter, set from a cell menu', () => {
+  it('writes the header row of the selection, and takes the key off again', async () => {
+    const { spec, port, files, told } = editor({
+      [ROOT]: `${SALES}    cells:\n      A1: Region\n`,
+    });
+
+    await filter(spec, { sheet: 'Sales', top: 1, left: 1, bottom: 9, right: 3, on: true }, port);
+    expect(files[ROOT]).toBe(`${SALES}    cells:\n      A1: Region\n    filter: A1:C1\n`);
+    expect(told).toEqual(['Sales has a filter on its header row.']);
+
+    await filter(spec, { sheet: 'Sales', top: 1, left: 1, bottom: 1, right: 1, on: false }, port);
+    expect(files[ROOT]).toBe(`${SALES}    cells:\n      A1: Region\n`);
   });
 });
 

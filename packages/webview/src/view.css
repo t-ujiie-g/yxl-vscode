@@ -622,6 +622,21 @@ body {
   border-color: transparent;
 }
 
+/* A filtered header's mark, at the right of the cell as Excel puts it. */
+.grid td .dropdown {
+  position: absolute;
+  top: 50%;
+  right: 2px;
+  z-index: 1;
+  translate: 0 -50%;
+  border: 1px solid #b0b0b0;
+  border-radius: 2px;
+  background: #ffffff;
+  padding: 0 2px;
+  font-size: 0.8em;
+  line-height: 1.2;
+}
+
 /* An `icon_set` rule's mark, which sits before the value as Excel puts it. */
 .grid td .icon {
   position: relative;

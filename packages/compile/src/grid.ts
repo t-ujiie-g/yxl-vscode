@@ -49,6 +49,7 @@ export interface CompiledSheet {
   readonly gridlines: boolean;
   readonly split: Split | null;
   readonly conditional: readonly CompiledRule[];
+  readonly filter: Rect | null;
 }
 
 /** What decides a rule, its colours substituted; everything else is the spec's own (`docs/spec.md` §10). */

@@ -3,6 +3,7 @@ import { columnLabel } from '@yxl-vscode/units';
 import { corner } from './boxes';
 import { drawCell, shows, spills, typeInto } from './cell';
 import { copying, filling, going, looking as lookingFor, pasting, undoing } from './keys';
+import { says } from './menus';
 import {
   behind,
   drawOutline,
@@ -386,6 +387,7 @@ function line(
     if (merged.covered.has(cellKey(col, row)) || widthOf(sheet, col) === 0) continue;
 
     const here = held.get(cellKey(col, row));
+    const filtered = filters(sheet, row, col);
     const anchored = merged.anchored.get(cellKey(col, row));
     const drawn = drawCell(
       here,
@@ -393,6 +395,7 @@ function line(
       anchored === undefined ? spillOf(sheet, held, row, col) : 0,
     );
     if (drawn.querySelector('.spill') !== null) drawn.classList.add('spilling');
+    if (filtered) drawn.append(dropdown());
     drawn.setAttribute('data-at', cellKey(col, row));
     if (one.stays) stay(sheet, drawn, { col });
     if (showing.selected?.row === row && showing.selected.col === col) {
@@ -547,4 +550,22 @@ export function pinned(into: HTMLElement): void {
     }
     top += line.offsetHeight;
   }
+}
+
+/** Whether this cell is one of the header cells a sheet's filter hangs off (`docs/spec.md` §10). */
+function filters(sheet: DrawnSheet, row: number, col: number): boolean {
+  const at = sheet.filter;
+  if (at === null) return false;
+
+  return row === at.top && col >= at.left && col <= at.right;
+}
+
+/** The mark Excel puts on a filtered header, which says a filter is there and nothing more. */
+function dropdown(): HTMLElement {
+  const mark = document.createElement('span');
+  mark.className = 'dropdown';
+  mark.textContent = '▾';
+  says(mark, 'This column has a filter; the preview does not filter by it');
+
+  return mark;
 }

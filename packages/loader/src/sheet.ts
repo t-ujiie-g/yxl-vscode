@@ -64,6 +64,7 @@ function readSheet(site: Site): Sheet | null {
   let gridlines: Sheet['gridlines'] = null;
   let split: Sheet['split'] = null;
   let conditional: Conditional[] = [];
+  let filter: Sheet['filter'] = null;
   const opaque: Opaque[] = [];
 
   for (const entry of entries) {
@@ -108,6 +109,9 @@ function readSheet(site: Site): Sheet | null {
       case 'conditional':
         conditional = readConditional(here, entry.value, at);
         break;
+      case 'filter':
+        filter = readAs(here, entry.value, `${what} \`filter\``, RANGE);
+        break;
       default:
         opaque.push({ ...identify(here, at, entry.span), key });
     }
@@ -128,6 +132,7 @@ function readSheet(site: Site): Sheet | null {
     gridlines,
     split,
     conditional,
+    filter,
     keyOrder: entries.map(keyOf),
     opaque,
   };

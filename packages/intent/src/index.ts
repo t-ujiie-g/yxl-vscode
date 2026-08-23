@@ -11,6 +11,7 @@ export {
   type Text,
 } from './direct';
 export { type Filling, setFilled } from './fill';
+export { type Filtering, setFilter } from './filter';
 export { type Frozen, setFreeze } from './freeze';
 export { type Grouping, setGroup } from './group';
 export { type Hiding, setHidden } from './hidden';

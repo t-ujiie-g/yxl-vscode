@@ -143,6 +143,7 @@ function drawSheet(
     tabColor: sheet.tabColor,
     gridlines: sheet.gridlines,
     split: sheet.split,
+    filter: sheet.filter,
     widths: sheet.columns.map(sizedRun),
     heights: sheet.rows.map(sizedRun),
     cells: drawCells(sheet, { at, rows, columns, freeze }, evaluation),

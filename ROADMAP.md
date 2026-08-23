@@ -1481,10 +1481,12 @@ of its colours and why a header row showed no filter.
       With this, **every kind of `conditional:` rule is drawn**, and the
       inspector's "not drawn by this preview yet" had nothing left to say and
       is gone.
-- [ ] **Auto filter** (`filter:`) — the dropdown mark on the header row where
-      the sheet has one, and *Create a filter* / *Remove filter* on a selection.
-      Per-column criteria are not in the schema yet, so neither is filtering
-      the preview; what is drawn is that a filter is there and where
+- [x] **Auto filter** (`filter:`) — modelled rather than opaque. Every header
+      cell wears Excel's dropdown mark, and the cell's own menu offers *Create a
+      filter* over the selection's top row or *Remove filter*, one per sheet as
+      `docs/spec.md` §10 says. Per-column criteria are not in the schema, so the
+      preview does not filter by one and says so on the mark: what is drawn is
+      that a filter is there and where.
 - [ ] **Notes** (`comments:`) — the red corner, the note on hover, and *Insert
       note* / *Edit note* / *Delete note* in the cell's own menu
 - [ ] **Hyperlinks** (`links:`) — drawn as links, `Cmd`+click follows one, and
@@ -2991,6 +2993,19 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-23 — The filter a sheet hangs off its header row
+`filter:` was opaque. It is modelled now, drawn, and can be put on and taken off.
+
+- **Every header cell wears the dropdown mark** Excel puts there, and says on
+  hover what it is: a filter is declared, and this preview does not filter by
+  it. Per-column criteria are not in the schema (`docs/spec.md` §10), so there
+  is nothing to filter *by* — drawing the mark is the whole of what is true.
+- **The cell's own menu offers it**: *Create a filter* over the selection's top
+  row, or *Remove filter*. One per sheet, so a second one replaces the first
+  rather than being refused.
+- The entry sits last in the menu, under the clipboard, where Excel keeps it.
+- Comment shape: export 2.2, private 1.0, inline 1.5, 0 over the limit — held.
 
 ### 2026-08-23 — Icon sets, and every conditional rule drawn
 The last of conditional formatting's kinds, and the end of the construct.

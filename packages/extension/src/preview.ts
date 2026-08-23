@@ -6,6 +6,7 @@ import type { Axis } from '@yxl-vscode/spec';
 import { addrAt, cellOf, filePath, parseColor } from '@yxl-vscode/units';
 import type {
   Filled,
+  Filtered,
   FromView,
   Frozen,
   Grouped,
@@ -31,7 +32,7 @@ import { inspect, type Nodes, nodeUnder } from './inspect';
 import { line } from './lines';
 import { wear } from './look';
 import { merge } from './merges';
-import { freeze } from './panes';
+import { filter, freeze } from './panes';
 import { drawRun, type Projected, project, redraw, type Window } from './project';
 import { add, move, remove, rename, tab } from './sheets';
 import { resize } from './size';
@@ -68,6 +69,7 @@ const WRITES = {
     choice === undefined ? empty(spec, ranged, port) : emptied(spec, ranged, choice, port),
   wear: (spec: Spec, worn: Worn, port: Port, choice?: string) => wear(spec, worn, port, choice),
   freeze: (spec: Spec, frozen: Frozen, port: Port) => freeze(spec, frozen, port),
+  filter: (spec: Spec, asked: Filtered, port: Port) => filter(spec, asked, port),
   merge: (spec: Spec, one: Merged, port: Port) => merge(spec, one, port),
   table: (spec: Spec, one: Ranged, port: Port) => table(spec, one, port),
   fill: (spec: Spec, one: Filled, port: Port, choice?: string) => fill(spec, one, port, choice),

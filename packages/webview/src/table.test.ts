@@ -169,6 +169,7 @@ describe('a sheet with frozen panes', () => {
     tabColor: null,
     gridlines: true,
     split: null,
+    filter: null,
   });
 
   it('draws the frozen rows above the window, wherever the window is', () => {
@@ -1002,5 +1003,25 @@ describe('text that does not fit its cell', () => {
     });
 
     expect(at(shown({ drawing: held }), 1, 1)?.querySelector('.spill')).toBeNull();
+  });
+});
+
+describe('a sheet with a filter on its header row', () => {
+  it('marks each header cell, and nothing under them', () => {
+    const held = drawing({
+      sheets: [
+        sheet({
+          rows: 2,
+          columns: 2,
+          filter: { top: 1, left: 1, bottom: 1, right: 2 },
+          cells: [cell(1, 1, { value: 'Region' }), cell(2, 1, { value: 'EMEA' })],
+        }),
+      ],
+    });
+    const into = shown({ drawing: held });
+
+    expect(at(into, 1, 1)?.querySelector('.dropdown')).not.toBeNull();
+    expect(at(into, 1, 2)?.querySelector('.dropdown')).not.toBeNull();
+    expect(at(into, 2, 1)?.querySelector('.dropdown')).toBeNull();
   });
 });
