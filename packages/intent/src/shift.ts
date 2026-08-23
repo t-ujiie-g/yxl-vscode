@@ -98,13 +98,13 @@ function keeps(sheet: CompiledSheet, cell: CompiledCell, line: Line): string | n
 }
 
 /** One `data:` block, as the cells it laid down say where it reaches. */
-interface Block {
+export interface Block {
   readonly node: NodeId;
   readonly rect: Rect;
   readonly file: string | null;
 }
 
-function blocks(sheet: CompiledSheet): Block[] {
+export function blocks(sheet: CompiledSheet): Block[] {
   const found = new Map<NodeId, { rect: Rect; file: string | null }>();
 
   for (const cell of sheet.cells.values()) {
@@ -131,13 +131,13 @@ function blocks(sheet: CompiledSheet): Block[] {
 }
 
 /** The line, asked what it does to a place, a rectangle, or a run of the axis it is drawn on. */
-interface Along {
+export interface Along {
   readonly at: (cell: { col: number; row: number }) => Does | null;
   readonly over: (rect: Rect) => Does | null;
   readonly run: (first: number, last: number) => Does | null;
 }
 
-function along(line: Line): Along {
+export function along(line: Line): Along {
   const columns = line.axis === 'column';
   const taken = line.by < 0 ? { first: line.at, last: line.at - line.by - 1 } : null;
 

@@ -1276,8 +1276,22 @@ Deliberately **not** here: a second selection with `Cmd`+click (every answer in
             case for offering the conversion instead. Beside them, what stands
             in the way: a formula naming a row a delete would take, and rows
             that come from a CSV, which this cannot open a gap in.
-      - [ ] The write itself, construct by construct, and the gesture on the
-            heading
+      - [x] **The write itself**, construct by construct: a `cells:` key is
+            renamed and a formula rewritten wherever it stands, a `data:` block
+            opens a gap or moves by its anchor, a range and a merge take the
+            line in or move whole, a band's `at:` follows, the freeze moves with
+            the cell it names. `rekeyMap` turned out **not to be needed**: ops
+            are located against the tree as it was and spliced at the end, so
+            four hundred `renameKey`s are four hundred disjoint edits, and the
+            op the §4.5 table was holding a place for is one the language does
+            not have to grow.
+      - [ ] The gesture on the heading, with the count in front of it and the
+            `data:` conversion offered where the count is what the `cells:`
+            keys cost
+- [ ] **A field cannot go into rows written as `[a, b]`.** Inserting a column
+      through an inline `data:` block needs the CST to rewrite a flow sequence,
+      which it does not do yet; the gesture refuses and says so. Rows written a
+      line at a time take one either way.
 - [ ] `rekeyMap` for bulk A1 shifts in `cells:`
 - [ ] `merge` / `unmerge`, and band creation
 - [ ] The "convert this rectangle to `data:`" offer, at the moment a `cells:`
@@ -2764,6 +2778,28 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-23 — A line drawn in the sheet
+Phase 11's third piece: the write. Every construct the line reaches, moved where
+the line leaves it.
+
+- **A `cells:` key is renamed and its formula rewritten** — and a formula is
+  rewritten *wherever it stands*, not only where the line moved the cell it is
+  written in. `=A5*2` in `B1` says `=A6*2` once a row goes in above 5.
+- **A `data:` block opens a gap or moves by its anchor**, a `formulas:` range
+  and a merge take the line in or move whole, a band's `at:` follows, and the
+  freeze moves with the cell it names.
+- **`rekeyMap` is not needed.** §4.5 has been holding a place for an op that
+  does a bulk A1 shift; ops are located against the tree *as it was* and spliced
+  at the end, so four hundred `renameKey`s are four hundred disjoint edits with
+  no collision to sequence. The language does not have to grow.
+- **A filled cell is checked too.** Deleting row 5 under a range whose cell at
+  `C8` applies `=A5*2` is refused, naming that cell — Excel would leave `#REF!`
+  there.
+- **What it will not do, and says so:** put a field into rows written as
+  `[a, b]`, which needs the CST to rewrite a flow sequence. Rows written a line
+  at a time take one either way.
+- 1797 → 1813 tests.
 
 ### 2026-08-23 — What a line would move
 Phase 11's second piece: the answer to *what happens if I insert a row here*,
