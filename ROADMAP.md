@@ -2961,11 +2961,12 @@ The last of `docs/spec.md` §2's sheet keys, and the last item in the phase.
   the sheet splits, at the points the spec gives converted to pixels (a point is
   four thirds of a CSS pixel). An axis at `0` draws nothing, which is what `0`
   means.
-- **Read-only, and honestly so.** The panes do not scroll apart and the bar does
-  not move; a preview that let it be dragged would be writing a key it cannot
-  place to the pixel. The bar takes the pointer so it can say that on hover,
-  which costs three pixels of the sheet under it — Excel's splitter takes the
-  pointer too.
+- **Read-only, and said under the grid.** The panes do not scroll apart and the
+  bar does not move; a preview that let it be dragged would be writing a key it
+  cannot place to the pixel. That is said as a note under the grid, beside the
+  other notes, rather than as a tooltip on the bar: a three-pixel line running
+  the height of a scrolling sheet has nowhere to hang one, and it should not eat
+  the clicks of the cells it crosses to try.
 - **The freeze gesture reads the modelled `split`** rather than the CST key it
   stood in for while `split` was opaque. Same refusal, one source.
 - **Phase 12 is complete.** The tab bar adds, renames, deletes, reorders, hides,
