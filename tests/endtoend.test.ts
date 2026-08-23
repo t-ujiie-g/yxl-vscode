@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import { type CompiledGrid, cellAt, compile, resolve } from '@yxl-vscode/compile';
 import { parse } from '@yxl-vscode/cst';
-import { reading, setStyle } from '@yxl-vscode/intent';
+import { drawLine, reading, setStyle } from '@yxl-vscode/intent';
 import { load } from '@yxl-vscode/loader';
 import { type A1Addr, type FilePath, filePath, type SheetName } from '@yxl-vscode/units';
 import type { Typed } from '@yxl-vscode/webview/protocol';
@@ -294,6 +294,27 @@ describe('the loop, closed', () => {
     const { grid } = built(dir, root);
     expect(cell(grid, 'Sales', 'C3')?.formula).toBe('B3*0.05');
     expect(resolve(cell(grid, 'Sales', 'C3')?.style ?? [])['font.bold']).toBe(true);
+  });
+
+  it('puts a row into the workbook, moving what is under it and what names it', async () => {
+    if (!QUICKSTART) return;
+    const { dir, root, port, spec, refusals } = opened(QUICKSTART);
+
+    // Above `A5: Total` and its `SUM(B2:B3)`, and above the `data:` block at A9.
+    const intent = drawLine(
+      spec(),
+      { sheet: 'Sales' as SheetName, axis: 'row', at: 3, by: 1 },
+      reading(port.text),
+    );
+    await applied(spec(), intent, port, { anyway: false, from: 'line', about: null });
+    expect(refusals).toEqual([]);
+
+    const { grid } = built(dir, root);
+    expect(cell(grid, 'Sales', 'A3')).toBeNull();
+    expect(cell(grid, 'Sales', 'A4')?.value).toBe('EMEA');
+    expect(cell(grid, 'Sales', 'B6')?.formula).toBe('SUM(B2:B4)');
+    expect(cell(grid, 'Sales', 'A10')?.value).toBe('Quarter');
+    expect(cell(grid, 'Sales', 'C4')?.formula).toBe('B4*0.05');
   });
 
   it('takes a cell back out of the workbook when it is emptied', async () => {

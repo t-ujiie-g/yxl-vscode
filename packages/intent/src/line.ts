@@ -1,4 +1,10 @@
-import { type CompiledSheet, sheetOf } from '@yxl-vscode/compile';
+import {
+  addressesIn,
+  type CompiledSheet,
+  type FullAddr,
+  REACH,
+  sheetOf,
+} from '@yxl-vscode/compile';
 import { nodeAt, type Op, type Path } from '@yxl-vscode/cst';
 import {
   type A1Addr,
@@ -8,10 +14,12 @@ import {
   type Line,
   qualified,
   type Rect,
+  type SheetName,
   shifted,
 } from '@yxl-vscode/units';
 import { spelled } from './bands';
 import { type Found, type Intent, located, type Projection, type Reading, refused } from './direct';
+import type { Candidate } from './resolve';
 import { along, blocks, lineSaid, shifting } from './shift';
 
 /**
@@ -41,6 +49,57 @@ export function drawLine(spec: Projection, line: Line, read: Reading): Intent {
   };
 }
 
+/** How much a line may move before a reader is asked first, rather than told after. */
+const MANY = 20;
+
+/**
+ * The one answer a line has, with what it costs in front of it: applied without
+ * asking where it moves little, and offered where the count is what a reader is
+ * deciding about (§4.4).
+ */
+export function setLine(spec: Projection, line: Line, read: Reading): readonly Candidate[] {
+  const sheet = sheetOf(spec.grid, line.sheet);
+  if (sheet === null) return [];
+
+  // The one answer, whatever the intent turns out to be: a refusal carries its
+  // own reason, and swallowing it here would leave the reader with none.
+  const intent = drawLine(spec, line, read);
+  const { moves } = shifting(sheet, line);
+  const keys = moves.filter((one) => one.of === 'cell').length;
+
+  return [
+    {
+      id: 'line',
+      what: `${said(line)}, moving ${counted(moves.length, keys)}`,
+      moves: intent.kind === 'edit' ? [...intent.expects.cells].map(named) : [],
+      alone: moves.length <= MANY,
+      intent,
+    },
+  ];
+}
+
+/** What the gesture is, as the reader asked for it. */
+function said(line: Line): string {
+  const many = Math.abs(line.by);
+  const what = many === 1 ? line.axis : `${many} ${line.axis}s`;
+
+  return line.by < 0 ? `Take ${lineSaid(line)} away` : `Put ${what} in above ${lineSaid(line)}`;
+}
+
+/** What it costs, in the lines of YAML it would touch and the cell keys among them. */
+function counted(all: number, keys: number): string {
+  const things = `${all} thing${all === 1 ? '' : 's'}`;
+  if (keys === 0) return things;
+
+  return `${things}, ${keys === all ? 'all' : keys} of them \`cells:\` keys`;
+}
+
+/** One qualified address back into the sheet and cell it names. */
+function named(one: string): FullAddr {
+  const [sheet = '', at = ''] = one.split('!');
+  return { sheet: sheet as SheetName, at: at as A1Addr };
+}
+
 interface Writing {
   readonly kind: 'writing';
   readonly file: FilePath;
@@ -60,6 +119,16 @@ function writing(sheet: CompiledSheet, line: Line, read: Reading): Writing | Int
     return true;
   };
 
+  // What the edit claims: every address the line reaches, and the one it leaves
+  // each of them at — a cell that moved changed in both places.
+  for (const at of addressesIn(sheet, REACH)) {
+    const does = of.at(cellOf(at));
+    if (does === null) continue;
+
+    moves.push(at);
+    if (does !== 'goes') moves.push(moved(at, line));
+  }
+
   for (const [key, cell] of sheet.cells) {
     const at = key as A1Addr;
     const from = cell.provenance.value;
@@ -68,7 +137,6 @@ function writing(sheet: CompiledSheet, line: Line, read: Reading): Writing | Int
     const does = of.at(cellOf(at));
     const gone = does === 'goes';
     if (does !== null) {
-      moves.push(at);
       put(located(from.node, read), (path) =>
         gone ? [{ op: 'remove', path }] : [{ op: 'renameKey', path, to: moved(at, line) }],
       );

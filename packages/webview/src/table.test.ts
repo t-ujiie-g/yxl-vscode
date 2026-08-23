@@ -413,14 +413,26 @@ describe('a heading a reader clicks', () => {
     const entries = [...menu.querySelectorAll<HTMLElement>('.pointed .entry')];
 
     expect(entries.map((one) => one.textContent)).toEqual([
+      'Insert 2 columns left',
+      'Insert 2 columns right',
+      'Delete 2 columns',
       'Hide these 2 columns',
       'Group these 2 columns',
     ]);
 
     entries[0]?.click();
-    expect(on.hide).toHaveBeenCalledWith('column', 2, 3, true);
+    expect(on.line).toHaveBeenCalledWith('column', 2, 2);
 
     entries[1]?.click();
+    expect(on.line).toHaveBeenLastCalledWith('column', 4, 2);
+
+    entries[2]?.click();
+    expect(on.line).toHaveBeenLastCalledWith('column', 2, -2);
+
+    entries[3]?.click();
+    expect(on.hide).toHaveBeenCalledWith('column', 2, 3, true);
+
+    entries[4]?.click();
     expect(on.group).toHaveBeenCalledWith('column', 2, 3, 1);
   });
 
@@ -463,6 +475,9 @@ describe('a heading a reader clicks', () => {
 
     const entries = [...menu.querySelectorAll<HTMLElement>('.pointed .entry')];
     expect(entries.map((one) => one.textContent)).toEqual([
+      'Insert column left',
+      'Insert column right',
+      'Delete this column',
       'Hide this column',
       'Show columns B-C again',
       'Group this column',

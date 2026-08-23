@@ -1075,7 +1075,8 @@ describe('the bar over the grid', () => {
     heading(2)?.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true, buttons: 1 }));
     heading(2)?.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
 
-    into.querySelector<HTMLButtonElement>('.pointed .entry')?.click();
+    const entries = [...into.querySelectorAll<HTMLButtonElement>('.pointed .entry')];
+    entries.find((one) => one.textContent?.startsWith('Hide'))?.click();
     expect(sent.filter((one) => one.kind === 'hide').at(-1)).toMatchObject({ first: 1, last: 2 });
   });
 

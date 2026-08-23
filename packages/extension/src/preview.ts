@@ -8,6 +8,7 @@ import type {
   Frozen,
   Grouped,
   Hidden,
+  Lined,
   Pasted,
   PastedAt,
   PastedText,
@@ -22,6 +23,7 @@ import { asOpen, put, reveal, textOf } from './documents';
 import { group } from './group';
 import { hide } from './hidden';
 import { inspect, type Nodes, nodeUnder } from './inspect';
+import { line } from './lines';
 import { wear } from './look';
 import { freeze } from './panes';
 import { drawRun, type Projected, project, redraw, type Window } from './project';
@@ -62,6 +64,7 @@ const WRITES = {
   hide: (spec: Spec, one: Hidden, port: Port, choice?: string) => hide(spec, one, port, choice),
   resize: (spec: Spec, one: Resized, port: Port, choice?: string) =>
     resize(spec, one, port, choice),
+  line: (spec: Spec, one: Lined, port: Port, choice?: string) => line(spec, one, port, choice),
   paste: (spec: Spec, one: Pasted, port: Port, choice?: string) =>
     pastedWith(spec, one, choice ?? '', port),
   pasteText: (spec: Spec, one: PastedText, port: Port, choice?: string) =>
