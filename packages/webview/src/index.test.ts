@@ -1186,6 +1186,21 @@ describe('the bar over the grid', () => {
     expect(into.querySelector<HTMLInputElement>('.tabs .tab.naming')?.value).toBe('Sales');
   });
 
+  it("takes a sheet out from the tab's own menu", () => {
+    const { into, sent } = view();
+
+    into
+      .querySelector<HTMLButtonElement>('.tabs .tab:not(.add)')
+      ?.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+
+    const entries = [...into.querySelectorAll<HTMLButtonElement>('.pointed .entry')];
+    entries.find((one) => one.firstChild?.textContent === 'Delete')?.click();
+
+    expect(sent.filter((one) => one.kind === 'deleteSheet')).toEqual([
+      { kind: 'deleteSheet', sheet: 'Sales' },
+    ]);
+  });
+
   it('asks for nothing where the name in the tab did not change', () => {
     const { into, sent } = view();
 

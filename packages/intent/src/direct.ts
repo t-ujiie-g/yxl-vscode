@@ -1,8 +1,10 @@
 import {
+  addressesIn,
   type CompiledGrid,
   type CompiledSheet,
   cellAt,
   type FacetOrigin,
+  REACH,
   sheetOf,
 } from '@yxl-vscode/compile';
 import {
@@ -18,11 +20,12 @@ import {
 } from '@yxl-vscode/cst';
 import { pathOf } from '@yxl-vscode/loader';
 import type { Patch } from '@yxl-vscode/patch';
-import type { ScalarValue, SpecDoc } from '@yxl-vscode/spec';
+import type { ScalarValue, Sheet, SpecDoc } from '@yxl-vscode/spec';
 import {
   type A1Addr,
   type FilePath,
   type NodeId,
+  names,
   qualified,
   type SheetName,
 } from '@yxl-vscode/units';
@@ -385,4 +388,29 @@ export function beside(file: string): string {
 /** An edit that will not happen, and the sentence a reader can act on (ADR-001). */
 export function refused(why: string): Intent & { kind: 'refused' } {
   return { kind: 'refused', why };
+}
+
+/**
+ * Every cell on the other sheets whose formula names this one, as `Sheet!A1`.
+ * A rename rewrites them; a deletion is refused over them rather than leaving
+ * `#REF!` behind.
+ */
+export function cellsNaming(spec: Projection, sheet: SheetName): Set<string> {
+  const found = new Set<string>();
+
+  for (const one of spec.grid.sheets) {
+    if (one.name === sheet) continue;
+
+    for (const at of addressesIn(one, REACH)) {
+      const body = cellAt(one, at)?.formula ?? null;
+      if (body !== null && names(body, sheet)) found.add(qualified(one.name, at));
+    }
+  }
+
+  return found;
+}
+
+/** The name a sheet is written under, or `null` where a `${...}` stands in its place. */
+export function nameOf(sheet: Sheet): SheetName | null {
+  return typeof sheet.name === 'string' ? sheet.name : null;
 }

@@ -45,6 +45,24 @@ function calling(from: SheetName, to: SheetName): Rule {
   };
 }
 
+/** Whether a formula names this sheet — the word before a `!`, never one inside a string. */
+export function names(formula: string, sheet: SheetName): boolean {
+  let found = false;
+
+  walked(formula, {
+    cell: (text) => text,
+    column: (text) => text,
+    row: (text) => text,
+    why: (word) => `\`${word}\` could not be read`,
+    named: (name) => {
+      if (name === sheet) found = true;
+      return name;
+    },
+  });
+
+  return found;
+}
+
 /** A sheet name as a formula writes it: quoted where anything but a word would need it. */
 export function sheetSpelled(name: SheetName): string {
   return /^[A-Za-z_][A-Za-z0-9_.]*$/.test(name) ? name : `'${name.replaceAll("'", "''")}'`;

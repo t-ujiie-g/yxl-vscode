@@ -10,6 +10,7 @@ export function asks(): Asks {
     addSheet: vi.fn(),
     renameSheet: vi.fn(),
     nameSheet: vi.fn(),
+    deleteSheet: vi.fn(),
     drawWith: vi.fn(),
     resize: vi.fn(),
     select: vi.fn(),

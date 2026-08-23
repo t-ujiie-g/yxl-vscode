@@ -32,7 +32,7 @@ import { wear } from './look';
 import { merge } from './merges';
 import { freeze } from './panes';
 import { drawRun, type Projected, project, redraw, type Window } from './project';
-import { add, rename } from './sheets';
+import { add, remove, rename } from './sheets';
 import { resize } from './size';
 import { sort } from './sorts';
 import { summed } from './summing';
@@ -74,6 +74,7 @@ const WRITES = {
   addSheet: (spec: Spec, one: { name: string }, port: Port) => add(spec, one.name, port),
   renameSheet: (spec: Spec, one: { sheet: string; name: string }, port: Port) =>
     rename(spec, one.sheet, one.name, port),
+  deleteSheet: (spec: Spec, one: { sheet: string }, port: Port) => remove(spec, one.sheet, port),
   group: (spec: Spec, grouped: Grouped, port: Port, choice?: string) =>
     group(spec, grouped, port, choice),
   hide: (spec: Spec, one: Hidden, port: Port, choice?: string) => hide(spec, one, port, choice),

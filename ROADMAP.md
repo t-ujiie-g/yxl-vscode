@@ -1404,8 +1404,13 @@ are carried through untouched and shown as nothing (`docs/spec.md` §2).
       quotes the new name where Excel's grammar needs it, and leaves a name
       inside a string alone. The edit claims exactly the cells whose formula it
       rewrites, so `verify` still catches anything else that moved.
-- [ ] **Delete a sheet** from the tab's menu, refused where it is the last
-      visible one (§2) or where another sheet's formula names it
+- [x] **Delete a sheet** from the tab's menu — its entry, and the overrides on
+      its cells, which yxl refuses if left dangling. Refused where it is the
+      only sheet, where a surviving formula names it (Excel writes `#REF!`
+      there; this writes nothing), and where every other sheet sets
+      `visibility:`, which is not read yet and so cannot be shown to leave one
+      visible (§2). That last refusal tightens into a real check when the
+      hide/unhide item below lands.
 - [ ] **Reorder** by dragging a tab — the `sheets:` sequence is tab order
 - [ ] **Hide and unhide** a sheet (`visibility: hidden`), and `very_hidden`
       drawn as what it is and not offered; **tab colour** from the tab's menu
@@ -2930,6 +2935,24 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-23 — A sheet taken out
+The tab bar's third gesture, and the first deletion in this project that has to
+reason about what else the file says.
+
+- **Delete from the tab's own menu.** The sheet's entry goes, and so do the
+  `overrides:` on its cells — yxl refuses an override naming a sheet that is not
+  declared, so leaving them would write a spec that no longer builds. Where they
+  were the only overrides, the `overrides:` key goes with them.
+- **Three refusals, each with the reason.** The only sheet (`a workbook needs a
+  sheet`); a surviving formula that names it, listed by cell — Excel writes
+  `#REF!` there and this writes nothing; and every other sheet setting
+  `visibility:`, which this preview does not read yet and so cannot show that
+  one would be left visible.
+- **`names`, a fourth rule over the one formula parser**, and `cellsNaming` in
+  `intent` over it: every cell on the other sheets whose formula names this one.
+  The rename claims that set as what it changes; the deletion refuses over it.
+- Comment shape: export 2.2, private 1.0, inline 1.5, 9 over the limit — held.
 
 ### 2026-08-23 — A sheet renamed, and everything that named it
 The tab bar's second gesture, and the first edit in this project that rewrites

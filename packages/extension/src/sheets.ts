@@ -1,4 +1,4 @@
-import { addSheet, reading, renameSheet } from '@yxl-vscode/intent';
+import { addSheet, deleteSheet, reading, renameSheet } from '@yxl-vscode/intent';
 import { applied, type Port, type Spec, sheetNamed } from './write';
 
 /**
@@ -24,4 +24,18 @@ export async function rename(spec: Spec, said: string, name: string, port: Port)
 
   const done = await applied(spec, intent, port, { anyway: false, from: 'rename', about: null });
   if (done) port.said(`\`${said}\` is \`${name}\` now.`);
+}
+
+/**
+ * A sheet taken out from its tab's menu, with the overrides on its cells
+ * (`docs/spec.md` §2). Refused rather than leaving `#REF!` behind.
+ */
+export async function remove(spec: Spec, said: string, port: Port): Promise<void> {
+  const sheet = sheetNamed(said, port);
+  if (sheet === null) return;
+
+  const intent = deleteSheet(spec, { sheet }, reading(port.text));
+
+  const done = await applied(spec, intent, port, { anyway: false, from: 'delete', about: null });
+  if (done) port.said(`\`${said}\` taken out.`);
 }
