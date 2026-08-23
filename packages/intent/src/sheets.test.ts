@@ -76,6 +76,15 @@ describe('a sheet taken out', () => {
     expect(deleted(TWO, 'Sales')).toBe('sheets:\n  - name: Notes\n    cells:\n      A1: hello\n');
   });
 
+  it('takes the blank line between the sheets with it, either way round', () => {
+    const spaced = `${ONE}\n  - name: Notes\n    cells:\n      A1: hello\n`;
+
+    expect(deleted(spaced, 'Notes')).toBe(ONE);
+    expect(deleted(spaced, 'Sales')).toBe(
+      'sheets:\n  - name: Notes\n    cells:\n      A1: hello\n',
+    );
+  });
+
   it('is refused where it is the only sheet, which a workbook needs', () => {
     expect(deleted(ONE, 'Sales')).toBe(
       'refused: a workbook needs a sheet, and this is the only one',

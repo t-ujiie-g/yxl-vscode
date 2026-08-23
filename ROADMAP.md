@@ -2952,6 +2952,11 @@ reason about what else the file says.
 - **`names`, a fourth rule over the one formula parser**, and `cellsNaming` in
   `intent` over it: every cell on the other sheets whose formula names this one.
   The rename claims that set as what it changes; the deletion refuses over it.
+- **A last entry takes the gap above it.** A removal already took the comment
+  block above an entry and the blank line under it; a *last* entry has no gap
+  under it, and the blank line above it was left orphaned — so the removal was
+  refused, since it could not be put back byte for byte (ADR-026). It now takes
+  that gap, which is every real file with a blank line between its sheets.
 - Comment shape: export 2.2, private 1.0, inline 1.5, 9 over the limit — held.
 
 ### 2026-08-23 — A sheet renamed, and everything that named it
