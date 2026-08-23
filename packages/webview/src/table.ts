@@ -1,8 +1,8 @@
 import type { Axis } from '@yxl-vscode/spec';
 import { columnLabel } from '@yxl-vscode/units';
 import { corner } from './boxes';
-import { drawCell, noteInto, shows, spills, typeInto } from './cell';
-import { copying, filling, going, looking as lookingFor, pasting, undoing } from './keys';
+import { type Asking, askInto, drawCell, shows, spills, typeInto } from './cell';
+import { copying, filling, going, HELD, looking as lookingFor, pasting, undoing } from './keys';
 import {
   behind,
   drawOutline,
@@ -16,8 +16,9 @@ import {
   outline,
   type Span,
 } from './outline';
-import type { DrawnCell, DrawnMerge, DrawnNote, DrawnSheet } from './protocol';
+import type { DrawnCell, DrawnLink, DrawnMerge, DrawnNote, DrawnSheet } from './protocol';
 import {
+  type Asked,
   type Asks,
   cellKey,
   copiedFrom,
@@ -388,6 +389,7 @@ function line(
     const here = held.get(cellKey(col, row));
     const filtered = filters(sheet, row, col);
     const note = here?.note ?? null;
+    const link = here?.link ?? null;
     const anchored = merged.anchored.get(cellKey(col, row));
     const drawn = drawCell(
       here,
@@ -397,7 +399,12 @@ function line(
     if (drawn.querySelector('.spill') !== null) drawn.classList.add('spilling');
     if (filtered) drawn.append(dropdown());
     if (note !== null) drawn.append(noted());
-    tells(drawn, [filtered ? FILTERED : '', note === null ? '' : noteSaid(note)]);
+    if (link !== null) drawn.classList.add('linked');
+    tells(drawn, [
+      filtered ? FILTERED : '',
+      note === null ? '' : noteSaid(note),
+      link === null ? '' : linkSaid(link),
+    ]);
     drawn.setAttribute('data-at', cellKey(col, row));
     if (one.stays) stay(sheet, drawn, { col });
     if (showing.selected?.row === row && showing.selected.col === col) {
@@ -413,10 +420,12 @@ function line(
       drawn.classList.add('problem');
       drawn.title = said.join('\n');
     }
-    if (showing.noting?.row === row && showing.noting.col === col) {
-      noteInto(drawn, note, (text) => {
-        if (text === null) asks.noteAt(null);
-        else asks.note(row, col, text);
+    const asked = showing.asking;
+    if (asked?.at.row === row && asked.at.col === col) {
+      askInto(drawn, asking(asked.what, note, link), (text) => {
+        if (text === null) asks.askAt(null);
+        else if (asked.what === 'note') asks.note(row, col, text);
+        else asks.link(row, col, { kind: asked.what, text });
       });
     }
 
@@ -435,6 +444,11 @@ function line(
       // Not the right button, which fires this before the menu it is opening
       // and would throw away the selection that menu is about.
       if (event.button !== 0) return;
+
+      if (link !== null && (event.metaKey || event.ctrlKey)) {
+        asks.follow(row, col);
+        return;
+      }
 
       if (event.shiftKey) asks.reachTo(row, col);
       else asks.select(row, col);
@@ -575,6 +589,24 @@ function noted(): HTMLElement {
   mark.className = 'noted';
 
   return mark;
+}
+
+/** What the box over a cell asks for, by what the menu opened it for. */
+function asking(what: Asked['what'], note: DrawnNote | null, link: DrawnLink | null): Asking {
+  if (what === 'note') {
+    return { className: 'noting', value: note?.text ?? '', rows: 3, placeholder: 'a note' };
+  }
+
+  const holds = link?.kind === what ? link.target : '';
+  const placeholder = what === 'url' ? 'https://example.com' : 'Sheet!A1';
+
+  return { className: 'linking', value: holds, rows: 1, placeholder };
+}
+
+/** A link as it reads on hover: the tip the spec wrote, and where the link goes. */
+function linkSaid(link: DrawnLink): string {
+  const said = `${HELD}click follows this link: ${link.target}`;
+  return link.tip === null ? said : `${link.tip}\n${said}`;
 }
 
 /** A note as it reads on hover: the author first, as Excel writes one above the text. */

@@ -34,9 +34,20 @@ describe('the menu a cell has of its own', () => {
       'Paste',
       'Clear contents',
       'Insert note',
+      'Link to a page…',
+      'Link to a cell…',
       'Create a filter',
     ]);
-    expect(entries.map(said)).toEqual(['Ctrl+X', 'Ctrl+C', 'Ctrl+V', 'Delete', null, null]);
+    expect(entries.map(said)).toEqual([
+      'Ctrl+X',
+      'Ctrl+C',
+      'Ctrl+V',
+      'Delete',
+      null,
+      null,
+      null,
+      null,
+    ]);
   });
 
   it('cuts and copies the cell it was asked for, and shuts itself', () => {
@@ -89,7 +100,7 @@ describe('the filter a sheet may hang off its header row', () => {
   it('offers to create one where the sheet has none, over the selection header', () => {
     const { on, entries } = at(1, 1);
 
-    entries[5]?.click();
+    entries[7]?.click();
     expect(on.filter).toHaveBeenCalledWith(true);
   });
 });
@@ -99,7 +110,7 @@ describe('the note a cell may carry', () => {
     const { on, entries } = at(2, 3);
 
     entries[4]?.click();
-    expect(on.noteAt).toHaveBeenCalledWith({ row: 2, col: 3 });
+    expect(on.askAt).toHaveBeenCalledWith({ at: { row: 2, col: 3 }, what: 'note' });
   });
 
   it('offers to change and to take off the one a cell carries', () => {
@@ -111,5 +122,31 @@ describe('the note a cell may carry', () => {
     expect(entries.map((one) => one.firstChild?.textContent)).toContain('Edit note');
     entries[5]?.click();
     expect(on.note).toHaveBeenCalledWith(1, 1, null);
+  });
+});
+
+describe('the link a cell may carry', () => {
+  it('asks which kind of target it is rather than reading it off the text', () => {
+    const { on, entries } = at(2, 3);
+
+    entries[5]?.click();
+    expect(on.askAt).toHaveBeenCalledWith({ at: { row: 2, col: 3 }, what: 'url' });
+
+    entries[6]?.click();
+    expect(on.askAt).toHaveBeenLastCalledWith({ at: { row: 2, col: 3 }, what: 'to' });
+  });
+
+  it('offers to change the one a cell carries, in the kind it was written with', () => {
+    const linked = cell(1, 1, { link: { kind: 'to', target: 'Notes!A1', tip: null } });
+    const { on, entries } = at(1, 1, {
+      drawing: drawing({ sheets: [sheet({ cells: [linked] })] }),
+    });
+
+    expect(entries.map((one) => one.firstChild?.textContent)).toContain('Edit link');
+    entries[5]?.click();
+    expect(on.askAt).toHaveBeenCalledWith({ at: { row: 1, col: 1 }, what: 'to' });
+
+    entries[6]?.click();
+    expect(on.link).toHaveBeenCalledWith(1, 1, null);
   });
 });

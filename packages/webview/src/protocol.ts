@@ -82,6 +82,14 @@ export interface Noted {
   readonly text: string | null;
 }
 
+/** A cell's link as it is written, or `link: null` to take it off (`docs/spec.md` §10). */
+export interface Linked {
+  readonly sheet: string;
+  readonly row: number;
+  readonly col: number;
+  readonly link: { readonly kind: 'url' | 'to'; readonly text: string } | null;
+}
+
 /** Where a sheet's panes are asked to be frozen, or `null` to take the freeze off. */
 export interface Frozen {
   readonly sheet: string;
@@ -137,6 +145,18 @@ export interface DrawnCell {
   readonly bar: DrawnBar | null;
   readonly icon: DrawnIcon | null;
   readonly note: DrawnNote | null;
+  readonly link: DrawnLink | null;
+}
+
+/**
+ * The link a cell carries: `url` goes out of the workbook and `to` goes to a
+ * cell or a defined name in it — which it is, is written rather than read off
+ * the target (`docs/spec.md` §10).
+ */
+export interface DrawnLink {
+  readonly kind: 'url' | 'to';
+  readonly target: string;
+  readonly tip: string | null;
 }
 
 /** The note a cell carries, which Excel shows on hover (`docs/spec.md` §10). */
@@ -227,6 +247,7 @@ export type About =
   | { readonly kind: 'moveSheet'; readonly sheet: string; readonly to: number }
   | ({ readonly kind: 'filter' } & Filtered)
   | ({ readonly kind: 'note' } & Noted)
+  | ({ readonly kind: 'link' } & Linked)
   | {
       readonly kind: 'setTab';
       readonly sheet: string;
@@ -321,6 +342,14 @@ export interface Summed {
   readonly sum: number;
 }
 
+/** Where a link inside the workbook goes, for the view to take the reader (`docs/spec.md` §10). */
+export interface WentTo {
+  readonly kind: 'goTo';
+  readonly sheet: string;
+  readonly row: number;
+  readonly col: number;
+}
+
 /** The keyboard back in the grid, after the host had to put it somewhere else. */
 export interface Focus {
   readonly kind: 'focus';
@@ -336,7 +365,8 @@ export type ToView =
   | Said
   | Focus
   | Found
-  | Summed;
+  | Summed
+  | WentTo;
 
 /** The answer a reader took; absent the first time a message is sent (ADR-048). */
 interface Answerable {
@@ -363,6 +393,7 @@ export type FromView =
   | { readonly kind: 'undo'; readonly redo: boolean }
   | ({ readonly kind: 'pasteAt' } & PastedAt)
   | ({ readonly kind: 'freeze' } & Frozen)
+  | { readonly kind: 'follow'; readonly sheet: string; readonly row: number; readonly col: number }
   | ({ readonly kind: 'merge' } & Merged)
   | ({ readonly kind: 'table' } & Ranged)
   | ({ readonly kind: 'sum' } & Ranged)

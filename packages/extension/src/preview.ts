@@ -12,6 +12,7 @@ import type {
   Grouped,
   Hidden,
   Lined,
+  Linked,
   Merged,
   Noted,
   Pasted,
@@ -31,6 +32,7 @@ import { group } from './group';
 import { hide } from './hidden';
 import { inspect, type Nodes, nodeUnder } from './inspect';
 import { line } from './lines';
+import { following, link } from './links';
 import { wear } from './look';
 import { merge } from './merges';
 import { note } from './notes';
@@ -73,6 +75,7 @@ const WRITES = {
   freeze: (spec: Spec, frozen: Frozen, port: Port) => freeze(spec, frozen, port),
   filter: (spec: Spec, asked: Filtered, port: Port) => filter(spec, asked, port),
   note: (spec: Spec, asked: Noted, port: Port) => note(spec, asked, port),
+  link: (spec: Spec, asked: Linked, port: Port) => link(spec, asked, port),
   merge: (spec: Spec, one: Merged, port: Port) => merge(spec, one, port),
   table: (spec: Spec, one: Ranged, port: Port) => table(spec, one, port),
   fill: (spec: Spec, one: Filled, port: Port, choice?: string) => fill(spec, one, port, choice),
@@ -305,6 +308,11 @@ export class Preview {
       return;
     }
 
+    if (asked.kind === 'follow') {
+      this.went(asked);
+      return;
+    }
+
     if (asked.kind === 'reveal') {
       void reveal(asked.file, asked.start, asked.end);
       return;
@@ -382,6 +390,30 @@ export class Preview {
   }
 
   /** A write, with the spec and port it needs; a spec still loading and a failure are both said rather than dropped. */
+  /** A link followed: the page opened outside VS Code, or the view sent to the cell it names. */
+  private went(asked: { sheet: string; row: number; col: number }): void {
+    const spec = this.spec();
+    if (spec === null) return;
+
+    const went = following(spec, asked);
+    if (went.kind === 'refused') {
+      this.refuse(went.why, null);
+      return;
+    }
+
+    if (went.kind === 'open') {
+      void vscode.env.openExternal(vscode.Uri.parse(went.url));
+      return;
+    }
+
+    void this.panel.webview.postMessage({
+      kind: 'goTo',
+      sheet: went.sheet,
+      row: went.row,
+      col: went.col,
+    });
+  }
+
   private writing(make: (spec: Spec, port: Port) => Promise<void>): void {
     const spec = this.spec();
     if (spec === null) {

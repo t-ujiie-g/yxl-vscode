@@ -35,7 +35,9 @@ export function asks(): Asks {
     freeze: vi.fn(),
     filter: vi.fn(),
     note: vi.fn(),
-    noteAt: vi.fn(),
+    link: vi.fn(),
+    askAt: vi.fn(),
+    follow: vi.fn(),
     openMenu: vi.fn(),
     takeBand: vi.fn(),
     takeAll: vi.fn(),
@@ -67,6 +69,7 @@ export function cell(row: number, col: number, of: Partial<DrawnCell> = {}): Dra
     bar: null,
     icon: null,
     note: null,
+    link: null,
     ...of,
   };
 }
@@ -122,7 +125,7 @@ export function showingOf(of: Partial<Showing> = {}): Showing {
     menu: null,
     pointed: null,
     naming: null,
-    noting: null,
+    asking: null,
     comes: null,
     ...of,
   };

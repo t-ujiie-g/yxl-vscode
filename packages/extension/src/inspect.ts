@@ -39,6 +39,13 @@ export function inspect(nodes: Nodes, sheet: CompiledSheet, at: A1Addr, from: st
     found.push({ facet: 'note', says, ...sited(nodes.get(note.node)) });
   }
 
+  const link = sheet.links.get(at) ?? null;
+  if (link !== null) {
+    const goes = link.target.kind === 'url' ? link.target.text : `\`${link.target.text}\``;
+    const says = link.tip === null ? goes : `${goes} — ${link.tip}`;
+    found.push({ facet: 'link', says, ...sited(nodes.get(link.node)) });
+  }
+
   found.push(...reaching(nodes, sheet, at));
   return found;
 }
@@ -197,6 +204,7 @@ function inSheet(sheet: Sheet, put: (node: SpecNode, what: string) => void): voi
   for (const band of sheet.rows) put(band, `row \`${spelled(band.at)}\``);
   for (const merge of sheet.merges) put(merge, `the merge \`${spelled(merge.at)}\``);
   for (const note of sheet.comments) put(note, `the note on \`${spelled(note.at)}\``);
+  for (const link of sheet.links) put(link, `the link on \`${spelled(link.at)}\``);
 }
 
 /** A value the loader kept as a template reads back as the text the spec wrote. */

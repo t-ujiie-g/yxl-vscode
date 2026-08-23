@@ -2,7 +2,7 @@ import type { Axis } from '@yxl-vscode/spec';
 import { spanSaid } from '@yxl-vscode/units';
 import { HELD } from './keys';
 import { entry, pointedAt, says, swatches } from './menus';
-import type { DrawnSheet } from './protocol';
+import type { DrawnCell, DrawnSheet } from './protocol';
 import {
   type Asks,
   over,
@@ -116,6 +116,7 @@ function onCell(showing: Showing, asks: Asks, at: PointedCell): HTMLElement | nu
       shut(() => asks.empty(at.row, at.col)),
     ),
     ...noting(showing, asks, at, shut),
+    ...linking(showing, asks, at, shut),
     ...(showing.drawing.sheets[showing.sheet]?.filter === null
       ? [
           entry(
@@ -143,30 +144,48 @@ function noting(
   at: PointedCell,
   shut: (take: () => void) => () => void,
 ): HTMLElement[] {
-  const cells = showing.drawing.sheets[showing.sheet]?.cells ?? [];
-  const here = cells.find((one) => one.row === at.row && one.col === at.col);
-  if ((here?.note ?? null) === null) {
-    return [
-      entry(
-        'Insert note',
-        {},
-        shut(() => asks.noteAt({ row: at.row, col: at.col })),
-      ),
-    ];
-  }
+  const ask = shut(() => asks.askAt({ at: { row: at.row, col: at.col }, what: 'note' }));
+  if ((cellAt(showing, at)?.note ?? null) === null) return [entry('Insert note', {}, ask)];
 
   return [
-    entry(
-      'Edit note',
-      {},
-      shut(() => asks.noteAt({ row: at.row, col: at.col })),
-    ),
+    entry('Edit note', {}, ask),
     entry(
       'Delete note',
       {},
       shut(() => asks.note(at.row, at.col, null)),
     ),
   ];
+}
+
+/** What a cell's link is worth offering; which kind of target it is, is the reader's to say (`docs/spec.md` §10). */
+function linking(
+  showing: Showing,
+  asks: Asks,
+  at: PointedCell,
+  shut: (take: () => void) => () => void,
+): HTMLElement[] {
+  const ask = (what: 'url' | 'to') =>
+    shut(() => asks.askAt({ at: { row: at.row, col: at.col }, what }));
+
+  const link = cellAt(showing, at)?.link ?? null;
+  if (link === null) {
+    return [entry('Link to a page…', {}, ask('url')), entry('Link to a cell…', {}, ask('to'))];
+  }
+
+  return [
+    entry('Edit link', {}, ask(link.kind)),
+    entry(
+      'Remove link',
+      {},
+      shut(() => asks.link(at.row, at.col, null)),
+    ),
+  ];
+}
+
+/** The cell a menu was asked for on, as the drawing has it. */
+function cellAt(showing: Showing, at: PointedCell): DrawnCell | undefined {
+  const cells = showing.drawing.sheets[showing.sheet]?.cells ?? [];
+  return cells.find((one) => one.row === at.row && one.col === at.col);
 }
 
 /** Paste, which only the keyboard can reach the clipboard for unless the preview copied it. */

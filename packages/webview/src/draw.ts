@@ -80,7 +80,7 @@ export function draw(into: HTMLElement, showing: Showing, asks: Asks): void {
   into.addEventListener('keydown', (event) => keyed(into, event, asks));
 
   const box = into.querySelector<HTMLInputElement>('.tab.naming');
-  const writing = into.querySelector<HTMLTextAreaElement>('.noting');
+  const writing = into.querySelector<HTMLTextAreaElement>('.asking');
   if (box !== null) {
     // Only once it is in the page: an element outside it cannot take the keys.
     box.focus();

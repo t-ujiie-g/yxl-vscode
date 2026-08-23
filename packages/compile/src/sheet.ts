@@ -4,6 +4,7 @@ import type {
   DataBlock,
   DataRow,
   FormulaRange,
+  Link,
   Note,
   RowBand,
   Sheet,
@@ -31,6 +32,7 @@ import type {
   CompiledBand,
   CompiledCell,
   CompiledFill,
+  CompiledLink,
   CompiledMerge,
   CompiledNote,
   CompiledRule,
@@ -74,6 +76,7 @@ export function compileSheet(ctx: Ctx, sheet: Sheet): Drafted {
       split: sheet.split,
       filter: filterOf(ctx, sheet),
       notes: notesOf(ctx, sheet.comments),
+      links: linksOf(ctx, sheet.links),
       conditional: sheet.conditional
         .map((rule) => conditionalRule(ctx, rule))
         .filter((rule) => rule !== null),
@@ -310,6 +313,25 @@ function notesOf(ctx: Ctx, comments: readonly Note[]): Map<string, CompiledNote>
   }
 
   return notes;
+}
+
+/** Each link by the address it sits on; the later of two links on one cell is the one Excel keeps. */
+function linksOf(ctx: Ctx, links: readonly Link[]): Map<string, CompiledLink> {
+  const drawn = new Map<string, CompiledLink>();
+
+  for (const link of links) {
+    const at = address(ctx, link.at, link);
+    if (at === null) continue;
+
+    drawn.set(at, {
+      at,
+      target: { kind: link.target.kind, text: text(ctx, link.target.text, link) },
+      tip: link.tip === null ? null : text(ctx, link.tip, link),
+      node: link.id,
+    });
+  }
+
+  return drawn;
 }
 
 /** The header row a sheet hangs its filter off, as the range it is written as (`docs/spec.md` §10). */

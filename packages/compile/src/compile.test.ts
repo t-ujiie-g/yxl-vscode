@@ -497,3 +497,24 @@ describe('the notes a sheet carries', () => {
     expect(sheet(spec).notes.get('C3')?.text).toBe('asked by Ada');
   });
 });
+
+describe('the links a sheet carries', () => {
+  it('are held by the address each sits on, with the target the spec wrote', () => {
+    const spec = `${SALES}    links:\n      A2: https://example.com\n      B1: { to: "Notes!A1", tip: The notes }\n`;
+    const links = sheet(spec).links;
+
+    expect(links.get('A2')).toMatchObject({
+      target: { kind: 'url', text: 'https://example.com' },
+      tip: null,
+    });
+    expect(links.get('B1')).toMatchObject({
+      target: { kind: 'to', text: 'Notes!A1' },
+      tip: 'The notes',
+    });
+  });
+
+  it('have their parameters filled in, target and address alike', () => {
+    const spec = `params:\n  order: 1001\n  where: C3\n${SALES}    links:\n      \${where}: https://example.com/orders/\${order}\n`;
+    expect(sheet(spec).links.get('C3')?.target.text).toBe('https://example.com/orders/1001');
+  });
+});

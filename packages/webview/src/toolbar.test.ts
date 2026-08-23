@@ -21,6 +21,7 @@ function cell(of: Partial<DrawnCell>): DrawnCell {
     bar: null,
     icon: null,
     note: null,
+    link: null,
     style: {},
     ...of,
   };
@@ -76,7 +77,7 @@ function showing(of: {
     menu: of.menu ?? null,
     pointed: null,
     naming: null,
-    noting: null,
+    asking: null,
     comes: null,
   };
 }
