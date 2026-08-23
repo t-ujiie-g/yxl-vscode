@@ -450,6 +450,18 @@ body {
   cursor: pointer;
 }
 
+/* A menu entry that is a switch: a tick where it is on, and room for one where it is off. */
+.entry.ticked::before {
+  content: "\2713";
+  display: inline-block;
+  width: 1em;
+  opacity: 0;
+}
+
+.entry.ticked[aria-checked="true"]::before {
+  opacity: 1;
+}
+
 /* The tab colour, picked from the tab's own menu. */
 .entry.tabbed {
   display: block;
@@ -582,6 +594,10 @@ body {
 
 .grid td {
   position: relative;
+}
+
+.grid.bare td {
+  border-color: transparent;
 }
 
 /* A cell's own borders sit over the grid's own lines rather than collapsing

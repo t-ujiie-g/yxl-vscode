@@ -242,6 +242,11 @@ function onTab(showing: Showing, asks: Asks, at: PointedTab): HTMLElement | null
       { disabled: buried },
       shut(() => asks.setTab(sheet.name, { visibility: hidden ? 'visible' : 'hidden' })),
     ),
+    entry(
+      'Gridlines',
+      { disabled: buried, checked: sheet.gridlines },
+      shut(() => asks.setTab(sheet.name, { gridlines: !sheet.gridlines })),
+    ),
   ];
 
   const panel = pointedAt(showing, asks, entries);

@@ -33,7 +33,8 @@ import { across, down, heightOf, sizeOf, widthOf } from './window';
 /** The sheet as one `<table>`: the headings, the rows drawn of it, and the bands that stay put. */
 export function grid(sheet: DrawnSheet, showing: Showing, asks: Asks): HTMLElement {
   const table = document.createElement('table');
-  table.className = 'grid';
+  // `gridlines: false` takes the sheet's own lines off, not a cell's borders.
+  table.className = sheet.gridlines ? 'grid' : 'grid bare';
   // `table-layout: fixed` is inert without an explicit width.
   table.style.width = `${gutterOf(sheet, 'row') + GUTTER + across(sheet, sheet.of.columns + 1)}px`;
   table.append(headings(sheet, showing, asks));

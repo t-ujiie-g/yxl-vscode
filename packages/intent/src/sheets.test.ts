@@ -64,7 +64,7 @@ function moved(source: string, sheet: string, to: number): string {
 function tabbed(
   source: string,
   sheet: string,
-  of: { visibility?: Visibility; color?: string | null },
+  of: { visibility?: Visibility; color?: string | null; gridlines?: boolean },
 ): string {
   const { doc, grid, read } = files(source);
   const intent = setTab(
@@ -237,9 +237,19 @@ describe("a tab's own two keys", () => {
     expect(tabbed(buried, 'Notes', { visibility: 'visible' })).toContain("only Excel's VBA undoes");
   });
 
-  it('is refused where nothing about the tab would change', () => {
+  it('turns the gridlines off by writing `false`, and on by taking the key out', () => {
+    expect(tabbed(TWO, 'Notes', { gridlines: false })).toBe(`${TWO}    gridlines: false\n`);
+
+    const off = `${TWO}    gridlines: false\n`;
+    expect(tabbed(off, 'Notes', { gridlines: true })).toBe(TWO);
+  });
+
+  it('is refused where nothing about the sheet would change', () => {
     expect(tabbed(TWO, 'Notes', { visibility: 'visible' })).toBe(
-      'refused: nothing about this tab would change',
+      'refused: nothing about this sheet would change',
+    );
+    expect(tabbed(TWO, 'Notes', { gridlines: true })).toBe(
+      'refused: nothing about this sheet would change',
     );
   });
 });

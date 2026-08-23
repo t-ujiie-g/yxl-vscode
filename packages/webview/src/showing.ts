@@ -165,7 +165,7 @@ export interface Asks {
   readonly moveSheet: (sheet: string, to: number) => void;
   readonly setTab: (
     sheet: string,
-    of: { visibility?: 'visible' | 'hidden'; color?: string | null },
+    of: { visibility?: 'visible' | 'hidden'; color?: string | null; gridlines?: boolean },
   ) => void;
   readonly select: (row: number, col: number) => void;
   readonly reachTo: (row: number, col: number) => void;

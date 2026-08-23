@@ -1425,7 +1425,10 @@ are carried through untouched and shown as nothing (`docs/spec.md` §2).
       leaves no way to bring it back. Hiding the last sheet that shows is
       refused, which is also what turned the deletion's `visibility:` guess into
       a real check.
-- [ ] **Gridlines off** drawn as off, and a switch for it in the sheet's menu
+- [x] **Gridlines off** drawn as off, and a switch for it in the tab's menu —
+      the sheet's own lines, not a cell's borders (`docs/spec.md` §2). The
+      switch takes the key out again where it goes back to Excel's default,
+      rather than writing `gridlines: true`.
 - [ ] **`split:`** drawn as the splitter it is, read-only; the freeze gesture
       already refuses a split sheet with the reason
 
@@ -2946,6 +2949,19 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-23 — Gridlines, off
+The third of the tab's switches, and the smallest.
+
+- **`gridlines: false` is drawn as off**: the sheet's own lines go, and a cell's
+  own borders stay, which is the distinction `docs/spec.md` §2 draws.
+- **A switch in the tab's menu**, ticked where the lines are on. Turning them
+  back on takes the key out rather than writing `gridlines: true` — the spec
+  says the same thing with one fewer line, and this editor does not add a key to
+  say what the default already says.
+- Menu entries can carry a tick now, which is what a switch in a menu needs and
+  what the coming `split:` row will use.
+- Comment shape: export 2.2, private 1.0, inline 1.5, 9 over the limit — held.
 
 ### 2026-08-23 — The tab's own two keys
 `visibility:` and `tab_color:` were opaque — preserved and invisible. They are

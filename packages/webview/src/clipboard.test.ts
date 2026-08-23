@@ -37,6 +37,7 @@ function sheet(cells: readonly DrawnCell[], of: Partial<DrawnSheet> = {}): Drawn
     freeze: null,
     visibility: 'visible',
     tabColor: null,
+    gridlines: true,
     ...of,
   };
 }

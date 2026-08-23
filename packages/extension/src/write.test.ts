@@ -735,6 +735,16 @@ describe("a tab's own two keys", () => {
     expect(told).toEqual(['`Notes` set.', '`Sales` set.']);
   });
 
+  it('turns the gridlines off and back on', async () => {
+    const { spec, port, files } = editor({ [ROOT]: BOTH });
+
+    await tab(spec, 'Notes', { gridlines: false }, port);
+    expect(files[ROOT]).toBe(`${BOTH}    gridlines: false\n`);
+
+    await tab(spec, 'Notes', { gridlines: true }, port);
+    expect(files[ROOT]).toBe(BOTH);
+  });
+
   it('is refused where hiding it would leave nothing showing', async () => {
     const { spec, port, refusals } = editor({ [ROOT]: `${SALES}    cells:\n      A1: 1\n` });
 
