@@ -72,6 +72,12 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
   /** The sheet the reader asked for and has not seen yet. */
   let adding: string | null = null;
 
+  /** The tab being renamed, kept here so a redraw does not take the box away. */
+  let naming: number | null = null;
+
+  /** The tab last gone to, so the second click on it is the one that renames. */
+  let went: { index: number; at: number } | null = null;
+
   /** Where the last edit was typed, so a refusal can put the reader back at it. */
   let typedAt: { row: number; col: number } | null = null;
 
@@ -92,6 +98,7 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
     copied,
     looking,
     editable: editable(),
+    naming,
   });
 
   const redraw = (): void => {
@@ -107,6 +114,8 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
   const already = (at: Pointed): boolean => {
     if (drawing === null) return false;
     const now = showing(drawing);
+
+    if (at.kind === 'tab') return at.sheet === now.sheet;
 
     return at.kind === 'cell' ? reaches(now, at) : headed(now, at.axis, at.at);
   };
@@ -193,6 +202,17 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
 
   const asks: Asks = {
     showSheet: (index) => {
+      // Counted here rather than left to `dblclick`, which never arrives: going
+      // to a sheet redraws the bar, so the second click is on a new element.
+      const twice = went?.index === index && Date.now() - went.at < 500;
+      went = { index, at: Date.now() };
+      if (twice) {
+        naming = index;
+        redraw();
+        return;
+      }
+
+      naming = null;
       sheet = index;
       selected = null;
       anchor = null;
@@ -205,6 +225,18 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       said = null;
       adding = name;
       host.postMessage({ kind: 'addSheet', name });
+    },
+    nameSheet: (index) => {
+      naming = index;
+      redraw();
+    },
+    renameSheet: (sheet, name) => {
+      refused = null;
+      said = null;
+      naming = null;
+      adding = name;
+      redraw();
+      host.postMessage({ kind: 'renameSheet', sheet, name });
     },
     select: (row, col) => {
       selected = { row, col };
@@ -331,7 +363,8 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       // it was last drawn and cannot know where the reader has got to since.
       if (at !== null && !already(at)) {
         if (at.kind === 'cell') asks.select(at.row, at.col);
-        else asks.takeBand(at.axis, at.at, false);
+        if (at.kind === 'heading') asks.takeBand(at.axis, at.at, false);
+        if (at.kind === 'tab') asks.showSheet(at.sheet);
       }
 
       pointed = at;

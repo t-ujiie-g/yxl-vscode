@@ -11,7 +11,7 @@ import { hide } from './hidden';
 import { line } from './lines';
 import { wear } from './look';
 import { freeze } from './panes';
-import { add } from './sheets';
+import { add, rename } from './sheets';
 import { resize } from './size';
 import { sort } from './sorts';
 import { table } from './tables';
@@ -654,6 +654,29 @@ describe('a sheet added from the tab bar', () => {
 
     await add(spec, 'Sales', port);
     expect(refusals[0]).toBe('there is already a sheet named `Sales`');
+  });
+});
+
+describe('a sheet renamed from its tab', () => {
+  it('rewrites its `name:` and every formula that named it', async () => {
+    const { spec, port, files, told, refusals } = editor({
+      [ROOT]: `${SALES}    cells:\n      A1: 1\n  - name: Notes\n    cells:\n      A1: { formula: "Sales!A1+1" }\n`,
+    });
+
+    await rename(spec, 'Sales', 'Revenue', port);
+
+    expect(refusals).toEqual([]);
+    expect(files[ROOT]).toBe(
+      'sheets:\n  - name: Revenue\n    cells:\n      A1: 1\n  - name: Notes\n    cells:\n      A1: { formula: "Revenue!A1+1" }\n',
+    );
+    expect(told).toEqual(['`Sales` is `Revenue` now.']);
+  });
+
+  it('is refused under a name a sheet already has', async () => {
+    const { spec, port, refusals } = editor({ [ROOT]: `${SALES}  - name: Notes\n` });
+
+    await rename(spec, 'Sales', 'Notes', port);
+    expect(refusals[0]).toBe('there is already a sheet named `Notes`');
   });
 });
 

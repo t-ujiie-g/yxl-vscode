@@ -44,7 +44,7 @@ export function draw(into: HTMLElement, showing: Showing, asks: Asks): void {
 
   if (showing.looking !== null) into.append(findBar(showing.looking, asks));
   if (drawing.params.length > 0) into.append(parameters(drawing, asks));
-  into.append(tabs(drawing, showing.sheet, asks));
+  into.append(tabs(showing, asks));
   into.append(toolbar(showing, asks));
   into.append(formulaBar(showing, asks));
 
@@ -67,7 +67,14 @@ export function draw(into: HTMLElement, showing: Showing, asks: Asks): void {
   fit(into);
   into.addEventListener('keydown', (event) => keyed(into, event, asks));
 
-  if (held) focusCell(into, showing);
+  const box = into.querySelector<HTMLInputElement>('.tab.naming');
+  if (box !== null) {
+    // Only once it is in the page: an element outside it cannot take the keys.
+    box.focus();
+    box.select();
+  } else if (held) {
+    focusCell(into, showing);
+  }
 }
 
 /** The keys the page answers rather than a cell, and never where a box of text has them. */

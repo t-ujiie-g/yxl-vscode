@@ -450,6 +450,13 @@ body {
   cursor: pointer;
 }
 
+/* The tab, while it is being renamed: the same box, taking the keys. */
+.tab.naming {
+  min-width: 6rem;
+  background: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+}
+
 .tab.showing {
   background: var(--vscode-tab-activeBackground);
   border-bottom-color: transparent;

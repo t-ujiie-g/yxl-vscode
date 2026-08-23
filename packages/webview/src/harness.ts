@@ -8,6 +8,8 @@ export function asks(): Asks {
   return {
     showSheet: vi.fn(),
     addSheet: vi.fn(),
+    renameSheet: vi.fn(),
+    nameSheet: vi.fn(),
     drawWith: vi.fn(),
     resize: vi.fn(),
     select: vi.fn(),
@@ -105,6 +107,7 @@ export function showingOf(of: Partial<Showing> = {}): Showing {
     line: 'thin',
     menu: null,
     pointed: null,
+    naming: null,
     comes: null,
     ...of,
   };

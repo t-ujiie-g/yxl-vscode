@@ -73,6 +73,13 @@ function at(into: HTMLElement, row: number, col: number): HTMLTableCellElement |
 const typed: Typed = { sheet: 'Sales', row: 1, col: 1, text: '99' };
 
 /** A shortcut held down on a cell, which is where the reader's keyboard is. */
+/** Two clicks on the tab a selector names, close enough together to be one gesture. */
+function twice(into: HTMLElement, selector: string): void {
+  for (let one = 0; one < 2; one += 1) {
+    into.querySelector<HTMLButtonElement>(selector)?.click();
+  }
+}
+
 function press(into: HTMLElement, row: number, col: number, key: string): void {
   at(into, row, col)?.dispatchEvent(
     new KeyboardEvent('keydown', { key, metaKey: true, bubbles: true, cancelable: true }),
@@ -1140,6 +1147,55 @@ describe('the bar over the grid', () => {
     const { into } = view();
 
     expect(into.querySelectorAll('.tabs .tab:not(.add)')).toHaveLength(1);
+  });
+
+  it('renames a sheet in the tab itself, on the second click, and leaves it on Escape', () => {
+    const { into, sent } = view();
+
+    twice(into, '.tabs .tab:not(.add)');
+    const box = into.querySelector<HTMLInputElement>('.tabs .tab.naming');
+    expect(box?.value).toBe('Sales');
+
+    if (box) box.value = 'Revenue';
+    box?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+
+    expect(sent.filter((one) => one.kind === 'renameSheet')).toEqual([
+      { kind: 'renameSheet', sheet: 'Sales', name: 'Revenue' },
+    ]);
+    expect(into.querySelector('.tabs .tab.naming')).toBeNull();
+
+    twice(into, '.tabs .tab:not(.add)');
+    const again = into.querySelector<HTMLInputElement>('.tabs .tab.naming');
+    if (again) again.value = 'Costs';
+    again?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+    expect(sent.filter((one) => one.kind === 'renameSheet')).toHaveLength(1);
+    expect(into.querySelector('.tabs .tab.naming')).toBeNull();
+  });
+
+  it("renames from the tab's own menu, which is where a spreadsheet keeps it", () => {
+    const { into } = view();
+
+    into
+      .querySelector<HTMLButtonElement>('.tabs .tab:not(.add)')
+      ?.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+
+    const entries = [...into.querySelectorAll<HTMLButtonElement>('.pointed .entry')];
+    entries.find((one) => one.firstChild?.textContent === 'Rename')?.click();
+
+    expect(into.querySelector<HTMLInputElement>('.tabs .tab.naming')?.value).toBe('Sales');
+  });
+
+  it('asks for nothing where the name in the tab did not change', () => {
+    const { into, sent } = view();
+
+    twice(into, '.tabs .tab:not(.add)');
+    into
+      .querySelector<HTMLInputElement>('.tabs .tab.naming')
+      ?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+
+    expect(sent.filter((one) => one.kind === 'renameSheet')).toEqual([]);
+    expect(into.querySelector('.tabs .tab.naming')).toBeNull();
   });
 
   it('asks for the rows to be put in order, either way round', () => {

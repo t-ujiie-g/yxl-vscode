@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { type Line, moved, type Offset, shifted } from './formula';
+import { type Line, moved, type Offset, renamed, shifted } from './formula';
 import type { SheetName } from './name';
 
 /** The formula as it applies `by` away, or the reason it does not apply there. */
@@ -192,5 +192,40 @@ describe('a formula once a row is taken away', () => {
   it('takes a run of rows away at once', () => {
     expect(said('A4+A9', 5, -3)).toBe('A4+A6');
     expect(said('A7', 5, -3)).toBe('refused: `A7` names a row this would take away');
+  });
+});
+
+describe('a formula once a sheet is renamed', () => {
+  const to = (formula: string, from = 'Sales', name = 'Revenue') => {
+    const done = renamed(formula, from as SheetName, name as SheetName);
+    return done.ok ? done.formula : `refused: ${done.why}`;
+  };
+
+  it('names the sheet its new name, and leaves the address alone', () => {
+    expect(to('Sales!A1+Sales!B2')).toBe('Revenue!A1+Revenue!B2');
+  });
+
+  it('leaves the sheets it is not about, and words that are not sheets', () => {
+    expect(to('Sales!A1+Notes!A1+A1+SUM(Sales!A1:A2)')).toBe(
+      'Revenue!A1+Notes!A1+A1+SUM(Revenue!A1:A2)',
+    );
+  });
+
+  it('reads a quoted name, and writes one where the new name needs it', () => {
+    expect(to("'Q3 data'!A1", 'Q3 data', 'Q4 data')).toBe("'Q4 data'!A1");
+    expect(to("'Q3 data'!A1", 'Q3 data', 'Q4')).toBe('Q4!A1');
+    expect(to('Sales!A1', 'Sales', 'Q4 data')).toBe("'Q4 data'!A1");
+  });
+
+  it('doubles an apostrophe in a name that has one, as Excel writes it', () => {
+    expect(to('Sales!A1', 'Sales', "Bob's")).toBe("'Bob''s'!A1");
+  });
+
+  it('leaves a name inside a string alone, since that is text', () => {
+    expect(to('CONCAT("Sales!A1",Sales!A1)')).toBe('CONCAT("Sales!A1",Revenue!A1)');
+  });
+
+  it('does nothing where the name has not changed', () => {
+    expect(to('Sales!A1', 'Sales', 'Sales')).toBe('Sales!A1');
   });
 });
