@@ -1243,10 +1243,17 @@ Deliberately **not** here: a second selection with `Cmd`+click (every answer in
       since that is the one that reaches every cell it fills. The exception is
       not offered at the range's top-left, where the shared formula is stored
       and where §23 refuses one — there the run is the only answer.
-- [ ] **A look over a rectangle that spans a data block and cells.** Each cell
+- [x] **A look over a rectangle that spans a data block and cells.** Each cell
       is answered on its own today, which is right, but the answers are not
       counted together — a reader who selects ten cells should hear one sentence
       rather than one per cell.
+      **Written from a guess, and the guess was wrong**: the answers *are* one
+      candidate and one sentence already. What was actually broken is underneath
+      it — where none of the cells has a `cells:` entry yet, each of them asked
+      for the `cells:` mapping to be made, and the checker refused the patch with
+      `` `cells` is written twice ``. A sheet has one such key however many
+      entries go under it, so the ops that would each make it are folded into
+      the first.
 
 ### Phase 11 — Structural edits
 - [ ] `insertRow` / `insertCol` / `deleteRow` / `deleteCol`, with the
@@ -2731,6 +2738,23 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-23 — One `cells:` key, however many entries
+The last of what the data-block work left, and not what the note said it was.
+
+- **The note guessed, and guessed wrong.** A rectangle over several data-filled
+  cells was already one answer and one sentence. What was broken sat underneath:
+  each cell asked for the `cells:` mapping to be *made*, so a sheet that had none
+  got the key three times and the checker refused the patch outright —
+  `` `cells` is written twice; the first one wins ``. Nothing was written, and
+  the reader saw a message about the shape of their file rather than their edit.
+- **A sheet has one `cells:` key** however many entries go under it. The ops that
+  would each make it are folded into the first, which is the only one that has
+  to make anything.
+- **A note written from a guess is a note that has to be checked before it is
+  believed.** This one cost a reproduction to find out, and the reproduction is
+  now the test.
+- 1769 → 1770 tests.
 
 ### 2026-08-23 — A look inside a filled range
 The other half of the last change: the cells a `formulas:` range fills, where a

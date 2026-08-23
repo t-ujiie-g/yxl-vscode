@@ -161,6 +161,16 @@ describe('a look on a cell something else fills', () => {
     expect(taken(both, answer)).toContain('      Z9: 1\n      A2:\n        style:');
   });
 
+  it('makes one `cells:` mapping for a rectangle of them, however many go under it', () => {
+    const three = `${SALES}    data:\n      - at: A2\n        values:\n          - [APAC]\n          - [EMEA]\n          - [LATAM]\n`;
+    const [answer] = offered(three, { top: 2, left: 1, bottom: 4, right: 1 }, BOLD);
+    if (answer === undefined) throw new Error('nothing was offered');
+
+    expect(taken(three, answer)).toBe(
+      `${three}    cells:\n      A2:\n        style: { font: { bold: true } }\n      A3:\n        style: { font: { bold: true } }\n      A4:\n        style: { font: { bold: true } }\n`,
+    );
+  });
+
   it('goes into the entry the last look made, rather than a second one beside it', () => {
     const [first] = offered(DATA, at(2, 1), BOLD);
     if (first === undefined) throw new Error('nothing was offered');

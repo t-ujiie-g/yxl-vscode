@@ -61,9 +61,27 @@ export function onEvery(
 
   return {
     file,
-    ops: ops.get(file) ?? [],
+    ops: folded(ops.get(file) ?? []),
     moves: wants.map((one) => ({ sheet: name, at: one.at })),
   };
+}
+
+/** Several cells' ops, with those that would each *make* the `cells:` key folded into the first. */
+function folded(ops: readonly Op[]): Op[] {
+  const makes = (one: Op) => one.op === 'addSource' && one.key === CELLS;
+  const making = ops.filter(makes);
+  if (making.length < 2) return [...ops];
+
+  const source = making.map((one) => (one.op === 'addSource' ? one.source : '')).join('\n');
+  let first = true;
+
+  return ops.flatMap((one) => {
+    if (!makes(one)) return [one];
+    if (!first) return [];
+
+    first = false;
+    return [{ ...one, source }];
+  });
 }
 /** One key of a cell as the ask leaves it: the source to write there, or `null` to take the key out. */
 interface Carries {
