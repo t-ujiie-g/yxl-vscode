@@ -49,6 +49,11 @@ export interface DrawnSheet {
   readonly freeze: { readonly row: number; readonly col: number } | null;
 }
 
+/** Rows of a `data:` block to be put in order, by the column the selection starts in. */
+export interface Sorted extends Ranged {
+  readonly down: boolean;
+}
+
 /** A rectangle to be filled from its first line: down from the top row, or right from the left column. */
 export interface Filled extends Ranged {
   readonly axis: Axis;
@@ -175,7 +180,8 @@ export type About =
   | ({ readonly kind: 'hide' } & Hidden)
   | ({ readonly kind: 'resize' } & Resized)
   | ({ readonly kind: 'line' } & Lined)
-  | ({ readonly kind: 'fill' } & Filled);
+  | ({ readonly kind: 'fill' } & Filled)
+  | ({ readonly kind: 'sort' } & Sorted);
 
 /**
  * `Cmd`+`V` in the grid: where it goes, what the grid holds of its own, and what

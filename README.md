@@ -27,6 +27,7 @@ not into a workbook.
 | **Merges cells, and takes them apart** | From the cell's own menu, over the rectangle selected. Lossless: Excel throws away every value but the top-left, and a spec keeps them — the merge only draws over them — so unmerging gives the sheet back exactly. |
 | **Keeps a rectangle as a table** | `cells:` is keyed by address, so inserting a row rewrites every key below it. Select the rows, *make this a data table*, and the addresses live in one `at:` — each field taken as the file wrote it, so a quoted `"007"` is still text. The insert gesture points at this when the diff it would make is mostly cell keys. |
 | **Fills down and right** | `Cmd`+`D` / `Cmd`+`R` over a selection. A formula can go in as **one `formulas:` range** — which is what Excel's own fill makes of one — or as a cell each with the references moved; you pick. |
+| **Puts a table's rows in order** | Select the rows, sort by the column you started in. Each row is written where it goes exactly as it was written before, so the diff is the order of the lines and nothing else. |
 | **Computes** | Formulas are evaluated for display — 500-odd Excel functions, `#DIV/0!` and the rest of Excel's error text included, and a `formulas:` range computed per cell the way Excel shifts a shared formula. A formula that names something this does not model (a table, a workbook-defined name) is **not computed at all**, and the sheet says so: a number that is not the workbook's number is worse than no number. |
 | **Never writes a computed value** | What was computed is display-only and is kept apart from what the spec holds, everywhere, so no edit can ever be about it. |
 | **Edits, where the answer is one thing** | Type into a cell — Enter, or just start typing, as in Sheets; `Alt`+`Enter` for a line break inside it, `Tab` and `Shift`+`Enter` to leave it the way you would anywhere else — and the YAML changes: the smallest possible diff, in whichever `$include`d file wrote that cell, with your comments and quoting untouched. Every write is checked by compiling before and after and comparing what moved against what the edit said it would move; an edit that cannot be undone is not made. |
@@ -91,8 +92,8 @@ Seeing where everything came from is the half that already works, and it is what
 the rest is built on.
 
 The everyday spreadsheet gestures it does **not** have yet are listed as
-plainly as the ones it does — sorting a block of rows is the last of
-[`ROADMAP.md`](./ROADMAP.md) Phase 11, and the drag handle is not there yet.
+plainly as the ones it does — the charts, images and sparklines a spec declares
+are drawn by nothing yet, which is [`ROADMAP.md`](./ROADMAP.md) Phase 12.
 
 Excel still opens the result. `yxl build` still produces the `.xlsx`; this editor
 never writes one.

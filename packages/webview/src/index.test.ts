@@ -1124,6 +1124,23 @@ describe('the bar over the grid', () => {
     expect(sent.filter((one) => one.kind === 'fill').at(-1)).toMatchObject({ axis: 'column' });
   });
 
+  it('asks for the rows to be put in order, either way round', () => {
+    const { into, sent } = view();
+
+    reachFrom(into, { row: 1, col: 1 }, { row: 2, col: 1 });
+    at(into, 2, 1)?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 2 }));
+    at(into, 2, 1)?.dispatchEvent(
+      new MouseEvent('contextmenu', { bubbles: true, cancelable: true }),
+    );
+
+    const entries = [...into.querySelectorAll<HTMLButtonElement>('.pointed .entry')];
+    entries.find((one) => one.textContent === 'Sort Z to A')?.click();
+
+    expect(sent.filter((one) => one.kind === 'sort')).toEqual([
+      { kind: 'sort', sheet: 'Sales', top: 1, left: 1, bottom: 2, right: 1, down: true },
+    ]);
+  });
+
   it('asks to keep a rectangle of rows as a table', () => {
     const { into, sent } = view();
 

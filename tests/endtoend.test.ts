@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import { type CompiledGrid, cellAt, compile, resolve } from '@yxl-vscode/compile';
 import { parse } from '@yxl-vscode/cst';
-import { asTable, drawLine, reading, setMerged, setStyle } from '@yxl-vscode/intent';
+import { asTable, drawLine, reading, setMerged, setSorted, setStyle } from '@yxl-vscode/intent';
 import { load } from '@yxl-vscode/loader';
 import { type A1Addr, type FilePath, filePath, type SheetName } from '@yxl-vscode/units';
 import type { Typed } from '@yxl-vscode/webview/protocol';
@@ -355,6 +355,27 @@ describe('the loop, closed', () => {
     expect(cell(grid, 'Sales', 'A2')?.value).toBe('APAC');
     expect(cell(grid, 'Sales', 'B3')?.value).toBe(1750000);
     expect(cell(grid, 'Sales', 'B5')?.formula).toBe('SUM(B2:B3)');
+  });
+
+  it('puts a table’s rows in order without touching anything else', async () => {
+    if (!QUICKSTART) return;
+    const { dir, root, port, spec, refusals } = opened(QUICKSTART);
+
+    // The block at A9 is `Quarter/Bookings` then Q1, Q2, Q3 — sort rows 10-12
+    // by the bookings column, largest first, and leave the header where it is.
+    const where = { sheet: 'Sales' as SheetName, rect: at(10, 2, 12, 2), down: true };
+    await applied(spec(), setSorted(spec(), where, reading(port.text)), port, {
+      anyway: false,
+      from: 'sort',
+      about: null,
+    });
+    expect(refusals).toEqual([]);
+
+    const { grid } = built(dir, root);
+    expect(cell(grid, 'Sales', 'A9')?.value).toBe('Quarter');
+    expect(cell(grid, 'Sales', 'A10')?.value).toBe('Q3');
+    expect(cell(grid, 'Sales', 'B10')?.value).toBe(1300000);
+    expect(cell(grid, 'Sales', 'A12')?.value).toBe('Q1');
   });
 
   it('takes a cell back out of the workbook when it is emptied', async () => {

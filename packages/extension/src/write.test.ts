@@ -12,6 +12,7 @@ import { line } from './lines';
 import { wear } from './look';
 import { freeze } from './panes';
 import { resize } from './size';
+import { sort } from './sorts';
 import { table } from './tables';
 import { emptied, empty, type Port, resolve, type Spec, write, writeOverride } from './write';
 
@@ -631,6 +632,29 @@ describe('columns hidden from the preview', () => {
 
     await hide(spec, hiding({ hidden: false }), port);
     expect(refusals[0]).toContain('nothing hides columns B-C');
+  });
+});
+
+describe('rows of a table put in order', () => {
+  const TABLE = `${SALES}    data:\n      - at: A1\n        values:\n          - [EMEA, 3]\n          - [APAC, 1]\n`;
+
+  it('writes the rows in order and says how many moved', async () => {
+    const { spec, port, files, told } = editor({ [ROOT]: TABLE });
+
+    await sort(spec, { sheet: 'Sales', top: 1, left: 1, bottom: 2, right: 1, down: false }, port);
+
+    expect(files[ROOT]).toContain('          - [APAC, 1]\n          - [EMEA, 3]\n');
+    expect(told).toEqual(['2 rows in order.']);
+  });
+
+  it('says so where the rows are not a table written here', async () => {
+    const spec = `${SALES}    cells:\n      A1: EMEA\n      A2: APAC\n`;
+    const { spec: read, port, refusals } = editor({ [ROOT]: spec });
+
+    await sort(read, { sheet: 'Sales', top: 1, left: 1, bottom: 2, right: 1, down: false }, port);
+    expect(refusals[0]).toBe(
+      'these rows are not a table written here, so there is no order to put them in',
+    );
   });
 });
 

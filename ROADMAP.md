@@ -455,7 +455,7 @@ not a date.
 | Insert or delete a row or column | ✅ — from the heading, over the run selected, with what it moves in front of it |
 | Merge cells | ✅ — from the cell's own menu, and lossless: the covered values stay in the spec |
 | Fill down, and the drag handle | ✅ — `Cmd`+`D` / `Cmd`+`R`, offered as a range or as cells; no drag handle |
-| Sort a block of rows | **Phase 11** |
+| Sort a block of rows | ✅ — over a `data:` block, each row written where it goes exactly as it was |
 | See a chart, an image, a sparkline that the spec declares | **Phase 12** |
 | Insert a chart over a selection, place an image | **Phase 12** |
 | Edit a cell whose value comes from a CSV, a parameter, a definition | ✅ Phase 7 |
@@ -1353,7 +1353,12 @@ Deliberately **not** here: a second selection with `Cmd`+click (every answer in
       written under it, since a range may not cross a cell the sheet writes.
       **The drag handle is not in**: the keys and the menu are the gesture, and
       a handle is a second way to ask the same question.
-- [ ] Sorting a `data:` rectangle: its rows rewritten, and nothing else touched
+- [x] Sorting a `data:` rectangle: its rows rewritten, and nothing else touched
+      **In**, from the cell's own menu, over the rows selected and by the column
+      the selection starts in — the row moves whole, the column only says which
+      key. Each row is written where it goes **as the file wrote it**, so a sort
+      changes the order of the lines and nothing about any of them. Numbers,
+      then text, then nothing, as a column orders in Excel.
 
 ### Phase 12 — What sits on the sheet
 Charts, images, sparklines and shapes — all four are in the spec already
@@ -2829,6 +2834,25 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-23 — Rows in order, and Phase 11 with them
+The last item of the phase: sorting a `data:` block.
+
+- **Sort A to Z / Sort Z to A** in the cell's own menu, over the rows selected
+  and by the column the selection starts in. The **row moves whole**; the column
+  only says which key, which is what a reader who selected one column means.
+- **Each row is written where it goes as the file wrote it** — the source text,
+  not the values re-rendered — so a sort changes the order of the lines and
+  nothing whatever about any of them. A `"007"` is still `"007"` afterwards.
+- **The rows outside the selection do not move**, so a header row stays a header
+  row by not being selected, which is the only rule that needs no guessing.
+- **Numbers, then text, then nothing**, as a column orders in Excel.
+- **Refused with its reason** where the rows are not a table written here, where
+  they are in that order already, and where they are written a line at a time —
+  which the CST does not reorder yet.
+- 1867 → 1881 tests, one of them Tier 4: the quickstart's three quarters put in
+  order largest-first, its header left where it is, through the pinned compiler.
+- **Phase 11 is done.**
 
 ### 2026-08-23 — Fill down, fill right
 Phase 11's fifth item, and the one §8 Q2 was blocking until ADR-031 answered it.

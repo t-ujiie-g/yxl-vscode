@@ -170,6 +170,7 @@ export interface Asks {
   readonly merge: (merged: boolean) => void;
   readonly table: () => void;
   readonly fill: (axis: Axis) => void;
+  readonly sort: (down: boolean) => void;
   readonly pointAt: (at: Pointed | null) => void;
   readonly freeze: (at: At | null) => void;
   readonly look: (text: string | null) => void;
