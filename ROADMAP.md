@@ -1230,6 +1230,20 @@ gestures on a *heading*, and the headings are not selectors yet.
 Deliberately **not** here: a second selection with `Cmd`+click (every answer in
 §4.4 is counted over one rectangle), zoom, and a format painter.
 
+### Phase 10.5 — What the last pass left
+- [ ] **A look on a cell a `formulas:` range fills.** A `cells:` entry may not
+      overlap a range (`docs/spec.md` §3), so the cell has nowhere to carry one.
+      The two places that can are a `columns:`/`rows:` band over the region —
+      what §3 recommends, and what the reader may not mean when they picked one
+      cell — and an `overrides:` entry, which §23 says is *the* answer inside a
+      filled range and which ADR-007 already designates here. Offer both and
+      ask (ADR-001); today the gesture is refused with `nothing here can carry
+      that look`, which is true and unhelpful.
+- [ ] **A look over a rectangle that spans a data block and cells.** Each cell
+      is answered on its own today, which is right, but the answers are not
+      counted together — a reader who selects ten cells should hear one sentence
+      rather than one per cell.
+
 ### Phase 11 — Structural edits
 - [ ] `insertRow` / `insertCol` / `deleteRow` / `deleteCol`, with the
       consequence enumeration and the expected-diff-size preview (§4.4). The
@@ -2681,6 +2695,32 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-23 — A look on a cell a data block fills
+Reported from the running preview: bolding a row that a `data:` block writes did
+nothing. Two bugs stood behind it, and the compiler settled both.
+
+- **The look was being written into the data entry**, which the schema has no
+  key for — *"formatting is not part of a data block"* (`docs/spec.md` §9). The
+  loader caught it and the edit was refused, so nothing invalid was ever
+  written; the reader just got a schema error where an answer belonged.
+- **It goes in a `cells:` entry of its own now**, which is what the format
+  supports: asked of the real compiler, a style-only entry over a data block
+  passes `--check`, applies the look, and **leaves the value where the block
+  writes it** — whichever key comes first.
+- **Our own projection disagreed with that**, which is the part worth keeping:
+  a later construct replaced the *whole* cell, so the preview showed the value
+  vanishing where the workbook kept it. yxl merges **one facet at a time** —
+  what a cell holds, its format, its look — and each is the last construct that
+  spoke of it. That rule already existed here for `overrides:`; it is now the
+  one rule every construct goes through, and an override's `format: null` clears
+  the format the way the compiler does.
+- **A cell a `formulas:` range fills is still refused**, and correctly: a
+  `cells:` entry may not overlap a range at all (`docs/spec.md` §3), so there is
+  nowhere on the cell to put a look. The band or an override is the answer, and
+  neither is offered yet — the item below.
+- 1754 → 1760 tests, one of them Tier 4: the look goes through the real compiler
+  into the workbook, with the value still beside it.
 
 ### 2026-08-23 — A right-click menu on a cell
 Phase 10's last item, and the phase with it.

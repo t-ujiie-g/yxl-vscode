@@ -151,3 +151,36 @@ const NO_STYLE: Style = {
   format: null,
   cleared: new Set(),
 };
+
+/** Which of a cell's three facets a construct spoke of (`docs/spec.md` §2, §23). */
+export interface Spoke {
+  readonly holds: boolean;
+  readonly format: boolean;
+  readonly style: boolean;
+}
+
+/** What an entry said of a cell: what it holds, its format, its look — each separately. */
+export function spokenBy(node: CellFacets): Spoke {
+  return {
+    holds: node.value !== null || node.formula !== null || node.rich !== null,
+    format: node.format !== null || node.clearsFormat,
+    style: node.style !== null,
+  };
+}
+
+/** A construct laid over what an earlier one said: each facet is the last that spoke of it. */
+export function layer(under: CompiledCell, over: CompiledCell, said: Spoke): CompiledCell {
+  return {
+    at: under.at,
+    value: said.holds ? over.value : under.value,
+    type: said.holds ? over.type : under.type,
+    formula: said.holds ? over.formula : under.formula,
+    rich: said.holds ? over.rich : under.rich,
+    format: said.format ? over.format : under.format,
+    style: [...under.style, ...over.style],
+    provenance: {
+      value: said.holds ? over.provenance.value : under.provenance.value,
+      format: said.format ? over.provenance.format : under.provenance.format,
+    },
+  };
+}

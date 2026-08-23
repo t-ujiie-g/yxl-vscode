@@ -93,7 +93,13 @@ function onCell(
   ];
 
   const cell = cellAt(sheet, at);
-  const node = cell === null ? null : nodeOf(cell.provenance.value);
+  const from = cell?.provenance.value ?? null;
+
+  // A `formulas:` range cannot carry a look and cannot be overlapped by a cell
+  // either, so there is nowhere here to put one (`docs/spec.md` §3).
+  if (from?.kind === 'formulaRange') return null;
+
+  const node = from === null || filled(from) ? null : nodeOf(from);
   if (node === null) return newCell(sheet, at, carries, read);
 
   const found = located(node, read);
@@ -214,7 +220,12 @@ function supplied(said: StyleSays, key: StyleProperty): boolean {
   return said[key] !== undefined && said[key] !== null;
 }
 
-/** A look on an address nothing writes: a cell that carries formatting and no value (`docs/spec.md` §3). */
+/** Whether a `data:` block fills the cell, which carries no look of its own (`docs/spec.md` §9). */
+function filled(from: FacetOrigin): boolean {
+  return from.kind === 'inline' || from.kind === 'external';
+}
+
+/** A look where no `cells:` entry writes: an entry of its own, formatting and no value. */
 function newCell(
   sheet: CompiledSheet,
   at: A1Addr,

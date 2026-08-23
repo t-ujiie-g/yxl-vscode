@@ -5,6 +5,7 @@ import { sheetOf } from './compile';
 import type { DataReader } from './ctx';
 import { cell as at, codes, grid, sheet } from './harness';
 import { reaches } from './impact';
+import { resolve } from './style';
 
 const SALES = 'sheets:\n  - name: Sales\n';
 
@@ -260,6 +261,22 @@ describe('a `formulas:` range', () => {
   });
 });
 
+describe('an override, which is the last thing to speak of a cell', () => {
+  const spec = `${SALES}    cells:\n      A2: { value: 1, format: "0.00" }\n`;
+
+  it('takes the format off where it says the cell has none (`docs/spec.md` §6)', () => {
+    const off = `${spec}overrides:\n  - at: Sales!A2\n    format: null\n`;
+
+    expect([at(off, 'A2')?.value, at(off, 'A2')?.format]).toEqual([1, null]);
+  });
+
+  it('leaves the format alone where it says nothing about one', () => {
+    const bold = `${spec}overrides:\n  - at: Sales!A2\n    style: { font: { bold: true } }\n`;
+
+    expect(at(bold, 'A2')?.format).toBe('0.00');
+  });
+});
+
 describe('the order the sheet was written in', () => {
   const cells = '    cells:\n      A2: written by hand\n';
   const data = '    data:\n      - at: A2\n        values: [[from the block]]\n';
@@ -267,6 +284,30 @@ describe('the order the sheet was written in', () => {
   it('lets a later key win over an earlier one', () => {
     expect(at(`${SALES}${data}${cells}`, 'A2')?.value).toBe('written by hand');
     expect(at(`${SALES}${cells}${data}`, 'A2')?.value).toBe('from the block');
+  });
+
+  it('lets it win one facet at a time, since a data block speaks of no look', () => {
+    const look = '    cells:\n      A2: { style: { font: { bold: true } } }\n';
+
+    for (const spec of [`${SALES}${data}${look}`, `${SALES}${look}${data}`]) {
+      const one = at(spec, 'A2');
+      expect([one?.value, resolve(one?.style ?? [])['font.bold']]).toEqual([
+        'from the block',
+        true,
+      ]);
+    }
+  });
+
+  it('keeps the look and the format of a cell a later block writes the value of', () => {
+    const both =
+      '    cells:\n      A2: { value: 1, style: { font: { bold: true } }, format: "0.00" }\n';
+    const one = at(`${SALES}${both}${data}`, 'A2');
+
+    expect([one?.value, one?.format, resolve(one?.style ?? [])['font.bold']]).toEqual([
+      'from the block',
+      '0.00',
+      true,
+    ]);
   });
 });
 

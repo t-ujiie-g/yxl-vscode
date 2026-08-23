@@ -129,6 +129,44 @@ describe('a look nothing else supplies', () => {
   });
 });
 
+describe('a look on a cell something else fills', () => {
+  const DATA = `${SALES}    data:\n      - at: A2\n        values:\n          - [APAC, 1]\n          - [EMEA, 2]\n`;
+
+  it('is a `cells:` entry of its own, since a data block carries no formatting', () => {
+    const [answer] = offered(DATA, at(2, 1), BOLD);
+    if (answer === undefined) throw new Error('nothing was offered');
+
+    expect(taken(DATA, answer)).toBe(
+      `${DATA}    cells:\n      A2:\n        style: { font: { bold: true } }\n`,
+    );
+  });
+
+  it('leaves the value where the data block writes it', () => {
+    const [answer] = offered(DATA, at(2, 1), BOLD);
+    if (answer === undefined) throw new Error('nothing was offered');
+
+    const { grid } = files(taken(DATA, answer));
+    const sheet = grid.sheets[0];
+    const cell = sheet === undefined ? undefined : cellAt(sheet, 'A2' as A1Addr);
+
+    expect([cell?.value, resolve(cell?.style ?? [])['font.bold']]).toEqual(['APAC', true]);
+  });
+
+  it('goes in beside a cell already written there, not on top of it', () => {
+    const both = `${DATA}    cells:\n      Z9: 1\n`;
+    const [answer] = offered(both, at(2, 1), BOLD);
+    if (answer === undefined) throw new Error('nothing was offered');
+
+    expect(taken(both, answer)).toContain('      Z9: 1\n      A2:\n        style:');
+  });
+
+  it('says nothing about a cell a formula range fills, which no cell may overlap', () => {
+    const range = `${SALES}    cells:\n      A1: 2\n    formulas:\n      - at: C1:C2\n        formula: "A1*2"\n`;
+
+    expect(offered(range, at(1, 3), BOLD)).toEqual([]);
+  });
+});
+
 describe('a look the cell itself already carries', () => {
   const BOLDED = `${SALES}    cells:\n      A1: { value: 1, style: { font: { bold: true } } }\n`;
 

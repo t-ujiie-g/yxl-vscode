@@ -252,6 +252,9 @@ importers:
       '@yxl-vscode/cst':
         specifier: workspace:*
         version: link:../packages/cst
+      '@yxl-vscode/intent':
+        specifier: workspace:*
+        version: link:../packages/intent
       '@yxl-vscode/loader':
         specifier: workspace:*
         version: link:../packages/loader
