@@ -333,6 +333,11 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       said = null;
       host.postMessage({ kind: 'hide', sheet: named(), axis, first, last, hidden });
     },
+    line: (axis, at, by) => {
+      refused = null;
+      said = null;
+      host.postMessage({ kind: 'line', sheet: named(), axis, at, by });
+    },
     group: (axis, first, last, level) => {
       refused = null;
       said = null;

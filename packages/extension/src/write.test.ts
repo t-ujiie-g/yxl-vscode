@@ -7,6 +7,7 @@ import type { Choice, Frozen, Resized, Typed, Worn } from '@yxl-vscode/webview/p
 import { describe, expect, it } from 'vitest';
 import { group } from './group';
 import { hide } from './hidden';
+import { line } from './lines';
 import { wear } from './look';
 import { freeze } from './panes';
 import { resize } from './size';
@@ -615,6 +616,48 @@ describe('columns hidden from the preview', () => {
 
     await hide(spec, hiding({ hidden: false }), port);
     expect(refusals[0]).toContain('nothing hides columns B-C');
+  });
+});
+
+describe('rows put in and taken away from the heading', () => {
+  const SHEET = `${SALES}    cells:\n      A1: Region\n      A5: Total\n`;
+
+  it('moves the keys below it and says what moved', async () => {
+    const { spec, port, files, told } = editor({ [ROOT]: SHEET });
+
+    await line(spec, { sheet: 'Sales', axis: 'row', at: 5, by: 1 }, port);
+
+    expect(files[ROOT]).toBe(`${SALES}    cells:\n      A1: Region\n      A6: Total\n`);
+    expect(told).toEqual(['row 5 put in.']);
+  });
+
+  it('takes a row away, and the cells inside it with it', async () => {
+    const { spec, port, files } = editor({ [ROOT]: SHEET });
+
+    await line(spec, { sheet: 'Sales', axis: 'row', at: 5, by: -1 }, port);
+    expect(files[ROOT]).toBe(`${SALES}    cells:\n      A1: Region\n`);
+  });
+
+  it('asks first where it moves more than a handful, with the count in the question', async () => {
+    const many = Array.from({ length: 30 }, (_, one) => `      A${one + 2}: ${one}\n`).join('');
+    const { spec, port, refusals, answers, files } = editor({
+      [ROOT]: `${SALES}    cells:\n${many}`,
+    });
+    const asked = { sheet: 'Sales', axis: 'row', at: 2, by: 1 } as const;
+
+    await line(spec, asked, port);
+    expect(refusals[0]).toContain('30 things, all of them `cells:` keys');
+    expect(files[ROOT]).toBe(`${SALES}    cells:\n${many}`);
+
+    await line(spec, asked, port, answers[0]?.[0]?.id);
+    expect(files[ROOT]).toContain('      A32: 29\n');
+  });
+
+  it('says so where nothing it reaches moves', async () => {
+    const { spec, port, refusals } = editor({ [ROOT]: SHEET });
+
+    await line(spec, { sheet: 'Sales', axis: 'row', at: 40, by: 1 }, port);
+    expect(refusals[0]).toBe('nothing here moves when row 40 is drawn');
   });
 });
 

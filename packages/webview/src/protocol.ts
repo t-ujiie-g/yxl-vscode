@@ -163,7 +163,8 @@ export type About =
   | ({ readonly kind: 'wear' } & Worn)
   | ({ readonly kind: 'group' } & Grouped)
   | ({ readonly kind: 'hide' } & Hidden)
-  | ({ readonly kind: 'resize' } & Resized);
+  | ({ readonly kind: 'resize' } & Resized)
+  | ({ readonly kind: 'line' } & Lined);
 
 /**
  * `Cmd`+`V` in the grid: where it goes, what the grid holds of its own, and what
@@ -301,6 +302,17 @@ export type FromView =
       readonly row: number;
       readonly col: number;
     };
+
+/**
+ * Rows or columns put in above `at`, or taken away from there where `by` is
+ * below zero — as many as `by` says (`docs/spec.md` §2, ROADMAP §4.4).
+ */
+export interface Lined {
+  readonly sheet: string;
+  readonly axis: Axis;
+  readonly at: number;
+  readonly by: number;
+}
 
 /**
  * Columns dragged to a width in character units, or rows to a height in points

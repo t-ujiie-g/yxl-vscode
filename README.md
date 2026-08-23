@@ -23,6 +23,7 @@ not into a workbook.
 | **Explains** | Select a cell and the inspector says where each part of it came from — the definition, the band, the file — and takes you to that line. Put the cursor on a definition and the cells it reaches light up. |
 | **Answers** | Turn a parameter in the preview and the whole spec redraws as that workbook, without touching the file. Problems the projection found are marked on the cell and listed under the grid. |
 | **Says what a selection comes to** | Select a rectangle and its count, sum and average are under the grid, over the values as computed — the number you can see is the number that is added. Taken on the host, because the grid is drawn a window and a whole-column selection reaches past it. |
+| **Puts rows and columns in, and takes them out** | From the heading, over the run selected. Every construct the line reaches moves with it: a `cells:` key is renamed, a formula says the same thing from where it stands, a `data:` block opens a gap, a range and a merge take the line in, the freeze follows. What it would move is in front of you before it happens, and a formula naming a row a delete would take refuses the gesture rather than leaving `#REF!` behind. |
 | **Computes** | Formulas are evaluated for display — 500-odd Excel functions, `#DIV/0!` and the rest of Excel's error text included, and a `formulas:` range computed per cell the way Excel shifts a shared formula. A formula that names something this does not model (a table, a workbook-defined name) is **not computed at all**, and the sheet says so: a number that is not the workbook's number is worse than no number. |
 | **Never writes a computed value** | What was computed is display-only and is kept apart from what the spec holds, everywhere, so no edit can ever be about it. |
 | **Edits, where the answer is one thing** | Type into a cell — Enter, or just start typing, as in Sheets; `Alt`+`Enter` for a line break inside it, `Tab` and `Shift`+`Enter` to leave it the way you would anywhere else — and the YAML changes: the smallest possible diff, in whichever `$include`d file wrote that cell, with your comments and quoting untouched. Every write is checked by compiling before and after and comparing what moved against what the edit said it would move; an edit that cannot be undone is not made. |
@@ -87,8 +88,8 @@ Seeing where everything came from is the half that already works, and it is what
 the rest is built on.
 
 The everyday spreadsheet gestures it does **not** have yet are listed as
-plainly as the ones it does — inserting and deleting rows and columns are
-[`ROADMAP.md`](./ROADMAP.md) Phase 11, and merging cells comes with them.
+plainly as the ones it does — merging cells, filling down, and sorting a block
+of rows are the rest of [`ROADMAP.md`](./ROADMAP.md) Phase 11.
 
 Excel still opens the result. `yxl build` still produces the `.xlsx`; this editor
 never writes one.

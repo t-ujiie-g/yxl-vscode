@@ -72,7 +72,19 @@ function onHeading(showing: Showing, asks: Asks, at: PointedHeading): HTMLElemen
     asks.group(at.axis, run.first, run.last, level);
   };
 
+  const line = (where: number, by: number) => () => {
+    asks.pointAt(null);
+    asks.line(at.axis, where, by);
+  };
+
+  const these = many === 1 ? `${at.axis}` : `${many} ${at.axis}s`;
+  const before = at.axis === 'column' ? 'left' : 'above';
+  const after = at.axis === 'column' ? 'right' : 'below';
+
   const entries = [
+    entry(`Insert ${these} ${before}`, {}, line(run.first, many)),
+    entry(`Insert ${these} ${after}`, {}, line(run.last + 1, many)),
+    entry(`Delete ${many === 1 ? `this ${at.axis}` : these}`, {}, line(run.first, -many)),
     entry(
       many === 1 ? `Hide this ${at.axis}` : `Hide these ${many} ${at.axis}s`,
       {},

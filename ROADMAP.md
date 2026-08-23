@@ -451,7 +451,7 @@ not a date.
 | Currency, percent, more and fewer decimals; clear formatting | ✅ — the decimals are arithmetic on the format code, so the rest of it survives |
 | A right-click menu on a heading | ✅ — hide and show again live there |
 | A right-click menu on a cell | ✅ — cut, copy, paste, clear; it is where Phase 11's insert and delete will hang |
-| Insert or delete a row or column | **Phase 11** |
+| Insert or delete a row or column | ✅ — from the heading, over the run selected, with what it moves in front of it |
 | Merge cells | **Phase 11** |
 | Fill down, and the drag handle | **Phase 11** (needs §8 Q2) |
 | Sort a block of rows | **Phase 11** |
@@ -1285,9 +1285,15 @@ Deliberately **not** here: a second selection with `Cmd`+click (every answer in
             four hundred `renameKey`s are four hundred disjoint edits, and the
             op the §4.5 table was holding a place for is one the language does
             not have to grow.
-      - [ ] The gesture on the heading, with the count in front of it and the
-            `data:` conversion offered where the count is what the `cells:`
-            keys cost
+      - [x] **The gesture on the heading**: *Insert N rows above / below* and
+            *Delete N rows* on the row numbers, the same three on the column
+            letters, over the run the reader has selected. The count is in
+            front of them where it is more than a handful — the edit is
+            **offered rather than taken**, with what it moves and how much of
+            that is `cells:` keys, which is §4.4's diff-size preview. The
+            `data:` conversion it should offer beside that is the item three
+            below; until it exists the count says what the keys cost and no
+            more.
 - [ ] **A field cannot go into rows written as `[a, b]`.** Inserting a column
       through an inline `data:` block needs the CST to rewrite a flow sequence,
       which it does not do yet; the gesture refuses and says so. Rows written a
@@ -2778,6 +2784,27 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-23 — Insert and delete, from the heading
+Phase 11's first item, finished: the gesture a reader reaches for on a row
+number.
+
+- **Insert N rows above / below, and Delete N rows**, on the row numbers and the
+  column letters both, over the run the reader has selected — three rows
+  selected inserts three, as it does in both spreadsheets.
+- **The count is in front of it where it is more than a handful.** Over twenty
+  things and the edit is *offered* rather than taken, saying what it moves and
+  how much of that is `cells:` keys. That is §4.4's diff-size preview, and where
+  the keys are the cost, the number is the case the `data:` conversion will be
+  made from.
+- **Through the whole write path**, so every one of them lands through `verify`:
+  a structural edit is checked against the grid it leaves, and claims both ends
+  of every move — the cell that emptied and the one that filled.
+- **Proved at Tier 4**: a row put into yxl's own quickstart, built by the pinned
+  compiler, comes back with `EMEA` a row down, `SUM(B2:B3)` reading
+  `SUM(B2:B4)`, the `data:` block at `A10`, and the filled `C4` applying
+  `B4*0.05`.
+- 1813 → 1818 tests.
 
 ### 2026-08-23 — A line drawn in the sheet
 Phase 11's third piece: the write. Every construct the line reaches, moved where

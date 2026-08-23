@@ -34,6 +34,7 @@ export function asks(): Asks {
     hide: vi.fn(),
     pointAt: vi.fn(),
     group: vi.fn(),
+    line: vi.fn(),
   };
 }
 
