@@ -634,11 +634,21 @@ body {
   border-right-color: #e81123;
 }
 
-/* A note is a sentence or two, which the one line a tooltip is cannot hold. */
-.grid td.saying::after {
-  width: max-content;
+/* What a cell says on hover — a note, a filtered header. Fixed to the page and
+   placed from the cell's own box, since the cell clips everything inside it. */
+.notice {
+  position: fixed;
+  z-index: 30;
   max-width: 22rem;
+  width: max-content;
+  border: 1px solid var(--vscode-editorHoverWidget-border, #454545);
+  border-radius: 3px;
+  padding: 0.1rem 0.35rem;
+  background: var(--vscode-editorHoverWidget-background, #252526);
+  color: var(--vscode-editorHoverWidget-foreground, #cccccc);
+  font: 400 0.85em / 1.4 var(--vscode-font-family);
   white-space: pre-wrap;
+  pointer-events: none;
 }
 
 /* The box a note is written in, in the pale yellow Excel shows a note in. */

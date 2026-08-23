@@ -1026,6 +1026,18 @@ describe('a sheet with a filter on its header row', () => {
     expect(at(into, 1, 2)?.querySelector('.dropdown')).not.toBeNull();
     expect(at(into, 2, 1)?.querySelector('.dropdown')).toBeNull();
   });
+
+  it('says what the mark is while the pointer is over the header', () => {
+    const held = drawing({
+      sheets: [sheet({ rows: 1, columns: 1, filter: { top: 1, left: 1, bottom: 1, right: 1 } })],
+    });
+    const cell = at(shown({ drawing: held }), 1, 1);
+
+    cell?.dispatchEvent(new MouseEvent('mouseenter'));
+    expect(cell?.querySelector('.notice')?.textContent).toBe(
+      'This column has a filter; the preview does not filter by it',
+    );
+  });
 });
 
 describe('a cell that carries a note', () => {
@@ -1042,12 +1054,18 @@ describe('a cell that carries a note', () => {
     return shown({ drawing: held, ...of }, on);
   };
 
-  it('wears the corner, and says the note with its author on hover', () => {
+  it('wears the corner, and says the note with its author while the pointer is over it', () => {
     const into = noted();
+    const cell = at(into, 1, 1);
 
-    expect(at(into, 1, 1)?.querySelector('.noted')).not.toBeNull();
-    expect(at(into, 1, 1)?.getAttribute('data-says')).toBe('Ada: check stock');
+    expect(cell?.querySelector('.noted')).not.toBeNull();
     expect(at(into, 1, 2)?.querySelector('.noted')).toBeNull();
+
+    cell?.dispatchEvent(new MouseEvent('mouseenter'));
+    expect(cell?.querySelector('.notice')?.textContent).toBe('Ada: check stock');
+
+    cell?.dispatchEvent(new MouseEvent('mouseleave'));
+    expect(cell?.querySelector('.notice')).toBeNull();
   });
 
   it('is written in a box over the cell, which sends what was typed', () => {

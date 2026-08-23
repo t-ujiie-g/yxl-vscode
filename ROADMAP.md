@@ -3012,7 +3012,11 @@ grid to the drawing, and a note can be written, changed, and taken off.
   a note always carries one in the file, so there is nothing to lose there.
 - **The red corner Excel puts on the cell**, with the note itself on hover, the
   author before it where one is named. A cell that holds nothing but a note is
-  drawn for the note.
+  drawn for the note. What the cell says on hover is drawn *beside* the cell and
+  fixed to the page: `.grid td` clips what is inside it, so the `::after`
+  tooltip the rest of the view uses is never seen there — which is why the
+  filter mark's own hover text has not been showing either. Both go through the
+  one panel now, and a filtered header carrying a note says both.
 - **The cell's own menu offers it**: *Insert note* where there is none, *Edit
   note* and *Delete note* where there is one. The note is typed in a box over
   the cell, in the pale yellow Excel shows a note in — a webview has no dialog
