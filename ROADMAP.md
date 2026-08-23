@@ -1383,8 +1383,11 @@ are carried through untouched and shown as nothing (`docs/spec.md` §2).
 - [x] **A new sheet**, from a `+` on the tab bar: one `- name:` entry at the end
       of `sheets:`, and the tab bar shown even for one sheet so there is
       somewhere to press
-      **In.** The name is asked for, offered as `Sheet2`, `Sheet3`, … past the
-      ones there are, and checked at the writing edge against Excel's own rules
+      **In.** Added at once under the next free name — `Sheet2`, `Sheet3`, …
+      past the ones there are — as both spreadsheets do; renaming is the tab's
+      own gesture, the next item. (A webview has no `prompt`, which the first
+      cut leaned on and which is why its `+` did nothing.) The name is checked
+      at the writing edge against Excel's own rules
       (`docs/spec.md` §2) — which yxl refuses a spec over, so a name it would
       refuse is refused here first, by the rule it breaks. `verify` learned to
       take a **sheet** as something an edit may claim, beside the cells it may
@@ -2923,9 +2926,11 @@ Phase 12 opens: the first thing a spreadsheet user does with the tab bar that
 this one could not do.
 
 - **A `+` on the tab bar**, and the bar shown even for one sheet so there is
-  somewhere to press. The name is asked for, offered as `Sheet2`, `Sheet3`, …
-  past the ones there are — the name both spreadsheets offer — and the new sheet
-  is shown as soon as the drawing that has it arrives.
+  somewhere to press. The sheet is added at once under the next free name —
+  `Sheet2`, `Sheet3`, … past the ones there are — as both spreadsheets do, and
+  shown as soon as the drawing that has it arrives. Renaming is the next item.
+  (The first cut asked for the name with `window.prompt`, which a webview does
+  not have: the `+` did nothing in the running preview.)
 - **One `- name:` entry, last**, which is tab order (`docs/spec.md` §2). Holding
   nothing yet; the first thing typed into it makes its `cells:`.
 - **Excel's own name rules at the writing edge.** yxl refuses a spec over a bad

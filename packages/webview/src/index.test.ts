@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { type Host, wire } from './index';
 import type { Drawing, DrawnCell, DrawnSheet, FromView, Refused, Typed } from './protocol';
 
@@ -1124,19 +1124,16 @@ describe('the bar over the grid', () => {
     expect(sent.filter((one) => one.kind === 'fill').at(-1)).toMatchObject({ axis: 'column' });
   });
 
-  it('asks for a sheet from the `+` on the tabs, and goes to it when it arrives', () => {
+  it('asks for a sheet from the `+` on the tabs, under the next free name, and goes to it', () => {
     const { into, sent, told } = view();
-    const prompt = vi.spyOn(window, 'prompt').mockReturnValue('Notes');
 
     into.querySelector<HTMLButtonElement>('.tabs .add')?.click();
-    expect(prompt).toHaveBeenCalledWith('Name for the new sheet', 'Sheet2');
     expect(sent.filter((one) => one.kind === 'addSheet')).toEqual([
-      { kind: 'addSheet', name: 'Notes' },
+      { kind: 'addSheet', name: 'Sheet2' },
     ]);
 
-    told({ ...drawing, sheets: [sheet(), sheet({ name: 'Notes', cells: [] })] });
-    expect(into.querySelector('.tab.showing')?.textContent).toBe('Notes');
-    prompt.mockRestore();
+    told({ ...drawing, sheets: [sheet(), sheet({ name: 'Sheet2', cells: [] })] });
+    expect(into.querySelector('.tab.showing')?.textContent).toBe('Sheet2');
   });
 
   it('shows the tabs even for one sheet, so there is somewhere to press', () => {

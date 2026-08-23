@@ -213,11 +213,11 @@ export function tabs(drawing: Drawing, showing: number, asks: Asks): HTMLElement
   add.className = 'tab add';
   add.textContent = '+';
   says(add, 'Add a sheet');
-  add.addEventListener('click', () => {
-    const taken = drawing.sheets.map((one) => one.name as SheetName);
-    const name = window.prompt('Name for the new sheet', nextSheetName(taken));
-    if (name !== null && name.trim() !== '') asks.addSheet(name.trim());
-  });
+  // Added under the next free name at once, as both spreadsheets do — a webview
+  // has no `prompt`, and renaming is the tab's own gesture.
+  add.addEventListener('click', () =>
+    asks.addSheet(nextSheetName(drawing.sheets.map((one) => one.name as SheetName))),
+  );
   bar.append(add);
 
   return bar;
