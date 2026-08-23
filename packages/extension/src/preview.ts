@@ -9,6 +9,7 @@ import type {
   Grouped,
   Hidden,
   Lined,
+  Merged,
   Pasted,
   PastedAt,
   PastedText,
@@ -25,6 +26,7 @@ import { hide } from './hidden';
 import { inspect, type Nodes, nodeUnder } from './inspect';
 import { line } from './lines';
 import { wear } from './look';
+import { merge } from './merges';
 import { freeze } from './panes';
 import { drawRun, type Projected, project, redraw, type Window } from './project';
 import { resize } from './size';
@@ -59,6 +61,7 @@ const WRITES = {
     choice === undefined ? empty(spec, ranged, port) : emptied(spec, ranged, choice, port),
   wear: (spec: Spec, worn: Worn, port: Port, choice?: string) => wear(spec, worn, port, choice),
   freeze: (spec: Spec, frozen: Frozen, port: Port) => freeze(spec, frozen, port),
+  merge: (spec: Spec, one: Merged, port: Port) => merge(spec, one, port),
   group: (spec: Spec, grouped: Grouped, port: Port, choice?: string) =>
     group(spec, grouped, port, choice),
   hide: (spec: Spec, one: Hidden, port: Port, choice?: string) => hide(spec, one, port, choice),

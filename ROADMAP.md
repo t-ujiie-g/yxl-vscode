@@ -453,7 +453,7 @@ not a date.
 | A right-click menu on a heading | ✅ — hide and show again live there |
 | A right-click menu on a cell | ✅ — cut, copy, paste, clear; it is where Phase 11's insert and delete will hang |
 | Insert or delete a row or column | ✅ — from the heading, over the run selected, with what it moves in front of it |
-| Merge cells | **Phase 11** |
+| Merge cells | ✅ — from the cell's own menu, and lossless: the covered values stay in the spec |
 | Fill down, and the drag handle | **Phase 11** (needs §8 Q2) |
 | Sort a block of rows | **Phase 11** |
 | See a chart, an image, a sparkline that the spec declares | **Phase 12** |
@@ -1310,7 +1310,16 @@ Deliberately **not** here: a second selection with `Cmd`+click (every answer in
       four hundred `renameKey`s are four hundred disjoint edits — there is no
       collision to sequence and no bulk op to write. The place §4.5 was holding
       is given back.
-- [ ] `merge` / `unmerge`, and band creation
+- [x] `merge` / `unmerge`, and band creation
+      **Merging is lossless here**, which is the difference worth knowing: Excel
+      throws away every value but the top-left, and a spec keeps them — the
+      merge only *draws* over them (`docs/spec.md` §2), so taking it apart again
+      gives the sheet back exactly. Refused where it would cross a merge already
+      there: yxl passes overlapping merges through, and Excel is what would
+      complain about the workbook.
+      **Band creation** was already done, and by the gestures that need one: a
+      look or a size over a whole column writes a band of its own where none is
+      over exactly that span (ADR-041, ADR-042).
 - [ ] The "convert this rectangle to `data:`" offer, at the moment a `cells:`
       block proves it needs it — and with it **§4.4's `empty` ②**, the answer
       that extends the `data:` rectangle next to an address rather than writing
@@ -2795,6 +2804,26 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-23 — Merge, and take apart again
+Phase 11's third item.
+
+- **Merge cells / Unmerge cells** in a cell's own menu, over the rectangle the
+  reader has selected — *merge* where it is more than one cell and nothing there
+  is merged, *unmerge* where the cell is inside one.
+- **Merging is lossless.** Excel throws away every value but the top-left; a
+  spec keeps them, because a merge only *draws* over them (`docs/spec.md` §2).
+  So the gesture is its own inverse: merge and unmerge gives the sheet back
+  exactly, and the workbook shows what Excel would show either way.
+- **Refused where it would cross a merge already there**, naming it. yxl passes
+  overlapping merges through and it is Excel that would complain about the
+  workbook, so the editor is the place to stop it.
+- **The key is written the way the spec writes it** — `merges: [A1:C1]`, one
+  line — and goes when the last merge in it does.
+- **Band creation** was already done, by the gestures that need one: a look or a
+  size over a whole column writes a band of its own (ADR-041, ADR-042).
+- 1825 → 1837 tests, one of them Tier 4: the merge goes through the pinned
+  compiler and `B1` is still `Revenue` under it.
 
 ### 2026-08-23 — A field into a row written as `[a, b]`
 The limit the last change wrote down, lifted — and the first Phase 11 item

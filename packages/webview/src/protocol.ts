@@ -49,6 +49,11 @@ export interface DrawnSheet {
   readonly freeze: { readonly row: number; readonly col: number } | null;
 }
 
+/** A rectangle asked to be drawn as one cell, or taken back apart (`docs/spec.md` §2). */
+export interface Merged extends Ranged {
+  readonly merged: boolean;
+}
+
 /** Where a sheet's panes are asked to be frozen, or `null` to take the freeze off. */
 export interface Frozen {
   readonly sheet: string;
@@ -294,6 +299,7 @@ export type FromView =
   | { readonly kind: 'undo'; readonly redo: boolean }
   | ({ readonly kind: 'pasteAt' } & PastedAt)
   | ({ readonly kind: 'freeze' } & Frozen)
+  | ({ readonly kind: 'merge' } & Merged)
   | ({ readonly kind: 'sum' } & Ranged)
   | ({ readonly kind: 'override'; readonly reason: string } & Typed)
   | {

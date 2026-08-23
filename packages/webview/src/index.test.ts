@@ -1102,6 +1102,40 @@ describe('the bar over the grid', () => {
     expect(sent.filter((one) => one.kind === 'find').at(-1)).toMatchObject({ text: 'APAC' });
   });
 
+  it('asks for a merge over the rectangle the reader has selected', () => {
+    const { into, sent } = view();
+
+    reachFrom(into, { row: 1, col: 1 }, { row: 2, col: 2 });
+    at(into, 2, 2)?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 2 }));
+    at(into, 2, 2)?.dispatchEvent(
+      new MouseEvent('contextmenu', { bubbles: true, cancelable: true }),
+    );
+
+    const entries = [...into.querySelectorAll<HTMLButtonElement>('.pointed .entry')];
+    expect(entries[0]?.textContent).toBe('Merge cells');
+
+    entries[0]?.click();
+    expect(sent.filter((one) => one.kind === 'merge')).toEqual([
+      { kind: 'merge', sheet: 'Sales', top: 1, left: 1, bottom: 2, right: 2, merged: true },
+    ]);
+  });
+
+  it('offers to take one apart where the cell is inside one', () => {
+    const { into, sent, told } = view();
+    told({ ...drawing, sheets: [sheet({ merges: [{ top: 1, left: 1, bottom: 1, right: 2 }] })] });
+
+    at(into, 1, 1)?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 2 }));
+    at(into, 1, 1)?.dispatchEvent(
+      new MouseEvent('contextmenu', { bubbles: true, cancelable: true }),
+    );
+
+    const entries = [...into.querySelectorAll<HTMLButtonElement>('.pointed .entry')];
+    expect(entries[0]?.textContent).toBe('Unmerge cells');
+
+    entries[0]?.click();
+    expect(sent.filter((one) => one.kind === 'merge').at(-1)).toMatchObject({ merged: false });
+  });
+
   it('takes the whole sheet from the corner, as whole columns', () => {
     const { into, sent } = view();
 

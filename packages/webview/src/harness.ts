@@ -35,6 +35,7 @@ export function asks(): Asks {
     pointAt: vi.fn(),
     group: vi.fn(),
     line: vi.fn(),
+    merge: vi.fn(),
   };
 }
 
