@@ -160,6 +160,19 @@ describe('a look on a cell something else fills', () => {
     expect(taken(both, answer)).toContain('      Z9: 1\n      A2:\n        style:');
   });
 
+  it('goes into the entry the last look made, rather than a second one beside it', () => {
+    const [first] = offered(DATA, at(2, 1), BOLD);
+    if (first === undefined) throw new Error('nothing was offered');
+
+    const bold = taken(DATA, first);
+    const [again] = offered(bold, at(2, 1), { 'font.underline': true });
+    if (again === undefined) throw new Error('nothing was offered a second time');
+
+    expect(taken(bold, again)).toContain(
+      '      A2:\n        style: { font: { bold: true, underline: true } }\n',
+    );
+  });
+
   it('says nothing about a cell a formula range fills, which no cell may overlap', () => {
     const range = `${SALES}    cells:\n      A1: 2\n    formulas:\n      - at: C1:C2\n        formula: "A1*2"\n`;
 

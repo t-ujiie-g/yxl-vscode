@@ -99,7 +99,10 @@ function onCell(
   // either, so there is nowhere here to put one (`docs/spec.md` §3).
   if (from?.kind === 'formulaRange') return null;
 
-  const node = from === null || filled(from) ? null : nodeOf(from);
+  // Where a data block writes the value, the cell's own keys live in the
+  // `cells:` entry beside it — the one a look already went into, if there is one.
+  const beside = layers.find((one) => one.through === 'cell')?.node ?? null;
+  const node = from === null ? null : filled(from) ? beside : nodeOf(from);
   if (node === null) return newCell(sheet, at, carries, read);
 
   const found = located(node, read);
