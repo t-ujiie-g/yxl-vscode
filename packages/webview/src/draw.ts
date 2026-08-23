@@ -25,7 +25,7 @@ import {
   ranged,
   type Showing,
 } from './showing';
-import { grid, headed } from './table';
+import { grid, headed, pinned } from './table';
 import { toolbar } from './toolbar';
 import { type Where, wanted } from './window';
 
@@ -62,9 +62,11 @@ export function draw(into: HTMLElement, showing: Showing, asks: Asks): void {
   if (sheet !== undefined) {
     const box = scroller(sheet, showing, asks);
     into.append(box);
-    // Only once it is in the page: an element with no layout box cannot scroll.
+    // Only once it is in the page: an element with no layout box cannot scroll,
+    // and a frozen row has no measured height until it is laid out.
     box.scrollTop = kept.top;
     box.scrollLeft = kept.left;
+    pinned(box);
   }
 
   const menu = pointing(showing, asks);

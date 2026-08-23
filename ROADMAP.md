@@ -2954,6 +2954,19 @@ than widening it silently.
 
 ## 11. Living changelog
 
+### 2026-08-23 — A frozen row stays the height it is drawn at
+Scrolling a sheet with `freeze:` squashed the frozen rows: three rows of a
+header stacked into one band, their text overlapping.
+
+A frozen row is `position: sticky`, and each was pinned at the height the spec
+*declares* for the rows above it. A row is only ever at least its declared
+height — the browser grows it where the text wraps or the font is larger — so
+the pins were all too high, and each row sat on top of the one before.
+
+They are pinned by what they measure now, once the grid is in the page, and left
+as declared where there is no layout to measure at all: a panel not yet shown
+has only the declaration, and the declaration beats zero.
+
 ### 2026-08-23 — Text spills, as it does in both spreadsheets
 A heading typed into `A1` runs across `B1` and `C1` in Excel and in Sheets, so
 long as those cells are empty. Here it was clipped at the cell's own edge, which

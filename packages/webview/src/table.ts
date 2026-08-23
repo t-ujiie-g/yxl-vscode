@@ -528,3 +528,23 @@ function spillOf(
 
   return width === widthOf(sheet, col) ? 0 : width;
 }
+
+/**
+ * The frozen rows pinned by what they measure rather than what the spec
+ * declares — a row is taller than its declaration where its text wraps — and
+ * left as declared where there is no layout to measure.
+ */
+export function pinned(into: HTMLElement): void {
+  const head = into.querySelector('thead');
+  if (!(head instanceof HTMLElement) || head.offsetHeight === 0) return;
+
+  let top = head.offsetHeight;
+  for (const line of into.querySelectorAll('tr.frozen')) {
+    if (!(line instanceof HTMLElement) || line.offsetHeight === 0) return;
+
+    for (const cell of line.children) {
+      if (cell instanceof HTMLElement) cell.style.top = `${top}px`;
+    }
+    top += line.offsetHeight;
+  }
+}
