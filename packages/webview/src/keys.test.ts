@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 
+import { within } from '@yxl-vscode/units';
 import { describe, expect, it } from 'vitest';
 import {
   between,
@@ -11,7 +12,6 @@ import {
   takingAll,
   undoing,
   wearing,
-  within,
 } from './keys';
 import type { DrawnCell, DrawnSheet } from './protocol';
 
@@ -118,8 +118,8 @@ describe('the rectangle two corners make', () => {
       { row: 4, col: 3 },
     ] as const;
 
-    expect(within({ row: 3, col: 3 }, ...corners)).toBe(true);
-    expect(within({ row: 3, col: 4 }, ...corners)).toBe(false);
+    expect(within({ row: 3, col: 3 }, between(...corners))).toBe(true);
+    expect(within({ row: 3, col: 4 }, between(...corners))).toBe(false);
   });
 });
 

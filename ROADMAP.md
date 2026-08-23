@@ -2994,6 +2994,33 @@ than widening it silently.
 
 ## 11. Living changelog
 
+### 2026-08-23 — Refactoring pass after the decorations (`AGENTS.md` §8)
+Walked §8's lenses over what Phase 13 has added so far. Findings, and what each
+came to:
+
+- **§8.1 Constants.** Nothing new: `KEY` grew `filter` with the gesture that
+  writes it, which is the rule working rather than a finding.
+- **§8.2 Dead code.** The list of Excel's seventeen icon-set names in the loader
+  was exported and used by nobody — written for a validation that was never
+  added, and should not be: `yxl build --check` is the validator of record
+  (ADR-011), and refusing a name yxl accepts would be a local divergence. Gone.
+  A set this view has no marks for already draws no icon.
+- **§8.2 Duplicates.** *Is this cell inside this rectangle* had **four** hand-
+  rolled copies while `units` exports `within` — in `conditional.ts`,
+  `inspect.ts`, `showing.ts`, and one in `keys.ts` that was a **second exported
+  function of the same name** with a different signature. One `within` now, and
+  `between` where two corners have to become a rectangle first.
+- **§8.3 File splitting.** `extension/src/conditional.ts` is 378 lines and does
+  three things — decide a rule, measure a range, pick a bar or an icon. **Not
+  split**: they are one question asked three ways, all about what a rule makes
+  of a cell, and every split would hand the same three arguments across a new
+  seam. Recorded rather than done.
+- **§8.5 Documentation.** The README still said conditional formatting and auto
+  filters were "carried through untouched and drawn as nothing". Both are drawn.
+- **§8.6 Comments.** 0 over the limit before and after; the averages did not
+  move.
+- **§8.7 Layers.** Clean.
+
 ### 2026-08-23 — The filter a sheet hangs off its header row
 `filter:` was opaque. It is modelled now, drawn, and can be put on and taken off.
 

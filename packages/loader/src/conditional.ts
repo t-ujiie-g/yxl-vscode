@@ -23,27 +23,6 @@ import {
 import { readStyleUse } from './style';
 import { COLOR, RANGE, readAs } from './template';
 
-/** The names Excel's base schema has for an icon set (`docs/spec.md` §10). */
-const ICON_SETS = [
-  '3Arrows',
-  '3ArrowsGray',
-  '3Flags',
-  '3Signs',
-  '3Symbols',
-  '3Symbols2',
-  '3TrafficLights1',
-  '3TrafficLights2',
-  '4Arrows',
-  '4ArrowsGray',
-  '4Rating',
-  '4RedToBlack',
-  '4TrafficLights',
-  '5Arrows',
-  '5ArrowsGray',
-  '5Quarters',
-  '5Rating',
-] as const;
-
 /** A sheet's `conditional:` rules, in the order written, which is Excel's priority order. */
 export function readConditional(
   ctx: Ctx,
@@ -265,9 +244,6 @@ function readIconSet(ctx: Ctx, node: Node, what: string): ConditionalTest | null
 
   return name === null ? null : { kind: 'iconSet', name, reverse, iconsOnly };
 }
-
-/** Every icon set the base schema names, which is what a rule may ask for. */
-export const ICON_SET_NAMES: ReadonlySet<string> = new Set(ICON_SETS);
 
 function withoutEquals(formula: string): string {
   return formula.startsWith('=') ? formula.slice(1) : formula;
