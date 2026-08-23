@@ -194,18 +194,31 @@ export function inspector(showing: Showing, asks: Asks): HTMLElement {
   return panel;
 }
 
-/** The sheets, as the tabs both spreadsheets keep under the grid, and the `+` that makes another. */
-export function tabs(drawing: Drawing, showing: number, asks: Asks): HTMLElement {
+/** The sheets, as the tabs both spreadsheets keep by the grid, and the `+` that makes another. */
+export function tabs(showing: Showing, asks: Asks): HTMLElement {
+  const drawing = showing.drawing;
   const bar = document.createElement('nav');
   bar.className = 'tabs';
 
   for (const [index, sheet] of drawing.sheets.entries()) {
+    if (index === showing.naming) {
+      bar.append(naming(sheet.name, asks));
+      continue;
+    }
+
     const tab = document.createElement('button');
     tab.type = 'button';
     tab.textContent = sheet.name;
-    tab.className = index === showing ? 'tab showing' : 'tab';
+    tab.className = index === showing.sheet ? 'tab showing' : 'tab';
+    says(tab, 'Double-click to rename');
+
     tab.addEventListener('click', () => asks.showSheet(index));
-    tab.addEventListener('dblclick', () => renaming(tab, sheet.name, asks));
+
+    tab.addEventListener('contextmenu', (event) => {
+      event.preventDefault();
+      asks.pointAt({ kind: 'tab', sheet: index, x: event.clientX, y: event.clientY });
+    });
+
     bar.append(tab);
   }
 
@@ -224,19 +237,21 @@ export function tabs(drawing: Drawing, showing: number, asks: Asks): HTMLElement
   return bar;
 }
 
-/** The tab, made a box the new name is typed in — a webview has no dialog to ask in. */
-function renaming(tab: HTMLElement, was: string, asks: Asks): void {
+/** The tab, made the box the new name is typed in — a webview has no dialog to ask in. */
+function naming(was: string, asks: Asks): HTMLElement {
   const box = document.createElement('input');
   box.type = 'text';
   box.className = 'tab naming';
   box.value = was;
 
+  let over = false;
   const done = (take: boolean) => {
-    if (box.parentElement === null) return;
+    if (over) return;
+    over = true;
 
     const name = box.value.trim();
-    box.replaceWith(tab);
     if (take && name !== '' && name !== was) asks.renameSheet(was, name);
+    else asks.nameSheet(null);
   };
 
   box.addEventListener('keydown', (event) => {
@@ -246,9 +261,7 @@ function renaming(tab: HTMLElement, was: string, asks: Asks): void {
   });
   box.addEventListener('blur', () => done(true));
 
-  tab.replaceWith(box);
-  box.focus();
-  box.select();
+  return box;
 }
 
 export function note(text: string): HTMLElement {

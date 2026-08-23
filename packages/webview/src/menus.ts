@@ -11,7 +11,6 @@ export interface Menu {
   readonly marks: readonly Node[];
 }
 
-/** The control, and where it is open the panel with the scrim that closes it. */
 /** The tooltip a webview draws itself: the browser's own never appears in one. */
 export function says(on: HTMLElement, text: string): void {
   on.classList.add('saying');

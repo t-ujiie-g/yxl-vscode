@@ -3,14 +3,24 @@ import { spanSaid } from '@yxl-vscode/units';
 import { HELD } from './keys';
 import { entry, pointedAt, says } from './menus';
 import type { DrawnSheet } from './protocol';
-import { type Asks, over, type PointedCell, type PointedHeading, type Showing } from './showing';
+import {
+  type Asks,
+  over,
+  type PointedCell,
+  type PointedHeading,
+  type PointedTab,
+  type Showing,
+} from './showing';
 
 /** The menu the reader asked for at the pointer, over whatever they pointed at. */
 export function pointing(showing: Showing, asks: Asks): HTMLElement | null {
   const at = showing.pointed;
   if (at === null) return null;
 
-  return at.kind === 'cell' ? onCell(showing, asks, at) : onHeading(showing, asks, at);
+  if (at.kind === 'cell') return onCell(showing, asks, at);
+  if (at.kind === 'tab') return onTab(showing, asks, at);
+
+  return onHeading(showing, asks, at);
 }
 
 /** What a cell's own menu holds: the clipboard, and clearing what the cells hold. */
@@ -202,4 +212,16 @@ function hiddenNear(
   const last = Math.max(...hides.map((one) => one.last));
 
   return hides.length === 0 ? null : { first, last };
+}
+
+/** What a tab's own menu holds: what there is no room for on the tab itself. */
+function onTab(showing: Showing, asks: Asks, at: PointedTab): HTMLElement | null {
+  const entries = [
+    entry('Rename', {}, () => {
+      asks.pointAt(null);
+      asks.nameSheet(at.sheet);
+    }),
+  ];
+
+  return pointedAt(showing, asks, entries);
 }

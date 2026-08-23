@@ -1392,8 +1392,11 @@ are carried through untouched and shown as nothing (`docs/spec.md` §2).
       refuse is refused here first, by the rule it breaks. `verify` learned to
       take a **sheet** as something an edit may claim, beside the cells it may
       claim, which is what every other item in this phase will need.
-- [x] **Rename a sheet** by double-clicking its tab — the tab becomes the box
-      the new name is typed in, since a webview has no dialog to ask in. One
+- [x] **Rename a sheet** by double-clicking its tab, or from the tab's own
+      right-click menu — the tab becomes the box the new name is typed in, since
+      a webview has no dialog to ask in. The two clicks are counted in the view,
+      not left to `dblclick`: going to a sheet redraws the bar, so the second
+      click lands on an element the first never saw. One
       edit rewrites the sheet's `name:`, every inline cell formula, every
       `formulas:` range body, every `defs.formulas` body, and every override's
       `at:`. `renamed` is the third rule over the one formula parser in `units`
@@ -2932,9 +2935,15 @@ than widening it silently.
 The tab bar's second gesture, and the first edit in this project that rewrites
 formulas the reader never looked at.
 
-- **Double-click a tab to rename it.** The tab itself becomes the box the new
-  name is typed in — Enter takes it, Escape leaves it, clicking away takes it —
-  since a webview has no dialog to ask in. The same name back asks for nothing.
+- **Double-click a tab to rename it**, or pick *Rename* from the tab's own
+  right-click menu, which is where a spreadsheet keeps what there is no room for
+  on the tab. The tab itself becomes the box the new name is typed in — Enter
+  takes it, Escape leaves it, clicking away takes it — since a webview has no
+  dialog to ask in. The same name back asks for nothing.
+- **The two clicks are counted in the view**, not left to `dblclick`: going to a
+  sheet redraws the tab bar, so the second click lands on an element the first
+  never saw and the event never arrives (ADR-047 again, from the other side).
+  The box itself is drawn from view state for the same reason.
 - **One edit, everywhere the name is written**: the sheet's `name:`, every
   inline cell formula, every `formulas:` range body, every `defs.formulas` body,
   and every override's `at:`. Split across files it is refused rather than half

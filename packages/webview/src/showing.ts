@@ -40,6 +40,9 @@ export interface Showing {
 
   /** Whether the selected cell can be typed into, where one is selected. */
   readonly editable: Editable | null;
+
+  /** The sheet whose tab is being renamed, by its place in the tab bar. */
+  readonly naming: number | null;
 }
 
 /**
@@ -99,13 +102,21 @@ export function copiedFrom(showing: Showing, at: At): boolean {
 }
 
 /** A heading a menu was asked for on, and the point on the page it was asked at. */
-export type Pointed = PointedHeading | PointedCell;
+export type Pointed = PointedHeading | PointedCell | PointedTab;
 
 /** A menu asked for on a column letter or a row number. */
 export interface PointedHeading {
   readonly kind: 'heading';
   readonly axis: Axis;
   readonly at: number;
+  readonly x: number;
+  readonly y: number;
+}
+
+/** A menu asked for on a sheet's tab. */
+export interface PointedTab {
+  readonly kind: 'tab';
+  readonly sheet: number;
   readonly x: number;
   readonly y: number;
 }
@@ -149,6 +160,7 @@ export interface Asks {
   readonly showSheet: (index: number) => void;
   readonly addSheet: (name: string) => void;
   readonly renameSheet: (sheet: string, name: string) => void;
+  readonly nameSheet: (index: number | null) => void;
   readonly select: (row: number, col: number) => void;
   readonly reachTo: (row: number, col: number) => void;
   readonly reveal: (source: Source) => void;
