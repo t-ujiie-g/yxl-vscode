@@ -3,7 +3,7 @@ import { parse } from '@yxl-vscode/cst';
 import { load } from '@yxl-vscode/loader';
 import { type A1Addr, parseA1Addr } from '@yxl-vscode/units';
 import { describe, expect, it } from 'vitest';
-import { applied, barAt, decidable, overRanges, spreads } from './conditional';
+import { applied, barAt, iconAt, overRanges, spreads } from './conditional';
 
 /** The rules of a spec, compiled, which is what the drawing is handed. */
 function rulesOf(body: string): readonly CompiledRule[] {
@@ -75,15 +75,7 @@ describe('the rules a cell is drawn under', () => {
     expect(Object.keys(settled(resolve(layers)))).toEqual(['font.italic']);
   });
 
-  it('decides the rules a cell or a range settles, and says it cannot decide the rest', () => {
-    const kinds = rulesOf(
-      '      - at: A1:A9\n        cell: { equals: x }\n        style: a\n      - at: A1:A9\n        top: 3\n        style: b\n      - at: A1:A9\n        duplicate: true\n        style: a\n      - at: A1:A9\n        formula: "A1>0"\n        style: b\n      - at: A1:A9\n        icon_set: 3Arrows\n',
-    );
-
-    expect(kinds.map(decidable)).toEqual([true, true, true, true, false]);
-  });
-
-  it('applies nothing for a rule it cannot decide, and does not let it stop the run', () => {
+  it('lets an icon rule stand beside a look, since it dresses nothing itself', () => {
     const kinds = rulesOf(
       '      - at: A1:A9\n        icon_set: 3Arrows\n      - at: A1:A9\n        cell: { equals: x }\n        style: b\n',
     );
@@ -204,6 +196,8 @@ describe('the rules that draw a look of their own', () => {
         ).fill,
       bar: (address: string) =>
         barAt(rules, { at: at(address), value: held(at(address)), computed: null }, spread),
+      icon: (address: string) =>
+        iconAt(rules, { at: at(address), value: held(at(address)), computed: null }, spread),
     };
   }
 
@@ -244,5 +238,47 @@ describe('the rules that draw a look of their own', () => {
 
     expect(said.bar('B1')).toBeNull();
     expect(said.fill('B1')).toBeUndefined();
+  });
+
+  it('gives a three-icon set its icons at the thresholds yxl writes, 0/33/67', () => {
+    const rules = rulesOf('      - at: A1:A9\n        icon_set: 3TrafficLights1\n');
+    const said = over(rules, { A1: 0, A2: 40, A3: 70, A4: 100 });
+
+    expect(said.icon('A1')?.index).toBe(0);
+    expect(said.icon('A2')?.index).toBe(1);
+    expect(said.icon('A3')?.index).toBe(2);
+    expect(said.icon('A4')?.index).toBe(2);
+  });
+
+  it('gives a five-icon set five steps, which is 0/20/40/60/80', () => {
+    const rules = rulesOf('      - at: A1:A9\n        icon_set: 5Arrows\n');
+    const said = over(rules, { A1: 0, A2: 25, A3: 50, A4: 75, A5: 100 });
+
+    expect([1, 2, 3, 4, 5].map((one) => said.icon(`A${one}`)?.index)).toEqual([0, 1, 2, 3, 4]);
+  });
+
+  it('turns the set round where the rule says to, and carries `icons_only`', () => {
+    const rules = rulesOf(
+      '      - at: A1:A9\n        icon_set: { style: 3Arrows, reverse: true, icons_only: true }\n',
+    );
+    const said = over(rules, { A1: 0, A2: 100 });
+
+    expect(said.icon('A1')?.index).toBe(2);
+    expect(said.icon('A2')?.index).toBe(0);
+    expect(said.icon('A1')?.iconsOnly).toBe(true);
+  });
+
+  it('gives no icon to a cell holding no number', () => {
+    const rules = rulesOf('      - at: A1:A9\n        icon_set: 3Arrows\n');
+    const written = [at('A1')];
+    const held = () => 'text' as never;
+
+    expect(
+      iconAt(
+        rules,
+        { at: at('A1'), value: 'text' as never, computed: null },
+        spreads(rules, written, held),
+      ),
+    ).toBeNull();
   });
 });

@@ -1,6 +1,7 @@
 import { BORDER_EDGES, type ScalarValue, type StyleValues } from '@yxl-vscode/spec';
 import { painted } from '@yxl-vscode/units';
 import { format as excel } from 'numfmt';
+import { iconOf } from './icons';
 import type { DrawnBar, DrawnCell, DrawnMerge, DrawnRun } from './protocol';
 
 /** One cell as a `<td>`: what it says, and the look it was sent wearing. */
@@ -19,8 +20,12 @@ export function drawCell(
 
   if (cell.bar !== null) drawn.append(bar(cell.bar));
 
-  const text = cell.bar?.barOnly === true ? '' : cell.rich === null ? shown(cell) : '';
-  if (cell.rich !== null && cell.bar?.barOnly !== true) drawn.append(...cell.rich.map(run));
+  const icon = cell.icon === null ? null : iconOf(cell.icon);
+  if (icon !== null) drawn.append(icon);
+
+  const hidden = cell.bar?.barOnly === true || cell.icon?.iconsOnly === true;
+  const text = hidden ? '' : cell.rich === null ? shown(cell) : '';
+  if (cell.rich !== null && !hidden) drawn.append(...cell.rich.map(run));
   else if (spill > 0) drawn.append(spilling(text, spill));
   else if (text !== '') drawn.append(document.createTextNode(text));
 

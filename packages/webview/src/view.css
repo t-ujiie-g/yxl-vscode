@@ -622,6 +622,14 @@ body {
   border-color: transparent;
 }
 
+/* An `icon_set` rule's mark, which sits before the value as Excel puts it. */
+.grid td .icon {
+  position: relative;
+  z-index: 1;
+  margin-right: 0.3em;
+  font-size: 0.9em;
+}
+
 /* A `data_bar` rule's bar: behind the value, from the cell's left edge. */
 .grid td .bar {
   position: absolute;

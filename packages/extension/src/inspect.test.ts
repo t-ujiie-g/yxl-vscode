@@ -167,12 +167,10 @@ describe('what the inspector says about a conditional rule', () => {
     expect(said).toEqual(['`cell` equals `done`, over A1:A9', '`formula` `A1>0`, over A1:A9']);
   });
 
-  it('says which rules it does not draw, of the ones that reach the cell', () => {
-    const undrawn = `${SHEET}    cells:\n      A2: done\n    conditional:\n      - at: A1:A9\n        icon_set: 3Arrows\n`;
+  it('names a rule that draws a look of its own by the set it draws', () => {
+    const icons = `${SHEET}    cells:\n      A2: 1\n    conditional:\n      - at: A1:A9\n        icon_set: 3Arrows\n`;
 
-    expect(saying(undrawn, 'A2', 'conditional')).toBe(
-      '`icon_set` 3Arrows, over A1:A9 — not drawn by this preview yet',
-    );
+    expect(saying(icons, 'A2', 'conditional')).toBe('`icon_set` 3Arrows, over A1:A9');
   });
 
   it('says nothing about a cell no rule reaches', () => {

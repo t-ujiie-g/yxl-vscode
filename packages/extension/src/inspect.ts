@@ -3,7 +3,6 @@ import { type CompiledSheet, cellAt, type FacetOrigin, styleAt } from '@yxl-vsco
 import type { Comparison, ConditionalTest, Sheet, SpecDoc, SpecNode } from '@yxl-vscode/spec';
 import { type A1Addr, cellOf, type NodeId, rangeOf } from '@yxl-vscode/units';
 import type { Source } from '@yxl-vscode/webview/protocol';
-import { decidable } from './conditional';
 
 /** Where every facet of one cell came from, in a reader's words, with the place to go to. */
 export function inspect(nodes: Nodes, sheet: CompiledSheet, at: A1Addr, from: string): Source[] {
@@ -50,14 +49,11 @@ function reaching(nodes: Nodes, sheet: CompiledSheet, at: A1Addr): Source[] {
         col >= rule.rect.left &&
         col <= rule.rect.right,
     )
-    .map((rule) => {
-      const where = nodes.get(rule.node);
-      const said = decidable(rule)
-        ? `${ruleSaid(rule.test)}, over ${rangeOf(rule.rect)}`
-        : `${ruleSaid(rule.test)}, over ${rangeOf(rule.rect)} — not drawn by this preview yet`;
-
-      return { facet: 'conditional', says: said, ...sited(where) };
-    });
+    .map((rule) => ({
+      facet: 'conditional',
+      says: `${ruleSaid(rule.test)}, over ${rangeOf(rule.rect)}`,
+      ...sited(nodes.get(rule.node)),
+    }));
 }
 
 /** What decides a rule, in the words the spec writes it in. */
