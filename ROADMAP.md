@@ -1185,6 +1185,9 @@ gestures on a *heading*, and the headings are not selectors yet.
       cannot drift from the button. The shortcut is written on the button as
       both spreadsheets write it. A box of text keeps its own keys — which the
       `Cmd`+`A` guard had missed since the cell editor became a `textarea`.
+      A heading click **keeps the keyboard on the grid**: the browser was
+      putting it on the page, since nothing there could hold it, and every key
+      the page answers was lost with it.
 - [ ] **The rest of the bar a reader expects**: the font face and size
       (`docs/spec.md` §6 has both, the toolbar offers neither), the quick number
       formats Sheets keeps beside the menu — currency, percent, more and fewer
@@ -2618,7 +2621,12 @@ Phase 10's tenth item: `Cmd`/`Ctrl`+`B`, `I` and `U`.
 - **A box of text keeps its own keys.** The guard that held `Cmd`+`A` back from
   the grid only knew about `<input>`, and had let it through since the cell
   editor became a `<textarea>`.
-- 1699 → 1706 tests.
+- **A heading click keeps the keyboard on the grid.** Nothing in a heading could
+  hold it, so the browser put it on the page, and every key the page answers —
+  these three and `Cmd`+`A` — was lost until a cell was clicked. The heading
+  takes it, and hands it on to the cell the selection starts at where the grid
+  is drawing that cell.
+- 1699 → 1708 tests.
 
 ### 2026-08-23 — What the selection comes to
 Phase 10's ninth item, and the third thing the host answers because the view can

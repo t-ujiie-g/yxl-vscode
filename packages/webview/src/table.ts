@@ -254,10 +254,17 @@ function takes(heading: HTMLElement, axis: Axis, at: number, showing: Showing, a
     asks.pointAt({ axis, at, x: event.clientX, y: event.clientY });
   });
 
+  // Focusable so the page's keys reach it, as a cell is; not tab-reachable.
+  heading.tabIndex = -1;
   heading.addEventListener('mousedown', (event) => {
     // Not the grip, which sizes; not the right button, which is about to open a
     // menu about a run this would throw away.
     if (event.target !== heading || event.button !== 0) return;
+
+    // Taken, or the browser puts the keyboard on the page and the shortcuts
+    // above the grid stop reaching it.
+    event.preventDefault();
+    heading.focus({ preventScroll: true });
     asks.takeBand(axis, at, event.shiftKey);
   });
   heading.addEventListener('mouseenter', (event) => {
