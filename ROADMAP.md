@@ -1260,6 +1260,19 @@ Deliberately **not** here: a second selection with `Cmd`+click (every answer in
       consequence enumeration and the expected-diff-size preview (§4.4). The
       row *header* is where a reader reaches for this, so the headings becoming
       selectors (Phase 10) is the gesture it hangs off
+      - [x] **The references** every one of them moves: `shifted` in `units`,
+            beside `moved` and sharing its parser. A structural edit moves what
+            stands at the line or past it **whatever the `$` says** — the cell
+            it names has moved — which is the opposite of what a shared formula
+            does, and the reason the two rules are separate over one walk. It
+            moves a reference into that sheet **from another sheet too**, and no
+            reference out of it. A reference into what a delete takes away is
+            **refused, never written as `#REF!`**: a spec is read by people, and
+            a file that says `#REF!` is a file nobody can fix from.
+      - [ ] The consequence enumeration over a sheet: what each construct does,
+            counted, before anything is written
+      - [ ] The write itself, construct by construct, and the gesture on the
+            heading
 - [ ] `rekeyMap` for bulk A1 shifts in `cells:`
 - [ ] `merge` / `unmerge`, and band creation
 - [ ] The "convert this rectangle to `data:`" offer, at the moment a `cells:`
@@ -2480,14 +2493,22 @@ vocabulary, not another copy.
 
 ## 8. Open questions
 
-- **Q1 — `cells:` A1 keys and row insertion.** Inserting a row rewrites every
-  key below it; `rekeyMap` handles it mechanically but the diff is still total.
-  yxl's Phase 11 answered this for tabular regions with inline `data:` `values:`,
-  which is the right answer for most cases — so the structural phase should
-  *steer* toward conversion rather than optimize the shift. Remaining question:
-  is anchor-relative addressing in `cells:` worth proposing upstream for the
-  scattered case? Decide before Phase 11, and note that a paste of two hundred
-  rows (Phase 8) asks the same question first.
+- **Q1 — `cells:` A1 keys and row insertion.** ✅ *Answered 2026-08-23.*
+  **No**: anchor-relative addressing in `cells:` is not worth proposing
+  upstream. A `cells:` mapping is keyed by address because that is what makes it
+  readable on its own — `A1: Region` says where it is without counting from
+  anything — and an anchor would take that away from every scattered cell to
+  spare the diff of the rare inserted row. The format already has the answer for
+  the case that hurts, which is a *table*: `data:` with inline `values:`, where
+  inserting a row is one line. So the structural phase **steers** — it rewrites
+  the keys where it must, and offers the conversion where the rewrite is what is
+  bloating the diff. A paste of two hundred rows is the same judgement and gets
+  the same answer.
+
+  *What that costs, and why it is affordable:* the rewrite is mechanical
+  (`rekeyMap`), the reference arithmetic is `shifted` (`units`), and the diff it
+  would make is shown before it is made — so the reader chooses a total diff
+  knowingly, or takes the conversion instead.
 - **Q2 — How much formula translation do we do?** ✅ *Answered 2026-08-16
   (ADR-031).* As much as Excel does to a shared formula, and no more: relative
   references move, `$`-anchored halves stay, and strings, names and table
@@ -2738,6 +2759,27 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-23 — What a reference does when a row is inserted
+Phase 11's first piece, and the one everything structural stands on.
+
+- **`shifted`, beside `moved`, over one parser.** A shared formula and an
+  inserted row move references by *different rules*: the first leaves a
+  `$`-anchored half alone, the second moves it, because the cell it names has
+  moved. The parsing — quotes, brackets, `A:A`, Excel's limits, what is a word
+  and what is a name — is the same walk with the rule handed to it.
+- **It knows whose sheet the line is in.** `Sales!A5` in a formula on `Notes`
+  moves when the row goes into `Sales` and not otherwise; a bare `A5` moves only
+  where the formula is on the sheet the line is in. A quoted `'Q3 data'!A1`
+  reads as the sheet it names.
+- **A reference into what a delete takes away is refused**, and says which one:
+  `` `A5` names a row this would take away ``. Excel writes `#REF!`; a spec is
+  read by people, and a file that says `#REF!` is one nobody can fix from
+  (**§8 Q1**).
+- **Q1 is answered**, which Phase 11 was waiting on: no anchor-relative
+  addressing upstream. `cells:` is keyed by address because that is what makes
+  it readable alone; the format's answer for the case that hurts is a table.
+- 1772 → 1784 tests.
 
 ### 2026-08-23 — Said once, again
 A pass over the tree before Phase 11 proper. Less to find than last time, which

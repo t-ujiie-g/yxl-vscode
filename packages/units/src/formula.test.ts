@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { moved, type Offset } from './formula';
+import { type Line, moved, type Offset, shifted } from './formula';
+import type { SheetName } from './name';
 
 /** The formula as it applies `by` away, or the reason it does not apply there. */
 function to(formula: string, by: Offset): string {
@@ -124,5 +125,72 @@ describe('a formula that cannot be moved', () => {
 
   it('refuses rather than guess where a bracket never closes', () => {
     expect(to('SUM(Revenue[Revenue)', OVER)).toBe('refused: there is a `[` here that never closes');
+  });
+});
+
+const SALES = 'Sales' as SheetName;
+
+/** The formula as it reads once that line is drawn in `Sales`, or why it cannot be. */
+function once(formula: string, of: Partial<Line> = {}, sheet = SALES): string {
+  const done = shifted(formula, sheet, { sheet: SALES, axis: 'row', at: 5, by: 1, ...of });
+  return done.ok ? done.formula : `refused: ${done.why}`;
+}
+
+describe('a formula once a row is inserted', () => {
+  const said = (formula: string, at = 5, by = 1) => once(formula, { at, by });
+
+  it('moves what stands at the line or past it, and leaves what stands above', () => {
+    expect(said('A4+A5+A6')).toBe('A4+A6+A7');
+  });
+
+  it('moves an anchored reference too, since the cell it names has moved', () => {
+    expect(said('$A$5+$A$4')).toBe('$A$6+$A$4');
+  });
+
+  it('leaves the other axis alone', () => {
+    expect(once('A5+B5', { axis: 'column', at: 2 })).toBe('A5+C5');
+  });
+
+  it('moves a reference into that sheet from another, and only into that one', () => {
+    expect(once('Sales!A5+Notes!A5', {}, 'Notes' as SheetName)).toBe('Sales!A6+Notes!A5');
+  });
+
+  it('leaves a formula in another sheet that names no sheet at all', () => {
+    expect(once('A5', {}, 'Notes' as SheetName)).toBe('A5');
+  });
+
+  it('reads a quoted sheet name as the sheet it names', () => {
+    expect(once("'Sales'!A5", {}, 'Notes' as SheetName)).toBe("'Sales'!A6");
+  });
+
+  it('moves both ends of a whole-row range that the line reaches', () => {
+    expect(said('SUM(4:6)')).toBe('SUM(4:7)');
+    expect(said('SUM(A:C)')).toBe('SUM(A:C)');
+  });
+
+  it('says nothing about what is not a reference', () => {
+    // `MAX5` would be a reference: a name has to say it is not one.
+    expect(said('CONCAT("A5",LOG10(5),Rate_5)')).toBe('CONCAT("A5",LOG10(5),Rate_5)');
+  });
+});
+
+describe('a formula once a row is taken away', () => {
+  const said = (formula: string, at = 5, by = -1) => once(formula, { at, by });
+
+  it('closes the gap under what was taken', () => {
+    expect(said('A4+A6')).toBe('A4+A5');
+  });
+
+  it('refuses a reference into what is going, rather than writing `#REF!`', () => {
+    expect(said('A4+A5')).toBe('refused: `A5` names a row this would take away');
+  });
+
+  it('refuses a range end inside it for the same reason', () => {
+    expect(said('SUM(5:9)')).toBe('refused: `5:9` names a row this would take away');
+  });
+
+  it('takes a run of rows away at once', () => {
+    expect(said('A4+A9', 5, -3)).toBe('A4+A6');
+    expect(said('A7', 5, -3)).toBe('refused: `A7` names a row this would take away');
   });
 });
