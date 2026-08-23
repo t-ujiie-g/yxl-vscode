@@ -19,6 +19,42 @@ export function says(on: HTMLElement, text: string): void {
   on.setAttribute('aria-label', text);
 }
 
+/** One of a list, offered as the box a spreadsheet keeps its fonts and formats in. */
+export function chosen(of: Chosen): HTMLElement {
+  const box = document.createElement('select');
+  box.className = `look ${of.name}`;
+  box.disabled = of.disabled;
+
+  for (const one of of.options) {
+    const option = document.createElement('option');
+    option.value = one.value;
+    option.textContent = one.text;
+    option.title = one.code ?? '';
+    option.selected = one.value === of.now;
+    box.append(option);
+  }
+
+  box.addEventListener('change', () => of.take(box.value));
+
+  // Wrapped, since a tooltip is drawn with `::after` and a `select` has no
+  // room inside it for one.
+  const held = document.createElement('span');
+  held.className = 'held';
+  says(held, of.said);
+  held.append(box);
+
+  return held;
+}
+
+export interface Chosen {
+  readonly name: string;
+  readonly said: string;
+  readonly now: string;
+  readonly disabled: boolean;
+  readonly options: readonly { value: string; text: string; code?: string | null }[];
+  readonly take: (value: string) => void;
+}
+
 export function opens(
   of: Menu,
   showing: Showing,

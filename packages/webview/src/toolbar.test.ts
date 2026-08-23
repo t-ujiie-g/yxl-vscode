@@ -102,8 +102,12 @@ describe('the switches a reader reaches for first', () => {
       'Align middle',
       'Align bottom',
       'Wrap text',
+      'Format as percent',
+      'Fewer decimal places',
+      'More decimal places',
       'Borders',
       'Freeze panes',
+      'Clear formatting',
     ]);
   });
 
@@ -275,7 +279,7 @@ describe('a number under a format', () => {
     const bar = toolbar(showing({ cells: [cell({})], selected: { row: 1, col: 1 } }), asks());
 
     expect(box(bar)?.value).toBe('');
-    expect(box(bar)?.title).toBe('Number format');
+    expect(said(box(bar)?.parentElement ?? null)).toBe('Number format');
   });
 
   it('asks for the code behind what the reader picked', () => {
@@ -330,6 +334,8 @@ describe('a number under a format', () => {
       '0.00',
       '0%',
       '0.0%',
+      '¥#,##0',
+      '$#,##0.00',
       'yyyy-mm-dd',
       'h:mm',
     ]);
@@ -348,7 +354,7 @@ describe('a number under a format', () => {
     const bar = toolbar(showing({ cells, selected: { row: 1, col: 1 } }), asks());
 
     expect(box(bar)?.value).toBe('[h]:mm:ss');
-    expect(box(bar)?.title).toBe('Number format: [h]:mm:ss');
+    expect(said(box(bar)?.parentElement ?? null)).toBe('Number format: [h]:mm:ss');
   });
 
   it('is disabled until a cell is selected', () => {
@@ -491,7 +497,8 @@ describe('how the bar is laid out', () => {
     const bar = toolbar(showing({ selected: { row: 1, col: 1 } }), asks());
     const kinds = [...bar.children].map((one) => (one.className === 'divider' ? '|' : '.'));
 
-    // Font, colour, alignment across, alignment down, number, and the two menus.
-    expect(kinds.join('').split('|')).toHaveLength(6);
+    // Face and size, the switches, colour, alignment across, alignment down,
+    // number, the two menus, and clearing.
+    expect(kinds.join('').split('|')).toHaveLength(8);
   });
 });

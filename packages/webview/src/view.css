@@ -386,10 +386,32 @@ body {
   background: var(--vscode-panel-border);
 }
 
-.look.numbers {
+/* The boxes of the bar, each inside the span that carries its tooltip. */
+.held {
+  display: inline-flex;
+}
+
+.look.numbers,
+.look.face,
+.look.size {
   width: auto;
   max-width: 7.5rem;
   padding: 0.1rem 0.2rem;
+}
+
+.look.size {
+  max-width: 4rem;
+}
+
+/* Wide enough for the mark to say which way it goes. */
+.look.fewer,
+.look.more {
+  width: auto;
+  padding: 0.15rem 0.3rem;
+}
+
+.look.clear {
+  text-decoration: line-through;
 }
 
 .pick {

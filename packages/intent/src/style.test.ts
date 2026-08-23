@@ -1,8 +1,15 @@
-import { compile } from '@yxl-vscode/compile';
+import { cellAt, compile, resolve } from '@yxl-vscode/compile';
 import { parse } from '@yxl-vscode/cst';
 import { type IncludeReader, load } from '@yxl-vscode/loader';
-import type { StyleSays, StyleValues } from '@yxl-vscode/spec';
-import { type FilePath, filePath, parseColor, type Rect, type SheetName } from '@yxl-vscode/units';
+import { STYLE_PROPERTIES, type StyleSays, type StyleValues } from '@yxl-vscode/spec';
+import {
+  type A1Addr,
+  type FilePath,
+  filePath,
+  parseColor,
+  type Rect,
+  type SheetName,
+} from '@yxl-vscode/units';
 import { type Ctx, checked } from '@yxl-vscode/verify';
 import { describe, expect, it } from 'vitest';
 import { reading } from './direct';
@@ -55,6 +62,15 @@ function taken(source: string, candidate: Candidate): string {
 }
 
 const BOLD: StyleValues = { 'font.bold': true };
+
+/** What `A1` wears once a spec is written, resolved as the grid resolves it. */
+function worn(source: string): StyleSays {
+  const { grid } = files(source);
+  const sheet = grid.sheets[0];
+  const cell = sheet === undefined ? undefined : cellAt(sheet, 'A1' as A1Addr);
+
+  return resolve(cell?.style ?? []);
+}
 
 describe('a look nothing else supplies', () => {
   it('is one answer, which a caller may take without asking', () => {
@@ -270,6 +286,33 @@ describe('a colour, and a look taken off', () => {
     if (answer === undefined) throw new Error('nothing was offered');
 
     expect(taken(spec, answer)).toContain('- { at: A, style: { font: { bold: true } } }');
+  });
+});
+
+describe('the whole look taken off at once', () => {
+  const OFF = Object.fromEntries(STYLE_PROPERTIES.map((key) => [key, null])) as StyleSays;
+
+  it('leaves the cell holding what it held and nothing else', () => {
+    const spec = `${SALES}    cells:\n      A1: { value: 1, style: { font: { bold: true }, fill: FFFF00 } }\n`;
+    const [answer] = offered(spec, at(1, 1), OFF);
+    if (answer === undefined) throw new Error('nothing was offered');
+
+    expect(taken(spec, answer)).toBe(`${SALES}    cells:\n      A1: 1\n`);
+  });
+
+  it('leaves a cell that names a declaration wearing nothing of it', () => {
+    const spec = `defs:\n  styles:\n    header: { font: { bold: true } }\n${SALES}    cells:\n      A1: { value: 1, style: header }\n`;
+    const [answer] = offered(spec, at(1, 1), OFF);
+    if (answer === undefined) throw new Error('nothing was offered');
+
+    // The name goes and each of its properties is said off, which is the
+    // schema's own way of wearing none of it (ADR-038).
+    expect(taken(spec, answer)).not.toContain('style: header');
+    expect(worn(taken(spec, answer))).toEqual({ 'font.bold': null });
+  });
+
+  it('says nothing where the cells wear nothing to take off', () => {
+    expect(offered(`${SALES}    cells:\n      A1: 1\n`, at(1, 1), OFF)).toEqual([]);
   });
 });
 

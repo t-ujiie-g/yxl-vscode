@@ -275,10 +275,10 @@ describe('the switches over the grid', () => {
 
   it('follow the selection, which arrives after the grid was drawn', () => {
     const into = document.createElement('div');
-    // Every switch but the freeze menu, which opens with no cell selected because
-    // taking a freeze off is about the sheet rather than about a cell.
+    // Not the freeze menu, which opens with no cell selected because taking a
+    // freeze off is about the sheet; not the decimals, which want one to take.
     const switches = () => [
-      ...into.querySelectorAll<HTMLButtonElement>('button.look:not(.freeze)'),
+      ...into.querySelectorAll<HTMLButtonElement>('button.look:not(.freeze):not(.fewer)'),
     ];
 
     draw(into, state(null), asks());
@@ -296,9 +296,9 @@ describe('the switches over the grid', () => {
 
     draw(into, { ...state(null), drawing: bold }, asks());
     restate(into, { ...state({ row: 1, col: 1 }), drawing: bold }, asks());
-    expect(into.querySelector('.look')?.classList.contains('on')).toBe(true);
+    expect(into.querySelector('.look.bold')?.classList.contains('on')).toBe(true);
 
     restate(into, { ...state({ row: 2, col: 1 }), drawing: bold }, asks());
-    expect(into.querySelector('.look')?.classList.contains('on')).toBe(false);
+    expect(into.querySelector('.look.bold')?.classList.contains('on')).toBe(false);
   });
 });
