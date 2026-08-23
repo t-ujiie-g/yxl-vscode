@@ -41,6 +41,7 @@ function sheet(cells: readonly DrawnCell[], of: Partial<DrawnSheet> = {}): Drawn
     tabColor: null,
     gridlines: true,
     split: null,
+    filter: null,
     ...of,
   };
 }

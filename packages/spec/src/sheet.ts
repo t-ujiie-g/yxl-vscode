@@ -32,6 +32,7 @@ export interface Sheet extends SpecNode {
   readonly gridlines: boolean | null;
   readonly split: Split | null;
   readonly conditional: readonly Conditional[];
+  readonly filter: Templated<A1Range> | null;
   readonly keyOrder: readonly string[];
   readonly opaque: readonly Opaque[];
 }

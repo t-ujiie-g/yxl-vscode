@@ -115,6 +115,21 @@ function onCell(showing: Showing, asks: Asks, at: PointedCell): HTMLElement | nu
       { chord: 'Delete' },
       shut(() => asks.empty(at.row, at.col)),
     ),
+    ...(showing.drawing.sheets[showing.sheet]?.filter === null
+      ? [
+          entry(
+            'Create a filter',
+            {},
+            shut(() => asks.filter(true)),
+          ),
+        ]
+      : [
+          entry(
+            'Remove filter',
+            {},
+            shut(() => asks.filter(false)),
+          ),
+        ]),
   ];
 
   return pointedAt(showing, asks, entries);

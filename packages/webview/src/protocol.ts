@@ -51,6 +51,7 @@ export interface DrawnSheet {
   readonly tabColor: string | null;
   readonly gridlines: boolean;
   readonly split: { readonly x: number; readonly y: number } | null;
+  readonly filter: DrawnMerge | null;
 }
 
 /** Rows of a `data:` block to be put in order, by the column the selection starts in. */
@@ -66,6 +67,11 @@ export interface Filled extends Ranged {
 /** A rectangle asked to be drawn as one cell, or taken back apart (`docs/spec.md` §2). */
 export interface Merged extends Ranged {
   readonly merged: boolean;
+}
+
+/** A sheet's auto filter, over the selection's header row, or `on: false` to take it off. */
+export interface Filtered extends Ranged {
+  readonly on: boolean;
 }
 
 /** Where a sheet's panes are asked to be frozen, or `null` to take the freeze off. */
@@ -204,6 +210,7 @@ export type About =
   | { readonly kind: 'renameSheet'; readonly sheet: string; readonly name: string }
   | { readonly kind: 'deleteSheet'; readonly sheet: string }
   | { readonly kind: 'moveSheet'; readonly sheet: string; readonly to: number }
+  | ({ readonly kind: 'filter' } & Filtered)
   | {
       readonly kind: 'setTab';
       readonly sheet: string;

@@ -343,6 +343,12 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       said = null;
       host.postMessage({ kind: 'freeze', sheet: named(), at });
     },
+    filter: (on) => {
+      refused = null;
+      said = null;
+      const rect = spanned() ?? { top: 1, left: 1, bottom: 1, right: 1 };
+      host.postMessage({ kind: 'filter', sheet: named(), on, ...rect });
+    },
     takeAll: () => {
       const of = drawing?.sheets[sheet];
       if (of === undefined) return;

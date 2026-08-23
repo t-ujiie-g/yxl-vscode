@@ -38,15 +38,17 @@ describe('a sheet', () => {
   });
 
   it('carries a key it does not model, in place', () => {
-    const read = sheet('name: S\n    charts: []\n    filter: A1:D1\n');
-    expect(read.opaque.map((o) => o.key)).toEqual(['charts', 'filter']);
-    expect(read.keyOrder).toEqual(['name', 'charts', 'filter']);
+    const read = sheet('name: S\n    charts: []\n    links: {}\n');
+    expect(read.opaque.map((o) => o.key)).toEqual(['charts', 'links']);
+    expect(read.keyOrder).toEqual(['name', 'charts', 'links']);
   });
 
   it('spans an unmodeled key over its whole entry', () => {
-    const source = 'sheets:\n  - name: S\n    filter: A1:D1\n';
+    const source = 'sheets:\n  - name: S\n    links: { A1: https://example.com }\n';
     const opaque = load(parse(source, { file: 'f' })).doc?.sheets[0]?.opaque[0];
-    expect(source.slice(opaque?.span.start, opaque?.span.end)).toBe('filter: A1:D1');
+    expect(source.slice(opaque?.span.start, opaque?.span.end)).toBe(
+      'links: { A1: https://example.com }',
+    );
   });
 
   it('reads where the sheet is split, an absent axis being unsplit', () => {
@@ -60,6 +62,11 @@ describe('a sheet', () => {
       parse('sheets:\n  - name: S\n    split: { x: wide }\n', { file: 'f' }),
     );
     expect(diagnostics.map((one) => one.code)).toEqual(['loader.not-a-number']);
+  });
+
+  it('reads the header row a filter hangs off', () => {
+    expect(sheet('name: S\n    filter: A1:D1\n').filter).toBe('A1:D1');
+    expect(sheet('name: S\n').filter).toBeNull();
   });
 
   it('reads whether the sheet draws its own gridlines', () => {

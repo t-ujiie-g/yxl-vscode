@@ -45,6 +45,7 @@ function showing(of: {
     tabColor: null,
     gridlines: true,
     split: null,
+    filter: null,
     problems: [],
     freeze: of.freeze ?? null,
   };

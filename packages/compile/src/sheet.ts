@@ -17,6 +17,7 @@ import {
   parseA1Range,
   parseColumnSpan,
   parseRowSpan,
+  type Rect,
   rectOf,
   rowsOf,
   type SheetName,
@@ -69,6 +70,7 @@ export function compileSheet(ctx: Ctx, sheet: Sheet): Drafted {
       tabColor: sheet.tabColor === null ? null : colour(ctx, sheet.tabColor, sheet),
       gridlines: sheet.gridlines ?? true,
       split: sheet.split,
+      filter: filterOf(ctx, sheet),
       conditional: sheet.conditional
         .map((rule) => conditionalRule(ctx, rule))
         .filter((rule) => rule !== null),
@@ -286,4 +288,18 @@ function decides(ctx: Ctx, rule: Conditional): CompiledTest | null {
   }
 
   return test;
+}
+
+/** The header row a sheet hangs its filter off, as the range it is written as (`docs/spec.md` §10). */
+function filterOf(ctx: Ctx, sheet: Sheet): Rect | null {
+  if (sheet.filter === null) return null;
+
+  const spelled = text(ctx, sheet.filter, sheet);
+  const read = parseA1Range(spelled);
+  if (read === null) {
+    reject(ctx, CODE.badRange, `\`${spelled}\` is not a range`, sheet);
+    return null;
+  }
+
+  return rectOf(read);
 }

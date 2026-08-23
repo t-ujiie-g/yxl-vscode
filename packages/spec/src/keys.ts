@@ -19,6 +19,7 @@ const CELL_KEYS = [...CELL_HOLDS, ...CELL_WEARS];
 export const KEY = {
   at: 'at',
   cells: 'cells',
+  filter: 'filter',
   data: 'data',
   format: 'format',
   formulas: 'formulas',
@@ -56,6 +57,7 @@ export const MODELED_KEYS = {
     'gridlines',
     'split',
     'conditional',
+    'filter',
   ]),
   cell: keySet(CELL_KEYS),
   override: keySet(['at', 'reason', ...CELL_KEYS]),

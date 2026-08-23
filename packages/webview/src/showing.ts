@@ -193,6 +193,7 @@ export interface Asks {
   readonly sort: (down: boolean) => void;
   readonly pointAt: (at: Pointed | null) => void;
   readonly freeze: (at: At | null) => void;
+  readonly filter: (on: boolean) => void;
   readonly look: (text: string | null) => void;
   readonly goOn: (by: number) => void;
   readonly goTo: (address: string) => void;
