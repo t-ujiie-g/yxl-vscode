@@ -1,8 +1,9 @@
-import type { Axis, BorderStyle, StyleSays } from '@yxl-vscode/spec';
+import type { Axis, BorderStyle, StyleSays, StyleValues } from '@yxl-vscode/spec';
 import type { Rect } from '@yxl-vscode/units';
-import { type At, within } from './keys';
+import { type At, between, within } from './keys';
 import type {
   Drawing,
+  DrawnCell,
   Editable,
   Grouped,
   Hidden,
@@ -103,6 +104,26 @@ export interface Pointed {
   readonly at: number;
   readonly x: number;
   readonly y: number;
+}
+
+/** The rectangle a control acts on, which is everything the reader has selected. */
+export function over(showing: Showing): Rect {
+  const at = showing.selected ?? { row: 1, col: 1 };
+  return between(at, showing.anchor ?? at);
+}
+
+/** What the cell the reader has selected wears, which is what the toolbar shows. */
+export function wornBy(showing: Showing): StyleValues {
+  return cellOf(showing)?.style ?? {};
+}
+
+/** The cell the reader has selected, where the drawing holds one. */
+export function cellOf(showing: Showing): DrawnCell | undefined {
+  const at = showing.selected;
+  if (at === null) return undefined;
+
+  const cells = showing.drawing.sheets[showing.sheet]?.cells ?? [];
+  return cells.find((one: DrawnCell) => one.row === at.row && one.col === at.col);
 }
 
 /** How a cell is named in the sets and maps a drawing is looked up in. */

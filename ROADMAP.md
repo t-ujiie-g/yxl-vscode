@@ -1190,11 +1190,26 @@ gestures on a *heading*, and the headings are not selectors yet.
       the page answers was lost with it. VS Code answers the forwarded key too,
       so the extension binds all three to a command that does nothing while the
       preview is the active panel (**ADR-046**).
-- [ ] **The rest of the bar a reader expects**: the font face and size
+- [x] **The rest of the bar a reader expects**: the font face and size
       (`docs/spec.md` §6 has both, the toolbar offers neither), the quick number
       formats Sheets keeps beside the menu — currency, percent, more and fewer
       decimals — and *clear formatting*, which is `setStyle` asked to take
       everything off at once.
+      **In**. The face is a **list, not the machine's fonts**: a spec is read on
+      machines other than this one, so what it may name is what Excel will look
+      for, and whatever the cells already wear is kept and shown alongside.
+      **Currency is in the box rather than a button of its own** — the symbol is
+      a choice, and a button would have to make it for the reader.
+      **More and fewer decimals** are arithmetic on the format code
+      (`units/format.ts`), which is why they keep the rest of it: `¥#,##0` gains
+      a place as `¥#,##0.00`, and every section of a two-part code moves
+      together, as Excel does it.
+- [ ] **Clearing a look off a cell that names a declaration** writes each of the
+      declaration's properties as `null` rather than dropping the `style:` key.
+      The cell wears nothing either way (ADR-038) and the name does go, but the
+      file says it the long way round. The same is true of taking one property
+      off, so this is about how a cell's own look is written, not about
+      clearing.
 - [ ] **A right-click menu on a cell.** The headings have one (it came with
       hide and unhide, which had nowhere else to live); a cell's is what is
       left — cut, copy, paste and clear to begin with, and it is where Phase
@@ -2631,6 +2646,31 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-23 — The rest of the bar
+Phase 10's eleventh item: what a reader reaches for and did not find.
+
+- **The font face and size**, which `docs/spec.md` §6 has had all along and the
+  bar did not offer. The face is a **list rather than the machine's fonts** — a
+  spec is read on machines other than this one, so what it may name is what
+  Excel will go looking for. Whatever the cells already wear is kept and shown
+  alongside, so opening the box never loses a face this list has not heard of.
+- **Percent, and a decimal place more or fewer**, the quick formats Sheets keeps
+  beside its box. The decimals are arithmetic on the format code — `¥#,##0`
+  gains a place as `¥#,##0.00`, `0.0%` loses one as `0%`, and both halves of
+  `#,##0.00;[Red]-#,##0.00` move together, as Excel moves them. A point inside
+  quotes is text and is left alone.
+- **Currency is in the box, not a button.** The symbol is a choice; a button
+  would have to make it for the reader, and this project does not do that
+  (ADR-001). `¥#,##0` and `$#,##0.00` are two more entries in the list.
+- **Clear formatting**, which is one `setStyle` over every property the schema
+  has. On a cell carrying its own look the file goes back to exactly what it was
+  before any of it went on — `A1: { value: 1, style: … }` becomes `A1: 1`.
+- **Three modules where there was one.** `toolbar.ts` kept the bar; the fonts
+  and the number formats went to their own files, and the three helpers that say
+  what is selected and what it wears went to `showing.ts`, which is where that
+  question already lives.
+- 1709 → 1739 tests. Comment shape unchanged at 9 over the limit.
 
 ### 2026-08-23 — The keys a look has
 Phase 10's tenth item: `Cmd`/`Ctrl`+`B`, `I` and `U`.

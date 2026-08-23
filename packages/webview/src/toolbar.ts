@@ -6,22 +6,22 @@ import {
   type HAlign,
   type StyleProperty,
   type StyleSays,
-  type StyleValues,
   type VAlign,
 } from '@yxl-vscode/spec';
-import { addrAt, type Color, parseColor, type Rect } from '@yxl-vscode/units';
-import { underFormat } from './cell';
-import { between } from './keys';
+import { addrAt, type Color, parseColor } from '@yxl-vscode/units';
+import { faces, sizes } from './fonts';
+import { cleared, numbers, quickly } from './formats';
 import { ACROSS, type Bar, DOWN, framed, frozen, marked, RAGGED } from './marks';
 import { entry, opens, says } from './menus';
-import type { DrawnCell } from './protocol';
-import type { Asks, Showing } from './showing';
+import { type Asks, over, type Showing, wornBy } from './showing';
 
 /** What a reader reaches for first: the look of the cells they have selected, and where the sheet is frozen. */
 export function toolbar(showing: Showing, asks: Asks): HTMLElement {
   const bar = document.createElement('div');
   bar.className = 'toolbar';
 
+  bar.append(faces(showing, asks), sizes(showing, asks));
+  bar.append(divider());
   for (const one of TOGGLES) bar.append(toggle(one, showing, asks));
   bar.append(divider());
   for (const one of INKS) bar.append(ink(one, showing, asks));
@@ -32,10 +32,12 @@ export function toolbar(showing: Showing, asks: Asks): HTMLElement {
   }
   bar.append(toggle(WRAP, showing, asks));
   bar.append(divider());
-  bar.append(numbers(showing, asks));
+  bar.append(numbers(showing, asks), ...quickly(showing, asks));
   bar.append(divider());
   bar.append(borders(showing, asks));
   bar.append(panes(showing, asks));
+  bar.append(divider());
+  bar.append(cleared(showing, asks));
 
   return bar;
 }
@@ -75,26 +77,6 @@ function divider(): HTMLElement {
   const span = document.createElement('span');
   span.className = 'divider';
   return span;
-}
-
-/** The rectangle the toolbar was drawn over, which is what its controls act on. */
-function over(showing: Showing): Rect {
-  const at = showing.selected ?? { row: 1, col: 1 };
-  return between(at, showing.anchor ?? at);
-}
-
-/** What the cell the reader has selected wears, which is what the toolbar shows. */
-function wornBy(showing: Showing): StyleValues {
-  return cellOf(showing)?.style ?? {};
-}
-
-/** The cell the reader has selected, where the drawing holds one. */
-function cellOf(showing: Showing): DrawnCell | undefined {
-  const at = showing.selected;
-  if (at === null) return undefined;
-
-  const cells = showing.drawing.sheets[showing.sheet]?.cells ?? [];
-  return cells.find((one: DrawnCell) => one.row === at.row && one.col === at.col);
 }
 
 /** How a shortcut is written on the reader's own keyboard. */
@@ -426,48 +408,3 @@ function lines(showing: Showing, asks: Asks): HTMLElement {
 }
 
 /** The formats a toolbar offers, by their codes: what each is called depends on the cell. */
-const NUMBERS: readonly (string | null)[] = [
-  null,
-  '#,##0',
-  '#,##0.00',
-  '0.00',
-  '0%',
-  '0.0%',
-  'yyyy-mm-dd',
-  'h:mm',
-];
-
-/** A number format, said as what it would make of the number this cell holds. */
-function numbers(showing: Showing, asks: Asks): HTMLElement {
-  const of = cellOf(showing);
-  const now = wornBy(showing).format ?? null;
-  const box = document.createElement('select');
-
-  box.className = 'look numbers';
-  box.title = now === null ? 'Number format' : `Number format: ${now}`;
-  box.disabled = showing.selected === null;
-
-  const known = NUMBERS.includes(now);
-  for (const code of known ? NUMBERS : [...NUMBERS, now]) {
-    const option = document.createElement('option');
-    option.value = code ?? '';
-    option.textContent = called(code, of);
-    option.title = code ?? '';
-    option.selected = code === now;
-    box.append(option);
-  }
-
-  const where = over(showing);
-  box.addEventListener('change', () => {
-    asks.wear({ format: box.value === '' ? null : box.value }, where);
-  });
-
-  return box;
-}
-
-/** What a format is called here: what it would make of this cell's number, or the code where there is none. */
-function called(code: string | null, of: DrawnCell | undefined): string {
-  if (code === null) return 'General';
-
-  return (of === undefined ? null : underFormat(of, code)) ?? code;
-}
