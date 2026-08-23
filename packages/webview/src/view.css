@@ -571,7 +571,6 @@ body {
   position: absolute;
   z-index: 3;
   background: #7a7a7a;
-  pointer-events: none;
 }
 
 .split.column {
@@ -584,6 +583,13 @@ body {
   right: 0;
   left: 0;
   height: 3px;
+}
+
+/* Hung from the top of the bar, which runs the height of the sheet: the
+   tooltip's own place, under what it is about, would be off the page. */
+.split.column::after {
+  top: 0.35rem;
+  left: 0.35rem;
 }
 
 /* Separate borders, each cell carrying its own right and bottom line: under

@@ -1251,7 +1251,9 @@ describe('the bar over the grid', () => {
     expect(into.querySelectorAll('.split.row')).toHaveLength(0);
 
     told({ ...drawing, sheets: [sheet({ split: { x: 0, y: 60 } })] });
-    expect(into.querySelectorAll('.split.row')).toHaveLength(1);
+    const bar = into.querySelector('.split.row');
+    expect(bar?.classList.contains('saying')).toBe(true);
+    expect(bar?.getAttribute('data-says')).toContain('does not move it');
 
     told({ ...drawing, sheets: [sheet({ split: null })] });
     expect(into.querySelectorAll('.split')).toHaveLength(0);
