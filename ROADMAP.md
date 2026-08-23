@@ -3047,7 +3047,13 @@ than widening it silently.
   answer off what the reader typed. That is ADR-001's rule showing up as UI.
 - **`Cmd`+click follows one**: a page opens outside VS Code, a `to:` sends the
   view to that cell on that sheet, through a `goTo` message of its own. Deciding
-  which is a pure function in `links.ts`; the panel only does what it says.
+  which is a pure function in `links.ts`; the panel only does what it says, and
+  says where it went — *Went to `Statuses!A1`*, *Opened …* — so a gesture whose
+  whole effect is elsewhere is not silent.
+- **Going to another sheet clears the selection before it draws.** The cell the
+  reader came from belongs to the sheet they left; drawn selected on the sheet
+  they arrive at, it is a wrong answer on screen until the selection catches up
+  a frame later — which reads as *the link took me to the wrong cell*.
 - **Only `http`, `https` and `mailto` open** (**ADR-049**). A spec is a file and
   a file may come from anywhere; a `file:` or a custom scheme handed to
   `openExternal` would be this preview opening a door on the reader's machine.

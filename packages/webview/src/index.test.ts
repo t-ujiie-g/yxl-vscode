@@ -150,6 +150,8 @@ describe('what the view sends', () => {
     const notes = sheet({ name: 'Notes', cells: [cell({ value: 'here' })] });
     told({ ...drawing, sheets: [sheet({ cells: [linked] }), notes] });
 
+    // Selected first, as a reader does before holding the key down.
+    at(into, 1, 1)?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
     at(into, 1, 1)?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, metaKey: true }));
     expect(sent.filter((one) => one.kind === 'follow')).toEqual([
       { kind: 'follow', sheet: 'Sales', row: 1, col: 1 },
@@ -162,6 +164,11 @@ describe('what the view sends', () => {
       row: 1,
       col: 1,
     });
+
+    // The cell it came from is another sheet's, and is not what lands selected.
+    const marked = [...into.querySelectorAll('td.selected')];
+    expect(marked.map((one) => one.getAttribute('data-at'))).toEqual(['1:1']);
+    expect(into.querySelector<HTMLInputElement>('.formula .address')?.value).toBe('A1');
   });
 
   it('sends the colour picked to the cells the palette was opened over', () => {

@@ -3,7 +3,7 @@ import { type Engine, univerEngine } from '@yxl-vscode/evaluate';
 import type { Tabbed } from '@yxl-vscode/intent';
 import { did, type History, nothing } from '@yxl-vscode/patch';
 import type { Axis } from '@yxl-vscode/spec';
-import { addrAt, cellOf, filePath, parseColor } from '@yxl-vscode/units';
+import { addrAt, cellOf, filePath, parseColor, qualified } from '@yxl-vscode/units';
 import type {
   Filled,
   Filtered,
@@ -401,8 +401,10 @@ export class Preview {
       return;
     }
 
+    const port = this.port();
     if (went.kind === 'open') {
       void vscode.env.openExternal(vscode.Uri.parse(went.url));
+      port.said(`Opened ${went.url}.`);
       return;
     }
 
@@ -412,6 +414,7 @@ export class Preview {
       row: went.row,
       col: went.col,
     });
+    port.said(`Went to ${qualified(went.sheet, addrAt({ col: went.col, row: went.row }))}.`);
   }
 
   private writing(make: (spec: Spec, port: Port) => Promise<void>): void {

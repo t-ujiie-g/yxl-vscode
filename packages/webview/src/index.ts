@@ -627,7 +627,13 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       const went = drawing?.sheets.findIndex((one) => one.name === sent.sheet) ?? -1;
       if (went < 0) return;
 
+      // Cleared before the sheet is drawn: the cell came from another sheet,
+      // and drawing it selected here is a wrong answer until it catches up.
       sheet = went;
+      selected = null;
+      anchor = null;
+      sources = null;
+      reached = null;
       redraw();
       goToCell({ row: sent.row, col: sent.col });
       return;
