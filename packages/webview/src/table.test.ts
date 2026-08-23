@@ -373,7 +373,7 @@ describe('a heading a reader clicks', () => {
     expect(on.pointAt).toHaveBeenCalledWith({ kind: 'heading', axis: 'column', at: 2, x: 0, y: 0 });
   });
 
-  it('takes the one under the pointer where the menu is asked for outside the run', () => {
+  it('asks for a menu on the heading, leaving what it is about to the view', () => {
     const on = asks();
     const into = shown(
       {
@@ -388,7 +388,8 @@ describe('a heading a reader clicks', () => {
       .querySelector<HTMLElement>('thead th[data-col="2"]')
       ?.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
 
-    expect(on.takeBand).toHaveBeenCalledWith('column', 2, false);
+    expect(on.takeBand).not.toHaveBeenCalled();
+    expect(on.pointAt).toHaveBeenCalledWith({ kind: 'heading', axis: 'column', at: 2, x: 0, y: 0 });
   });
 
   it('opens a menu on a heading, which hides what the reader has selected', () => {
@@ -423,19 +424,7 @@ describe('a heading a reader clicks', () => {
     expect(on.group).toHaveBeenCalledWith('column', 2, 3, 1);
   });
 
-  it('opens a cell’s own menu at the pointer, taking the cell it was asked on', () => {
-    const on = asks();
-    const into = shown({ drawing: drawing({ sheets: [wide] }) }, on);
-
-    at(into, 1, 2)?.dispatchEvent(
-      new MouseEvent('contextmenu', { bubbles: true, cancelable: true }),
-    );
-
-    expect(on.select).toHaveBeenCalledWith(1, 2);
-    expect(on.pointAt).toHaveBeenCalledWith({ kind: 'cell', row: 1, col: 2, x: 0, y: 0 });
-  });
-
-  it('leaves a selection the right button lands inside of, as both spreadsheets do', () => {
+  it('asks for a cell’s own menu at the pointer, and takes nothing itself', () => {
     const on = asks();
     const into = shown(
       {

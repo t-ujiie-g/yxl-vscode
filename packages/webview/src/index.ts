@@ -20,9 +20,12 @@ import {
   type Copied,
   cellKey,
   type Looking,
+  type Pointed,
   type Reached,
+  reaches,
   type Showing,
 } from './showing';
+import { headed } from './table';
 import { sizeOf } from './window';
 
 /** The bridge VS Code puts in a webview, and the only way out of one. */
@@ -95,6 +98,14 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
   /** The same, for what the view holds of its own: the grid stays as it is. */
   const restated = (): void => {
     if (drawing !== null) restate(into, showing(drawing), asks);
+  };
+
+  /** Whether what the reader pointed at is already selected, which is what leaves a menu's run alone. */
+  const already = (at: Pointed): boolean => {
+    if (drawing === null) return false;
+    const now = showing(drawing);
+
+    return at.kind === 'cell' ? reaches(now, at) : headed(now, at.axis, at.at);
   };
 
   /** The keyboard put on the cell the selection starts at, where the grid is drawing it. */
@@ -310,6 +321,13 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       focused();
     },
     pointAt: (at) => {
+      // Decided here rather than in the grid, whose listeners were built when
+      // it was last drawn and cannot know where the reader has got to since.
+      if (at !== null && !already(at)) {
+        if (at.kind === 'cell') asks.select(at.row, at.col);
+        else asks.takeBand(at.axis, at.at, false);
+      }
+
       pointed = at;
       redraw();
     },
