@@ -1472,9 +1472,15 @@ of its colours and why a header row showed no filter.
       a fill and goes in as one more style layer, so the inspector answers for
       it like any other; a bar is drawn behind the value, and `bar_only` hides
       the value as it says.
-- [ ] `icon_set` **drawn** — the thresholds are `percent 0/33/67` and are the
-      easy half; the seventeen sets need a glyph each that is enough to
-      recognise and never Excel's own rendering (ADR-029)
+- [x] `icon_set` **drawn** — the thresholds are the evenly spaced percents yxl
+      writes (three at 0/33/67, four at 0/25/50/75, five at 0/20/40/60/80, read
+      out of a built workbook), `reverse` turns the set round, and `icons_only`
+      hides the value. The host picks *which* icon; the view decides what one
+      looks like, which is one character and a colour for each of the seventeen
+      sets — enough to recognise, never Excel's own rendering (ADR-029).
+      With this, **every kind of `conditional:` rule is drawn**, and the
+      inspector's "not drawn by this preview yet" had nothing left to say and
+      is gone.
 - [ ] **Auto filter** (`filter:`) — the dropdown mark on the header row where
       the sheet has one, and *Create a filter* / *Remove filter* on a selection.
       Per-column criteria are not in the schema yet, so neither is filtering
@@ -2985,6 +2991,21 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-23 — Icon sets, and every conditional rule drawn
+The last of conditional formatting's kinds, and the end of the construct.
+
+- **The thresholds are yxl's own**, read out of a built workbook: three icons at
+  `percent` 0/33/67, four at 0/25/50/75, five at 0/20/40/60/80 — evenly spaced
+  positions between the range's low and high, not percentile ranks.
+- **The host picks which icon; the view decides what one looks like.** One
+  character and a colour for each of the seventeen sets — an arrow, a light, a
+  flag, a bar of a rating — enough to recognise and never Excel's own drawing
+  (ADR-029). `reverse` turns the set round and `icons_only` hides the value.
+- **Every kind of rule is drawn now**, so `decidable` and the inspector's *not
+  drawn by this preview yet* had nothing left to say and are gone. What the
+  inspector says is what the rule is.
+- Comment shape: export 2.2, private 1.0, inline 1.5, 0 over the limit — held.
 
 ### 2026-08-23 — Colour scales and data bars
 The looks that are not a look: two of the three rules that draw an appearance of

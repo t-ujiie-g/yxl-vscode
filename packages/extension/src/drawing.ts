@@ -28,7 +28,7 @@ import type {
   Sized,
   Uncomputed,
 } from '@yxl-vscode/webview/protocol';
-import { applied, barAt, overRanges, spreads } from './conditional';
+import { applied, barAt, iconAt, overRanges, spreads } from './conditional';
 import { type Nodes, nodeUnder } from './inspect';
 
 /** A compiled grid as the view is handed it: one window per sheet, the cells with anything to show (ADR-019). */
@@ -251,6 +251,7 @@ function drawCells(
         format: applies(layers, cell?.value ?? null, cell?.format ?? null),
         style,
         bar: barAt(sheet.conditional, deciding, over),
+        icon: iconAt(sheet.conditional, deciding, over),
       });
     }
   }

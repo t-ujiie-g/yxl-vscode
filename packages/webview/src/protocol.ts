@@ -121,6 +121,14 @@ export interface DrawnCell {
   readonly editable: Editable;
   readonly style: StyleValues;
   readonly bar: DrawnBar | null;
+  readonly icon: DrawnIcon | null;
+}
+
+/** Which icon of which set a cell wears; what one looks like is this view's to decide (ADR-029). */
+export interface DrawnIcon {
+  readonly set: string;
+  readonly index: number;
+  readonly iconsOnly: boolean;
 }
 
 /** A `data_bar` rule's bar behind a cell: how far along the range its value is (`docs/spec.md` §10). */

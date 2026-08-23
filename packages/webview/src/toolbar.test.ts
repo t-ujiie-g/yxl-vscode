@@ -19,6 +19,7 @@ function cell(of: Partial<DrawnCell>): DrawnCell {
     overridden: false,
     editable: 'direct',
     bar: null,
+    icon: null,
     style: {},
     ...of,
   };

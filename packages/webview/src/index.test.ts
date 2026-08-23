@@ -18,6 +18,7 @@ function cell(of: Partial<DrawnCell> = {}): DrawnCell {
     editable: 'direct',
     style: {},
     bar: null,
+    icon: null,
     ...of,
   };
 }

@@ -48,21 +48,11 @@ export function applied(
   return layers;
 }
 
-/** The rule kinds a cell can be decided by without looking at the rest of its range. */
-const ALONE = new Set(['cell', 'text', 'formula']);
-
 /** The kinds that need every value in the range before any one cell can be decided. */
 const OVER_RANGE = new Set(['top', 'bottom', 'duplicate', 'unique']);
 
 /** The kinds that draw an appearance of their own rather than a look over the cell. */
-const OWN_LOOK = new Set(['colorScale', 'dataBar']);
-
-/** Whether this preview can decide a rule at all, which the inspector says where it cannot. */
-export function decidable(rule: CompiledRule): boolean {
-  return (
-    ALONE.has(rule.test.kind) || OVER_RANGE.has(rule.test.kind) || OWN_LOOK.has(rule.test.kind)
-  );
-}
+const OWN_LOOK = new Set(['colorScale', 'dataBar', 'iconSet']);
 
 /** What a range's numbers come to, which is what a scale and a bar are drawn against. */
 export interface Spread {
@@ -129,6 +119,41 @@ export interface Bar {
   readonly color: string;
   readonly fraction: number;
   readonly barOnly: boolean;
+}
+
+/** Which icon of a set a cell gets; what one looks like is the view's to decide (ADR-029). */
+export interface Icon {
+  readonly set: string;
+  readonly index: number;
+  readonly iconsOnly: boolean;
+}
+
+/**
+ * The icon an `icon_set` rule gives a cell. The thresholds are the evenly
+ * spaced percents yxl writes — three icons at 0/33/67, four at 0/25/50/75 —
+ * counted between the range's low and high (`docs/spec.md` §10).
+ */
+export function iconAt(rules: readonly CompiledRule[], cell: Deciding, over: Spreads): Icon | null {
+  for (const rule of rules) {
+    if (rule.test.kind !== 'iconSet' || !covers(rule, cell.at)) continue;
+
+    const spread = over.get(rule.node);
+    const value = shown(cell);
+    const many = Number.parseInt(rule.test.name.slice(0, 1), 10);
+    if (spread === undefined || typeof value !== 'number' || Number.isNaN(many)) continue;
+
+    const part = along(value, spread.low, spread.high) * 100;
+    const step = [...Array(many).keys()].filter((one) => part >= Math.floor((100 * one) / many));
+    const index = Math.max(0, step.length - 1);
+
+    return {
+      set: rule.test.name,
+      index: rule.test.reverse ? many - 1 - index : index,
+      iconsOnly: rule.test.iconsOnly,
+    };
+  }
+
+  return null;
 }
 
 /** The fill a `color_scale` rule gives a cell, as the layer every other look is one of. */

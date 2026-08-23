@@ -62,6 +62,7 @@ export function cell(row: number, col: number, of: Partial<DrawnCell> = {}): Dra
     editable: 'direct',
     style: {},
     bar: null,
+    icon: null,
     ...of,
   };
 }
