@@ -10,6 +10,7 @@ export {
   setValue,
   type Text,
 } from './direct';
+export { type Filling, setFilled } from './fill';
 export { type Frozen, setFreeze } from './freeze';
 export { type Grouping, setGroup } from './group';
 export { type Hiding, setHidden } from './hidden';

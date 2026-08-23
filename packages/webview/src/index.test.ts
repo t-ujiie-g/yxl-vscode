@@ -1102,6 +1102,28 @@ describe('the bar over the grid', () => {
     expect(sent.filter((one) => one.kind === 'find').at(-1)).toMatchObject({ text: 'APAC' });
   });
 
+  it('asks for a fill down over the rectangle, from the key and from the menu', () => {
+    const { into, sent } = view();
+
+    reachFrom(into, { row: 1, col: 1 }, { row: 2, col: 2 });
+    at(into, 2, 2)?.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'd', metaKey: true, bubbles: true, cancelable: true }),
+    );
+
+    expect(sent.filter((one) => one.kind === 'fill')).toEqual([
+      { kind: 'fill', sheet: 'Sales', top: 1, left: 1, bottom: 2, right: 2, axis: 'row' },
+    ]);
+
+    at(into, 2, 2)?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 2 }));
+    at(into, 2, 2)?.dispatchEvent(
+      new MouseEvent('contextmenu', { bubbles: true, cancelable: true }),
+    );
+
+    const entries = [...into.querySelectorAll<HTMLButtonElement>('.pointed .entry')];
+    entries.find((one) => one.firstChild?.textContent === 'Fill right')?.click();
+    expect(sent.filter((one) => one.kind === 'fill').at(-1)).toMatchObject({ axis: 'column' });
+  });
+
   it('asks to keep a rectangle of rows as a table', () => {
     const { into, sent } = view();
 

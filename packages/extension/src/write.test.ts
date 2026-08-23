@@ -5,6 +5,7 @@ import { did, type History, nothing } from '@yxl-vscode/patch';
 import { type FilePath, filePath, parseColor } from '@yxl-vscode/units';
 import type { Choice, Frozen, Resized, Typed, Worn } from '@yxl-vscode/webview/protocol';
 import { describe, expect, it } from 'vitest';
+import { fill } from './fills';
 import { group } from './group';
 import { hide } from './hidden';
 import { line } from './lines';
@@ -630,6 +631,30 @@ describe('columns hidden from the preview', () => {
 
     await hide(spec, hiding({ hidden: false }), port);
     expect(refusals[0]).toContain('nothing hides columns B-C');
+  });
+});
+
+describe('a rectangle filled from its first line', () => {
+  const COLUMN = `${SALES}    cells:\n      B1: 10\n      B2: 20\n      C1: { formula: "B1*2" }\n`;
+
+  it('offers the range first and a cell each second, and takes the one picked', async () => {
+    const { spec, port, answers, files } = editor({ [ROOT]: COLUMN });
+    const asked = { sheet: 'Sales', top: 1, left: 3, bottom: 2, right: 3, axis: 'row' } as const;
+
+    await fill(spec, asked, port);
+    expect(answers[0]?.map((one) => one.id)).toEqual(['range', 'onCells']);
+
+    await fill(spec, asked, port, 'range');
+    expect(files[ROOT]).toContain('    formulas:\n      - at: C1:C2\n        formula: "B1*2"\n');
+  });
+
+  it('says so where the line it would fill from is empty', async () => {
+    const { spec, port, refusals } = editor({ [ROOT]: COLUMN });
+
+    await fill(spec, { sheet: 'Sales', top: 1, left: 9, bottom: 3, right: 9, axis: 'row' }, port);
+    expect(refusals[0]).toBe(
+      'nothing on the first row of this is written, so there is nothing to fill',
+    );
   });
 });
 

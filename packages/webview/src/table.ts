@@ -2,7 +2,7 @@ import type { Axis } from '@yxl-vscode/spec';
 import { columnLabel } from '@yxl-vscode/units';
 import { corner } from './boxes';
 import { drawCell, typeInto } from './cell';
-import { copying, going, looking as lookingFor, pasting, undoing } from './keys';
+import { copying, filling, going, looking as lookingFor, pasting, undoing } from './keys';
 import {
   behind,
   drawOutline,
@@ -442,6 +442,13 @@ function line(
         event.preventDefault();
         if (through === 'open') asks.look(null);
         else asks.goOn(through === 'on' ? 1 : -1);
+        return;
+      }
+
+      const filled = filling(event);
+      if (filled !== null) {
+        event.preventDefault();
+        asks.fill(filled);
         return;
       }
 

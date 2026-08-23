@@ -30,6 +30,24 @@ function onCell(showing: Showing, asks: Asks, at: PointedCell): HTMLElement | nu
     ...(rect.bottom > rect.top
       ? [
           entry(
+            'Fill down',
+            { chord: `${HELD}D` },
+            shut(() => asks.fill('row')),
+          ),
+        ]
+      : []),
+    ...(rect.right > rect.left
+      ? [
+          entry(
+            'Fill right',
+            { chord: `${HELD}R` },
+            shut(() => asks.fill('column')),
+          ),
+        ]
+      : []),
+    ...(rect.bottom > rect.top
+      ? [
+          entry(
             'Make this a data table',
             {},
             shut(() => asks.table()),

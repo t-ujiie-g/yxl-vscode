@@ -49,6 +49,11 @@ export interface DrawnSheet {
   readonly freeze: { readonly row: number; readonly col: number } | null;
 }
 
+/** A rectangle to be filled from its first line: down from the top row, or right from the left column. */
+export interface Filled extends Ranged {
+  readonly axis: Axis;
+}
+
 /** A rectangle asked to be drawn as one cell, or taken back apart (`docs/spec.md` §2). */
 export interface Merged extends Ranged {
   readonly merged: boolean;
@@ -169,7 +174,8 @@ export type About =
   | ({ readonly kind: 'group' } & Grouped)
   | ({ readonly kind: 'hide' } & Hidden)
   | ({ readonly kind: 'resize' } & Resized)
-  | ({ readonly kind: 'line' } & Lined);
+  | ({ readonly kind: 'line' } & Lined)
+  | ({ readonly kind: 'fill' } & Filled);
 
 /**
  * `Cmd`+`V` in the grid: where it goes, what the grid holds of its own, and what
