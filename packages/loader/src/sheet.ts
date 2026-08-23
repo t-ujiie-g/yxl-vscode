@@ -5,6 +5,7 @@ import {
   type Conditional,
   type DataBlock,
   type FormulaRange,
+  type Link,
   type Merge,
   MODELED_KEYS,
   type Note,
@@ -19,6 +20,7 @@ import { CODE } from './codes';
 import { readConditional } from './conditional';
 import { type Ctx, identify, keyOf, reject, type Site } from './ctx';
 import { readDataBlocks } from './data';
+import { readLinks } from './link';
 import { readNotes } from './note';
 import {
   expectBool,
@@ -68,6 +70,7 @@ function readSheet(site: Site): Sheet | null {
   let conditional: Conditional[] = [];
   let filter: Sheet['filter'] = null;
   let comments: Note[] = [];
+  let links: Link[] = [];
   const opaque: Opaque[] = [];
 
   for (const entry of entries) {
@@ -118,6 +121,9 @@ function readSheet(site: Site): Sheet | null {
       case 'comments':
         comments = readNotes(here, entry.value, at);
         break;
+      case 'links':
+        links = readLinks(here, entry.value, at);
+        break;
       default:
         opaque.push({ ...identify(here, at, entry.span), key });
     }
@@ -140,6 +146,7 @@ function readSheet(site: Site): Sheet | null {
     conditional,
     filter,
     comments,
+    links,
     keyOrder: entries.map(keyOf),
     opaque,
   };

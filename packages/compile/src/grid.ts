@@ -2,6 +2,7 @@ import type { Diagnostic } from '@yxl-vscode/diag';
 import type {
   CellType,
   ConditionalTest,
+  LinkTarget,
   ScalarValue,
   Split,
   StyleSays,
@@ -51,6 +52,15 @@ export interface CompiledSheet {
   readonly conditional: readonly CompiledRule[];
   readonly filter: Rect | null;
   readonly notes: ReadonlyMap<string, CompiledNote>;
+  readonly links: ReadonlyMap<string, CompiledLink>;
+}
+
+/** One link on a cell, its target substituted; where it goes is the spec's own (`docs/spec.md` §10). */
+export interface CompiledLink {
+  readonly at: A1Addr;
+  readonly target: LinkTarget;
+  readonly tip: string | null;
+  readonly node: NodeId;
 }
 
 /** One note on a cell, its text substituted; the cell shows its own value still (`docs/spec.md` §10). */

@@ -651,6 +651,14 @@ body {
   pointer-events: none;
 }
 
+/* A cell whose text is a link, as both spreadsheets draw one. A look the spec
+   gives the cell is written inline and wins, which is what the spec says. */
+.grid td.linked {
+  color: var(--vscode-textLink-foreground, #3794ff);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 /* The box a note is written in, in the pale yellow Excel shows a note in. */
 .noting {
   position: absolute;
@@ -666,6 +674,24 @@ body {
   font: inherit;
   resize: none;
   white-space: pre-wrap;
+}
+
+/* The box a link's target is typed in: wider than a cell, since a URL is. */
+.linking {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 5;
+  width: max(100%, 18rem);
+  box-sizing: border-box;
+  border: 2px solid #107c41;
+  padding: 1px 3px;
+  background: #ffffff;
+  color: #000000;
+  font: inherit;
+  resize: none;
+  white-space: nowrap;
+  overflow: hidden;
 }
 
 /* A filtered header's mark, at the right of the cell as Excel puts it. */

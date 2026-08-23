@@ -27,7 +27,16 @@ export {
   type StyleSays,
   type StyleValues,
 } from './property';
-export type { FormulaRange, Merge, Note, Sheet, Split, Visibility } from './sheet';
+export type {
+  FormulaRange,
+  Link,
+  LinkTarget,
+  Merge,
+  Note,
+  Sheet,
+  Split,
+  Visibility,
+} from './sheet';
 export {
   type Align,
   BORDER_EDGES,

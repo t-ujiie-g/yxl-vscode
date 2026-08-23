@@ -2,7 +2,7 @@ import { BORDER_EDGES, type ScalarValue, type StyleValues } from '@yxl-vscode/sp
 import { painted } from '@yxl-vscode/units';
 import { format as excel } from 'numfmt';
 import { iconOf } from './icons';
-import type { DrawnBar, DrawnCell, DrawnMerge, DrawnNote, DrawnRun } from './protocol';
+import type { DrawnBar, DrawnCell, DrawnMerge, DrawnRun } from './protocol';
 
 /** One cell as a `<td>`: what it says, and the look it was sent wearing. */
 export function drawCell(
@@ -142,19 +142,20 @@ export function typeInto(
 }
 
 /**
- * Write a cell's note, in a box over the cell — a webview has no dialog to ask
- * in. Enter sends what was typed, Escape and clicking away leave the note as it
- * was.
+ * Ask for a line or two of text in a box over the cell — a webview has no
+ * dialog to ask in. Enter sends what was typed, Escape and clicking away send
+ * `null`, which leaves what is there as it is.
  */
-export function noteInto(
+export function askInto(
   cell: HTMLTableCellElement,
-  was: DrawnNote | null,
+  of: Asking,
   done: (text: string | null) => void,
 ): void {
   const box = document.createElement('textarea');
-  box.className = 'noting';
-  box.rows = 3;
-  box.value = was?.text ?? '';
+  box.className = `asking ${of.className}`;
+  box.rows = of.rows;
+  box.value = of.value;
+  box.placeholder = of.placeholder;
 
   let over = false;
   const leave = (text: string | null) => {
@@ -181,6 +182,14 @@ export function noteInto(
   box.addEventListener('blur', () => leave(null));
 
   cell.append(box);
+}
+
+/** What such a box asks for: the class that draws it, what it opens holding, and what it says while empty. */
+export interface Asking {
+  readonly className: string;
+  readonly value: string;
+  readonly rows: number;
+  readonly placeholder: string;
 }
 
 /** Where the cell an edit was committed from leaves the reader, in cells from where they were. */

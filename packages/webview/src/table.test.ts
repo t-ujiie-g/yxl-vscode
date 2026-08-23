@@ -117,7 +117,7 @@ describe('a sheet larger than the window drawn of it', () => {
       menu: null,
       pointed: null,
       naming: null,
-      noting: null,
+      asking: null,
       comes: null,
     });
 
@@ -148,7 +148,7 @@ describe('a sheet larger than the window drawn of it', () => {
       menu: null,
       pointed: null,
       naming: null,
-      noting: null,
+      asking: null,
       comes: null,
     });
 
@@ -1070,7 +1070,7 @@ describe('a cell that carries a note', () => {
 
   it('is written in a box over the cell, which sends what was typed', () => {
     const on = asks();
-    const into = noted({ noting: { row: 1, col: 1 } }, on);
+    const into = noted({ asking: { at: { row: 1, col: 1 }, what: 'note' } }, on);
     const box = at(into, 1, 1)?.querySelector<HTMLTextAreaElement>('.noting');
     if (box === null || box === undefined) throw new Error('there is no box');
 
@@ -1079,5 +1079,70 @@ describe('a cell that carries a note', () => {
     box.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
 
     expect(on.note).toHaveBeenCalledWith(1, 1, 'checked with Finance');
+  });
+});
+
+describe('a cell that carries a link', () => {
+  const linked = (of: Partial<Showing> = {}, on: Asks = asks()) => {
+    const held = drawing({
+      sheets: [
+        sheet({
+          rows: 1,
+          columns: 2,
+          cells: [
+            cell(1, 1, {
+              value: 'Order 1001',
+              link: { kind: 'url', target: 'https://example.com', tip: 'The order' },
+            }),
+          ],
+        }),
+      ],
+    });
+    return shown({ drawing: held, ...of }, on);
+  };
+
+  it('is drawn as a link, and says the tip and where it goes on hover', () => {
+    const into = linked();
+    const cell = at(into, 1, 1);
+
+    expect(cell?.classList.contains('linked')).toBe(true);
+    expect(at(into, 1, 2)?.classList.contains('linked')).toBe(false);
+
+    cell?.dispatchEvent(new MouseEvent('mouseenter'));
+    expect(cell?.querySelector('.notice')?.textContent).toContain('The order');
+    expect(cell?.querySelector('.notice')?.textContent).toContain('https://example.com');
+  });
+
+  it('is followed by holding the key and clicking, and selected by clicking alone', () => {
+    const on = asks();
+    const cell = at(linked({}, on), 1, 1);
+
+    cell?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, metaKey: true }));
+    expect(on.follow).toHaveBeenCalledWith(1, 1);
+    expect(on.select).not.toHaveBeenCalled();
+
+    cell?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    expect(on.select).toHaveBeenCalledWith(1, 1);
+  });
+
+  it('is typed into a box that opens holding the target, and sends it back as its kind', () => {
+    const on = asks();
+    const into = linked({ asking: { at: { row: 1, col: 1 }, what: 'url' } }, on);
+    const box = at(into, 1, 1)?.querySelector<HTMLTextAreaElement>('.linking');
+    if (box === null || box === undefined) throw new Error('there is no box');
+
+    expect(box.value).toBe('https://example.com');
+    box.value = 'https://example.com/two';
+    box.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+
+    expect(on.link).toHaveBeenCalledWith(1, 1, {
+      kind: 'url',
+      text: 'https://example.com/two',
+    });
+  });
+
+  it('opens an empty box for the other kind, since the two are not the same target', () => {
+    const into = linked({ asking: { at: { row: 1, col: 1 }, what: 'to' } });
+    expect(at(into, 1, 1)?.querySelector<HTMLTextAreaElement>('.linking')?.value).toBe('');
   });
 });

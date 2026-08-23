@@ -34,6 +34,7 @@ export interface Sheet extends SpecNode {
   readonly conditional: readonly Conditional[];
   readonly filter: Templated<A1Range> | null;
   readonly comments: readonly Note[];
+  readonly links: readonly Link[];
   readonly keyOrder: readonly string[];
   readonly opaque: readonly Opaque[];
 }
@@ -57,6 +58,23 @@ export interface Note extends SpecNode {
   readonly at: Templated<A1Addr>;
   readonly text: string;
   readonly author: string | null;
+}
+
+/**
+ * One link on a cell, which decorates it as a note does: the cell shows its own
+ * value still. Which kind of target it is, is written rather than inferred —
+ * `Summary!A1` and a URL are both just text (`docs/spec.md` §10).
+ */
+export interface Link extends SpecNode {
+  readonly at: Templated<A1Addr>;
+  readonly target: LinkTarget;
+  readonly tip: string | null;
+}
+
+/** Where a link goes: `url` out of the workbook, `to` a cell or a defined name in it. */
+export interface LinkTarget {
+  readonly kind: 'url' | 'to';
+  readonly text: string;
 }
 
 /** One merged region; Excel shows the top-left cell's value across it. */

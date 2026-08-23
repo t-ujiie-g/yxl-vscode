@@ -197,3 +197,16 @@ describe('what the inspector says about a note', () => {
     expect(sources(NOTED, 'C1').filter((one) => one.facet === 'note')).toEqual([]);
   });
 });
+
+describe('what the inspector says about a link', () => {
+  const LINKED = `${SHEET}    cells:\n      A1: Region\n    links:\n      A1: { url: https://example.com, tip: The dashboard }\n      B1: { to: "Sales!C3" }\n`;
+
+  it('says where the link goes, and the tip where one is written', () => {
+    expect(saying(LINKED, 'A1', 'link')).toBe('https://example.com — The dashboard');
+    expect(saying(LINKED, 'B1', 'link')).toBe('`Sales!C3`');
+  });
+
+  it('says nothing about a cell carrying none', () => {
+    expect(sources(LINKED, 'C1').filter((one) => one.facet === 'link')).toEqual([]);
+  });
+});

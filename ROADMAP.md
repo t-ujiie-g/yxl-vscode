@@ -468,7 +468,8 @@ not a date.
 | Add, rename, delete, reorder a sheet; a tab colour; hide a sheet | ✅ — all from the tab bar and the tab's own menu; `split:` is drawn read-only |
 | See that a sheet has an auto filter, and put one on | ✅ — every header cell wears the mark, and the cell's menu puts one on or takes it off; the preview does not filter *by* it, since the schema carries no per-column criteria |
 | A note on a cell | ✅ — the red corner, the note on hover, and *Insert note* / *Edit note* / *Delete note* in the cell's own menu |
-| A hyperlink; a dropdown list of allowed values | **Phase 13** — both are opaque today |
+| A link on a cell, and following it | ✅ — drawn as a link, `Cmd`+click follows it, and the menu writes one to a page or to a cell; the two are never told apart by how the target reads |
+| A dropdown list of allowed values | **Phase 13** — `validations:` is opaque today |
 | Conditional formatting, applied in the drawing | ✅ — every kind of rule, over the evaluated values, display only (ADR-014) |
 | Format a region as a table | **Phase 13** |
 | See a chart, an image, a sparkline that the spec declares | **Phase 14** |
@@ -1498,8 +1499,16 @@ of its colours and why a header row showed no filter.
       otherwise write the address twice. Editing a note written the long way
       changes its `text` and leaves its `author` alone. The note is in the
       inspector too, with where it is written.
-- [ ] **Hyperlinks** (`links:`) — drawn as links, `Cmd`+click follows one, and
-      *Insert link* in the cell's menu with the URL or the `Sheet!A1` it goes to
+- [x] **Hyperlinks** (`links:`) — modelled rather than opaque, both forms read:
+      the bare URL, and `{ url: | to:, tip: }`. A cell carrying one is drawn as
+      a link and says its `tip` and where it goes on hover; `Cmd`+click follows
+      it — a page opens outside VS Code, a `to:` takes the reader to that cell,
+      on that sheet. **Which kind of target it is, is never inferred**
+      (`docs/spec.md` §10 is explicit that `Summary!A1` and a URL are both just
+      text), so the menu asks: *Link to a page…* and *Link to a cell…*, and
+      *Edit link* keeps the kind it was written with, and its `tip`. Only
+      `http`, `https` and `mailto` are opened — a spec is a file, and a file may
+      come from anywhere. The link is in the inspector with where it came from.
 - [ ] **Data validation** (`validations:`) — a `list:` drawn as the dropdown a
       spreadsheet shows, its choices offered when the cell is edited; the other
       kinds drawn as the mark and the prompt; *Data validation…* on a selection
@@ -2733,6 +2742,29 @@ answer taken, say what happened. That is now one function (`asked.ts`) and four
 vocabularies of five sentences each. Phase 11's insert and delete are a
 vocabulary, not another copy.
 
+### ADR-049 — A link opens the web and the post, and nothing else
+**Accepted** 2026-08-24.
+
+*A spec is a file, and a file may come from anywhere.* Following a `links:`
+entry hands its target to `vscode.env.openExternal`, which gives it to the
+machine's own handler for that scheme. A spec pulled from a repository, a
+gist, or an attachment could therefore carry `file:///…`, or a scheme some
+installed application registered, and this preview would be the thing that
+opened it — on a gesture that looks like clicking a link in a spreadsheet.
+
+*Only `http`, `https` and `mailto` are opened.* Anything else is refused with a
+sentence naming the three, so a reader who meant it can still open the target
+themselves. Which scheme a target has is decided in `links.ts`, beside where the
+link is resolved, and not at the call to `openExternal` — the decision is a
+value the tests can hold.
+
+*A `to:` is not a URL at all* and does not go through this: it is a cell on a
+sheet of this workbook, or a refusal.
+
+*What this costs.* A spec that links to a file beside it — a plausible thing to
+want — is not followed here. That is the trade taken: the reader is told what
+this preview opens, and nothing on their machine runs because a spec asked.
+
 ## 8. Open questions
 
 - **Q1 — `cells:` A1 keys and row insertion.** ✅ *Answered 2026-08-23.*
@@ -3002,6 +3034,35 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-24 — The link a cell carries, and following it
+`links:` was opaque. It is modelled now, drawn as a link, followed on
+`Cmd`+click, and written from the cell's own menu.
+
+- **Both forms are read**: the bare URL, and `{ url: | to:, tip: }`. A link
+  keeps the kind it was written with and its `tip` when its target is changed.
+- **Which kind of target it is, is never inferred.** `docs/spec.md` §10 says it
+  outright — `Summary!A1` and a URL are both just text — so the menu asks it as
+  two entries, *Link to a page…* and *Link to a cell…*, rather than reading the
+  answer off what the reader typed. That is ADR-001's rule showing up as UI.
+- **`Cmd`+click follows one**: a page opens outside VS Code, a `to:` sends the
+  view to that cell on that sheet, through a `goTo` message of its own. Deciding
+  which is a pure function in `links.ts`; the panel only does what it says, and
+  says where it went — *Went to `Statuses!A1`*, *Opened …* — so a gesture whose
+  whole effect is elsewhere is not silent.
+- **Going to another sheet clears the selection before it draws.** The cell the
+  reader came from belongs to the sheet they left; drawn selected on the sheet
+  they arrive at, it is a wrong answer on screen until the selection catches up
+  a frame later — which reads as *the link took me to the wrong cell*.
+- **Only `http`, `https` and `mailto` open** (**ADR-049**). A spec is a file and
+  a file may come from anywhere; a `file:` or a custom scheme handed to
+  `openExternal` would be this preview opening a door on the reader's machine.
+  The refusal names the schemes it does open.
+- **A `to:` that is a defined name is refused**, in as many words: the schema
+  allows one, and this preview follows cells.
+- The note's box and the link's box are one function now (`askInto`), and the
+  view holds one `asking` rather than a state per decoration.
+- Comment shape: export 2.2, private 1.0, inline 1.5, 0 over the limit — held.
 
 ### 2026-08-24 — The note a cell carries
 `comments:` was opaque. It is modelled now, from the loader through the compiled

@@ -9,6 +9,7 @@ import { fill } from './fills';
 import { group } from './group';
 import { hide } from './hidden';
 import { line } from './lines';
+import { link } from './links';
 import { wear } from './look';
 import { note } from './notes';
 import { filter, freeze } from './panes';
@@ -712,6 +713,28 @@ describe("a cell's note, written from its own menu", () => {
 
     await note(spec, { sheet: 'Sales', row: 1, col: 1, text: null }, port);
     expect(refusals[0]).toBe('`A1` has no note to take off');
+  });
+});
+
+describe("a cell's link, written from its own menu", () => {
+  it('writes each kind in the form it takes, and takes the link off again', async () => {
+    const cells = `${SALES}    cells:\n      A1: Region\n`;
+    const { spec, port, files, told, refusals } = editor({ [ROOT]: cells });
+    const where = { sheet: 'Sales', row: 1, col: 1 };
+
+    await link(spec, { ...where, link: { kind: 'url', text: 'https://example.com' } }, port);
+    expect(files[ROOT]).toBe(`${cells}    links:\n      A1: https://example.com\n`);
+    expect(told).toEqual(['A1 goes to https://example.com.']);
+
+    await link(spec, { ...where, link: null }, port);
+    expect(files[ROOT]).toBe(cells);
+
+    await link(spec, { ...where, link: { kind: 'to', text: 'Sales!B2' } }, port);
+    expect(files[ROOT]).toBe(`${cells}    links:\n      A1:\n        to: "Sales!B2"\n`);
+
+    await link(spec, { ...where, link: null }, port);
+    await link(spec, { ...where, link: null }, port);
+    expect(refusals[0]).toBe('`A1` has no link to take off');
   });
 });
 

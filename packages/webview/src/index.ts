@@ -75,8 +75,8 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
   /** The tab being renamed, kept here so a redraw does not take the box away. */
   let naming: number | null = null;
 
-  /** The cell whose note is being written, kept here for the same reason. */
-  let noting: Showing['noting'] = null;
+  /** The box open over a cell and what it asks for, kept here for the same reason. */
+  let asking: Showing['asking'] = null;
 
   /** The tab last gone to, so the second click on it is the one that renames. */
   let went: { index: number; at: number } | null = null;
@@ -102,7 +102,7 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
     looking,
     editable: editable(),
     naming,
-    noting,
+    asking,
   });
 
   const redraw = (): void => {
@@ -353,16 +353,28 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       const rect = spanned() ?? { top: 1, left: 1, bottom: 1, right: 1 };
       host.postMessage({ kind: 'filter', sheet: named(), on, ...rect });
     },
-    noteAt: (at) => {
-      noting = at;
+    askAt: (asked) => {
+      asking = asked;
       redraw();
     },
     note: (row, col, text) => {
       refused = null;
       said = null;
-      noting = null;
+      asking = null;
       redraw();
       host.postMessage({ kind: 'note', sheet: named(), row, col, text });
+    },
+    link: (row, col, to) => {
+      refused = null;
+      said = null;
+      asking = null;
+      redraw();
+      host.postMessage({ kind: 'link', sheet: named(), row, col, link: to });
+    },
+    follow: (row, col) => {
+      refused = null;
+      said = null;
+      host.postMessage({ kind: 'follow', sheet: named(), row, col });
     },
     takeAll: () => {
       const of = drawing?.sheets[sheet];
@@ -608,6 +620,22 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
         if (sent.cells.length > 0) asks.goOn(1);
         else restated();
       }
+      return;
+    }
+
+    if (sent.kind === 'goTo') {
+      const went = drawing?.sheets.findIndex((one) => one.name === sent.sheet) ?? -1;
+      if (went < 0) return;
+
+      // Cleared before the sheet is drawn: the cell came from another sheet,
+      // and drawing it selected here is a wrong answer until it catches up.
+      sheet = went;
+      selected = null;
+      anchor = null;
+      sources = null;
+      reached = null;
+      redraw();
+      goToCell({ row: sent.row, col: sent.col });
       return;
     }
 
