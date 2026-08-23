@@ -5,6 +5,7 @@ import { draw, restate } from './draw';
 import { asks, at, cell, drawing, scrolled, sheet, showingOf, shown } from './harness';
 import type { DrawnSheet } from './protocol';
 import type { Showing } from './showing';
+import { pinned } from './table';
 import { widthOf } from './window';
 
 describe('the grid', () => {
@@ -198,6 +199,19 @@ describe('a sheet with frozen panes', () => {
       '24px',
       '44px',
     ]);
+  });
+
+  it('leaves the declared pinning alone where there is no layout to measure', () => {
+    // jsdom lays nothing out, which is the same shape as a panel not yet shown:
+    // the declared heights are all there is, and they are better than zero.
+    const into = shown({ drawing: drawing({ sheets: [frozen] }) });
+    pinned(into);
+
+    expect(
+      [...into.querySelectorAll<HTMLElement>('tr.frozen')].map(
+        (one) => one.querySelector<HTMLElement>('td')?.style.top,
+      ),
+    ).toEqual(['24px', '44px']);
   });
 
   it('keeps the frozen columns right of the row numbers', () => {
