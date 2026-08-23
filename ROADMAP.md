@@ -1231,7 +1231,7 @@ Deliberately **not** here: a second selection with `Cmd`+click (every answer in
 §4.4 is counted over one rectangle), zoom, and a format painter.
 
 ### Phase 10.5 — What the last pass left
-- [ ] **A look on a cell a `formulas:` range fills.** A `cells:` entry may not
+- [x] **A look on a cell a `formulas:` range fills.** A `cells:` entry may not
       overlap a range (`docs/spec.md` §3), so the cell has nowhere to carry one.
       The two places that can are a `columns:`/`rows:` band over the region —
       what §3 recommends, and what the reader may not mean when they picked one
@@ -1239,6 +1239,10 @@ Deliberately **not** here: a second selection with `Cmd`+click (every answer in
       filled range and which ADR-007 already designates here. Offer both and
       ask (ADR-001); today the gesture is refused with `nothing here can carry
       that look`, which is true and unhelpful.
+      **In**, both, as a question. The band is over the axis the **range** runs,
+      since that is the one that reaches every cell it fills. The exception is
+      not offered at the range's top-left, where the shared formula is stored
+      and where §23 refuses one — there the run is the only answer.
 - [ ] **A look over a rectangle that spans a data block and cells.** Each cell
       is answered on its own today, which is right, but the answers are not
       counted together — a reader who selects ten cells should hear one sentence
@@ -2727,6 +2731,39 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-23 — A look inside a filled range
+The other half of the last change: the cells a `formulas:` range fills, where a
+`cells:` entry may not go at all.
+
+- **Two answers, asked rather than picked.** An `overrides:` entry on that one
+  cell — which §23 calls *the* answer inside a filled range and ADR-007 already
+  designates here — or a band over the run, which is what §3 recommends for
+  styling a region. The band is over the axis the **range** runs, since that is
+  the one that reaches every cell it fills.
+- **An override says only the facets it is about.** `lines()` wrote a `value:`
+  whatever it was given; a look asked for now writes `style:` and no value, as
+  §23's facet independence intends.
+- **At the range's top-left there is only the run.** That is where the shared
+  formula is stored, so §23 refuses an override there, and offering one would
+  have been offering a refusal.
+- **One spec type through the intent layer.** `Projection { grid }` and
+  `Excepting { doc, grid }` were two names for what a write needs; they are one
+  now, which is what let a *look* reach the override path at all. Every caller
+  in the extension passes its `Spec` straight through.
+- **A band names what a range fills.** The cells a `formulas:` range covers are
+  worked out on demand, not held in the sheet's map, so a look over the column
+  named none of them and the checker called all four hundred a surprise. Which
+  addresses a sheet holds a cell at is a question `compile` owns and `verify`
+  already answered for itself; it answers it once now, and `intent` asks the
+  same question.
+- **Any gesture can be confirmed, not just a typed edit.** *Apply it anyway* was
+  offered only where the refusal carried what the reader typed, so a look that
+  surprised the checker was a sentence with no way past it. The message a
+  refusal carries is the way back for every gesture now (ADR-048), and the
+  shared flow reads `anyway:` the way the typed path always has.
+- 1764 → 1769 tests, one of them Tier 4: the exception goes through the real
+  compiler and the cell comes back bold with its formula still filling it.
 
 ### 2026-08-23 — A look on a cell a data block fills
 Reported from the running preview: bolding a row that a `data:` block writes did

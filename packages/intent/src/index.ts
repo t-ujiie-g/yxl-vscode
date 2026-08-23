@@ -16,7 +16,6 @@ export { type Hiding, setHidden } from './hidden';
 export { overridable, override, type Says } from './override';
 export {
   couldBlock,
-  type Excepting,
   type Pasting,
   pasteRange,
   pasteText,

@@ -1,6 +1,5 @@
 import {
   type CompiledBand,
-  type CompiledGrid,
   type CompiledSheet,
   cellAt,
   type FacetOrigin,
@@ -21,12 +20,10 @@ import {
 } from '@yxl-vscode/spec';
 import type { A1Addr, FilePath, NodeId, SheetName } from '@yxl-vscode/units';
 import { soleBand } from './bands';
-import { type Found, located, type Reading } from './direct';
+import { type Found, type Intent, located, type Projection, type Reading } from './direct';
+import { override, type Says } from './override';
 
-/** What a write needs of the spec: what it draws, which carries the looks and the bands it declares. */
-export interface Projection {
-  readonly grid: CompiledGrid;
-}
+export type { Projection };
 
 /** A look asked for over one address: which of its properties are to land there. */
 export interface Wanted {
@@ -120,6 +117,30 @@ function onCell(
   if (found.node.kind !== 'map') return null;
 
   return { file: found.file, ops: intoCell(found, carries, read) };
+}
+
+/**
+ * The look written as an exception, which is where a cell inside a `formulas:`
+ * range carries one (`docs/spec.md` §23, ADR-007); `null` where it has nothing
+ * to say or the range keeps its formula there.
+ */
+export function asException(
+  spec: Projection,
+  sheet: CompiledSheet,
+  name: SheetName,
+  at: A1Addr,
+  want: StyleSays,
+  read: Reading,
+): Intent | null {
+  const layers = styleAt(sheet, at);
+  const carries = [...asStyle(spec, layers, [], without(want, FORMAT)), ...asFormat(layers, want)];
+  const said = carries.filter((one) => one.source !== null);
+  if (said.length === 0) return null;
+
+  const says: Says = Object.fromEntries(said.map((one) => [one.key, one.source]));
+  const written = override(spec, { sheet: name, at }, says, read);
+
+  return written.kind === 'edit' ? written : null;
 }
 
 /** The look the cell's `style:` would carry, where the ask reaches it at all (ADR-008, ADR-037). */

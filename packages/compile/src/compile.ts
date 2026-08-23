@@ -1,6 +1,7 @@
 import type { Override, SpecDoc } from '@yxl-vscode/spec';
 import {
   type A1Addr,
+  addrAt,
   cellOf,
   moved,
   parseQualifiedAddr,
@@ -90,6 +91,28 @@ export function cellAt(sheet: CompiledSheet, at: A1Addr): CompiledCell | null {
     },
   };
 }
+
+/**
+ * Every address the sheet holds a cell at — written, or filled by a `formulas:`
+ * range — up to `most`, past which the inside of a range is left out.
+ */
+export function addressesIn(sheet: CompiledSheet, most: number): A1Addr[] {
+  const all = new Set<string>(sheet.cells.keys());
+
+  for (const fill of sheet.fills) {
+    for (let row = fill.rect.top; row <= fill.rect.bottom; row += 1) {
+      for (let col = fill.rect.left; col <= fill.rect.right; col += 1) {
+        if (all.size > most) return [...all] as A1Addr[];
+        all.add(addrAt({ col, row }));
+      }
+    }
+  }
+
+  return [...all] as A1Addr[];
+}
+
+/** How many addresses one walk of a sheet looks at; past it, the inside of a range is dropped. */
+export const REACH = 50_000;
 
 /**
  * Every layer that makes an address look how it looks, in the order they apply

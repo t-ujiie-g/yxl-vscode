@@ -14,8 +14,7 @@ export function hide(spec: Spec, hidden: Hidden, port: Port, choice?: string): P
 
 const HIDE: Asking<Hidden> = {
   about: (hidden) => ({ ...hidden, kind: 'hide' }),
-  answers: (spec, hidden, sheet, read) =>
-    setHidden({ grid: spec.grid }, { ...hidden, sheet }, read),
+  answers: (spec, hidden, sheet, read) => setHidden(spec, { ...hidden, sheet }, read),
   nothing: (hidden) =>
     hidden.hidden ? `nothing here can hide ${many(hidden)}` : `nothing hides ${many(hidden)}`,
   why: (hidden) =>

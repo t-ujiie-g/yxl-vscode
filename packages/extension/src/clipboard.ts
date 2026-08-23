@@ -53,7 +53,7 @@ export async function paste(
     return;
   }
 
-  const done = await applied(spec, intent, port, { anyway: false, from: null, typed: null });
+  const done = await applied(spec, intent, port, { anyway: false, from: null, about: null });
   if (done && intent.kind === 'edit') {
     const cells = intent.expects.cells.size;
     port.said(`${cells} cell${cells === 1 ? '' : 's'} ${pasted.cut ? 'moved' : 'pasted'}.`);
@@ -195,7 +195,7 @@ async function land(
     return;
   }
 
-  const done = await applied(spec, intent, port, { anyway: false, from: null, typed: null });
+  const done = await applied(spec, intent, port, { anyway: false, from: null, about: null });
   if (done && intent.kind === 'edit') {
     const cells = intent.expects.cells.size;
     port.said(`${cells} cell${cells === 1 ? '' : 's'} pasted.`);

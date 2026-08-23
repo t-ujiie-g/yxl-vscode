@@ -1,8 +1,8 @@
 import { type CompiledGrid, type CompiledSheet, cellAt, sheetOf } from '@yxl-vscode/compile';
 import { nodeAt, type Op, renderScalar, type Value } from '@yxl-vscode/cst';
-import type { SpecDoc, Templated } from '@yxl-vscode/spec';
+import type { Templated } from '@yxl-vscode/spec';
 import { type A1Addr, type QualifiedAddr, qualified, type SheetName } from '@yxl-vscode/units';
-import { type Intent, type Reading, refused } from './direct';
+import { type Intent, type Projection, type Reading, refused } from './direct';
 
 /** The key this all writes into (`docs/spec.md` §23). */
 const OVERRIDES = 'overrides';
@@ -11,6 +11,8 @@ const OVERRIDES = 'overrides';
 export interface Says {
   readonly value?: Value;
   readonly formula?: string;
+  readonly style?: string;
+  readonly format?: string;
   readonly reason?: string;
 }
 
@@ -31,13 +33,12 @@ export function overridable(grid: CompiledGrid, where: { sheet: SheetName; at: A
  * told why the ordinary edit was refused.
  */
 export function override(
-  doc: SpecDoc,
-  grid: CompiledGrid,
+  spec: Projection,
   where: { sheet: SheetName; at: A1Addr },
   says: Says,
   read: Reading,
 ): Intent {
-  return overrides(doc, grid, where.sheet, [{ at: where.at, says }], read);
+  return overrides(spec, where.sheet, [{ at: where.at, says }], read);
 }
 
 /** One cell to be excepted, and what its override says. */
@@ -51,12 +52,12 @@ export interface Excepted {
  * time; the `overrides:` key is written once however many entries go in.
  */
 export function overrides(
-  doc: SpecDoc,
-  grid: CompiledGrid,
+  spec: Projection,
   where: SheetName,
   these: readonly Excepted[],
   read: Reading,
 ): Intent {
+  const { doc, grid } = spec;
   const sheet = sheetOf(grid, where);
   if (sheet === null) return refused(`there is no sheet named \`${where}\``);
   if (these.length === 0) return refused('there is nothing here to except');
@@ -123,8 +124,15 @@ function whyNot(sheet: CompiledSheet, where: { sheet: SheetName; at: A1Addr }): 
 function lines(where: { sheet: SheetName; at: A1Addr }, says: Says): string {
   const written = [`at: ${renderScalar(qualified(where.sheet, where.at))}`];
 
+  // The facets are independent, so an override says only the ones it is about
+  // (`docs/spec.md` §23); a look asked for says no value at all.
   if (says.formula !== undefined) written.push(`formula: ${renderScalar(says.formula, 'double')}`);
-  else written.push(`value: ${renderScalar(says.value ?? null)}`);
+  else if (says.style === undefined && says.format === undefined) {
+    written.push(`value: ${renderScalar(says.value ?? null)}`);
+  }
+
+  if (says.style !== undefined) written.push(`style: ${says.style}`);
+  if (says.format !== undefined) written.push(`format: ${says.format}`);
 
   if (says.reason !== undefined && says.reason !== '') {
     written.push(`reason: ${renderScalar(says.reason, 'double')}`);

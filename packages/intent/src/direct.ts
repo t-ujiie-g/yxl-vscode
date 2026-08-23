@@ -18,7 +18,7 @@ import {
 } from '@yxl-vscode/cst';
 import { pathOf } from '@yxl-vscode/loader';
 import type { Patch } from '@yxl-vscode/patch';
-import type { ScalarValue } from '@yxl-vscode/spec';
+import type { ScalarValue, SpecDoc } from '@yxl-vscode/spec';
 import {
   type A1Addr,
   type FilePath,
@@ -28,6 +28,12 @@ import {
 } from '@yxl-vscode/units';
 import type { Expects } from '@yxl-vscode/verify';
 import { meaning } from './typed';
+
+/** What a write needs of the spec: the tree it edits, and what that tree draws. */
+export interface Projection {
+  readonly doc: SpecDoc;
+  readonly grid: CompiledGrid;
+}
 
 /**
  * What a gesture came to: an edit to make, with what it claims to change, or a

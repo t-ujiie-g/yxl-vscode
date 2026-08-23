@@ -1,6 +1,6 @@
 import { type CompiledGrid, type CompiledSheet, cellAt, sheetOf } from '@yxl-vscode/compile';
 import { entryOf, type Op, renderScalar } from '@yxl-vscode/cst';
-import type { ScalarValue, SpecDoc } from '@yxl-vscode/spec';
+import type { ScalarValue } from '@yxl-vscode/spec';
 import {
   type A1Addr,
   addrAt,
@@ -24,12 +24,7 @@ import {
 } from './direct';
 import { type Entry, landed, taking } from './landing';
 import { meaning } from './typed';
-
-/** What writing an exception needs of the spec: the grid it is drawn from, and the document `overrides:` goes in. */
-export interface Excepting {
-  readonly doc: SpecDoc;
-  readonly grid: CompiledGrid;
-}
+import type { Projection } from './writes';
 
 /** A rectangle of cells copied in the grid, and the cell its top-left corner is going to. */
 export interface Pasting {
@@ -51,7 +46,7 @@ export type Standing = 'refuse' | 'skip' | Stood;
  * it lands on *wears* stays. One that cannot be pasted is `doing`'s to answer.
  */
 export function pasteRange(
-  spec: Excepting,
+  spec: Projection,
   where: Pasting,
   read: Reading,
   doing: Standing = 'refuse',
@@ -152,7 +147,7 @@ export type Shape = 'cells' | 'data';
  * rather than a guess (ADR-028).
  */
 export function pasteText(
-  spec: Excepting,
+  spec: Projection,
   where: { sheet: SheetName; at: A1Addr },
   rows: readonly (readonly string[])[],
   read: Reading,

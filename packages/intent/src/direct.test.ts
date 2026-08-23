@@ -20,7 +20,7 @@ function files(sources: Record<string, string>) {
   const { doc } = load(parse(source, { file: ROOT }), includes);
   if (doc === null) throw new Error('did not load');
 
-  return { grid: compile(doc, { read: includes }), read: reading(text), includes, source };
+  return { doc, grid: compile(doc, { read: includes }), read: reading(text), includes, source };
 }
 
 function edited(sources: Record<string, string>, intent: Intent): string {

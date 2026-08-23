@@ -23,15 +23,15 @@ function files(source: string) {
   const { doc } = load(parse(source, { file: ROOT }), includes);
   if (doc === null) throw new Error('did not load');
 
-  return { grid: compile(doc, { read: includes }), read: reading(() => source), includes };
+  return { doc, grid: compile(doc, { read: includes }), read: reading(() => source), includes };
 }
 
 /** What freezing at that cell — or unfreezing, at `null` — comes to. */
 function asked(source: string, at: string | null, sheet = 'Sales') {
-  const { grid, read } = files(source);
+  const { doc, grid, read } = files(source);
   const cell = at === null ? null : parseA1Addr(at);
 
-  return setFreeze({ grid }, { sheet: sheet as SheetName, at: cell as A1Addr | null }, read);
+  return setFreeze({ doc, grid }, { sheet: sheet as SheetName, at: cell as A1Addr | null }, read);
 }
 
 /** The same, taken all the way through the checker, which is what lands in the file. */
