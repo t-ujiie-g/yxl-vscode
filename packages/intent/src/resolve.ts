@@ -85,10 +85,7 @@ export interface Resolving {
   readonly params: ReadonlyMap<string, string>;
 }
 
-/**
- * The `param` row: change the default every cell reading it follows. Only where the
- * cell is one placeholder — `"${quarter} ${region}"` would have to be split in two.
- */
+/** The `param` row: only where the cell is one placeholder, since two would have to be split. */
 function parameter(
   spec: Resolving,
   origin: Extract<FacetOrigin, { kind: 'param' }>,
@@ -302,10 +299,7 @@ function newCell(
   };
 }
 
-/**
- * The `external` row: write the CSV field, and no other byte of the file. JSON is
- * not offered — putting a value back into one reformats the rest of it.
- */
+/** The `external` row: the CSV field and no other byte. JSON is not offered — writing one reformats it. */
 function external(
   origin: Extract<FacetOrigin, { kind: 'external' }>,
   where: { sheet: SheetName; at: A1Addr },

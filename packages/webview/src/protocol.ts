@@ -104,11 +104,9 @@ export interface Sized {
 }
 
 /**
- * One cell as it is drawn. `value` and `formula` are what the spec holds and
- * `computed` is separate on purpose (ADR-014). `format` is the one that applies
- * here — an inherited format does not reach a text cell (`docs/spec.md` §4).
- * `filledFrom` is the anchor of the range a cell belongs to, whose `formula` is
- * written as it applies there. `overridden` marks an `overrides:` cell.
+ * One cell as it is drawn: what the spec holds, with `computed` kept separate
+ * from it (ADR-014) and `format` the one that applies here, since an inherited
+ * format does not reach a text cell (`docs/spec.md` §4).
  */
 export interface DrawnCell {
   readonly row: number;

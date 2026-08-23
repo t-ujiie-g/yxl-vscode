@@ -1,6 +1,6 @@
 import { sheetOf } from '@yxl-vscode/compile';
-import { holds, type Node, type Op, type Path, renderScalar, reordered } from '@yxl-vscode/cst';
-import type { Templated, Visibility } from '@yxl-vscode/spec';
+import { type Op, type Path, renderScalar, reordered } from '@yxl-vscode/cst';
+import { KEY, type Templated, type Visibility } from '@yxl-vscode/spec';
 import {
   type Color,
   type FilePath,
@@ -15,6 +15,7 @@ import { nothingChanges } from '@yxl-vscode/verify';
 import {
   cellsNaming,
   type Intent,
+  keyed,
   located,
   nameOf,
   type Projection,
@@ -205,13 +206,13 @@ export function setTab(spec: Projection, tabbed: Tabbed, read: Reading): Intent 
 
   const ops: Op[] = [];
   if (shown !== undefined) {
-    ops.push(...keyed(found.path, 'visibility', shown === 'visible' ? null : shown, found.node));
+    ops.push(...keyed(found.path, KEY.visibility, shown === 'visible' ? null : shown, found.node));
   }
   if (tabbed.color !== undefined) {
-    ops.push(...keyed(found.path, 'tab_color', tabbed.color, found.node));
+    ops.push(...keyed(found.path, KEY.tabColor, tabbed.color, found.node));
   }
   if (tabbed.gridlines !== undefined) {
-    ops.push(...switched(found.path, 'gridlines', tabbed.gridlines, found.node));
+    ops.push(...keyed(found.path, KEY.gridlines, tabbed.gridlines ? null : false, found.node));
   }
   if (ops.length === 0) return refused('nothing about this sheet would change');
 
@@ -221,22 +222,4 @@ export function setTab(spec: Projection, tabbed: Tabbed, read: Reading): Intent 
 /** Whether a sheet's tab is one Excel shows, which is every sheet but the two hidden spellings. */
 function shows(sheet: { readonly visibility: Visibility }): boolean {
   return sheet.visibility === 'visible';
-}
-
-/** The op that writes a sheet's key, takes it out where the value is `null`, or nothing. */
-function keyed(path: Path, key: string, value: string | null, node: Node): Op[] {
-  const already = holds(node, key);
-  if (value === null) return already ? [{ op: 'remove', path: [...path, key] }] : [];
-  if (already) return [{ op: 'set', path: [...path, key], value }];
-
-  return [{ op: 'add', path, key, value, before: null }];
-}
-
-/** The op that writes a sheet's switch, or takes the key out where it is back at Excel's default. */
-function switched(path: Path, key: string, on: boolean, node: Node): Op[] {
-  const already = holds(node, key);
-  if (on) return already ? [{ op: 'remove', path: [...path, key] }] : [];
-  if (already) return [{ op: 'set', path: [...path, key], value: false }];
-
-  return [{ op: 'add', path, key, value: false, before: null }];
 }

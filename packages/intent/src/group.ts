@@ -1,5 +1,5 @@
 import { sheetOf } from '@yxl-vscode/compile';
-import type { Axis } from '@yxl-vscode/spec';
+import { type Axis, KEY } from '@yxl-vscode/spec';
 import type { SheetName } from '@yxl-vscode/units';
 import { type Says, type Span, setBandKey, spelled } from './bands';
 import type { Reading } from './direct';
@@ -41,7 +41,7 @@ export function setGroup(
       : `Group \`${spelled(one)}\` at level ${level}`;
 
   const says: Says = {
-    key: 'group',
+    key: KEY.group,
     value: level,
     clears: level === 0,
     said: (band) => (band.group ?? 0) > 0,

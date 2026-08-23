@@ -53,7 +53,7 @@ export function across(sheet: DrawnSheet, col: number): number {
 }
 
 /** The row and the column a scroll position has arrived at. */
-export function rowAt(sheet: DrawnSheet, top: number): number {
+function rowAt(sheet: DrawnSheet, top: number): number {
   let sum = 0;
   for (let at = 1; at <= sheet.of.rows; at += 1) {
     sum += heightOf(sheet, at);
@@ -62,7 +62,7 @@ export function rowAt(sheet: DrawnSheet, top: number): number {
   return sheet.of.rows;
 }
 
-export function columnAt(sheet: DrawnSheet, left: number): number {
+function columnAt(sheet: DrawnSheet, left: number): number {
   let sum = 0;
   for (let at = 1; at <= sheet.of.columns; at += 1) {
     sum += widthOf(sheet, at);

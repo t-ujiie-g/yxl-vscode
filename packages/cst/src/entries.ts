@@ -273,12 +273,9 @@ function blankLines(source: string, from: number, limit: number): number {
 }
 
 /**
- * What a removal takes out, and what putting it back needs to know.
- *
- * An entry goes back above the entry that followed it, or last; `inexact` is
- * the reason it could *not* go back byte for byte, which a caller refuses on
- * (ADR-026). Inside a flow collection there are no lines, so what is kept is
- * the collection's own text.
+ * What a removal takes out, and what putting it back needs to know: an entry
+ * goes back above the one that followed it, and `inexact` is the reason it
+ * could not go back byte for byte, which a caller refuses on (ADR-026).
  */
 export type Removal =
   | {

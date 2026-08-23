@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { describe, expect, it } from 'vitest';
-import { fontOf, ruler, widest } from './measure';
+import { ruler, widest } from './measure';
 import type { DrawnCell } from './protocol';
 
 function cell(of: Partial<DrawnCell> = {}): DrawnCell {
@@ -25,18 +25,34 @@ function cell(of: Partial<DrawnCell> = {}): DrawnCell {
 const counting = (text: string, font: string) => text.length * (font.includes('bold') ? 2 : 1);
 
 describe('the font a cell is measured in', () => {
-  it('is the one the grid draws in where the cell says nothing', () => {
-    expect(fontOf({})).toBe('11pt Calibri, Aptos, "Segoe UI", system-ui, sans-serif');
-  });
+  /** A ruler that reports the font it was handed, which is what is under test here. */
+  const noting = (fonts: string[]) => (text: string, font: string) => {
+    fonts.push(font);
+    return text.length;
+  };
 
-  it('is the cell own face, size and weight where it has them', () => {
-    const font = fontOf({
-      'font.bold': true,
-      'font.italic': true,
-      'font.size': 14,
-      'font.name': 'Meiryo',
-    });
-    expect(font).toBe('italic bold 14pt Meiryo');
+  it('is the grid own where the cell says nothing, and the cell own where it does', () => {
+    const fonts: string[] = [];
+    widest(
+      [
+        cell({ value: 'plain' }),
+        cell({
+          value: 'dressed',
+          style: {
+            'font.bold': true,
+            'font.italic': true,
+            'font.size': 14,
+            'font.name': 'Meiryo',
+          },
+        }),
+      ],
+      noting(fonts),
+    );
+
+    expect(fonts).toEqual([
+      '11pt Calibri, Aptos, "Segoe UI", system-ui, sans-serif',
+      'italic bold 14pt Meiryo',
+    ]);
   });
 });
 

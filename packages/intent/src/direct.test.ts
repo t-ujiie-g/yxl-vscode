@@ -1,10 +1,10 @@
 import { compile } from '@yxl-vscode/compile';
-import { parse } from '@yxl-vscode/cst';
+import { nodeAt, parse } from '@yxl-vscode/cst';
 import { type IncludeReader, load } from '@yxl-vscode/loader';
 import { type A1Addr, type FilePath, filePath, type SheetName } from '@yxl-vscode/units';
 import { type Ctx, checked } from '@yxl-vscode/verify';
 import { describe, expect, it } from 'vitest';
-import { excepting, type Intent, reading, setFormula, setValue, type Text } from './direct';
+import { excepting, type Intent, keyed, reading, setFormula, setValue, type Text } from './direct';
 
 const ROOT = filePath('spec.yxl.yaml') ?? ('' as FilePath);
 
@@ -250,5 +250,32 @@ describe('what an answer for one group of a rectangle says', () => {
       'Write the one that reads a definition as a value of its own',
       'Write the 3 that read a definition as values of their own',
     ]);
+  });
+});
+
+describe('a key written on a node, or taken off it', () => {
+  const sheet = () => {
+    const { root } = parse('sheets:\n  - name: Sales\n    freeze: B2\n', { file: ROOT });
+    const node = root === null ? null : nodeAt(root, ['sheets', 0]);
+    if (node === null) throw new Error('did not parse');
+    return node;
+  };
+
+  it('sets a key that is there, adds one that is not, and removes it for `null`', () => {
+    const node = sheet();
+
+    expect(keyed(['sheets', 0], 'freeze', 'C3', node)).toEqual([
+      { op: 'set', path: ['sheets', 0, 'freeze'], value: 'C3' },
+    ]);
+    expect(keyed(['sheets', 0], 'gridlines', false, node)).toEqual([
+      { op: 'add', path: ['sheets', 0], key: 'gridlines', value: false, before: null },
+    ]);
+    expect(keyed(['sheets', 0], 'freeze', null, node)).toEqual([
+      { op: 'remove', path: ['sheets', 0, 'freeze'] },
+    ]);
+  });
+
+  it('says nothing where a key that is not there is asked to go', () => {
+    expect(keyed(['sheets', 0], 'gridlines', null, sheet())).toEqual([]);
   });
 });

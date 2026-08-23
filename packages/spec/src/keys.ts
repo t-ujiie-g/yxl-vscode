@@ -17,12 +17,21 @@ const CELL_KEYS = [...CELL_HOLDS, ...CELL_WEARS];
  * putting things under them, and they are spelled here and nowhere else.
  */
 export const KEY = {
+  at: 'at',
   cells: 'cells',
   data: 'data',
+  format: 'format',
+  formulas: 'formulas',
+  freeze: 'freeze',
+  gridlines: 'gridlines',
+  group: 'group',
+  hidden: 'hidden',
   merges: 'merges',
+  name: 'name',
   overrides: 'overrides',
   style: 'style',
-  format: 'format',
+  tabColor: 'tab_color',
+  visibility: 'visibility',
 } as const;
 
 /**

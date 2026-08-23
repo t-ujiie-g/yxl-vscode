@@ -1,5 +1,5 @@
 import type { Op, Path } from '@yxl-vscode/cst';
-import type { Templated } from '@yxl-vscode/spec';
+import { KEY, type Templated } from '@yxl-vscode/spec';
 import {
   type FilePath,
   type NodeId,
@@ -53,7 +53,7 @@ export function renameSheet(spec: Projection, where: Renaming, read: Reading): I
     return true;
   };
 
-  if (!put(sheet.id, 'name', to)) return refused('this sheet has no place in the file to rename');
+  if (!put(sheet.id, KEY.name, to)) return refused('this sheet has no place in the file to rename');
 
   const bodies: { id: NodeId; key: string | null; body: string; what: string }[] = [
     ...spec.doc.sheets.flatMap((one) => [

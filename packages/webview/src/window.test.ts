@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DrawnSheet } from './protocol';
-import { across, columnAt, down, heightOf, rowAt, sizeOf, wanted, widthOf } from './window';
+import { across, down, heightOf, sizeOf, wanted, widthOf } from './window';
 
 function sheet(of: Partial<DrawnSheet> = {}): DrawnSheet {
   return {
@@ -44,17 +44,6 @@ describe('how big a sheet is on the page', () => {
     expect(
       across(sheet({ widths: [{ first: 1, last: 2, size: 10, hidden: false, group: null }] }), 3),
     ).toBe(140);
-  });
-
-  it('answers which row and column a scroll position has reached', () => {
-    expect(rowAt(sheet(), 0)).toBe(1);
-    expect(rowAt(sheet(), 200)).toBe(11);
-    expect(columnAt(sheet(), 0)).toBe(1);
-  });
-
-  it('stops at the last row and column, however far the scroll went', () => {
-    const small = sheet({ of: { rows: 3, columns: 2 } });
-    expect([rowAt(small, 99_999), columnAt(small, 99_999)]).toEqual([3, 2]);
   });
 });
 

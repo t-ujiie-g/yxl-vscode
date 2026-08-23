@@ -67,9 +67,13 @@ so is copying out — Google Sheets receives the whole look, Excel everything bu
 the cell fill (`ROADMAP.md` ADR-033) — and pasting *in*, which carries the
 values and not yet the looks (ADR-034). Finding something in the
 sheet and going to it are in. A rectangle that lands on cells written in several
-different ways is answered a group at a time rather than refused whole. A
-formatting toolbar, inserting rows, and seeing the charts a spec declares are
-not, and are the next three phases in that order.
+different ways is answered a group at a time rather than refused whole. The
+formatting toolbar is in, and so are inserting and deleting rows and columns,
+merging, filling, sorting a block of rows, and the whole of the tab bar — adding,
+renaming, deleting and reordering a sheet, hiding one, colouring its tab. What a
+spec writes *on* its cells — an auto filter, a note, a hyperlink, conditional
+formatting — is carried through untouched and drawn as nothing, and is the next
+phase.
 
 ## Where it is going
 
@@ -93,7 +97,7 @@ the rest is built on.
 
 The everyday spreadsheet gestures it does **not** have yet are listed as
 plainly as the ones it does — the charts, images and sparklines a spec declares
-are drawn by nothing yet, which is [`ROADMAP.md`](./ROADMAP.md) Phase 12.
+are drawn by nothing yet, which is [`ROADMAP.md`](./ROADMAP.md) Phase 14.
 
 Excel still opens the result. `yxl build` still produces the `.xlsx`; this editor
 never writes one.

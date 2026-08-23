@@ -103,11 +103,7 @@ function block(node: Node): boolean {
   return node.kind === 'scalar' && (node.style === 'literal' || node.style === 'folded');
 }
 
-/**
- * A new value into a block scalar's body, indented to where the body sits: a
- * shallower line would close the block early. Written as text, not rendered —
- * quotes inside a block scalar are part of the string.
- */
+/** A value into a block scalar's body, as text at the body's indent: a shallower line closes the block. */
 function intoBlock(source: string, value: Value, node: Node, refuse: Refuse): Edit | undefined {
   const body = lineEnd(source, node.span.start);
   const indent = /^[ \t]*/.exec(source.slice(body, lineEnd(source, body)))?.[0] ?? '';

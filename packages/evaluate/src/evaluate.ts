@@ -83,10 +83,7 @@ function flat(computed: ReadonlyMap<SheetName, ReadonlyMap<A1Addr, Computed>>) {
   return values;
 }
 
-/**
- * Which sheets cannot be computed, and what is missing: without a dependency
- * graph the line is the sheet, and doubt crosses wherever one reads (ADR-025).
- */
+/** Which sheets cannot be computed: without a dependency graph the line is the sheet (ADR-025). */
 function doubt(
   asked: readonly Asked[],
   engine: Engine,

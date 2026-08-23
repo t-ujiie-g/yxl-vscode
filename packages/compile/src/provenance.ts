@@ -2,10 +2,8 @@ import type { A1Addr, FilePath, NodeId, ParamName } from '@yxl-vscode/units';
 
 /**
  * Where one facet of a cell came from, which is what lets an edit be answered
- * rather than guessed at (ADR-005). `node` is what a patch would address; a
- * position on `inline` or `external` counts from the block's corner. `param`
- * carries where each parameter is `declared`; `empty` carries the cell it was
- * not said at, or `null` where there is no cell.
+ * rather than guessed at (ADR-005). `node` is what a patch would address, and a
+ * row and column count from the block's own corner.
  */
 export type FacetOrigin =
   | { readonly kind: 'literal'; readonly node: NodeId }

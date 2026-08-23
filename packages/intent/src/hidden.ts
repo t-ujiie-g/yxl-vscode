@@ -1,5 +1,5 @@
 import { sheetOf } from '@yxl-vscode/compile';
-import type { Axis } from '@yxl-vscode/spec';
+import { type Axis, KEY } from '@yxl-vscode/spec';
 import type { SheetName } from '@yxl-vscode/units';
 import { type Says, type Span, setBandKey, spelled } from './bands';
 import type { Reading } from './direct';
@@ -25,7 +25,7 @@ export function setHidden(spec: Projection, hiding: Hiding, read: Reading): read
   const said = hiding.hidden ? 'Hide' : 'Show';
 
   const says: Says = {
-    key: 'hidden',
+    key: KEY.hidden,
     value: hiding.hidden,
     clears: !hiding.hidden,
     said: (band) => band.hidden === true,

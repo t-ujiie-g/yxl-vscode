@@ -414,3 +414,15 @@ export function cellsNaming(spec: Projection, sheet: SheetName): Set<string> {
 export function nameOf(sheet: Sheet): SheetName | null {
   return typeof sheet.name === 'string' ? sheet.name : null;
 }
+
+/**
+ * The ops that put a value under a key of a node, or take the key out where the
+ * value is `null` — nothing where there is nothing to do (`docs/spec.md` §2).
+ */
+export function keyed(path: Path, key: string, value: Value | null, node: Node): Op[] {
+  const already = holds(node, key);
+  if (value === null) return already ? [{ op: 'remove', path: [...path, key] }] : [];
+  if (already) return [{ op: 'set', path: [...path, key], value }];
+
+  return [{ op: 'add', path, key, value, before: null }];
+}

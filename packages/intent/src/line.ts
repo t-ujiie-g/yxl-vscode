@@ -6,6 +6,7 @@ import {
   sheetOf,
 } from '@yxl-vscode/compile';
 import { nodeAt, type Op, type Path } from '@yxl-vscode/cst';
+import { KEY } from '@yxl-vscode/spec';
 import {
   type A1Addr,
   addrAt,
@@ -232,8 +233,8 @@ function writing(sheet: CompiledSheet, line: Line, read: Reading): Writing | Int
     const does = of.at(cellOf(at));
     put(located(sheet.node, read), (path) =>
       does === 'goes'
-        ? [{ op: 'remove', path: [...path, 'freeze'] }]
-        : [{ op: 'set', path: [...path, 'freeze'], value: moved(at, line) }],
+        ? [{ op: 'remove', path: [...path, KEY.freeze] }]
+        : [{ op: 'set', path: [...path, KEY.freeze], value: moved(at, line) }],
     );
   }
 

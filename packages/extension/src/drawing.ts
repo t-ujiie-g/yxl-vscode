@@ -273,10 +273,7 @@ function typeable(cell: CompiledCell | null): Editable {
   return said === 'readonly' ? 'mediated' : said;
 }
 
-/**
- * The number format that applies: the cell's `own` first, else the inherited one,
- * which does not reach a text cell unless it has a text section (`docs/spec.md` §4).
- */
+/** The format that applies: the cell's own, else the inherited one, which skips a text cell (§4). */
 function applies(
   layers: readonly StyleLayer[],
   value: ScalarValue,

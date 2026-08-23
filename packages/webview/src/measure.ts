@@ -23,7 +23,7 @@ export function ruler(): Ruler | null {
 }
 
 /** The CSS `font` a cell is drawn with, which is the font it has to be measured in. */
-export function fontOf(style: StyleValues): string {
+function fontOf(style: StyleValues): string {
   const parts = [
     style['font.italic'] === true ? 'italic' : '',
     style['font.bold'] === true ? 'bold' : '',

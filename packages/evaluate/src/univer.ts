@@ -69,11 +69,7 @@ export function univerEngine(): Engine {
   };
 }
 
-/**
- * What a formula names, off the lexer's tokens. The lexer calls any bare name a
- * function — `SUM`, `target_revenue`, `StoreMaster[store_name` alike — so a
- * name with no executor is exactly the set this cannot compute.
- */
+/** What a formula names: the lexer calls every bare name a function, so one with no executor is one we cannot compute. */
 function about(asked: Asked, tokens: LexerTreeBuilder, functions: IFunctionService): About {
   const said = tokens.sequenceNodesBuilder(asked.formula) ?? [];
   const unknown: string[] = [];

@@ -1,6 +1,6 @@
 import { type CompiledSheet, cellAt, sheetOf } from '@yxl-vscode/compile';
 import type { Op } from '@yxl-vscode/cst';
-import type { Axis } from '@yxl-vscode/spec';
+import { type Axis, KEY } from '@yxl-vscode/spec';
 import {
   type A1Addr,
   addrAt,
@@ -164,7 +164,7 @@ function beside(
   const one = first === undefined ? null : located(first.node, read);
   if (one === null || one.kind === 'refused') {
     const source = ranges.map((body) => `- ${body.split('\n').join('\n  ')}`).join('\n');
-    return [{ op: 'addSource', path: [...path], key: 'formulas', source }];
+    return [{ op: 'addSource', path: [...path], key: KEY.formulas, source }];
   }
 
   return ranges.map((body, index) => ({

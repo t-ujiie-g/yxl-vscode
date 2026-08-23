@@ -1439,7 +1439,12 @@ rather than carried through blind (`docs/spec.md` §2).
 ### Phase 13 — What decorates a cell
 `docs/spec.md` §10 and §11: the constructs that sit *on* cells rather than fill
 them. All of them are opaque today (ADR-011) — preserved byte for byte, and
-invisible. Ordered by how often a reader meets one.
+invisible. Ordered by what a real spec turned out to use: the first two came
+back from `torchrelay-docs`, where a reader asked why a status column drew none
+of its colours and why a header row showed no filter.
+- [ ] **Conditional formatting** (`conditional:`) — the rules *applied* in the
+      drawing, over the evaluated values (display only, ADR-014); the rule
+      itself read-only in the inspector to begin with
 - [ ] **Auto filter** (`filter:`) — the dropdown mark on the header row where
       the sheet has one, and *Create a filter* / *Remove filter* on a selection.
       Per-column criteria are not in the schema yet, so neither is filtering
@@ -1452,9 +1457,6 @@ invisible. Ordered by how often a reader meets one.
       spreadsheet shows, its choices offered when the cell is edited; the other
       kinds drawn as the mark and the prompt; *Data validation…* on a selection
       for the `list` kind first, since that is the one a reader makes by hand
-- [ ] **Conditional formatting** (`conditional:`) — the rules *applied* in the
-      drawing, over the evaluated values (display only, ADR-014); the rule
-      itself read-only in the inspector to begin with
 - [ ] **Tables** (`tables:`) — the banded region drawn with its header, the
       *Format as table* gesture over a selection, and structured references
       left alone by `moved` and `shifted` as they already are
@@ -2953,6 +2955,38 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-23 — Refactoring pass over the whole tree (`AGENTS.md` §8)
+Walked §8's lenses in order at the Phase 12 boundary. Findings, and what each
+came to:
+
+- **§8.1 Constants.** `KEY` said the keys a writer names "are spelled here and
+  nowhere else", and ten of them were bare literals in `intent` — `name`,
+  `formulas`, `freeze`, `visibility`, `tab_color`, `gridlines`, `at`, `hidden`,
+  `group`. They are in `KEY` now, and the sentence is true again.
+- **§8.2 Duplicates.** Three copies of *write this key, or take it out* —
+  `freeze.ts`, and two in `sheets.ts` that differed only in which value meant
+  "absent". One `keyed` in `direct.ts`, where `null` is the removal.
+- **§8.2 Dead ends.** Three exports existed only so a test could reach them:
+  `rowAt` and `columnAt` in `window.ts`, `fontOf` in `measure.ts`. All three are
+  private now, and the tests go through `wanted` and `widest` — which is where
+  the seam already was, since `widest` takes its ruler as an argument.
+- **§8.3 File splitting.** `webview/src/index.ts` is 641 lines and one closure
+  over eighteen pieces of view state. **Not split**, deliberately: the state is
+  genuinely one thing (ADR-047 — the view decides, not a listener), and every
+  extraction would mean threading a state object through, which trades one long
+  file for a wider seam. Recorded here so the next pass does not rediscover it.
+- **§8.5 Documentation.** The README said the toolbar and inserting rows were
+  "not [in], and are the next three phases", which shipped in Phases 9–11, and
+  pointed at Phase 12 for charts, which is Phase 14. Both corrected. **Phase 13
+  reordered**: `conditional:` and `filter:` go first, because a real spec
+  (`torchrelay-docs`) uses both and a reader asked after them.
+- **§8.6 Comments.** Nine blocks over §8.6's shape limit, now **zero**. Three
+  export docs cut to what the API is plus one pointer; six private docs cut to
+  one line. Nothing was deleted that the code could not already say.
+- **§8.7 Layers.** Clean: the checker passes and nothing imports upward.
+- Comment shape after the pass: export 2.2, private **1.0**, inline 1.5, **0**
+  over the limit — down from 9, which is the number to hold to next time.
 
 ### 2026-08-23 — A frozen row stays the height it is drawn at
 Scrolling a sheet with `freeze:` squashed the frozen rows: three rows of a

@@ -1,7 +1,7 @@
 import { sheetOf } from '@yxl-vscode/compile';
-import { holds, type Op, type Path } from '@yxl-vscode/cst';
+import { KEY } from '@yxl-vscode/spec';
 import { type A1Addr, cellOf, type SheetName } from '@yxl-vscode/units';
-import { type Intent, located, type Reading, refused } from './direct';
+import { type Intent, keyed, located, type Reading, refused } from './direct';
 import type { Projection } from './writes';
 
 /** A sheet's panes as a gesture asks for them: the cell to freeze at, or `null` to take the freeze off. */
@@ -34,21 +34,13 @@ export function setFreeze(spec: Projection, frozen: Frozen, read: Reading): Inte
   if (found.kind === 'refused') return found;
   if (found.node.kind !== 'map') return refused(`\`${frozen.sheet}\` is not written as a sheet`);
 
-  const op = written(found.path, at, holds(found.node, 'freeze'));
-  if (op === null) return refused(`\`${frozen.sheet}\` freezes nothing to take off`);
+  const ops = keyed(found.path, KEY.freeze, at, found.node);
+  if (ops.length === 0) return refused(`\`${frozen.sheet}\` freezes nothing to take off`);
 
   return {
     kind: 'edit',
     file: found.file,
-    patch: { ops: [op] },
+    patch: { ops },
     expects: { cells: new Set(), beyond: 'refuse' },
   };
-}
-
-/** The op that writes the key or takes it out, and `null` where there is nothing to do. */
-function written(path: Path, at: A1Addr | null, already: boolean): Op | null {
-  if (at === null) return already ? { op: 'remove', path: [...path, 'freeze'] } : null;
-  if (already) return { op: 'set', path: [...path, 'freeze'], value: at };
-
-  return { op: 'add', path, key: 'freeze', value: at, before: null };
 }
