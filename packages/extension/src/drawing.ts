@@ -14,7 +14,7 @@ import {
   styleAt,
 } from '@yxl-vscode/compile';
 import type { Diagnostic } from '@yxl-vscode/diag';
-import type { Evaluation } from '@yxl-vscode/evaluate';
+import { conditionKey, type Evaluation } from '@yxl-vscode/evaluate';
 import type { Axis, ScalarValue, SpecDoc } from '@yxl-vscode/spec';
 import { type A1Addr, addrAt, cellOf, qualified } from '@yxl-vscode/units';
 import type {
@@ -222,7 +222,17 @@ function drawCells(
       // looks sit above a cell's style (`docs/spec.md` §10).
       const layers = [
         ...styleAt(sheet, addr),
-        ...applied(sheet.conditional, { at: addr, value: cell?.value ?? null, computed }, ranked),
+        ...applied(
+          sheet.conditional,
+          {
+            at: addr,
+            value: cell?.value ?? null,
+            computed,
+            conditions: (rule) =>
+              evaluation?.conditions.get(conditionKey(rule, sheet.name, addr)) ?? null,
+          },
+          ranked,
+        ),
       ];
       const style = settled(resolve(layers));
       const holds =

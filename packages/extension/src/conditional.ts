@@ -9,6 +9,8 @@ export interface Deciding {
   readonly at: A1Addr;
   readonly value: ScalarValue;
   readonly computed: Computed | null;
+  /** What a `formula:` rule came to at this cell, by the rule that asked. */
+  readonly conditions?: (rule: NodeId) => Computed | null;
 }
 
 /** Which addresses each rule that needs the whole range matches, worked out once for the sheet. */
@@ -40,7 +42,7 @@ export function applied(
 }
 
 /** The rule kinds a cell can be decided by without looking at the rest of its range. */
-const ALONE = new Set(['cell', 'text']);
+const ALONE = new Set(['cell', 'text', 'formula']);
 
 /** The kinds that need every value in the range before any one cell can be decided. */
 const OVER_RANGE = new Set(['top', 'bottom', 'duplicate', 'unique']);
@@ -146,9 +148,18 @@ function matches(rule: CompiledRule, cell: Deciding, ranked: Ranked): boolean | 
   const held = shown(cell);
   if (rule.test.kind === 'cell') return compares(rule.test.compares, held);
   if (rule.test.kind === 'text') return asks(rule.test.asks, held);
+  if (rule.test.kind === 'formula') return truthy(cell.conditions?.(rule.node) ?? null);
 
   const over = ranked.get(rule.node);
   return over === undefined ? null : over.has(cell.at);
+}
+
+/** What a condition's answer means: only a value counts, and only a truthy one (`docs/spec.md` §10). */
+function truthy(said: Computed | null): boolean | null {
+  if (said === null) return null;
+  if (said.kind !== 'value') return false;
+
+  return said.value !== null && said.value !== false && said.value !== 0 && said.value !== '';
 }
 
 /** The value a rule decides on: what was computed, else what the spec holds. */

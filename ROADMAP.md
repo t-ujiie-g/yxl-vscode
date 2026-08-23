@@ -1459,8 +1459,13 @@ of its colours and why a header row showed no filter.
       rounding for `{ percent: true }` is not written down in the schema, so
       this floors it and never takes fewer than one — said here because it is a
       choice rather than a reading.
-- [ ] `formula` rules applied, which means evaluating one per cell of the range
-      with the range's top-left as the origin (`docs/spec.md` §10)
+- [x] `formula` rules applied: one ask per written cell the range covers, the
+      formula shifted by that cell's offset from the range's corner, which is
+      the shared-formula rule the fills already use. The answers come back on a
+      channel of their own — a condition is asked *about* a cell, not held by
+      one, and must never become that cell's value (ADR-014). Only a truthy
+      value matches; an error or a name the engine has nothing behind matches
+      nothing rather than everything.
 - [ ] `color_scale`, `data_bar` and `icon_set` **drawn**, which is an appearance
       of their own rather than a look laid over the cell
 - [ ] **Auto filter** (`filter:`) — the dropdown mark on the header row where
@@ -2973,6 +2978,22 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-23 — A conditional rule that is a formula
+The third of conditional formatting's four, and the one that needed the engine.
+
+- **`formula:` rules are computed and applied**: one ask per written cell the
+  range covers, the formula shifted by that cell's offset from the range's
+  corner — the same shared-formula rule the `formulas:` fills already use.
+- **The answers come back on a channel of their own.** A condition is asked
+  *about* a cell rather than held by one, so it must never land under that
+  cell's address: `Evaluation` gained `conditions`, keyed by the rule that asked
+  and the cell it was asked about. Nothing evaluated is written either way
+  (ADR-014).
+- **Only a truthy value matches.** An error, or a formula naming something the
+  engine has nothing behind, matches nothing rather than everything — a rule
+  that cannot be answered still applies nothing and stops nothing.
+- Comment shape: export 2.2, private 1.0, inline 1.5, 0 over the limit — held.
 
 ### 2026-08-23 — The rules a range decides
 The second half of conditional formatting's common case: the rules that cannot
