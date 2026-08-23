@@ -3,7 +3,7 @@ import { parse } from '@yxl-vscode/cst';
 import { load } from '@yxl-vscode/loader';
 import { type A1Addr, parseA1Addr } from '@yxl-vscode/units';
 import { describe, expect, it } from 'vitest';
-import { applied, decidable } from './conditional';
+import { applied, decidable, overRanges } from './conditional';
 
 /** The rules of a spec, compiled, which is what the drawing is handed. */
 function rulesOf(body: string): readonly CompiledRule[] {
@@ -75,12 +75,12 @@ describe('the rules a cell is drawn under', () => {
     expect(Object.keys(settled(resolve(layers)))).toEqual(['font.italic']);
   });
 
-  it('decides a `cell` and a `text` rule, and says it cannot decide the others', () => {
+  it('decides the rules a cell or a range settles, and says it cannot decide the rest', () => {
     const kinds = rulesOf(
-      '      - at: A1:A9\n        cell: { equals: x }\n        style: a\n      - at: A1:A9\n        text: { contains: x }\n        style: b\n      - at: A1:A9\n        formula: "A1>0"\n        style: a\n      - at: A1:A9\n        top: 3\n        style: b\n',
+      '      - at: A1:A9\n        cell: { equals: x }\n        style: a\n      - at: A1:A9\n        top: 3\n        style: b\n      - at: A1:A9\n        duplicate: true\n        style: a\n      - at: A1:A9\n        formula: "A1>0"\n        style: b\n      - at: A1:A9\n        icon_set: 3Arrows\n',
     );
 
-    expect(kinds.map(decidable)).toEqual([true, true, false, false]);
+    expect(kinds.map(decidable)).toEqual([true, true, true, false, false]);
   });
 
   it('applies nothing for a rule it cannot decide, and does not let it stop the run', () => {
@@ -89,5 +89,73 @@ describe('the rules a cell is drawn under', () => {
     );
 
     expect(wears(kinds, 'A1', 'x')).toEqual(['font.italic']);
+  });
+});
+
+describe('the rules that need the whole range to decide', () => {
+  /** What the rules make a cell wear, the range's values given as the sheet holds them. */
+  function over(rules: readonly CompiledRule[], values: Record<string, unknown>, address: string) {
+    const written = Object.keys(values).map(at);
+    const held = (one: A1Addr) => (values[String(one)] ?? null) as never;
+    const layers = applied(
+      rules,
+      { at: at(address), value: held(at(address)), computed: null },
+      overRanges(rules, written, held),
+    );
+
+    return Object.keys(settled(resolve(layers)));
+  }
+
+  it('marks the top few by value, and takes every cell that ties for the last place', () => {
+    const rules = rulesOf('      - at: A1:A9\n        top: 2\n        style: a\n');
+    const values = { A1: 10, A2: 30, A3: 20, A4: 20 };
+
+    expect(over(rules, values, 'A2')).toEqual(['font.bold']);
+    expect(over(rules, values, 'A3')).toEqual(['font.bold']);
+    expect(over(rules, values, 'A4')).toEqual(['font.bold']);
+    expect(over(rules, values, 'A1')).toEqual([]);
+  });
+
+  it('marks the bottom few the other way round', () => {
+    const rules = rulesOf('      - at: A1:A9\n        bottom: 1\n        style: a\n');
+
+    expect(over(rules, { A1: 10, A2: 30, A3: 20 }, 'A1')).toEqual(['font.bold']);
+    expect(over(rules, { A1: 10, A2: 30, A3: 20 }, 'A2')).toEqual([]);
+  });
+
+  it('takes a percentage of how many numbers the range holds', () => {
+    const rules = rulesOf(
+      '      - at: A1:A9\n        top: { count: 50, percent: true }\n        style: a\n',
+    );
+    const values = { A1: 1, A2: 2, A3: 3, A4: 4 };
+
+    expect(over(rules, values, 'A4')).toEqual(['font.bold']);
+    expect(over(rules, values, 'A3')).toEqual(['font.bold']);
+    expect(over(rules, values, 'A2')).toEqual([]);
+  });
+
+  it('ranks numbers only, since text has no place in a ranking', () => {
+    const rules = rulesOf('      - at: A1:A9\n        top: 1\n        style: a\n');
+
+    expect(over(rules, { A1: 5, A2: 'zzz' }, 'A2')).toEqual([]);
+    expect(over(rules, { A1: 5, A2: 'zzz' }, 'A1')).toEqual(['font.bold']);
+  });
+
+  it('marks what appears more than once, and what appears exactly once', () => {
+    const twice = rulesOf('      - at: A1:A9\n        duplicate: true\n        style: a\n');
+    const once = rulesOf('      - at: A1:A9\n        unique: true\n        style: a\n');
+    const values = { A1: 'x', A2: 'x', A3: 'y' };
+
+    expect(over(twice, values, 'A1')).toEqual(['font.bold']);
+    expect(over(twice, values, 'A3')).toEqual([]);
+    expect(over(once, values, 'A3')).toEqual(['font.bold']);
+    expect(over(once, values, 'A1')).toEqual([]);
+  });
+
+  it('counts a blank as nothing, which is what Excel does with one', () => {
+    const once = rulesOf('      - at: A1:A9\n        unique: true\n        style: a\n');
+
+    expect(over(once, { A1: null, A2: 'x' }, 'A1')).toEqual([]);
+    expect(over(once, { A1: null, A2: 'x' }, 'A2')).toEqual(['font.bold']);
   });
 });

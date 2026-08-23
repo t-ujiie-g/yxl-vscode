@@ -2,7 +2,7 @@ import type { CompiledRule, StyleLayer } from '@yxl-vscode/compile';
 import type { Computed } from '@yxl-vscode/evaluate';
 import type { Comparison, ScalarValue, TextTest } from '@yxl-vscode/spec';
 import type { A1Addr } from '@yxl-vscode/units';
-import { cellOf } from '@yxl-vscode/units';
+import { cellOf, type NodeId } from '@yxl-vscode/units';
 
 /** What a cell holds for a rule to decide on: the computed value where there is one (ADR-014). */
 export interface Deciding {
@@ -11,18 +11,25 @@ export interface Deciding {
   readonly computed: Computed | null;
 }
 
+/** Which addresses each rule that needs the whole range matches, worked out once for the sheet. */
+export type Ranked = ReadonlyMap<NodeId, ReadonlySet<string>>;
+
 /**
  * The looks the rules apply to a cell, in the order written, which is Excel's
  * priority order; `stop_if_true` ends the run (`docs/spec.md` §10). A rule this
  * preview cannot decide applies nothing and stops nothing.
  */
-export function applied(rules: readonly CompiledRule[], cell: Deciding): StyleLayer[] {
+export function applied(
+  rules: readonly CompiledRule[],
+  cell: Deciding,
+  ranked: Ranked = new Map(),
+): StyleLayer[] {
   const layers: StyleLayer[] = [];
 
   for (const rule of rules) {
     if (!covers(rule, cell.at)) continue;
 
-    const matched = matches(rule, cell);
+    const matched = matches(rule, cell, ranked);
     if (matched !== true) continue;
 
     layers.push(...rule.style);
@@ -32,9 +39,99 @@ export function applied(rules: readonly CompiledRule[], cell: Deciding): StyleLa
   return layers;
 }
 
+/** The rule kinds a cell can be decided by without looking at the rest of its range. */
+const ALONE = new Set(['cell', 'text']);
+
+/** The kinds that need every value in the range before any one cell can be decided. */
+const OVER_RANGE = new Set(['top', 'bottom', 'duplicate', 'unique']);
+
 /** Whether this preview can decide a rule at all, which the inspector says where it cannot. */
 export function decidable(rule: CompiledRule): boolean {
-  return rule.test.kind === 'cell' || rule.test.kind === 'text';
+  return ALONE.has(rule.test.kind) || OVER_RANGE.has(rule.test.kind);
+}
+
+/**
+ * Which cells each whole-range rule matches. `held` answers what an address
+ * shows; an address it answers `null` at is blank, which Excel ranks and counts
+ * as nothing.
+ */
+export function overRanges(
+  rules: readonly CompiledRule[],
+  written: readonly A1Addr[],
+  held: (at: A1Addr) => ScalarValue,
+): Ranked {
+  const ranked = new Map<NodeId, ReadonlySet<string>>();
+
+  for (const rule of rules) {
+    if (!OVER_RANGE.has(rule.test.kind)) continue;
+
+    const inside = written.filter((at) => covers(rule, at));
+    ranked.set(rule.node, matching(rule, inside, held));
+  }
+
+  return ranked;
+}
+
+function matching(
+  rule: CompiledRule,
+  inside: readonly A1Addr[],
+  held: (at: A1Addr) => ScalarValue,
+): ReadonlySet<string> {
+  const test = rule.test;
+  if (test.kind === 'duplicate' || test.kind === 'unique') {
+    return seenOnce(inside, held, test.kind === 'unique');
+  }
+  if (test.kind !== 'top' && test.kind !== 'bottom') return new Set();
+
+  const numbers = inside
+    .map((at) => held(at))
+    .filter((value): value is number => typeof value === 'number');
+
+  // Excel's own rounding for a percentage is not in the schema; this takes the
+  // floor and never less than one, and a tie brings every cell that ties in.
+  const many = test.percent
+    ? Math.max(1, Math.floor((numbers.length * test.count) / 100))
+    : test.count;
+  const ordered = [...numbers].sort((one, two) => (test.kind === 'top' ? two - one : one - two));
+  const edge = ordered[Math.min(many, ordered.length) - 1];
+  if (edge === undefined) return new Set();
+
+  return new Set(
+    inside
+      .filter((at) => {
+        const value = held(at);
+        return typeof value === 'number' && (test.kind === 'top' ? value >= edge : value <= edge);
+      })
+      .map(String),
+  );
+}
+
+/** The addresses whose value appears once in the range, or more than once. */
+function seenOnce(
+  inside: readonly A1Addr[],
+  held: (at: A1Addr) => ScalarValue,
+  once: boolean,
+): ReadonlySet<string> {
+  const counted = new Map<string, number>();
+  for (const at of inside) {
+    const value = held(at);
+    if (value === null) continue;
+
+    const key = said(value);
+    counted.set(key, (counted.get(key) ?? 0) + 1);
+  }
+
+  return new Set(
+    inside
+      .filter((at) => {
+        const value = held(at);
+        if (value === null) return false;
+
+        const seen = counted.get(said(value)) ?? 0;
+        return once ? seen === 1 : seen > 1;
+      })
+      .map(String),
+  );
 }
 
 function covers(rule: CompiledRule, at: A1Addr): boolean {
@@ -45,12 +142,13 @@ function covers(rule: CompiledRule, at: A1Addr): boolean {
 }
 
 /** Whether a rule matches, or `null` where this preview does not decide that kind. */
-function matches(rule: CompiledRule, cell: Deciding): boolean | null {
+function matches(rule: CompiledRule, cell: Deciding, ranked: Ranked): boolean | null {
   const held = shown(cell);
   if (rule.test.kind === 'cell') return compares(rule.test.compares, held);
   if (rule.test.kind === 'text') return asks(rule.test.asks, held);
 
-  return null;
+  const over = ranked.get(rule.node);
+  return over === undefined ? null : over.has(cell.at);
 }
 
 /** The value a rule decides on: what was computed, else what the spec holds. */

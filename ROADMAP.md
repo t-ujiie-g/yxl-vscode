@@ -1451,8 +1451,14 @@ of its colours and why a header row showed no filter.
       (display only, ADR-014), in the order written, which is Excel's priority
       order. Every rule that reaches the selected cell is named in the
       inspector, and the ones not drawn say so.
-- [ ] The rules that need the **whole range** to decide — `top`, `bottom`,
-      `duplicate`, `unique` — applied too; they are read and shown already
+- [x] The rules that need the **whole range** to decide — `top`, `bottom`,
+      `duplicate`, `unique` — applied too, off the values the sheet actually
+      writes rather than the whole rectangle, which may be a column of a million
+      rows. `top`/`bottom` rank numbers only, as Excel does, and bring in every
+      cell that ties for the last place; a blank counts as nothing. Excel's own
+      rounding for `{ percent: true }` is not written down in the schema, so
+      this floors it and never takes fewer than one — said here because it is a
+      choice rather than a reading.
 - [ ] `formula` rules applied, which means evaluating one per cell of the range
       with the range's top-left as the origin (`docs/spec.md` §10)
 - [ ] `color_scale`, `data_bar` and `icon_set` **drawn**, which is an appearance
@@ -2967,6 +2973,21 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-23 — The rules a range decides
+The second half of conditional formatting's common case: the rules that cannot
+look at one cell and answer.
+
+- **`top`, `bottom`, `duplicate` and `unique` are applied**, worked out once per
+  sheet over the addresses the sheet actually writes — a rule's range may be a
+  column of a million rows, and only a written cell can hold a value.
+- **`top`/`bottom` rank numbers only**, which is what Excel ranks, and every
+  cell that ties for the last place comes in with it. A blank counts as nothing,
+  for the ranking and for the duplicate count alike.
+- **One choice, named as a choice.** Excel's rounding for `{ percent: true }` is
+  not in the schema; this takes the floor and never fewer than one. If it turns
+  out to differ from Excel, that is a fix and not a surprise.
+- Comment shape: export 2.2, private 1.0, inline 1.5, 0 over the limit — held.
 
 ### 2026-08-23 — Conditional formatting, drawn
 Phase 13 opens with the construct a real spec turned out to lean on: a status
