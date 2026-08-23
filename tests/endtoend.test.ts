@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import { type CompiledGrid, cellAt, compile, resolve } from '@yxl-vscode/compile';
 import { parse } from '@yxl-vscode/cst';
-import { drawLine, reading, setStyle } from '@yxl-vscode/intent';
+import { drawLine, reading, setMerged, setStyle } from '@yxl-vscode/intent';
 import { load } from '@yxl-vscode/loader';
 import { type A1Addr, type FilePath, filePath, type SheetName } from '@yxl-vscode/units';
 import type { Typed } from '@yxl-vscode/webview/protocol';
@@ -81,7 +81,12 @@ function cell(grid: CompiledGrid, sheet: string, at: string) {
 
 const typed = (of: Partial<Typed>): Typed => ({ sheet: 'Sales', row: 1, col: 1, text: '', ...of });
 
-const at = (row: number, col: number) => ({ top: row, left: col, bottom: row, right: col });
+const at = (row: number, col: number, bottom = row, right = col) => ({
+  top: row,
+  left: col,
+  bottom,
+  right,
+});
 
 describe('the loop, closed', () => {
   it('has the pinned compiler to close it with', () => {
@@ -315,6 +320,22 @@ describe('the loop, closed', () => {
     expect(cell(grid, 'Sales', 'B6')?.formula).toBe('SUM(B2:B4)');
     expect(cell(grid, 'Sales', 'A10')?.value).toBe('Quarter');
     expect(cell(grid, 'Sales', 'C4')?.formula).toBe('B4*0.05');
+  });
+
+  it('carries a merge into the workbook, keeping the cell it covers', async () => {
+    if (!QUICKSTART) return;
+    const { dir, root, port, spec, refusals } = opened(QUICKSTART);
+    const where = { sheet: 'Sales' as SheetName, rect: at(1, 1, 1, 3), merged: true };
+
+    const intent = setMerged(spec(), where, reading(port.text));
+    await applied(spec(), intent, port, { anyway: false, from: 'merge', about: null });
+    expect(refusals).toEqual([]);
+
+    // The merge draws over B1; the spec keeps it, which is what makes the
+    // gesture its own inverse.
+    const { grid } = built(dir, root);
+    expect(cell(grid, 'Sales', 'A1')?.value).toBe('Region');
+    expect(cell(grid, 'Sales', 'B1')?.value).toBe('Revenue');
   });
 
   it('takes a cell back out of the workbook when it is emptied', async () => {

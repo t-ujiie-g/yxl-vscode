@@ -3,7 +3,7 @@ import { spanSaid } from '@yxl-vscode/units';
 import { HELD } from './keys';
 import { entry, pointedAt, says } from './menus';
 import type { DrawnSheet } from './protocol';
-import type { Asks, PointedCell, PointedHeading, Showing } from './showing';
+import { type Asks, over, type PointedCell, type PointedHeading, type Showing } from './showing';
 
 /** The menu the reader asked for at the pointer, over whatever they pointed at. */
 export function pointing(showing: Showing, asks: Asks): HTMLElement | null {
@@ -20,8 +20,31 @@ function onCell(showing: Showing, asks: Asks, at: PointedCell): HTMLElement | nu
     take();
   };
   const ours = showing.copied !== null;
+  const rect = over(showing);
+  const wide = rect.top !== rect.bottom || rect.left !== rect.right;
+  const merged = (showing.drawing.sheets[showing.sheet]?.merges ?? []).some(
+    (one) => one.top <= at.row && at.row <= one.bottom && one.left <= at.col && at.col <= one.right,
+  );
 
   const entries = [
+    ...(merged
+      ? [
+          entry(
+            'Unmerge cells',
+            {},
+            shut(() => asks.merge(false)),
+          ),
+        ]
+      : []),
+    ...(wide && !merged
+      ? [
+          entry(
+            'Merge cells',
+            {},
+            shut(() => asks.merge(true)),
+          ),
+        ]
+      : []),
     entry(
       'Cut',
       { chord: `${HELD}X` },
