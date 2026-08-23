@@ -450,6 +450,11 @@ body {
   cursor: pointer;
 }
 
+/* The tab a dragged one would land on. */
+.tab.under {
+  border-color: var(--vscode-focusBorder);
+}
+
 /* The tab, while it is being renamed: the same box, taking the keys. */
 .tab.naming {
   min-width: 6rem;

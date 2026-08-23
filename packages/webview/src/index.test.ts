@@ -1186,6 +1186,25 @@ describe('the bar over the grid', () => {
     expect(into.querySelector<HTMLInputElement>('.tabs .tab.naming')?.value).toBe('Sales');
   });
 
+  it('moves a sheet where it was dragged to, and asks for nothing on its own tab', () => {
+    const { into, sent, told } = view();
+    told({ ...drawing, sheets: [sheet(), sheet({ name: 'Notes', cells: [] })] });
+
+    const tabs = [...into.querySelectorAll<HTMLButtonElement>('.tabs .tab:not(.add)')];
+    tabs[1]?.dispatchEvent(new Event('dragstart', { bubbles: true }));
+    tabs[0]?.dispatchEvent(new Event('dragover', { bubbles: true, cancelable: true }));
+    expect(tabs[0]?.classList.contains('under')).toBe(true);
+
+    tabs[0]?.dispatchEvent(new Event('drop', { bubbles: true, cancelable: true }));
+    expect(sent.filter((one) => one.kind === 'moveSheet')).toEqual([
+      { kind: 'moveSheet', sheet: 'Notes', to: 0 },
+    ]);
+
+    tabs[1]?.dispatchEvent(new Event('dragstart', { bubbles: true }));
+    tabs[1]?.dispatchEvent(new Event('drop', { bubbles: true, cancelable: true }));
+    expect(sent.filter((one) => one.kind === 'moveSheet')).toHaveLength(1);
+  });
+
   it("takes a sheet out from the tab's own menu", () => {
     const { into, sent } = view();
 

@@ -5,7 +5,7 @@ import { type FilePath, filePath, type SheetName } from '@yxl-vscode/units';
 import { type Ctx, checked } from '@yxl-vscode/verify';
 import { describe, expect, it } from 'vitest';
 import { reading } from './direct';
-import { addSheet, deleteSheet } from './sheets';
+import { addSheet, deleteSheet, moveSheet } from './sheets';
 
 const ROOT = filePath('spec.yxl.yaml') ?? ('' as FilePath);
 
@@ -35,6 +35,20 @@ function added(source: string, name: string): string {
 function deleted(source: string, sheet: string): string {
   const { doc, grid, read } = files(source);
   const intent = deleteSheet({ doc, grid }, { sheet: sheet as SheetName }, read);
+  if (intent.kind === 'refused') return `refused: ${intent.why}`;
+  if (intent.kind !== 'edit') throw new Error('a file was not written');
+
+  const { includes } = files(source);
+  const ctx: Ctx = { root: ROOT, file: intent.file, read: includes };
+  const done = checked(source, intent.patch, intent.expects, ctx);
+
+  return done.ok === false ? `refused: ${done.diagnostics[0]?.message ?? 'a surprise'}` : done.text;
+}
+
+/** The sheet moved, through the checker — the file, or why not. */
+function moved(source: string, sheet: string, to: number): string {
+  const { doc, grid, read } = files(source);
+  const intent = moveSheet({ doc, grid }, { sheet: sheet as SheetName, to }, read);
   if (intent.kind === 'refused') return `refused: ${intent.why}`;
   if (intent.kind !== 'edit') throw new Error('a file was not written');
 
@@ -131,5 +145,35 @@ describe('a sheet taken out', () => {
 
   it('is refused where there is no such sheet', () => {
     expect(deleted(TWO, 'Gone')).toBe('refused: there is no sheet named `Gone`');
+  });
+});
+
+describe('a sheet moved along the tab bar', () => {
+  const THREE = `${TWO}  - name: Costs\n    cells:\n      A1: 3\n`;
+
+  it('goes where it was let go, and every other sheet keeps its bytes', () => {
+    expect(moved(THREE, 'Costs', 0)).toBe(
+      'sheets:\n  - name: Costs\n    cells:\n      A1: 3\n  - name: Sales\n    cells:\n      A1: 1\n  - name: Notes\n    cells:\n      A1: hello\n',
+    );
+  });
+
+  it('goes to the end, which is the other way round', () => {
+    expect(moved(THREE, 'Sales', 2)).toBe(
+      'sheets:\n  - name: Notes\n    cells:\n      A1: hello\n  - name: Costs\n    cells:\n      A1: 3\n  - name: Sales\n    cells:\n      A1: 1\n',
+    );
+  });
+
+  it('leaves the blank lines between the sheets where they were', () => {
+    const spaced = `${ONE}\n  - name: Notes\n    cells:\n      A1: hello\n`;
+
+    expect(moved(spaced, 'Notes', 0)).toBe(
+      'sheets:\n  - name: Notes\n    cells:\n      A1: hello\n\n  - name: Sales\n    cells:\n      A1: 1\n',
+    );
+  });
+
+  it('is refused where it is already there, and where there is no such place', () => {
+    expect(moved(TWO, 'Sales', 0)).toBe('refused: `Sales` is already there');
+    expect(moved(TWO, 'Sales', 2)).toBe('refused: a sheet cannot go there');
+    expect(moved(TWO, 'Gone', 0)).toBe('refused: there is no sheet named `Gone`');
   });
 });
