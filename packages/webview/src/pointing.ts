@@ -30,6 +30,20 @@ function onCell(showing: Showing, asks: Asks, at: PointedCell): HTMLElement | nu
     ...(rect.bottom > rect.top
       ? [
           entry(
+            'Sort A to Z',
+            {},
+            shut(() => asks.sort(false)),
+          ),
+          entry(
+            'Sort Z to A',
+            {},
+            shut(() => asks.sort(true)),
+          ),
+        ]
+      : []),
+    ...(rect.bottom > rect.top
+      ? [
+          entry(
             'Fill down',
             { chord: `${HELD}D` },
             shut(() => asks.fill('row')),

@@ -16,6 +16,7 @@ import type {
   PastedText,
   Ranged,
   Resized,
+  Sorted,
   Typed,
   Worn,
 } from '@yxl-vscode/webview/protocol';
@@ -32,6 +33,7 @@ import { merge } from './merges';
 import { freeze } from './panes';
 import { drawRun, type Projected, project, redraw, type Window } from './project';
 import { resize } from './size';
+import { sort } from './sorts';
 import { summed } from './summing';
 import { table } from './tables';
 import { goBack } from './undo';
@@ -67,6 +69,7 @@ const WRITES = {
   merge: (spec: Spec, one: Merged, port: Port) => merge(spec, one, port),
   table: (spec: Spec, one: Ranged, port: Port) => table(spec, one, port),
   fill: (spec: Spec, one: Filled, port: Port, choice?: string) => fill(spec, one, port, choice),
+  sort: (spec: Spec, one: Sorted, port: Port) => sort(spec, one, port),
   group: (spec: Spec, grouped: Grouped, port: Port, choice?: string) =>
     group(spec, grouped, port, choice),
   hide: (spec: Spec, one: Hidden, port: Port, choice?: string) => hide(spec, one, port, choice),

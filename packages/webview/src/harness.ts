@@ -38,6 +38,7 @@ export function asks(): Asks {
     merge: vi.fn(),
     table: vi.fn(),
     fill: vi.fn(),
+    sort: vi.fn(),
   };
 }
 
