@@ -200,6 +200,8 @@ export function tabs(showing: Showing, asks: Asks): HTMLElement {
   const bar = document.createElement('nav');
   bar.className = 'tabs';
 
+  const dragged = { name: '' };
+
   for (const [index, sheet] of drawing.sheets.entries()) {
     if (index === showing.naming) {
       bar.append(naming(sheet.name, asks));
@@ -210,7 +212,7 @@ export function tabs(showing: Showing, asks: Asks): HTMLElement {
     tab.type = 'button';
     tab.textContent = sheet.name;
     tab.className = index === showing.sheet ? 'tab showing' : 'tab';
-    says(tab, 'Double-click to rename');
+    says(tab, 'Double-click to rename, drag to reorder');
 
     tab.addEventListener('click', () => asks.showSheet(index));
 
@@ -219,6 +221,7 @@ export function tabs(showing: Showing, asks: Asks): HTMLElement {
       asks.pointAt({ kind: 'tab', sheet: index, x: event.clientX, y: event.clientY });
     });
 
+    dragging(tab, sheet.name, index, dragged, asks);
     bar.append(tab);
   }
 
@@ -235,6 +238,43 @@ export function tabs(showing: Showing, asks: Asks): HTMLElement {
   bar.append(add);
 
   return bar;
+}
+
+/** A tab dragged along the bar, which is the order of `sheets:` (`docs/spec.md` §2). */
+function dragging(
+  tab: HTMLElement,
+  name: string,
+  index: number,
+  dragged: { name: string },
+  asks: Asks,
+): void {
+  tab.draggable = true;
+
+  tab.addEventListener('dragstart', () => {
+    dragged.name = name;
+  });
+
+  tab.addEventListener('dragover', (event) => {
+    if (dragged.name === '' || dragged.name === name) return;
+
+    event.preventDefault();
+    tab.classList.add('under');
+  });
+
+  tab.addEventListener('dragleave', () => tab.classList.remove('under'));
+
+  tab.addEventListener('drop', (event) => {
+    event.preventDefault();
+    tab.classList.remove('under');
+    if (dragged.name === '' || dragged.name === name) return;
+
+    asks.moveSheet(dragged.name, index);
+    dragged.name = '';
+  });
+
+  tab.addEventListener('dragend', () => {
+    dragged.name = '';
+  });
 }
 
 /** The tab, made the box the new name is typed in — a webview has no dialog to ask in. */

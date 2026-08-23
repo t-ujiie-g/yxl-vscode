@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { apply } from './apply';
 import { CODE } from './codes';
-import { removalOf } from './entries';
+import { removalOf, reordered } from './entries';
 import type { Op } from './op';
 import { parse } from './parse';
 
@@ -600,5 +600,49 @@ describe('entries of a collection', () => {
     it('has nothing to say about the document root', () => {
       expect(removing('cells:\n  A1: 1\n', [])).toBeNull();
     });
+  });
+});
+
+describe('a sequence written in a new order', () => {
+  const put = (source: string, order: number[]): string | null => {
+    const { root } = parse(source, { file: 'test.yxl.yaml' });
+    if (root === null) throw new Error('did not parse');
+
+    const said = reordered(source, root, ['sheets'], order);
+    return said === null ? null : text(source, { op: 'write', path: ['sheets'], source: said });
+  };
+
+  it('moves the items and leaves the blank lines where they were', () => {
+    const source =
+      'sheets:\n  - name: Sales\n    cells:\n      A1: 1\n\n  - name: Notes\n    cells:\n      A1: 2\n';
+
+    expect(put(source, [1, 0])).toBe(
+      'sheets:\n  - name: Notes\n    cells:\n      A1: 2\n\n  - name: Sales\n    cells:\n      A1: 1\n',
+    );
+  });
+
+  it("takes an item's own comments with it", () => {
+    const source = 'sheets:\n  - name: Sales\n  # about Notes\n  - name: Notes\n  - name: Costs\n';
+
+    expect(put(source, [2, 1, 0])).toBe(
+      'sheets:\n  - name: Costs\n  # about Notes\n  - name: Notes\n  - name: Sales\n',
+    );
+  });
+
+  it('gives back the file it was given, where the order is the one it had', () => {
+    const source = 'sheets:\n  - name: Sales\n\n  - name: Notes\n  - name: Costs\n';
+
+    expect(put(source, [0, 1, 2])).toBe(source);
+  });
+
+  it('says nothing about an order that is not a rearrangement of the items', () => {
+    const { root } = parse('sheets:\n  - name: Sales\n  - name: Notes\n', {
+      file: 'test.yxl.yaml',
+    });
+    if (root === null) throw new Error('did not parse');
+
+    expect(reordered('', root, ['sheets'], [0, 0])).toBeNull();
+    expect(reordered('', root, ['sheets'], [0])).toBeNull();
+    expect(reordered('', root, ['sheets', 0], [0, 1])).toBeNull();
   });
 });

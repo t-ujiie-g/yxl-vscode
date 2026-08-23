@@ -162,6 +162,7 @@ export interface Asks {
   readonly renameSheet: (sheet: string, name: string) => void;
   readonly nameSheet: (index: number | null) => void;
   readonly deleteSheet: (sheet: string) => void;
+  readonly moveSheet: (sheet: string, to: number) => void;
   readonly select: (row: number, col: number) => void;
   readonly reachTo: (row: number, col: number) => void;
   readonly reveal: (source: Source) => void;

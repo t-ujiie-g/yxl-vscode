@@ -1,4 +1,4 @@
-import { type Op, type Path, renderScalar } from '@yxl-vscode/cst';
+import { type Op, type Path, renderScalar, reordered } from '@yxl-vscode/cst';
 import type { Templated } from '@yxl-vscode/spec';
 import {
   type FilePath,
@@ -9,6 +9,7 @@ import {
   sheetName,
   whyNotASheetName,
 } from '@yxl-vscode/units';
+import { nothingChanges } from '@yxl-vscode/verify';
 import {
   cellsNaming,
   type Intent,
@@ -131,4 +132,43 @@ function onSheet(at: Templated<QualifiedAddr>, sheet: SheetName): boolean {
 
   const said = typeof at === 'string' ? at : qualified(at.sheet, at.at);
   return parseQualifiedAddr(said)?.sheet === sheet;
+}
+
+/** A sheet a reader dragged, and where in the tab bar they let it go. */
+export interface Ordering {
+  readonly sheet: SheetName;
+  readonly to: number;
+}
+
+/**
+ * A sheet moved along the tab bar, which is the order of `sheets:`
+ * (`docs/spec.md` §2). Every other entry keeps its own bytes; only the order
+ * changes, and the blank lines between them stay where they are.
+ */
+export function moveSheet(spec: Projection, where: Ordering, read: Reading): Intent {
+  const at = spec.doc.sheets.findIndex((one) => nameOf(one) === where.sheet);
+  if (at < 0) return refused(`there is no sheet named \`${where.sheet}\``);
+
+  const many = spec.doc.sheets.length;
+  if (where.to < 0 || where.to >= many) return refused('a sheet cannot go there');
+  if (where.to === at) return refused(`\`${where.sheet}\` is already there`);
+
+  const sheet = spec.doc.sheets[at];
+  const found = sheet === undefined ? null : located(sheet.id, read);
+  if (found === null || found.kind === 'refused') {
+    return refused('this sheet has no place in the file to move');
+  }
+
+  const rest = [...Array(many).keys()].filter((one) => one !== at);
+  const order = [...rest.slice(0, where.to), at, ...rest.slice(where.to)];
+
+  const list = found.path.slice(0, -1);
+  const tree = read.parsed(found.file);
+  const root = tree?.root ?? null;
+  const said = root === null ? null : reordered(read.text(found.file) ?? '', root, list, order);
+  if (said === null) return refused('the sheets are not written as a list this can reorder');
+
+  const ops: readonly Op[] = [{ op: 'write', path: list, source: said }];
+
+  return { kind: 'edit', file: found.file, patch: { ops }, expects: nothingChanges };
 }

@@ -1411,7 +1411,13 @@ are carried through untouched and shown as nothing (`docs/spec.md` §2).
       `visibility:`, which is not read yet and so cannot be shown to leave one
       visible (§2). That last refusal tightens into a real check when the
       hide/unhide item below lands.
-- [ ] **Reorder** by dragging a tab — the `sheets:` sequence is tab order
+- [x] **Reorder** by dragging a tab — the `sheets:` sequence is tab order. One
+      `write` over the whole sequence, whose inverse is the text it replaced:
+      every entry keeps its own bytes and its own comments, and the blank lines
+      between them stay where they are rather than travelling with a sheet. A
+      remove-and-insert pair would have been unsound, since a sequence's index
+      paths shift under the removal and the inverse is read against the tree as
+      it was (ADR-026).
 - [ ] **Hide and unhide** a sheet (`visibility: hidden`), and `very_hidden`
       drawn as what it is and not offered; **tab colour** from the tab's menu
 - [ ] **Gridlines off** drawn as off, and a switch for it in the sheet's menu
@@ -2935,6 +2941,24 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-23 — The tabs, dragged into order
+The tab bar's fourth gesture, and the last of `sheets:` itself.
+
+- **Drag a tab along the bar** to move the sheet, which is the order of
+  `sheets:` (`docs/spec.md` §2). The tab a dragged one would land on takes a
+  border; dropping on it puts the sheet at that place.
+- **One `write` over the whole sequence.** Every entry keeps its own bytes and
+  its own comments; only the order changes, and the blank lines between the
+  entries stay where they are rather than travelling with a sheet. The edit
+  claims `nothingChanges`, which is true: no cell moves, so `verify` refuses
+  anything that does.
+- **Why not remove-and-insert.** A sequence's paths are indices, and the inverse
+  of a patch is read against the tree as it was (ADR-026); a removal shifts
+  every index after it, so the undo of the pair would have pointed at the wrong
+  item. `reordered` in `cst` writes the sequence instead, and its inverse is the
+  text it replaced.
+- Comment shape: export 2.2, private 1.0, inline 1.5, 9 over the limit — held.
 
 ### 2026-08-23 — A range reaches as far as what it reads
 A `formulas:` range is meant to be written past the data (`docs/spec.md` §3:

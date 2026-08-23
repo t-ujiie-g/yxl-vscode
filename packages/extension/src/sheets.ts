@@ -1,4 +1,4 @@
-import { addSheet, deleteSheet, reading, renameSheet } from '@yxl-vscode/intent';
+import { addSheet, deleteSheet, moveSheet, reading, renameSheet } from '@yxl-vscode/intent';
 import { applied, type Port, type Spec, sheetNamed } from './write';
 
 /**
@@ -38,4 +38,15 @@ export async function remove(spec: Spec, said: string, port: Port): Promise<void
 
   const done = await applied(spec, intent, port, { anyway: false, from: 'delete', about: null });
   if (done) port.said(`\`${said}\` taken out.`);
+}
+
+/** A sheet dragged along the tab bar, all the way to the order of `sheets:`. */
+export async function move(spec: Spec, said: string, to: number, port: Port): Promise<void> {
+  const sheet = sheetNamed(said, port);
+  if (sheet === null) return;
+
+  const intent = moveSheet(spec, { sheet, to }, reading(port.text));
+
+  const done = await applied(spec, intent, port, { anyway: false, from: 'move', about: null });
+  if (done) port.said(`\`${said}\` moved.`);
 }

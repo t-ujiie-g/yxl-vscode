@@ -27,7 +27,14 @@ export {
 } from './paste';
 export { type Renaming, renameSheet } from './renaming';
 export { type Candidate, candidates, type Resolving } from './resolve';
-export { type Adding, addSheet, type Deleting, deleteSheet } from './sheets';
+export {
+  type Adding,
+  addSheet,
+  type Deleting,
+  deleteSheet,
+  moveSheet,
+  type Ordering,
+} from './sheets';
 export { type Does, lineSaid, type Moving, type Shift, shifting } from './shift';
 export { type Dragged, setSize } from './size';
 export { type Sorting, setSorted } from './sort';

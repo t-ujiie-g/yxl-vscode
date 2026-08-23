@@ -2,7 +2,7 @@ import { type Span, span } from '@yxl-vscode/diag';
 import { CODE } from './codes';
 import { cutOf, itemAt, withEntry, withoutEntry } from './flow';
 import { aboveComments, lineBreak, lineEnd, lineStart } from './lines';
-import { entryOf, formatPath, holds, locate, type Site } from './locate';
+import { entryOf, formatPath, holds, locate, nodeAt, type Site } from './locate';
 import type { Mapping, Node, Sequence } from './node';
 import type { Edit, Op, Path, Refuse } from './op';
 import { renderScalar } from './write';
@@ -405,4 +405,48 @@ function carriesTheDash(path: Path): string {
 
 function insideFlow(path: Path): string {
   return `\`${formatPath(path)}\` is inside a flow collection, which this editor does not rewrite yet`;
+}
+
+/**
+ * A block sequence's items written in a new order, as the text a `write` over
+ * the sequence replaces it with; `order` holds the items' own indices. An item
+ * carries its comments, and the blank lines between items stay where they are.
+ */
+export function reordered(
+  source: string,
+  root: Node,
+  path: Path,
+  order: readonly number[],
+): string | null {
+  const node = nodeAt(root, path);
+  if (node === null || node.kind !== 'seq' || node.flow) return null;
+
+  const items = node.items;
+  if (order.length !== items.length) return null;
+  if (new Set(order).size !== order.length) return null;
+  if (order.some((one) => items[one] === undefined)) return null;
+
+  const bodies: string[] = [];
+  const gaps: string[] = [];
+
+  for (const [index, item] of items.entries()) {
+    const from = index === 0 ? lineStart(source, node.span.start) : above(source, item.span.start);
+    const next = items[index + 1];
+    const to = next === undefined ? node.span.end : above(source, next.span.start);
+
+    const text = source.slice(from, to);
+    const body = text.replace(/(?<=\n)(?:[ \t]*\n)*$/, '');
+    bodies.push(body.endsWith('\n') ? body : `${body}\n`);
+    gaps.push(text.slice(body.length));
+  }
+
+  const said = order.map((one, at) => `${bodies[one] ?? ''}${gaps[at] ?? ''}`).join('');
+  const column = node.span.start - lineStart(source, node.span.start);
+
+  return said.slice(column).replace(/\n$/, '');
+}
+
+/** Where an item's own text begins: the line it opens on, and the comments above it. */
+function above(source: string, start: number): number {
+  return aboveComments(source, lineStart(source, start));
 }

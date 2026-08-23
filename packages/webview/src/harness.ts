@@ -11,6 +11,7 @@ export function asks(): Asks {
     renameSheet: vi.fn(),
     nameSheet: vi.fn(),
     deleteSheet: vi.fn(),
+    moveSheet: vi.fn(),
     drawWith: vi.fn(),
     resize: vi.fn(),
     select: vi.fn(),
