@@ -2954,6 +2954,20 @@ than widening it silently.
 
 ## 11. Living changelog
 
+### 2026-08-23 — Text spills, as it does in both spreadsheets
+A heading typed into `A1` runs across `B1` and `C1` in Excel and in Sheets, so
+long as those cells are empty. Here it was clipped at the cell's own edge, which
+made a real sheet look like it had lost its title.
+
+- **A cell's text may run over the empty cells to its right**, and clips where
+  the first cell that shows anything begins. The cell keeps its own width; only
+  the text runs.
+- **It does not run where a spreadsheet would not let it**: where the cell wraps
+  (that is what wrapping is for), where the text is not left-aligned (Excel runs
+  right-aligned text the other way, which is a later item), where the text holds
+  a line break, or where the cell is merged and already spans.
+- Comment shape: export 2.2, private 1.0, inline 1.5, 9 over the limit — held.
+
 ### 2026-08-23 — A colour written `00RRGGBB` is not invisible
 A real spec drew a sheet of blank cells: every value laid out, every row the
 right height, and not one character on the screen.

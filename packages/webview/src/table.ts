@@ -1,7 +1,7 @@
 import type { Axis } from '@yxl-vscode/spec';
 import { columnLabel } from '@yxl-vscode/units';
 import { corner } from './boxes';
-import { drawCell, typeInto } from './cell';
+import { drawCell, shows, spills, typeInto } from './cell';
 import { copying, filling, going, looking as lookingFor, pasting, undoing } from './keys';
 import {
   behind,
@@ -385,7 +385,14 @@ function line(
     const col = one.at;
     if (merged.covered.has(cellKey(col, row)) || widthOf(sheet, col) === 0) continue;
 
-    const drawn = drawCell(held.get(cellKey(col, row)), merged.anchored.get(cellKey(col, row)));
+    const here = held.get(cellKey(col, row));
+    const anchored = merged.anchored.get(cellKey(col, row));
+    const drawn = drawCell(
+      here,
+      anchored,
+      anchored === undefined ? spillOf(sheet, held, row, col) : 0,
+    );
+    if (drawn.querySelector('.spill') !== null) drawn.classList.add('spilling');
     drawn.setAttribute('data-at', cellKey(col, row));
     if (one.stays) stay(sheet, drawn, { col });
     if (showing.selected?.row === row && showing.selected.col === col) {
@@ -502,4 +509,22 @@ function line(
   }
 
   return line;
+}
+
+/** How wide a cell's text may run: its own width plus the empty cells right of it, or `0`. */
+function spillOf(
+  sheet: DrawnSheet,
+  held: ReadonlyMap<string, DrawnCell>,
+  row: number,
+  col: number,
+): number {
+  if (!spills(held.get(cellKey(col, row)))) return 0;
+
+  let width = widthOf(sheet, col);
+  for (let over = col + 1; over <= sheet.of.columns; over += 1) {
+    if (shows(held.get(cellKey(over, row)))) break;
+    width += widthOf(sheet, over);
+  }
+
+  return width === widthOf(sheet, col) ? 0 : width;
 }

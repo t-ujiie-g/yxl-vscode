@@ -7,6 +7,7 @@ import type { DrawnCell, DrawnMerge, DrawnRun } from './protocol';
 export function drawCell(
   cell: DrawnCell | undefined,
   merge: DrawnMerge | undefined,
+  spill = 0,
 ): HTMLTableCellElement {
   const drawn = document.createElement('td');
   if (merge !== undefined) {
@@ -17,8 +18,9 @@ export function drawCell(
   if (cell === undefined) return drawn;
 
   const text = cell.rich === null ? shown(cell) : '';
-  if (cell.rich === null) drawn.textContent = text;
-  else drawn.append(...cell.rich.map(run));
+  if (cell.rich !== null) drawn.append(...cell.rich.map(run));
+  else if (spill > 0) drawn.append(spilling(text, spill));
+  else drawn.textContent = text;
 
   // A value that holds a line break is drawn with it, wrapped or not: the break
   // is what the spec says, and `nowrap` would eat it (`docs/spec.md` §3).
@@ -42,6 +44,16 @@ export function drawCell(
   if (over !== null) drawn.append(over);
 
   return drawn;
+}
+
+/** Text let past the cell's own width, over the empty cells beside it, as both spreadsheets let it. */
+function spilling(text: string, width: number): HTMLElement {
+  const over = document.createElement('span');
+  over.className = 'spill';
+  over.style.maxWidth = `${width}px`;
+  over.textContent = text;
+
+  return over;
 }
 
 /** A cell's own borders, drawn over the grid's lines rather than collapsed with them, which a 1px line loses. */
@@ -278,4 +290,25 @@ function thickness(line: string): string {
   if (line === 'hair') return '0.5px';
   if (line === 'medium' || line === 'double') return '2px';
   return line === 'thick' ? '3px' : '1px';
+}
+
+/** Whether a cell shows anything, which is what stops its neighbour spilling over it. */
+export function shows(cell: DrawnCell | undefined): boolean {
+  if (cell === undefined) return false;
+
+  return cell.rich !== null || cell.formula !== null || cell.value !== null;
+}
+
+/** Whether a cell's text may run past its own width: Excel wraps or clips it otherwise. */
+export function spills(cell: DrawnCell | undefined): boolean {
+  if (cell === undefined || !shows(cell)) return false;
+
+  const style = cell.style;
+  const where = style['align.horizontal'];
+
+  return (
+    style['align.wrap'] !== true &&
+    (where === undefined || where === 'left') &&
+    !shown(cell).includes('\n')
+  );
 }
