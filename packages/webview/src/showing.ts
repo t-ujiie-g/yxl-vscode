@@ -12,6 +12,7 @@ import type {
   Refused,
   Resized,
   Source,
+  Summed,
   Typed,
   Worn,
 } from './protocol';
@@ -38,6 +39,9 @@ export interface Showing {
 
   /** The heading a reader has asked for a menu on, and where they asked. */
   readonly pointed: Pointed | null;
+
+  /** What the rectangle selected comes to, where more than one cell is (ADR-014). */
+  readonly comes: Summed | null;
 
   /** Whether the selected cell can be typed into, where one is selected. */
   readonly editable: Editable | null;

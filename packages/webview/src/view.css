@@ -711,6 +711,15 @@ body {
   text-align: center;
 }
 
+/* What the selection comes to, where every spreadsheet says it: quietly, on the
+   right, under the grid. */
+.comes {
+  margin: 0.3rem 0 0;
+  color: var(--vscode-descriptionForeground);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
 /* The marching ants a copied rectangle wears in every spreadsheet. */
 .grid td.copied {
   outline: 1px dashed #107c41;

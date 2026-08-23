@@ -4,6 +4,7 @@ import { takingAll } from './keys';
 import { entry, fit, pointedAt } from './menus';
 import { spanSaid } from './outline';
 import {
+  comesTo,
   inspector,
   note,
   parameters,
@@ -220,6 +221,8 @@ function say(under: Element, showing: Showing, asks: Asks): void {
   const { drawing } = showing;
   under.replaceChildren();
 
+  const comes = showing.comes === null ? null : comesTo(showing.comes);
+  if (comes !== null) under.append(comes);
   if (showing.said !== null) under.append(note(showing.said));
   if (showing.refused !== null) under.append(refusal(showing.refused, asks));
   if (drawing.uncomputed !== null) under.append(note(uncomputed(drawing.uncomputed)));

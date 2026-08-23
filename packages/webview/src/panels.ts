@@ -1,5 +1,5 @@
 import { columnLabel } from '@yxl-vscode/units';
-import type { About, Choice, Drawing, Refused, Uncomputed } from './protocol';
+import type { About, Choice, Drawing, Refused, Summed, Uncomputed } from './protocol';
 import type { Asks, Reached, Showing } from './showing';
 
 /** The parameters as boxes to turn (`docs/spec.md` §7); emptying one gives the default back. */
@@ -33,6 +33,30 @@ export function parameters(drawing: Drawing, asks: Asks): HTMLElement {
 
   panel.append(form);
   return panel;
+}
+
+/**
+ * What the rectangle selected comes to, said where every spreadsheet says it:
+ * how many cells hold anything, and what the numbers among them add up to.
+ */
+export function comesTo(summed: Summed): HTMLElement | null {
+  const said = document.createElement('p');
+  said.className = 'comes';
+  if (summed.held === 0) return null;
+
+  const parts = [`Count ${summed.held}`];
+  if (summed.numbers > 0) {
+    parts.unshift(`Sum ${round(summed.sum)}`, `Average ${round(summed.sum / summed.numbers)}`);
+  }
+
+  said.textContent = parts.join('   ');
+  return said;
+}
+
+/** A number as a status bar shows one: what it is, without a tail of floating point. */
+function round(value: number): string {
+  const said = Math.round(value * 1e9) / 1e9;
+  return said.toLocaleString('en-US', { maximumFractionDigits: 9 });
 }
 
 /** Why some cells show a formula rather than what it comes to, said once under the grid. */

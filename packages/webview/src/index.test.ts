@@ -194,6 +194,45 @@ describe('what the view sends', () => {
     expect(sent.filter((one) => one.kind === 'wear').at(-1)).toMatchObject({ whole: null });
   });
 
+  it('asks what a rectangle comes to, and says it under the grid', () => {
+    const { into, sent, told } = view();
+
+    reachFrom(into, { row: 1, col: 1 }, { row: 2, col: 2 });
+    expect(sent.filter((one) => one.kind === 'sum')).toEqual([
+      { kind: 'sum', sheet: 'Sales', top: 1, left: 1, bottom: 2, right: 2 },
+    ]);
+
+    told({ kind: 'summed', sheet: 'Sales', held: 3, numbers: 2, sum: 30 });
+    expect(into.querySelector('.comes')?.textContent).toBe('Sum 30   Average 15   Count 3');
+  });
+
+  it('says nothing of the sort about one cell, which comes to itself', () => {
+    const { into, sent } = view();
+
+    at(into, 1, 1)?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    expect(sent.filter((one) => one.kind === 'sum')).toEqual([]);
+    expect(into.querySelector('.comes')).toBeNull();
+  });
+
+  it('puts it away when the selection becomes one cell again', () => {
+    const { into, told } = view();
+
+    reachFrom(into, { row: 1, col: 1 }, { row: 2, col: 2 });
+    told({ kind: 'summed', sheet: 'Sales', held: 3, numbers: 2, sum: 30 });
+    at(into, 1, 1)?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+
+    expect(into.querySelector('.comes')).toBeNull();
+  });
+
+  it('says only the count where nothing in the rectangle is a number', () => {
+    const { into, told } = view();
+
+    reachFrom(into, { row: 1, col: 1 }, { row: 2, col: 2 });
+    told({ kind: 'summed', sheet: 'Sales', held: 2, numbers: 0, sum: 0 });
+
+    expect(into.querySelector('.comes')?.textContent).toBe('Count 2');
+  });
+
   it('sends a column dragged by its edge, in the units a spec writes widths in', () => {
     const { into, sent } = view();
 
