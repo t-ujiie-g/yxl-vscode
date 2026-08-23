@@ -21,6 +21,7 @@ import {
   type Port,
   perOrigin,
   type Spec,
+  sheetNamed,
   theseOnly,
 } from './write';
 
@@ -123,11 +124,8 @@ export async function pasteFrom(
   port: Port,
   choice?: string,
 ): Promise<void> {
-  const sheet = sheetName(asked.sheet);
-  if (sheet === null) {
-    port.refuse(`\`${asked.sheet}\` is not a name a sheet can have`, null);
-    return;
-  }
+  const sheet = sheetNamed(asked.sheet, port);
+  if (sheet === null) return;
 
   const where = { sheet, at: addrAt({ col: asked.col, row: asked.row }) };
   const rows = tabular(asked.text);

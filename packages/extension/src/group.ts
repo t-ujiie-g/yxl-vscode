@@ -1,7 +1,6 @@
 import { setGroup } from '@yxl-vscode/intent';
-import { spanSaid } from '@yxl-vscode/units';
 import type { Grouped } from '@yxl-vscode/webview/protocol';
-import { type Asking, asked } from './asked';
+import { type Asking, asked, many } from './asked';
 import type { Port, Spec } from './write';
 
 /**
@@ -24,8 +23,3 @@ const GROUP: Asking<Grouped> = {
   done: (grouped) =>
     `${many(grouped)} ${grouped.level === 0 ? 'taken out of the outline' : 'grouped'}.`,
 };
-
-/** What was named, as the reader is told about it — by the letter on the heading, not by its number. */
-function many(grouped: Grouped): string {
-  return spanSaid(grouped.axis, grouped.first, grouped.last);
-}

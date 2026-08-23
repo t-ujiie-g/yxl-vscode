@@ -2739,6 +2739,31 @@ than widening it silently.
 
 ## 11. Living changelog
 
+### 2026-08-23 — Said once, again
+A pass over the tree before Phase 11 proper. Less to find than last time, which
+is the point of doing it every phase; what there was, was mostly things the last
+few fixes had each said for themselves.
+
+- **`ANYWAY` was written twice.** The `anyway:<id>` convention — how a reader
+  confirms an edit the checker was surprised by — had a regex in `write.ts` and
+  an identical one in `asked.ts`, a fortnight apart in age and one character
+  from silently disagreeing. One export now.
+- **The sheet-name guard was written eight times**, message and all. It is one
+  function: the sheet a gesture named, or `null` once the reader has been told
+  it is not a name.
+- **`cellOf(showing)` was byte-identical** in `boxes.ts` and `showing.ts`, the
+  second a leftover from the pass that moved it.
+- **`many()` was written three times** over three payloads with the same three
+  fields, and is one function beside the flow that uses it.
+- **Schema key names are the schema's**, not the writer's: `'cells'`,
+  `'overrides'`, `'style'` and `'format'` were named again in `intent` and now
+  come from `spec`, which is where the schema's keys are spelled.
+- **`webview/index.ts` (534 lines) was looked at again and left alone.** Its
+  state is genuinely shared between the gestures and the message handler, so
+  every split is arbitrary; noted rather than cut, for the third time.
+- 1770 → 1772 tests, and 27 fewer lines. Comment shape unchanged at 9 over the
+  limit.
+
 ### 2026-08-23 — One `cells:` key, however many entries
 The last of what the data-block work left, and not what the note said it was.
 

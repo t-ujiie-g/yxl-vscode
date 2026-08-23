@@ -1,7 +1,7 @@
 import { reading, setFreeze } from '@yxl-vscode/intent';
-import { addrAt, sheetName } from '@yxl-vscode/units';
+import { addrAt } from '@yxl-vscode/units';
 import type { Frozen } from '@yxl-vscode/webview/protocol';
-import { applied, type Port, type Spec } from './write';
+import { applied, type Port, type Spec, sheetNamed } from './write';
 
 /**
  * A sheet's panes frozen from the preview, all the way to the file: the sheet's
@@ -9,11 +9,8 @@ import { applied, type Port, type Spec } from './write';
  * question (`docs/spec.md` §2).
  */
 export async function freeze(spec: Spec, frozen: Frozen, port: Port): Promise<void> {
-  const sheet = sheetName(frozen.sheet);
-  if (sheet === null) {
-    port.refuse(`\`${frozen.sheet}\` is not a name a sheet can have`, null);
-    return;
-  }
+  const sheet = sheetNamed(frozen.sheet, port);
+  if (sheet === null) return;
 
   const at = frozen.at === null ? null : addrAt(frozen.at);
   const intent = setFreeze(spec, { sheet, at }, reading(port.text));

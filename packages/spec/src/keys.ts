@@ -13,6 +13,17 @@ export const CELL_WEARS: ReadonlySet<string> = keySet(['format', 'style']);
 const CELL_KEYS = [...CELL_HOLDS, ...CELL_WEARS];
 
 /**
+ * The keys a *writer* names, which are the schema's own: a spec is edited by
+ * putting things under them, and they are spelled here and nowhere else.
+ */
+export const KEY = {
+  cells: 'cells',
+  overrides: 'overrides',
+  style: 'style',
+  format: 'format',
+} as const;
+
+/**
  * The keys each construct is read from; a key not here is kept verbatim and
  * marked opaque (ADR-011). The document's and the sheet's lists are short of
  * what yxl accepts and grow as constructs are modeled.

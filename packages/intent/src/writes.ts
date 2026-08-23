@@ -12,6 +12,7 @@ import {
 import { holds, type Node, type Op, type Path, renderScalar } from '@yxl-vscode/cst';
 import { normalize, written } from '@yxl-vscode/normalize';
 import {
+  KEY,
   ordered,
   propertiesOf,
   type StyleProperty,
@@ -68,7 +69,7 @@ export function onEvery(
 
 /** Several cells' ops, with those that would each *make* the `cells:` key folded into the first. */
 function folded(ops: readonly Op[]): Op[] {
-  const makes = (one: Op) => one.op === 'addSource' && one.key === CELLS;
+  const makes = (one: Op) => one.op === 'addSource' && one.key === KEY.cells;
   const making = ops.filter(makes);
   if (making.length < 2) return [...ops];
 
@@ -103,7 +104,7 @@ function onCell(
   const inStyle = resolve(own.filter((one) => one.name === null)).format !== undefined;
 
   const carries = [
-    ...asStyle(spec, layers, own, inStyle ? want : without(want, FORMAT)),
+    ...asStyle(spec, layers, own, inStyle ? want : without(want, KEY.format)),
     ...(inStyle ? [] : asFormat(layers, want)),
   ];
 
@@ -151,7 +152,10 @@ export function asException(
   read: Reading,
 ): Intent | null {
   const layers = styleAt(sheet, at);
-  const carries = [...asStyle(spec, layers, [], without(want, FORMAT)), ...asFormat(layers, want)];
+  const carries = [
+    ...asStyle(spec, layers, [], without(want, KEY.format)),
+    ...asFormat(layers, want),
+  ];
   const said = carries.filter((one) => one.source !== null);
   if (said.length === 0) return null;
 
@@ -179,7 +183,7 @@ function asStyle(
   const anything = propertiesOf(beyond(mine, under, {})).length > 0;
   const how = anything ? normalize(beyond(mine, under, named), spec.grid.styles) : null;
 
-  return [{ key: STYLE, source: how === null ? null : written(how) }];
+  return [{ key: KEY.style, source: how === null ? null : written(how) }];
 }
 
 /** The `format:` the cell would carry: the ask itself, since one key holds all of it. */
@@ -189,9 +193,10 @@ function asFormat(layers: readonly StyleLayer[], want: StyleSays): Carries[] {
 
   const under = resolve(layers.filter((one) => !ownFormat(one))).format;
   const supplied = under !== undefined && under !== null;
-  if (wanted === under || (wanted === null && !supplied)) return [{ key: FORMAT, source: null }];
+  if (wanted === under || (wanted === null && !supplied))
+    return [{ key: KEY.format, source: null }];
 
-  return [{ key: FORMAT, source: wanted === null ? 'null' : renderScalar(wanted, 'double') }];
+  return [{ key: KEY.format, source: wanted === null ? 'null' : renderScalar(wanted, 'double') }];
 }
 
 /** Whether the layer is the cell's own `format:` key, which the ask replaces outright. */
@@ -280,7 +285,7 @@ function newCell(
   const found = located(sheet.node, read);
   if (found.kind === 'refused' || found.node.kind !== 'map') return null;
 
-  const already = holds(found.node, CELLS);
+  const already = holds(found.node, KEY.cells);
   const entry = written.map((one) => `${one.key}: ${one.source}`).join(', ');
   const body = written.length === 1 ? entry : `{ ${entry} }`;
 
@@ -288,8 +293,8 @@ function newCell(
     file: found.file,
     ops: [
       already
-        ? { op: 'addSource', path: [...found.path, CELLS], key: at, source: body }
-        : { op: 'addSource', path: found.path, key: CELLS, source: `${at}:\n  ${body}` },
+        ? { op: 'addSource', path: [...found.path, KEY.cells], key: at, source: body }
+        : { op: 'addSource', path: found.path, key: KEY.cells, source: `${at}:\n  ${body}` },
     ],
   };
 }
@@ -311,7 +316,7 @@ export function onBand(
 
   const kept = beyond({ ...resolve(band.style), ...want }, resolve(under), {});
   const how = propertiesOf(kept).length === 0 ? null : normalize(kept, spec.grid.styles);
-  const held = holds(found.node, STYLE);
+  const held = holds(found.node, KEY.style);
 
   const ops = bandOps(found, how === null ? null : written(how), held, read);
   return { file: found.file, ops, moves: reaches(spec.grid, band.node) };
@@ -326,15 +331,15 @@ function bandOps(
 ): readonly Op[] {
   if (source !== null) {
     return held
-      ? [{ op: 'write', path: [...found.path, STYLE], source }]
-      : [{ op: 'addSource', path: found.path, key: STYLE, source }];
+      ? [{ op: 'write', path: [...found.path, KEY.style], source }]
+      : [{ op: 'addSource', path: found.path, key: KEY.style, source }];
   }
   if (!held) return [];
 
   // A band written for its look alone goes when the look does, and takes the
   // `columns:` key with it where it was the only band under it.
   const rest = found.node.kind === 'map' ? found.node.entries.length : 0;
-  if (rest > 2) return [{ op: 'remove', path: [...found.path, STYLE] }];
+  if (rest > 2) return [{ op: 'remove', path: [...found.path, KEY.style] }];
 
   return [{ op: 'remove', path: soleBand(found, read) ? found.path.slice(0, -1) : found.path }];
 }
@@ -349,7 +354,7 @@ export function atSupplier(
   const found = located(supplier.node, read);
   if (found.kind === 'refused' || found.node.kind !== 'map') return null;
 
-  const into = supplier.key === 'style' && supplier.name === null ? STYLE : null;
+  const into = supplier.key === 'style' && supplier.name === null ? KEY.style : null;
   const ops = writing(found, into, want);
   if (ops === null) return null;
 
@@ -419,10 +424,6 @@ function nodeOf(origin: FacetOrigin): NodeId | null {
 
   return origin.node;
 }
-
-const STYLE = 'style';
-const FORMAT = 'format';
-const CELLS = 'cells';
 
 /** Whether the cell's own `style:` put it there, a declaration it names included: rewriting that key replaces all of it. */
 function fromCell(layer: StyleLayer): boolean {
