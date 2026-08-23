@@ -8,7 +8,7 @@ import {
   type StyleSays,
   type VAlign,
 } from '@yxl-vscode/spec';
-import { addrAt, type Color, parseColor } from '@yxl-vscode/units';
+import { addrAt, type Color, painted, parseColor } from '@yxl-vscode/units';
 import { faces, sizes } from './fonts';
 import { cleared, numbers, quickly } from './formats';
 import { HELD } from './keys';
@@ -148,7 +148,7 @@ function ink(of: Ink, showing: Showing, asks: Asks): HTMLElement {
   const mark = document.createElement('span');
   mark.className = 'letter';
   mark.textContent = of.mark;
-  mark.style.setProperty('border-bottom-color', now === null ? 'transparent' : picked(now));
+  mark.style.setProperty('border-bottom-color', now === null ? 'transparent' : painted(now));
 
   const menu = {
     name: of.name,
@@ -170,7 +170,7 @@ function palette(of: Ink, now: Color | null, showing: Showing, asks: Asks): HTML
 
   panel.append(entry(of.clears, { disabled: now === null, className: 'clears' }, () => wear(null)));
   panel.append(
-    ...swatches(now === null ? null : picked(now).slice(1), of.opens, (digits) =>
+    ...swatches(now === null ? null : painted(now).slice(1), of.opens, (digits) =>
       wear(parseColor(digits)),
     ),
   );
@@ -237,10 +237,6 @@ const PICKS: readonly Pick[] = [
 ];
 
 /** A colour as the picker takes one: six digits behind a `#`, an eight-digit form's alpha dropped. */
-function picked(of: Color): string {
-  const digits = of.startsWith('#') ? of.slice(1) : of;
-  return `#${digits.length === 8 ? digits.slice(2) : digits}`;
-}
 
 /** One of a group, showing where the text sits and asking for it there — or, where it already is, nowhere. */
 function pick(of: Pick, showing: Showing, asks: Asks): HTMLElement {

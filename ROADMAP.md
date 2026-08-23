@@ -2954,6 +2954,21 @@ than widening it silently.
 
 ## 11. Living changelog
 
+### 2026-08-23 — A colour written `00RRGGBB` is not invisible
+A real spec drew a sheet of blank cells: every value laid out, every row the
+right height, and not one character on the screen.
+
+Its styles spell every colour `AARRGGBB` with a `00` alpha — `'00303AB2'` — which
+is what yxl writes into the workbook and what Excel reads as **opaque**: Excel
+ignores the alpha byte of a `<color rgb>`. The view moved that byte to the end
+for CSS, which reads `#303AB200` as **fully transparent**. The one existing test
+used `FF00FF00`, whose alpha happens to be opaque either way.
+
+So the view drops the alpha rather than moving it, which is what Excel does.
+`painted` in `units` is the one answer to "how does a screen paint this colour",
+and the three places that each had their own — a cell's text and fill, the
+toolbar's swatch and picker, a tab's colour — now ask it.
+
 ### 2026-08-23 — The splitter, drawn — Phase 12 complete
 The last of `docs/spec.md` §2's sheet keys, and the last item in the phase.
 
