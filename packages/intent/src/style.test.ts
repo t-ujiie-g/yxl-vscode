@@ -300,15 +300,31 @@ describe('the whole look taken off at once', () => {
     expect(taken(spec, answer)).toBe(`${SALES}    cells:\n      A1: 1\n`);
   });
 
-  it('leaves a cell that names a declaration wearing nothing of it', () => {
+  it('takes the name off a cell that wore a declaration, and writes nothing in its place', () => {
     const spec = `defs:\n  styles:\n    header: { font: { bold: true } }\n${SALES}    cells:\n      A1: { value: 1, style: header }\n`;
     const [answer] = offered(spec, at(1, 1), OFF);
     if (answer === undefined) throw new Error('nothing was offered');
 
-    // The name goes and each of its properties is said off, which is the
-    // schema's own way of wearing none of it (ADR-038).
-    expect(taken(spec, answer)).not.toContain('style: header');
-    expect(worn(taken(spec, answer))).toEqual({ 'font.bold': null });
+    expect(taken(spec, answer)).toContain('      A1: 1\n');
+    expect(worn(taken(spec, answer))).toEqual({});
+  });
+
+  it('keeps the declaration where only some of it comes off', () => {
+    const spec = `defs:\n  styles:\n    header: { font: { bold: true }, fill: FFFF00 }\n${SALES}    cells:\n      A1: { value: 1, style: header }\n`;
+    const answers = offered(spec, at(1, 1), { 'font.bold': null });
+    const cell = answers.find((one) => one.id === 'onCells');
+    if (cell === undefined) throw new Error('the cell was not offered');
+
+    expect(taken(spec, cell)).toContain('style: { extends: header, font: { bold: null } }');
+  });
+
+  it('takes the name off for one property too, where the name gave only that', () => {
+    const spec = `defs:\n  styles:\n    strong: { font: { bold: true } }\n${SALES}    cells:\n      A1: { value: 1, style: strong }\n`;
+    const answers = offered(spec, at(1, 1), { 'font.bold': null });
+    const cell = answers.find((one) => one.id === 'onCells');
+    if (cell === undefined) throw new Error('the cell was not offered');
+
+    expect(taken(spec, cell)).toContain('      A1: 1\n');
   });
 
   it('says nothing where the cells wear nothing to take off', () => {

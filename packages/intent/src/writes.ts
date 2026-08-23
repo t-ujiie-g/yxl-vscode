@@ -124,9 +124,13 @@ function asStyle(
 
   const under = resolve(layers.filter((one) => !fromCell(one)));
   const named = resolve(own.filter((one) => one.name !== null));
-  const gives = beyond({ ...resolve(own), ...want }, under, named);
+  const mine = { ...resolve(own), ...want };
 
-  const how = propertiesOf(gives).length === 0 ? null : normalize(gives, spec.grid.styles);
+  // Measured with no declaration kept, since `normalize` decides whether one is
+  // named at all — and nothing to say means no key rather than a map of nulls.
+  const anything = propertiesOf(beyond(mine, under, {})).length > 0;
+  const how = anything ? normalize(beyond(mine, under, named), spec.grid.styles) : null;
+
   return [{ key: STYLE, source: how === null ? null : written(how) }];
 }
 
