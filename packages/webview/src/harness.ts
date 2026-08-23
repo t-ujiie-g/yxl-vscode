@@ -106,6 +106,7 @@ export function showingOf(of: Partial<Showing> = {}): Showing {
     line: 'thin',
     menu: null,
     pointed: null,
+    comes: null,
     ...of,
   };
 }

@@ -238,13 +238,35 @@ export interface Fitting {
   readonly cells: readonly DrawnCell[];
 }
 
+/**
+ * What the rectangle a reader has selected comes to, as every spreadsheet says
+ * under the grid: what it holds, how much of that is numbers, and their sum.
+ * Display only, and from the evaluated values (ADR-014).
+ */
+export interface Summed {
+  readonly kind: 'summed';
+  readonly sheet: string;
+  readonly held: number;
+  readonly numbers: number;
+  readonly sum: number;
+}
+
 /** The keyboard back in the grid, after the host had to put it somewhere else. */
 export interface Focus {
   readonly kind: 'focus';
 }
 
 /** Everything the host sends the view. */
-export type ToView = Drawing | Fitting | Inspected | Highlighted | Refused | Said | Focus | Found;
+export type ToView =
+  | Drawing
+  | Fitting
+  | Inspected
+  | Highlighted
+  | Refused
+  | Said
+  | Focus
+  | Found
+  | Summed;
 
 /**
  * Everything the view sends back. `edit`, `resolve` and `override` carry what
@@ -273,6 +295,7 @@ export type FromView =
   | ({ readonly kind: 'wear' } & Worn)
   | ({ readonly kind: 'worn'; readonly choice: string } & Worn)
   | ({ readonly kind: 'freeze' } & Frozen)
+  | ({ readonly kind: 'sum' } & Ranged)
   | ({ readonly kind: 'group' } & Grouped)
   | ({ readonly kind: 'grouped'; readonly choice: string } & Grouped)
   | ({ readonly kind: 'hide' } & Hidden)

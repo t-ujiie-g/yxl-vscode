@@ -445,7 +445,7 @@ not a date.
 | Hide and unhide a row or a column | ✅ — from the heading's own menu, with a mark on the heading a hidden run sits behind |
 | Group rows or columns, and collapse the group | ✅ — the outline is drawn on the headings, and the control writes the collapse |
 | A formula bar over the grid | ✅ — what the cell holds, editable there, never what it computes to |
-| What the selection comes to — count, sum, average | **Phase 10** — every spreadsheet's status bar |
+| What the selection comes to — count, sum, average | ✅ — under the grid, over the values as computed |
 | `Cmd`+`B` / `I` / `U` | **Phase 10** — the toolbar has them, the keyboard does not |
 | The font face and size | **Phase 10** — `docs/spec.md` §6 has both and the toolbar offers neither |
 | Currency, percent, more and fewer decimals; clear formatting | **Phase 10** |
@@ -1169,9 +1169,14 @@ gestures on a *heading*, and the headings are not selectors yet.
       was there. The bar is *rebuilt* on every restate rather than written
       into, because what it sends is about the cell selected now — unless the
       reader is typing in it, whose text is theirs until they leave.
-- [ ] **What the selection comes to**, under the grid: count, sum, average of
+- [x] **What the selection comes to**, under the grid: count, sum, average of
       the rectangle, from the evaluated values and unreachable from any write
       (ADR-014).
+      **In**, and computed on the **host** for the reason `find` and the fit are:
+      the view is drawn a window and a whole-column selection reaches past it
+      (ADR-019), so a sum taken there would be the sum of what happened to be
+      drawn. It is asked for only where the selection is more than one cell,
+      which is when a spreadsheet shows one.
 - [ ] **The keys a look has**: `Cmd`/`Ctrl`+`B`, `I`, `U` — the toolbar has
       them and the keyboard does not.
 - [ ] **The rest of the bar a reader expects**: the font face and size
@@ -2592,6 +2597,25 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-23 — What the selection comes to
+Phase 10's ninth item, and the third thing the host answers because the view can
+only see a window.
+
+- **Select a rectangle and the count, sum and average are said under the grid**,
+  quietly and on the right, where every spreadsheet says them. One cell says
+  nothing, which is what a spreadsheet does too.
+- **The host computes it**, for the reason `find` (Phase 8) and the fit
+  (ADR-043) are answered there: the view is drawn a window, and a whole-column
+  selection reaches past it (ADR-019) — a sum taken in the view would be the sum
+  of what happened to be drawn.
+- **It adds what a formula came to**, not the formula: the number a reader sees
+  is the number they expect to be added. That is display reading display, and it
+  reaches no write path (ADR-014).
+- **Count is what holds anything**, sum and average what is a number among it —
+  Excel's own division, and the reason a column of names says `Count 12` and
+  nothing else.
+- 1690 → 1699 tests.
 
 ### 2026-08-22 — A line break inside a cell, and the keys that leave it
 The everyday half of the editor, brought to what a reader of Sheets already

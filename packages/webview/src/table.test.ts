@@ -114,6 +114,7 @@ describe('a sheet larger than the window drawn of it', () => {
       line: 'thin',
       menu: null,
       pointed: null,
+      comes: null,
     });
 
     draw(into, showing(tall), on);
@@ -142,6 +143,7 @@ describe('a sheet larger than the window drawn of it', () => {
       line: 'thin',
       menu: null,
       pointed: null,
+      comes: null,
     });
 
     draw(into, showing(0), on);

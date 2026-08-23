@@ -63,6 +63,8 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
   let taken: Whole = null;
   /** The heading a menu was asked for on, which is the view's own like the rest of them. */
   let pointed: Showing['pointed'] = null;
+  /** What the host last said the selection comes to, which only a rectangle has. */
+  let comes: Showing['comes'] = null;
 
   /** Where the last edit was typed, so a refusal can put the reader back at it. */
   let typedAt: { row: number; col: number } | null = null;
@@ -76,6 +78,7 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
     line,
     menu,
     pointed,
+    comes,
     sources,
     reached,
     refused,
@@ -141,6 +144,17 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
     return at >= run.first && at <= run.last ? run : { first: at, last: at };
   };
 
+  /** What the selection comes to, asked of the host: the view has only a window (ADR-019). */
+  const summing = (): void => {
+    const rect = spanned();
+    if (rect === null) {
+      comes = null;
+      return;
+    }
+
+    host.postMessage({ kind: 'sum', sheet: named(), ...rect });
+  };
+
   /** The rectangle selected, read live: the grid restates rather than redraws on a selection. */
   const spanned = (): Rect | null => {
     if (selected === null || anchor === null) return null;
@@ -172,6 +186,7 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       anchor = { row, col };
       taken = null;
       sources = null;
+      comes = null;
       host.postMessage({ kind: 'inspect', sheet: named(), row, col });
       restated();
     },
@@ -181,6 +196,7 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       taken = null;
       sources = null;
       host.postMessage({ kind: 'inspect', sheet: named(), row, col });
+      summing();
       restated();
     },
     reveal: (source) => {
@@ -266,6 +282,7 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       taken = 'columns';
       sources = null;
       host.postMessage({ kind: 'inspect', sheet: named(), row: 1, col: 1 });
+      summing();
       restated();
     },
     takeBand: (axis, at, extend) => {
@@ -282,6 +299,7 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       taken = along;
       sources = null;
       host.postMessage({ kind: 'inspect', sheet: named(), row: near.row, col: near.col });
+      summing();
       restated();
     },
     pointAt: (at) => {
@@ -444,6 +462,15 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       const wide = rule === null ? null : widest(sent.cells, rule);
       if (wide !== null && sent.sheet === named()) {
         asks.resize(sent.axis, sent.at, sizeOf(sent.axis, wide));
+      }
+      return;
+    }
+
+    if (sent.kind === 'summed') {
+      // Only while it is still the sheet that asked: a drawing may have come between.
+      if (sent.sheet === named()) {
+        comes = sent;
+        restated();
       }
       return;
     }

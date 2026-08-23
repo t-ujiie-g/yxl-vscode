@@ -67,6 +67,7 @@ function showing(of: {
     line: 'thin',
     menu: of.menu ?? null,
     pointed: null,
+    comes: null,
   };
 }
 

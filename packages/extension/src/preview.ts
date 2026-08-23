@@ -26,6 +26,7 @@ import { wear } from './look';
 import { freeze } from './panes';
 import { drawRun, type Projected, project, redraw, type Window } from './project';
 import { resize } from './size';
+import { summed } from './summing';
 import { goBack } from './undo';
 import {
   emptied,
@@ -247,6 +248,17 @@ export class Preview {
     void this.panel.webview.postMessage({ kind: 'found', sheet: name, text, cells });
   }
 
+  /** What the rectangle a reader has selected comes to, said under the grid (ADR-014). */
+  private summing(ranged: Ranged): void {
+    const sheet = this.drawn?.grid?.sheets.find((one) => one.name === ranged.sheet);
+    if (sheet === undefined) return;
+
+    const rect = { top: ranged.top, left: ranged.left, bottom: ranged.bottom, right: ranged.right };
+    const comes = summed(sheet, rect, this.drawn?.evaluation ?? null);
+
+    void this.panel.webview.postMessage({ kind: 'summed', sheet: ranged.sheet, ...comes });
+  }
+
   /** Every cell of a run, for the view to measure a fit against (ADR-043). */
   private measuring(name: string, axis: Axis, at: number): void {
     const sheet = this.drawn?.grid?.sheets.find((one) => one.name === name);
@@ -283,6 +295,11 @@ export class Preview {
     if (asked.kind === 'pasteAt') {
       const { kind, ...where } = asked;
       this.writing((spec, port) => this.pasteHere(spec, where, port));
+      return;
+    }
+
+    if (asked.kind === 'sum') {
+      this.summing(asked);
       return;
     }
 
