@@ -300,6 +300,7 @@ export type FromView =
   | ({ readonly kind: 'pasteAt' } & PastedAt)
   | ({ readonly kind: 'freeze' } & Frozen)
   | ({ readonly kind: 'merge' } & Merged)
+  | ({ readonly kind: 'table' } & Ranged)
   | ({ readonly kind: 'sum' } & Ranged)
   | ({ readonly kind: 'override'; readonly reason: string } & Typed)
   | {

@@ -27,6 +27,15 @@ function onCell(showing: Showing, asks: Asks, at: PointedCell): HTMLElement | nu
   );
 
   const entries = [
+    ...(rect.bottom > rect.top
+      ? [
+          entry(
+            'Make this a data table',
+            {},
+            shut(() => asks.table()),
+          ),
+        ]
+      : []),
     ...(merged
       ? [
           entry(

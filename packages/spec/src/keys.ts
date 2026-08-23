@@ -18,6 +18,7 @@ const CELL_KEYS = [...CELL_HOLDS, ...CELL_WEARS];
  */
 export const KEY = {
   cells: 'cells',
+  data: 'data',
   merges: 'merges',
   overrides: 'overrides',
   style: 'style',

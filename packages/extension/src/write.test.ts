@@ -11,6 +11,7 @@ import { line } from './lines';
 import { wear } from './look';
 import { freeze } from './panes';
 import { resize } from './size';
+import { table } from './tables';
 import { emptied, empty, type Port, resolve, type Spec, write, writeOverride } from './write';
 
 const ROOT = filePath('/specs/report.yxl.yaml') ?? ('' as FilePath);
@@ -619,6 +620,29 @@ describe('columns hidden from the preview', () => {
   });
 });
 
+describe('a rectangle kept as a table', () => {
+  const ROWS = `${SALES}    cells:\n      A1: APAC\n      B1: 1\n      A2: EMEA\n      B2: 2\n`;
+
+  it('writes the block and says how much of the sheet it took over', async () => {
+    const { spec, port, files, told } = editor({ [ROOT]: ROWS });
+
+    await table(spec, { sheet: 'Sales', top: 1, left: 1, bottom: 2, right: 2 }, port);
+
+    expect(files[ROOT]).toContain(
+      '    data:\n      - at: A1\n        values:\n          - [APAC, 1]\n          - [EMEA, 2]\n',
+    );
+    expect(told).toEqual(['2 rows are one table now.']);
+  });
+
+  it('says why where a cell there cannot go into one', async () => {
+    const spec = `${SALES}    cells:\n      A1: { value: APAC, format: "0.0%" }\n      A2: EMEA\n`;
+    const { spec: read, port, refusals } = editor({ [ROOT]: spec });
+
+    await table(read, { sheet: 'Sales', top: 1, left: 1, bottom: 2, right: 1 }, port);
+    expect(refusals[0]).toBe('`A1` says more than a value, which a table has nowhere to keep');
+  });
+});
+
 describe('rows put in and taken away from the heading', () => {
   const SHEET = `${SALES}    cells:\n      A1: Region\n      A5: Total\n`;
 
@@ -647,6 +671,7 @@ describe('rows put in and taken away from the heading', () => {
 
     await line(spec, asked, port);
     expect(refusals[0]).toContain('30 things, all of them `cells:` keys');
+    expect(refusals[0]).toContain('a `data:` table keeps its addresses in one place');
     expect(files[ROOT]).toBe(`${SALES}    cells:\n${many}`);
 
     await line(spec, asked, port, answers[0]?.[0]?.id);
