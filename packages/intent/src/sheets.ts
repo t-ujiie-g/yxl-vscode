@@ -1,6 +1,8 @@
-import { type Op, type Path, renderScalar, reordered } from '@yxl-vscode/cst';
-import type { Templated } from '@yxl-vscode/spec';
+import { sheetOf } from '@yxl-vscode/compile';
+import { holds, type Node, type Op, type Path, renderScalar, reordered } from '@yxl-vscode/cst';
+import type { Templated, Visibility } from '@yxl-vscode/spec';
 import {
+  type Color,
   type FilePath,
   parseQualifiedAddr,
   type QualifiedAddr,
@@ -78,10 +80,8 @@ export function deleteSheet(spec: Projection, where: Deleting, read: Reading): I
 
   const rest = spec.doc.sheets.filter((one) => one !== sheet);
   if (rest.length === 0) return refused('a workbook needs a sheet, and this is the only one');
-  if (!rest.some((one) => !one.opaque.some((key) => key.key === 'visibility'))) {
-    return refused(
-      'every other sheet sets `visibility:`, which this preview does not read yet, so it cannot tell one would be left visible',
-    );
+  if (!spec.grid.sheets.some((one) => one.name !== where.sheet && shows(one))) {
+    return refused('a workbook needs a sheet that shows, and this is the only one');
   }
 
   const held = [...cellsNaming(spec, where.sheet)];
@@ -171,4 +171,59 @@ export function moveSheet(spec: Projection, where: Ordering, read: Reading): Int
   const ops: readonly Op[] = [{ op: 'write', path: list, source: said }];
 
   return { kind: 'edit', file: found.file, patch: { ops }, expects: nothingChanges };
+}
+
+/** A sheet's tab as a gesture asks for it: whether it shows, and the colour it wears. */
+export interface Tabbed {
+  readonly sheet: SheetName;
+  readonly visibility?: Visibility;
+  readonly color?: Color | null;
+}
+
+/**
+ * A sheet's `visibility:` or `tab_color:`, the tab's own two keys
+ * (`docs/spec.md` §2). Hiding the last one that shows is refused, and
+ * `very_hidden` is left to VBA.
+ */
+export function setTab(spec: Projection, tabbed: Tabbed, read: Reading): Intent {
+  const sheet = sheetOf(spec.grid, tabbed.sheet);
+  if (sheet === null) return refused(`there is no sheet named \`${tabbed.sheet}\``);
+  if (sheet.visibility === 'very_hidden') {
+    return refused(`\`${tabbed.sheet}\` is \`very_hidden\`, which only Excel's VBA undoes`);
+  }
+
+  const shown = tabbed.visibility;
+  if (shown === 'very_hidden') return refused('`very_hidden` is not written by this editor');
+  if (shown === 'hidden' && !spec.grid.sheets.some((one) => one !== sheet && shows(one))) {
+    return refused('a workbook needs a sheet that shows, and this is the only one');
+  }
+
+  const found = located(sheet.node, read);
+  if (found.kind === 'refused') return found;
+  if (found.node.kind !== 'map') return refused(`\`${tabbed.sheet}\` is not written as a sheet`);
+
+  const ops: Op[] = [];
+  if (shown !== undefined) {
+    ops.push(...keyed(found.path, 'visibility', shown === 'visible' ? null : shown, found.node));
+  }
+  if (tabbed.color !== undefined) {
+    ops.push(...keyed(found.path, 'tab_color', tabbed.color, found.node));
+  }
+  if (ops.length === 0) return refused('nothing about this tab would change');
+
+  return { kind: 'edit', file: found.file, patch: { ops }, expects: nothingChanges };
+}
+
+/** Whether a sheet's tab is one Excel shows, which is every sheet but the two hidden spellings. */
+function shows(sheet: { readonly visibility: Visibility }): boolean {
+  return sheet.visibility === 'visible';
+}
+
+/** The op that writes a sheet's key, takes it out where the value is `null`, or nothing. */
+function keyed(path: Path, key: string, value: string | null, node: Node): Op[] {
+  const already = holds(node, key);
+  if (value === null) return already ? [{ op: 'remove', path: [...path, key] }] : [];
+  if (already) return [{ op: 'set', path: [...path, key], value }];
+
+  return [{ op: 'add', path, key, value, before: null }];
 }

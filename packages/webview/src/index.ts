@@ -226,6 +226,12 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       adding = name;
       host.postMessage({ kind: 'addSheet', name });
     },
+    setTab: (sheet, of) => {
+      refused = null;
+      said = null;
+      naming = null;
+      host.postMessage({ kind: 'setTab', sheet, ...of });
+    },
     moveSheet: (sheet, to) => {
       refused = null;
       said = null;

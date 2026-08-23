@@ -163,6 +163,10 @@ export interface Asks {
   readonly nameSheet: (index: number | null) => void;
   readonly deleteSheet: (sheet: string) => void;
   readonly moveSheet: (sheet: string, to: number) => void;
+  readonly setTab: (
+    sheet: string,
+    of: { visibility?: 'visible' | 'hidden'; color?: string | null },
+  ) => void;
   readonly select: (row: number, col: number) => void;
   readonly reachTo: (row: number, col: number) => void;
   readonly reveal: (source: Source) => void;

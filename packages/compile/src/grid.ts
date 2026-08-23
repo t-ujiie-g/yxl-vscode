@@ -1,6 +1,6 @@
 import type { Diagnostic } from '@yxl-vscode/diag';
-import type { CellType, ScalarValue, StyleSays, StyleValues } from '@yxl-vscode/spec';
-import type { A1Addr, NodeId, Rect, SheetName, StyleName } from '@yxl-vscode/units';
+import type { CellType, ScalarValue, StyleSays, StyleValues, Visibility } from '@yxl-vscode/spec';
+import type { A1Addr, Color, NodeId, Rect, SheetName, StyleName } from '@yxl-vscode/units';
 import type { CellProvenance } from './provenance';
 import type { StyleLayer } from './style';
 
@@ -36,6 +36,8 @@ export interface CompiledSheet {
   readonly rows: readonly CompiledBand[];
   readonly merges: readonly CompiledMerge[];
   readonly freeze: A1Addr | null;
+  readonly visibility: Visibility;
+  readonly tabColor: Color | null;
 }
 
 /** One `formulas:` range, kept as a range: `D2:D1048576` is two words, not a million cells (ADR-019). */

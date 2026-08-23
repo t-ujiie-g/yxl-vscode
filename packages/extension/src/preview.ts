@@ -1,8 +1,9 @@
 import { finds, reaches } from '@yxl-vscode/compile';
 import { type Engine, univerEngine } from '@yxl-vscode/evaluate';
+import type { Tabbed } from '@yxl-vscode/intent';
 import { did, type History, nothing } from '@yxl-vscode/patch';
 import type { Axis } from '@yxl-vscode/spec';
-import { addrAt, cellOf, filePath } from '@yxl-vscode/units';
+import { addrAt, cellOf, filePath, parseColor } from '@yxl-vscode/units';
 import type {
   Filled,
   FromView,
@@ -32,7 +33,7 @@ import { wear } from './look';
 import { merge } from './merges';
 import { freeze } from './panes';
 import { drawRun, type Projected, project, redraw, type Window } from './project';
-import { add, move, remove, rename } from './sheets';
+import { add, move, remove, rename, tab } from './sheets';
 import { resize } from './size';
 import { sort } from './sorts';
 import { summed } from './summing';
@@ -77,6 +78,11 @@ const WRITES = {
   deleteSheet: (spec: Spec, one: { sheet: string }, port: Port) => remove(spec, one.sheet, port),
   moveSheet: (spec: Spec, one: { sheet: string; to: number }, port: Port) =>
     move(spec, one.sheet, one.to, port),
+  setTab: (
+    spec: Spec,
+    one: { sheet: string; visibility?: 'visible' | 'hidden'; color?: string | null },
+    port: Port,
+  ) => tab(spec, one.sheet, worn(one), port),
   group: (spec: Spec, grouped: Grouped, port: Port, choice?: string) =>
     group(spec, grouped, port, choice),
   hide: (spec: Spec, one: Hidden, port: Port, choice?: string) => hide(spec, one, port, choice),
@@ -485,4 +491,15 @@ export class Preview {
   </body>
 </html>`;
   }
+}
+
+/** A tab's keys as the intent takes them, the colour parsed at the edge; an absent key stays absent. */
+function worn(one: {
+  visibility?: 'visible' | 'hidden';
+  color?: string | null;
+}): Omit<Tabbed, 'sheet'> {
+  const shown = one.visibility === undefined ? {} : { visibility: one.visibility };
+  if (one.color === undefined) return shown;
+
+  return { ...shown, color: one.color === null ? null : parseColor(one.color) };
 }

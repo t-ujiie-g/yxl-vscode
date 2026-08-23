@@ -34,6 +34,8 @@ export {
   deleteSheet,
   moveSheet,
   type Ordering,
+  setTab,
+  type Tabbed,
 } from './sheets';
 export { type Does, lineSaid, type Moving, type Shift, shifting } from './shift';
 export { type Dragged, setSize } from './size';

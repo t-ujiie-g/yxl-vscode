@@ -47,6 +47,8 @@ export interface DrawnSheet {
   readonly merges: readonly DrawnMerge[];
   readonly problems: readonly MarkedCell[];
   readonly freeze: { readonly row: number; readonly col: number } | null;
+  readonly visibility: 'visible' | 'hidden' | 'very_hidden';
+  readonly tabColor: string | null;
 }
 
 /** Rows of a `data:` block to be put in order, by the column the selection starts in. */
@@ -185,7 +187,13 @@ export type About =
   | { readonly kind: 'addSheet'; readonly name: string }
   | { readonly kind: 'renameSheet'; readonly sheet: string; readonly name: string }
   | { readonly kind: 'deleteSheet'; readonly sheet: string }
-  | { readonly kind: 'moveSheet'; readonly sheet: string; readonly to: number };
+  | { readonly kind: 'moveSheet'; readonly sheet: string; readonly to: number }
+  | {
+      readonly kind: 'setTab';
+      readonly sheet: string;
+      readonly visibility?: 'visible' | 'hidden';
+      readonly color?: string | null;
+    };
 
 /**
  * `Cmd`+`V` in the grid: where it goes, what the grid holds of its own, and what

@@ -212,7 +212,17 @@ export function tabs(showing: Showing, asks: Asks): HTMLElement {
     tab.type = 'button';
     tab.textContent = sheet.name;
     tab.className = index === showing.sheet ? 'tab showing' : 'tab';
-    says(tab, 'Double-click to rename, drag to reorder');
+    if (sheet.visibility !== 'visible') tab.classList.add('away');
+    if (sheet.tabColor !== null) {
+      tab.classList.add('coloured');
+      tab.style.borderBottomColor = `#${sheet.tabColor}`;
+    }
+    says(
+      tab,
+      sheet.visibility === 'visible'
+        ? 'Double-click to rename, drag to reorder'
+        : `Hidden in Excel — \`${sheet.visibility}\``,
+    );
 
     tab.addEventListener('click', () => asks.showSheet(index));
 

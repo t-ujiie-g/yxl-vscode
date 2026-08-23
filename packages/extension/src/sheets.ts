@@ -1,4 +1,12 @@
-import { addSheet, deleteSheet, moveSheet, reading, renameSheet } from '@yxl-vscode/intent';
+import {
+  addSheet,
+  deleteSheet,
+  moveSheet,
+  reading,
+  renameSheet,
+  setTab,
+  type Tabbed,
+} from '@yxl-vscode/intent';
 import { applied, type Port, type Spec, sheetNamed } from './write';
 
 /**
@@ -49,4 +57,20 @@ export async function move(spec: Spec, said: string, to: number, port: Port): Pr
 
   const done = await applied(spec, intent, port, { anyway: false, from: 'move', about: null });
   if (done) port.said(`\`${said}\` moved.`);
+}
+
+/** A tab's own two keys, set from its menu: whether the sheet shows, and the colour it wears. */
+export async function tab(
+  spec: Spec,
+  said: string,
+  of: Omit<Tabbed, 'sheet'>,
+  port: Port,
+): Promise<void> {
+  const sheet = sheetNamed(said, port);
+  if (sheet === null) return;
+
+  const intent = setTab(spec, { sheet, ...of }, reading(port.text));
+
+  const done = await applied(spec, intent, port, { anyway: false, from: 'setTab', about: null });
+  if (done) port.said(`\`${said}\` set.`);
 }

@@ -167,3 +167,65 @@ export function pointedAt(
 
   return box;
 }
+
+/** The colours a palette offers: the two rows of standards a reader of Sheets or Excel knows. */
+const PALETTE: readonly string[] = [
+  '000000',
+  '434343',
+  '666666',
+  '999999',
+  'B7B7B7',
+  'CCCCCC',
+  'D9D9D9',
+  'EFEFEF',
+  'F3F3F3',
+  'FFFFFF',
+  '980000',
+  'FF0000',
+  'FF9900',
+  'FFFF00',
+  '00FF00',
+  '00FFFF',
+  '4A86E8',
+  '0000FF',
+  '9900FF',
+  'FF00FF',
+];
+
+/**
+ * The standard swatches and one of the reader's own, as every palette in this
+ * view offers them. `now` and what `take` is given are `RRGGBB`, which is how a
+ * spec writes a colour (`docs/spec.md` §6).
+ */
+export function swatches(
+  now: string | null,
+  opens: string,
+  take: (digits: string) => void,
+): HTMLElement[] {
+  const grid = document.createElement('div');
+  grid.className = 'swatches';
+
+  for (const digits of PALETTE) {
+    const one = document.createElement('button');
+    one.type = 'button';
+    one.className = now?.toLowerCase() === digits.toLowerCase() ? 'swatch here' : 'swatch';
+    one.title = `#${digits}`;
+    one.style.background = `#${digits}`;
+    one.addEventListener('click', () => take(digits));
+    grid.append(one);
+  }
+
+  const custom = document.createElement('label');
+  custom.className = 'entry custom';
+  custom.append('Custom\u2026');
+
+  const pick = document.createElement('input');
+  pick.type = 'color';
+  pick.className = 'pick';
+  pick.value = now === null ? opens : `#${now}`;
+  // The picker says `#rrggbb`; a spec writes `RRGGBB`.
+  pick.addEventListener('change', () => take(pick.value.replace('#', '').toUpperCase()));
+
+  custom.append(pick);
+  return [grid, custom];
+}

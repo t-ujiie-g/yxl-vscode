@@ -39,6 +39,8 @@ function showing(of: {
     heights: [],
     cells: of.cells ?? [],
     merges: [],
+    visibility: 'visible',
+    tabColor: null,
     problems: [],
     freeze: of.freeze ?? null,
   };

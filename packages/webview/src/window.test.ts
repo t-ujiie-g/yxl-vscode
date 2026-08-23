@@ -13,6 +13,8 @@ function sheet(of: Partial<DrawnSheet> = {}): DrawnSheet {
     heights: [],
     cells: [],
     merges: [],
+    visibility: 'visible',
+    tabColor: null,
     problems: [],
     freeze: null,
     ...of,

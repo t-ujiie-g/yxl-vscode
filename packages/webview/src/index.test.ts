@@ -34,6 +34,8 @@ function sheet(of: Partial<DrawnSheet> = {}): DrawnSheet {
     merges: [],
     problems: [],
     freeze: null,
+    visibility: 'visible',
+    tabColor: null,
     ...of,
   };
 }
@@ -1203,6 +1205,66 @@ describe('the bar over the grid', () => {
     tabs[1]?.dispatchEvent(new Event('dragstart', { bubbles: true }));
     tabs[1]?.dispatchEvent(new Event('drop', { bubbles: true, cancelable: true }));
     expect(sent.filter((one) => one.kind === 'moveSheet')).toHaveLength(1);
+  });
+
+  it('hides a sheet from its tab, and offers to unhide the one that is hidden', () => {
+    const { into, sent, told } = view();
+    told({ ...drawing, sheets: [sheet(), sheet({ name: 'Notes', cells: [] })] });
+
+    const point = () =>
+      into
+        .querySelectorAll<HTMLButtonElement>('.tabs .tab:not(.add)')[1]
+        ?.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+    const pick = (text: string) =>
+      [...into.querySelectorAll<HTMLButtonElement>('.pointed .entry')]
+        .find((one) => one.firstChild?.textContent === text)
+        ?.click();
+
+    point();
+    pick('Hide');
+    expect(sent.filter((one) => one.kind === 'setTab')).toEqual([
+      { kind: 'setTab', sheet: 'Notes', visibility: 'hidden' },
+    ]);
+
+    told({
+      ...drawing,
+      sheets: [sheet(), sheet({ name: 'Notes', cells: [], visibility: 'hidden' })],
+    });
+    expect(into.querySelectorAll('.tabs .tab.away')).toHaveLength(1);
+
+    point();
+    pick('Unhide');
+    expect(sent.filter((one) => one.kind === 'setTab').at(-1)).toEqual({
+      kind: 'setTab',
+      sheet: 'Notes',
+      visibility: 'visible',
+    });
+  });
+
+  it('sets a tab colour from a swatch, and takes it off again', () => {
+    const { into, sent } = view();
+
+    into
+      .querySelector<HTMLButtonElement>('.tabs .tab:not(.add)')
+      ?.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+    into.querySelectorAll<HTMLButtonElement>('.pointed .swatch')[11]?.click();
+
+    expect(sent.filter((one) => one.kind === 'setTab')).toEqual([
+      { kind: 'setTab', sheet: 'Sales', color: 'FF0000' },
+    ]);
+  });
+
+  it('offers nothing on a `very_hidden` tab, which only VBA undoes', () => {
+    const { into, told } = view();
+    told({ ...drawing, sheets: [sheet(), sheet({ name: 'Deep', visibility: 'very_hidden' })] });
+
+    into
+      .querySelectorAll<HTMLButtonElement>('.tabs .tab:not(.add)')[1]
+      ?.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+
+    const entries = [...into.querySelectorAll<HTMLButtonElement>('.pointed .entry')];
+    expect(entries.every((one) => one.disabled)).toBe(true);
+    expect(into.querySelectorAll('.pointed .swatch')).toHaveLength(0);
   });
 
   it("takes a sheet out from the tab's own menu", () => {

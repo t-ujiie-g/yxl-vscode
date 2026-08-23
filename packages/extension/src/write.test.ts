@@ -11,7 +11,7 @@ import { hide } from './hidden';
 import { line } from './lines';
 import { wear } from './look';
 import { freeze } from './panes';
-import { add, remove, rename } from './sheets';
+import { add, move, remove, rename, tab } from './sheets';
 import { resize } from './size';
 import { sort } from './sorts';
 import { table } from './tables';
@@ -700,6 +700,46 @@ describe('a sheet taken out from its tab', () => {
 
     await remove(spec, 'Sales', port);
     expect(refusals[0]).toContain('would be left with `#REF!`');
+  });
+});
+
+describe('a sheet dragged along the tab bar', () => {
+  it('writes the sheets in the new order, and says so', async () => {
+    const { spec, port, files, told, refusals } = editor({
+      [ROOT]: `${SALES}    cells:\n      A1: 1\n  - name: Notes\n    cells:\n      A1: hello\n`,
+    });
+
+    await move(spec, 'Notes', 0, port);
+
+    expect(refusals).toEqual([]);
+    expect(files[ROOT]).toBe(
+      'sheets:\n  - name: Notes\n    cells:\n      A1: hello\n  - name: Sales\n    cells:\n      A1: 1\n',
+    );
+    expect(told).toEqual(['`Notes` moved.']);
+  });
+});
+
+describe("a tab's own two keys", () => {
+  const BOTH = `${SALES}    cells:\n      A1: 1\n  - name: Notes\n    cells:\n      A1: hello\n`;
+
+  it('hides a sheet and gives it a colour, and says so', async () => {
+    const { spec, port, files, told, refusals } = editor({ [ROOT]: BOTH });
+
+    await tab(spec, 'Notes', { visibility: 'hidden' }, port);
+    await tab(spec, 'Sales', { color: parseColor('1F77B4') }, port);
+
+    expect(refusals).toEqual([]);
+    expect(files[ROOT]).toBe(
+      'sheets:\n  - name: Sales\n    cells:\n      A1: 1\n    tab_color: 1F77B4\n  - name: Notes\n    cells:\n      A1: hello\n    visibility: hidden\n',
+    );
+    expect(told).toEqual(['`Notes` set.', '`Sales` set.']);
+  });
+
+  it('is refused where hiding it would leave nothing showing', async () => {
+    const { spec, port, refusals } = editor({ [ROOT]: `${SALES}    cells:\n      A1: 1\n` });
+
+    await tab(spec, 'Sales', { visibility: 'hidden' }, port);
+    expect(refusals[0]).toBe('a workbook needs a sheet that shows, and this is the only one');
   });
 });
 

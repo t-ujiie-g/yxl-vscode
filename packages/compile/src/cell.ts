@@ -1,5 +1,5 @@
 import type { CellFacets, ScalarValue, SpecNode, Style, Templated } from '@yxl-vscode/spec';
-import { type A1Addr, parseA1Addr } from '@yxl-vscode/units';
+import { type A1Addr, type Color, parseA1Addr, parseColor } from '@yxl-vscode/units';
 import { CODE } from './codes';
 import { type Ctx, filled, reject, text } from './ctx';
 import type { CompiledCell, CompiledRun } from './grid';
@@ -18,6 +18,14 @@ export function address(ctx: Ctx, at: Templated<A1Addr>, node: SpecNode): A1Addr
   const spelled = text(ctx, at, node);
   const read = parseA1Addr(spelled);
   if (read === null) reject(ctx, CODE.badAddress, `\`${spelled}\` is not a cell reference`, node);
+  return read;
+}
+
+/** A colour after its parameters are substituted, or `null` with the reason reported. */
+export function colour(ctx: Ctx, said: Templated<Color>, node: SpecNode): Color | null {
+  const spelled = text(ctx, said, node);
+  const read = parseColor(spelled);
+  if (read === null) reject(ctx, CODE.badColour, `\`${spelled}\` is not a hex colour`, node);
   return read;
 }
 
