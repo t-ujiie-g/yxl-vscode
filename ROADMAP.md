@@ -1204,12 +1204,18 @@ gestures on a *heading*, and the headings are not selectors yet.
       (`units/format.ts`), which is why they keep the rest of it: `¥#,##0` gains
       a place as `¥#,##0.00`, and every section of a two-part code moves
       together, as Excel does it.
-- [ ] **Clearing a look off a cell that names a declaration** writes each of the
+- [x] **Clearing a look off a cell that names a declaration** writes each of the
       declaration's properties as `null` rather than dropping the `style:` key.
       The cell wears nothing either way (ADR-038) and the name does go, but the
       file says it the long way round. The same is true of taking one property
       off, so this is about how a cell's own look is written, not about
       clearing.
+      **Fixed** where it was decided: what a cell must say is now measured with
+      **no declaration kept**, because `normalize` is what decides whether one
+      is named at all. Where that leaves nothing to say there is no key, and
+      where it leaves something the declaration is still offered as a base — so
+      taking one property off a cell that wears more still writes
+      `{ extends: header, font: { bold: null } }`.
 - [ ] **A right-click menu on a cell.** The headings have one (it came with
       hide and unhide, which had nowhere else to live); a cell's is what is
       left — cut, copy, paste and clear to begin with, and it is where Phase
@@ -2646,6 +2652,25 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-23 — A look taken all the way off
+The item the last change left behind, which turned out to be one line of
+measurement in the wrong place.
+
+- **A cell that wore a declaration and now wears nothing says nothing.**
+  `A1: { value: 1, style: header }` cleared is `A1: 1`, where it used to be
+  `A1: { value: 1, style: { font: { bold: null } } }` — the name gone and a
+  mapping of nulls standing in for it, overriding a declaration that was no
+  longer named.
+- **Why it happened.** What a cell must say was measured against the
+  declaration it *currently* names, on the assumption that the name survives.
+  `normalize` is what decides that, and it had already decided otherwise. The
+  measurement is now taken with no declaration kept; the declaration is still
+  offered to `normalize` as a base, so nothing about the compact answer changes.
+- **Taking one property off is the same fix.** A cell wearing a declaration that
+  gives only that property loses the name too; one wearing a declaration that
+  gives more keeps it, as `{ extends: header, font: { bold: null } }`.
+- 1739 → 1741 tests.
 
 ### 2026-08-23 — The rest of the bar
 Phase 10's eleventh item: what a reader reaches for and did not find.
