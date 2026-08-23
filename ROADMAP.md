@@ -82,6 +82,18 @@ times over and is a different thing: there the workbook is the truth and the tex
 is a artifact. Here the text is the truth and the grid is the artifact. Every
 design call in this document resolves that way.
 
+### What it is, in one sentence (2026-08-23)
+
+**A VS Code extension in which everything `docs/spec.md` can say is reached the
+way a spreadsheet user would reach for it.** Two things that were in this
+document are no longer its business: a shell other than VS Code, and an
+assistant that proposes edits. Both were architecturally cheap and neither is
+what the project is for; they are taken out rather than left to stand in the
+phase list as things that will be got to (§6, 2026-08-23). The measure of done
+is **schema coverage** — which of the spec's sections a reader can see, and
+which they can change, from the grid — and the phases from 12 on are ordered by
+how often an ordinary day needs the gesture, the same rule §6 has always used.
+
 ## 2. Non-goals
 
 Inherited from `yxl` unchanged:
@@ -141,9 +153,8 @@ New to this project:
    position, never a silent drop or a guess. (yxl ADR-006)
 8. **Core is I/O-free and UI-free.** `cst` / `spec` / `loader` / `compile` /
    `intent` / `normalize` / `verify` touch neither the filesystem nor the VS Code
-   API nor the DOM. That is what makes them testable, and what makes a Tauri or
-   browser shell a packaging exercise later rather than a rewrite. (ADR-004,
-   after yxl ADR-003)
+   API nor the DOM. That is what makes them testable on values alone, and what
+   keeps `extension` a thin edge. (ADR-004, after yxl ADR-003)
 9. **Type-safe boundaries.** No bare `string` for A1 addresses, sheet names,
    colours, or node ids in internal APIs. Branded types, parsed once at the edge.
    (yxl design principle 6)
@@ -165,8 +176,6 @@ New to this project:
 
 ```
 ┌──────────────────────────────────────────────┐
-│ L5  Assistant        proposals only, never applies directly
-├──────────────────────────────────────────────┤
 │ L4  Intent Resolver  gesture → candidate patches → user choice
 ├──────────────────────────────────────────────┤
 │ L3  Grid+Provenance  disposable projection; what the UI draws
@@ -205,8 +214,8 @@ a higher one. The rows below are in dependency order, and that order is
 | `webview` | UI | The grid, the inspector, the resolution dialog. The only package that renders. |
 | `extension` | edge | VS Code custom editor registration, filesystem, `yxl` CLI invocation, settings. The only package that imports `vscode`. |
 
-`extension` and `webview` are replaceable — a Tauri shell swaps both and keeps
-everything above (§8 Q8). Nothing below them may know which shell it is in.
+Nothing below `webview` and `extension` may know it is in VS Code, or in a
+webview; that is what keeps the core testable on values (ADR-004).
 
 ### 4.3 Provenance — the shape that makes the rest work
 
@@ -372,9 +381,9 @@ Three modes, one implementation:
 | Definition edit | every cell the impact estimate named | warn — an unforeseen ripple is exactly the bug this catches |
 | **Refactor** | **empty** | **refuse — one changed cell fails it** |
 
-The third row is why an assistant can be allowed to restructure a spec at all: a
-proposal that provably changes nothing visible is safe to accept regardless of
-how it was produced. (ADR-009)
+The third row is what makes a refactor safe to accept at all: a proposal that
+provably changes nothing visible is safe regardless of how it was produced.
+(ADR-009)
 
 ## 5. Verification tiers
 
@@ -456,8 +465,14 @@ not a date.
 | Merge cells | ✅ — from the cell's own menu, and lossless: the covered values stay in the spec |
 | Fill down, and the drag handle | ✅ — `Cmd`+`D` / `Cmd`+`R`, offered as a range or as cells; no drag handle |
 | Sort a block of rows | ✅ — over a `data:` block, each row written where it goes exactly as it was |
-| See a chart, an image, a sparkline that the spec declares | **Phase 12** |
-| Insert a chart over a selection, place an image | **Phase 12** |
+| Add, rename, delete, reorder a sheet; a tab colour; hide a sheet | **Phase 12** — the tabs switch today and do nothing else |
+| See that a sheet has an auto filter, and put one on | **Phase 13** — `filter:` is opaque today |
+| A note on a cell; a hyperlink; a dropdown list of allowed values | **Phase 13** — all three are opaque today |
+| Conditional formatting, applied in the drawing | **Phase 13** — over the evaluated values, display only |
+| Format a region as a table | **Phase 13** |
+| See a chart, an image, a sparkline that the spec declares | **Phase 14** |
+| Insert a chart over a selection, place an image | **Phase 14** |
+| Edit rich text, run by run | **Phase 15** — it is drawn today |
 | Edit a cell whose value comes from a CSV, a parameter, a definition | ✅ Phase 7 |
 | A second selection with `Cmd`+click | **not planned** — every write here is about one rectangle, and §4.4's answers are counted over one |
 | Zoom, a format painter, freeze by dragging the pane edge | **not planned yet** — none of them is in the schema, and none is load-bearing |
@@ -1360,7 +1375,51 @@ Deliberately **not** here: a second selection with `Cmd`+click (every answer in
       changes the order of the lines and nothing about any of them. Numbers,
       then text, then nothing, as a column orders in Excel.
 
-### Phase 12 — What sits on the sheet
+### Phase 12 — The sheets themselves
+A workbook is more than one sheet, and a spreadsheet user reaches for the tab bar
+before the toolbar. Today the tabs *switch*; they do nothing else, and the keys
+that say what a sheet is — `visibility`, `tab_color`, `gridlines`, `split` —
+are carried through untouched and shown as nothing (`docs/spec.md` §2).
+- [ ] **A new sheet**, from a `+` on the tab bar: one `- name:` entry at the end
+      of `sheets:`, and the tab bar shown even for one sheet so there is
+      somewhere to press
+- [ ] **Rename a sheet** by double-clicking its tab — the sheet's `name:`, and
+      every `Sheet!A1` reference that names it, through `shifted`'s parser
+- [ ] **Delete a sheet** from the tab's menu, refused where it is the last
+      visible one (§2) or where another sheet's formula names it
+- [ ] **Reorder** by dragging a tab — the `sheets:` sequence is tab order
+- [ ] **Hide and unhide** a sheet (`visibility: hidden`), and `very_hidden`
+      drawn as what it is and not offered; **tab colour** from the tab's menu
+- [ ] **Gridlines off** drawn as off, and a switch for it in the sheet's menu
+- [ ] **`split:`** drawn as the splitter it is, read-only; the freeze gesture
+      already refuses a split sheet with the reason
+
+### Phase 13 — What decorates a cell
+`docs/spec.md` §10 and §11: the constructs that sit *on* cells rather than fill
+them. All of them are opaque today (ADR-011) — preserved byte for byte, and
+invisible. Ordered by how often a reader meets one.
+- [ ] **Auto filter** (`filter:`) — the dropdown mark on the header row where
+      the sheet has one, and *Create a filter* / *Remove filter* on a selection.
+      Per-column criteria are not in the schema yet, so neither is filtering
+      the preview; what is drawn is that a filter is there and where
+- [ ] **Notes** (`comments:`) — the red corner, the note on hover, and *Insert
+      note* / *Edit note* / *Delete note* in the cell's own menu
+- [ ] **Hyperlinks** (`links:`) — drawn as links, `Cmd`+click follows one, and
+      *Insert link* in the cell's menu with the URL or the `Sheet!A1` it goes to
+- [ ] **Data validation** (`validations:`) — a `list:` drawn as the dropdown a
+      spreadsheet shows, its choices offered when the cell is edited; the other
+      kinds drawn as the mark and the prompt; *Data validation…* on a selection
+      for the `list` kind first, since that is the one a reader makes by hand
+- [ ] **Conditional formatting** (`conditional:`) — the rules *applied* in the
+      drawing, over the evaluated values (display only, ADR-014); the rule
+      itself read-only in the inspector to begin with
+- [ ] **Tables** (`tables:`) — the banded region drawn with its header, the
+      *Format as table* gesture over a selection, and structured references
+      left alone by `moved` and `shifted` as they already are
+- [ ] Each of these **in the inspector** with where it came from, the day it is
+      drawn — provenance is what makes the rest editable later (ADR-005)
+
+### Phase 14 — What sits on the sheet
 Charts, images, sparklines and shapes — all four are in the spec already
 (`docs/spec.md` §12, §13, §18, §19). This editor carries them through untouched
 (ADR-011) and draws nothing of them, which is the largest hole in the preview.
@@ -1372,32 +1431,49 @@ Charts, images, sparklines and shapes — all four are in the spec already
       anchor rather than to a picture
 - [ ] What is still unmodelled stays opaque and byte-identical while it waits
 
-### Phase 13 — Deterministic refactors
-Everything here is detectable by analysis. **No model involved** — which is the
-point, and is why it precedes Phase 11.
+### Phase 15 — The rest of the schema, honestly
+What is left of `docs/spec.md` once the phases above are done: `print:` (§5),
+`protect:` (§16), `background:` (§13), form controls (§20), slicers (§21),
+pivots (§14), document properties and calculation (§15), and `rich:` *editing*
+(§3 — it is drawn today). None of it is an ordinary day's gesture; each is
+either **previewed and read-only** or **opaque and said so** — and the v1.0
+coverage table below is generated from which.
+- [ ] Every sheet and document key in the spec is in one of three states in the
+      code — editable, preview-only, opaque — and the README's table is
+      generated from that, so it cannot lie
+- [ ] `print:` and `protect:` previewed: the print area outlined, the locked
+      cells marked
+- [ ] `rich:` runs editable in the formula bar, one run at a time
+- [ ] The rest stays opaque, and the inspector says so where a cell is under one
+
+### Phase 16 — Deterministic refactors *(lowest priority)*
+Kept, and moved last, on 2026-08-23: this is spec hygiene rather than a
+spreadsheet gesture, which is not what the project is for (§1) — but it is
+model-free, it is what principle 6 looks like when it acts rather than waits,
+and Phase 11's `data:` conversion is its first row already shipped. Everything
+here is detectable by analysis.
 - [ ] Identical resolved styles at N sites → extract to `defs.styles`
-- [ ] Homogeneous `cells:` rectangles → `data:` with inline `values:`
+- [x] Homogeneous `cells:` rectangles → `data:` with inline `values:`
+      *(Phase 11, 2026-08-23, as a gesture on the rectangle)*
 - [ ] Columns of translated formulas → a `formulas:` range
+      *(half there: Phase 11's fill offers the range for a new column; the
+      refactor is the same answer over a column that already exists)*
 - [ ] Accumulated `overrides:` sharing a pattern → a definition
 - [ ] All of the above gated on **`expectedDiff: empty`** — a refactor that
       changes one rendered cell is rejected, automatically (ADR-009)
 - [ ] Presented as reviewable proposals with a diff, never applied silently
 
-### Phase 14 — Assistant
-- [ ] Proposal-only interface: output is a `Patch`, constrained to its JSON
-      schema, and passes §4.6 like anything else
-- [ ] Naming: `style_7` → a role name, from the evidence of where it is used
-- [ ] Parameterization proposals across near-identical sheets
-- [ ] Natural-language edits (non-empty expected diff — always shown, always
-      confirmed)
-- [ ] Context is a **summary** — style inventory, sheet shapes, detected
-      candidates — never the whole grid
-- [ ] Provider behind a seam; works with a local model, since correctness comes
-      from §4.6 rather than from the model
+### Taken out (2026-08-23)
+Two phases that were here are not any more, and not because they were hard:
 
-### Phase 15 — Beyond VS Code
-- [ ] Tauri shell reusing `webview` unchanged; only `extension` is replaced
-- [ ] Standalone `.yxl.yaml` file association for people who do not use VS Code
+- **An assistant** — natural-language edits, naming, parameterization proposals,
+  behind a provider seam. A VS Code extension is a poor home for one, and it is
+  not what this project is for. The machinery it would have needed (§4.6's gate,
+  `Patch` as the only way in) is there for the refactors and stays.
+- **Beyond VS Code** — a Tauri shell, a standalone file association. Nothing in
+  the architecture blocks either (ADR-004, §8 Q8), and nothing in this plan will
+  make room for them. If the demand appears it is a different project that
+  reuses these packages.
 
 ### v1.0 — Stability gate
 - [ ] Schema coverage stated honestly: which of `docs/spec.md`'s 23 sections are
@@ -2508,8 +2584,8 @@ closed the side bar behind the preview even though the view had taken the event:
 the forwarding happens whatever the view does with it. The extension binds the
 three to a command that does nothing, `when` the preview is the active panel, so
 VS Code's own keybinding does not match and the view's answer is the only one.
-The gesture stays in the view, where a shell that is not VS Code
-(`ROADMAP.md` Phase 15) will still have it.
+The gesture stays in the view, which is the side of the seam that knows what a
+key is.
 
 ### ADR-047 — A listener built at draw time does not decide about the selection
 **Accepted** 2026-08-23.
@@ -2671,8 +2747,9 @@ vocabulary, not another copy.
   YAML support — in a project that has no other. Whether the *extension* should
   contribute the mapping itself, so a reader gets it without configuring
   anything, is a question for the release phase and is asked there.
-- **Q8 — Tauri.** Phase 15. Nothing in the architecture blocks it (ADR-004); the
-  question is whether the demand exists.
+- **Q8 — Tauri.** ✅ *Closed 2026-08-23, not pursued.* A shell other than VS
+  Code is out of scope (§1). Nothing in the architecture blocks one (ADR-004),
+  and nothing in the plan will make room for one.
 - **Q9 — `overrides:` must exist upstream.** ✅ **Answered: it does.** Filed as
   [yxl#66](https://github.com/t-ujiie-g/yxl/issues/66) (2026-08-14) and shipped
   in **yxl v0.3.4** (2026-08-15) as `docs/spec.md` §23, close to the shape
@@ -2834,6 +2911,31 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-23 — What the project is for, said again
+A tidy of this document and a pass over the tree, between Phase 11 and what
+comes next.
+
+- **Two phases taken out.** The assistant (was Phase 14) and the shells beyond VS
+  Code (was Phase 15) are gone from the plan, not deferred: a VS Code extension
+  is a poor home for an assistant, and another shell is another project. §1 now
+  says in one sentence what this one is — *everything `docs/spec.md` can say,
+  reached the way a spreadsheet user would reach for it* — and the L5 layer, the
+  Tauri clause in principle 8 and §4.2, and §8 Q8 went with them.
+- **The schema is the measure, and it was not being measured.** The sheet keys a
+  spreadsheet user meets on an ordinary day — `filter:`, `comments:`, `links:`,
+  `validations:`, `conditional:`, `tables:`, and the sheet's own `visibility`,
+  `tab_color`, `gridlines` — were all opaque and none was on any phase's list.
+  They are now: **Phase 12** is the sheets themselves (add, rename, delete,
+  reorder, hide, colour — today the tabs only switch), **Phase 13** is what
+  decorates a cell (§10, §11), **Phase 14** is what sits on the sheet (was 12),
+  **Phase 15** is the rest of the schema said honestly, and the deterministic
+  refactors are **Phase 16** and marked lowest — spec hygiene, not a gesture.
+  The gesture table has eight new rows for all of that.
+- **The code:** the five Phase 11 modules each spelled a rectangle as `A1:B2`
+  and walked one into addresses for themselves. `rangeOf`, `addressesOf` and
+  `overlapping` are `units`' now, beside `rectOf`, which they are the way back
+  from. 1881 → 1885 tests.
 
 ### 2026-08-23 — Rows in order, and Phase 11 with them
 The last item of the phase: sorting a `data:` block.

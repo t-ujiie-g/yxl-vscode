@@ -47,6 +47,34 @@ export function rectOf(range: A1Range): Rect {
 }
 
 /** The columns a `columns:` band selects. */
+/** A rectangle as a range spells it, `A1:B2` — the way back from `rectOf`. */
+export function rangeOf(rect: Rect): A1Range {
+  const from = addrAt({ col: rect.left, row: rect.top });
+  const to = addrAt({ col: rect.right, row: rect.bottom });
+
+  return `${from}:${to}` as A1Range;
+}
+
+/** Every address of a rectangle, row by row as a reader reads it. */
+export function addressesOf(rect: Rect): A1Addr[] {
+  const all: A1Addr[] = [];
+  for (let row = rect.top; row <= rect.bottom; row += 1) {
+    for (let col = rect.left; col <= rect.right; col += 1) all.push(addrAt({ col, row }));
+  }
+
+  return all;
+}
+
+/** Whether two rectangles share a cell. */
+export function overlapping(one: Rect, than: Rect): boolean {
+  return (
+    one.left <= than.right &&
+    than.left <= one.right &&
+    one.top <= than.bottom &&
+    than.top <= one.bottom
+  );
+}
+
 export function columnsOf(span: ColumnSpan): Band {
   const [first, last] = endpoints(span);
   return { first: columnIndex(first), last: columnIndex(last ?? first) };

@@ -1,7 +1,15 @@
 import { type CompiledSheet, cellAt, sheetOf } from '@yxl-vscode/compile';
 import type { Op } from '@yxl-vscode/cst';
 import type { Axis } from '@yxl-vscode/spec';
-import { type A1Addr, addrAt, qualified, type Rect, type SheetName } from '@yxl-vscode/units';
+import {
+  type A1Addr,
+  addrAt,
+  addressesOf,
+  qualified,
+  type Rect,
+  rangeOf,
+  type SheetName,
+} from '@yxl-vscode/units';
 import { type Held, located, type Projection, type Reading } from './direct';
 import { type Entry, landed, taking } from './landing';
 import type { Candidate } from './resolve';
@@ -121,8 +129,8 @@ function asRange(sheet: CompiledSheet, where: Filling, read: Reading): Candidate
       : { top: one, left: from, bottom: one, right: where.rect.right };
     if (written(sheet, rect)) return null;
 
-    ranges.push(`at: ${ranged(rect)}\nformula: ${quoted(cell.formula)}`);
-    for (const at of spread(rect)) moves.push({ sheet: where.sheet, at });
+    ranges.push(`at: ${rangeOf(rect)}\nformula: ${quoted(cell.formula)}`);
+    for (const at of addressesOf(rect)) moves.push({ sheet: where.sheet, at });
   }
 
   const found = located(sheet.node, read);
@@ -169,26 +177,13 @@ function beside(
 
 /** Whether anything in the rectangle but its first cell is already written, which a range may not cross. */
 function written(sheet: CompiledSheet, rect: Rect): boolean {
-  return spread(rect)
+  return addressesOf(rect)
     .slice(1)
     .some((at) => cellAt(sheet, at) !== null);
 }
 
-function spread(rect: Rect): A1Addr[] {
-  const all: A1Addr[] = [];
-  for (let row = rect.top; row <= rect.bottom; row += 1) {
-    for (let col = rect.left; col <= rect.right; col += 1) all.push(addrAt({ col, row }));
-  }
-
-  return all;
-}
-
 function said(many: number): string {
   return many === 1 ? 'one range' : `${many} ranges`;
-}
-
-function ranged(rect: Rect): string {
-  return `${addrAt({ col: rect.left, row: rect.top })}:${addrAt({ col: rect.right, row: rect.bottom })}`;
 }
 
 function quoted(formula: string): string {

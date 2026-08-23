@@ -80,9 +80,7 @@ is one more than we want.
   are out of scope everywhere, and the DOM lib is configured only in
   `packages/webview/tsconfig.json` — so reaching for `document` or `process` in
   a core package is a compile error. Everything else takes its inputs as values
-  and returns values. This is what makes the core
-  testable and the Tauri shell (`ROADMAP.md` Phase 15) a packaging change
-  rather than a rewrite.
+  and returns values. This is what makes the core testable on values alone.
 - TypeScript **strict** everywhere. `any` needs a comment saying why, and that
   comment is one of the few that earns its place (§8.6).
 
