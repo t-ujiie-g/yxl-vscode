@@ -2,7 +2,7 @@ import { BORDER_EDGES, type ScalarValue, type StyleValues } from '@yxl-vscode/sp
 import { painted } from '@yxl-vscode/units';
 import { format as excel } from 'numfmt';
 import { iconOf } from './icons';
-import type { DrawnBar, DrawnCell, DrawnMerge, DrawnRun } from './protocol';
+import type { DrawnBar, DrawnCell, DrawnMerge, DrawnNote, DrawnRun } from './protocol';
 
 /** One cell as a `<td>`: what it says, and the look it was sent wearing. */
 export function drawCell(
@@ -139,6 +139,48 @@ export function typeInto(
   box.focus({ preventScroll: true });
   grown(box);
   if (seed === undefined) box.select();
+}
+
+/**
+ * Write a cell's note, in a box over the cell — a webview has no dialog to ask
+ * in. Enter sends what was typed, Escape and clicking away leave the note as it
+ * was.
+ */
+export function noteInto(
+  cell: HTMLTableCellElement,
+  was: DrawnNote | null,
+  done: (text: string | null) => void,
+): void {
+  const box = document.createElement('textarea');
+  box.className = 'noting';
+  box.rows = 3;
+  box.value = was?.text ?? '';
+
+  let over = false;
+  const leave = (text: string | null) => {
+    if (over) return;
+    over = true;
+    done(text);
+  };
+
+  box.addEventListener('keydown', (event) => {
+    event.stopPropagation();
+
+    if (leaving(event) !== null) {
+      event.preventDefault();
+      leave(box.value.trim());
+      return;
+    }
+    if (breaking(event)) {
+      event.preventDefault();
+      broken(box);
+      return;
+    }
+    if (event.key === 'Escape') leave(null);
+  });
+  box.addEventListener('blur', () => leave(null));
+
+  cell.append(box);
 }
 
 /** Where the cell an edit was committed from leaves the reader, in cells from where they were. */

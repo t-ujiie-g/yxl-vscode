@@ -219,6 +219,7 @@ function drawCells(
     for (const col of lines(drawing.at.col, drawing.columns, drawing.freeze?.col ?? 1)) {
       const addr = addrAt({ col, row });
       const cell = cellAt(sheet, addr);
+      const note = sheet.notes.get(addr) ?? null;
       const computed = evaluation?.values.get(qualified(sheet.name, addr)) ?? null;
 
       // The rules go over what the cell wears, since Excel's own conditional
@@ -237,7 +238,7 @@ function drawCells(
       const style = settled(resolve(layers));
       const holds =
         cell !== null && (cell.value !== null || cell.formula !== null || cell.rich !== null);
-      if (!holds && Object.keys(style).length === 0) continue;
+      if (!holds && note === null && Object.keys(style).length === 0) continue;
 
       drawn.push({
         row,
@@ -253,6 +254,7 @@ function drawCells(
         style,
         bar: barAt(sheet.conditional, deciding, over),
         icon: iconAt(sheet.conditional, deciding, over),
+        note: note === null ? null : { text: note.text, author: note.author },
       });
     }
   }

@@ -50,6 +50,15 @@ export interface CompiledSheet {
   readonly split: Split | null;
   readonly conditional: readonly CompiledRule[];
   readonly filter: Rect | null;
+  readonly notes: ReadonlyMap<string, CompiledNote>;
+}
+
+/** One note on a cell, its text substituted; the cell shows its own value still (`docs/spec.md` §10). */
+export interface CompiledNote {
+  readonly at: A1Addr;
+  readonly text: string;
+  readonly author: string | null;
+  readonly node: NodeId;
 }
 
 /** What decides a rule, its colours substituted; everything else is the spec's own (`docs/spec.md` §10). */

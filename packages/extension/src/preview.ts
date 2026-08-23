@@ -13,6 +13,7 @@ import type {
   Hidden,
   Lined,
   Merged,
+  Noted,
   Pasted,
   PastedAt,
   PastedText,
@@ -32,6 +33,7 @@ import { inspect, type Nodes, nodeUnder } from './inspect';
 import { line } from './lines';
 import { wear } from './look';
 import { merge } from './merges';
+import { note } from './notes';
 import { filter, freeze } from './panes';
 import { drawRun, type Projected, project, redraw, type Window } from './project';
 import { add, move, remove, rename, tab } from './sheets';
@@ -70,6 +72,7 @@ const WRITES = {
   wear: (spec: Spec, worn: Worn, port: Port, choice?: string) => wear(spec, worn, port, choice),
   freeze: (spec: Spec, frozen: Frozen, port: Port) => freeze(spec, frozen, port),
   filter: (spec: Spec, asked: Filtered, port: Port) => filter(spec, asked, port),
+  note: (spec: Spec, asked: Noted, port: Port) => note(spec, asked, port),
   merge: (spec: Spec, one: Merged, port: Port) => merge(spec, one, port),
   table: (spec: Spec, one: Ranged, port: Port) => table(spec, one, port),
   fill: (spec: Spec, one: Filled, port: Port, choice?: string) => fill(spec, one, port, choice),

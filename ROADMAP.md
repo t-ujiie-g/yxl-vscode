@@ -466,9 +466,10 @@ not a date.
 | Fill down, and the drag handle | ✅ — `Cmd`+`D` / `Cmd`+`R`, offered as a range or as cells; no drag handle |
 | Sort a block of rows | ✅ — over a `data:` block, each row written where it goes exactly as it was |
 | Add, rename, delete, reorder a sheet; a tab colour; hide a sheet | ✅ — all from the tab bar and the tab's own menu; `split:` is drawn read-only |
-| See that a sheet has an auto filter, and put one on | **Phase 13** — `filter:` is opaque today |
-| A note on a cell; a hyperlink; a dropdown list of allowed values | **Phase 13** — all three are opaque today |
-| Conditional formatting, applied in the drawing | **Phase 13** — over the evaluated values, display only |
+| See that a sheet has an auto filter, and put one on | ✅ — every header cell wears the mark, and the cell's menu puts one on or takes it off; the preview does not filter *by* it, since the schema carries no per-column criteria |
+| A note on a cell | ✅ — the red corner, the note on hover, and *Insert note* / *Edit note* / *Delete note* in the cell's own menu |
+| A hyperlink; a dropdown list of allowed values | **Phase 13** — both are opaque today |
+| Conditional formatting, applied in the drawing | ✅ — every kind of rule, over the evaluated values, display only (ADR-014) |
 | Format a region as a table | **Phase 13** |
 | See a chart, an image, a sparkline that the spec declares | **Phase 14** |
 | Insert a chart over a selection, place an image | **Phase 14** |
@@ -1487,8 +1488,16 @@ of its colours and why a header row showed no filter.
       `docs/spec.md` §10 says. Per-column criteria are not in the schema, so the
       preview does not filter by one and says so on the mark: what is drawn is
       that a filter is there and where.
-- [ ] **Notes** (`comments:`) — the red corner, the note on hover, and *Insert
-      note* / *Edit note* / *Delete note* in the cell's own menu
+- [x] **Notes** (`comments:`) — modelled rather than opaque, both forms read: the
+      bare text, and `{ text:, author: }`. A cell carrying one wears Excel's red
+      corner and says the note on hover, the author before it where one is
+      named. *Insert note* / *Edit note* / *Delete note* sit in the cell's own
+      menu, and the note is written in a box over the cell, since a webview has
+      no dialog to ask in. Which cell already carries a note is read from the
+      file rather than from the projection: two gestures inside one redraw would
+      otherwise write the address twice. Editing a note written the long way
+      changes its `text` and leaves its `author` alone. The note is in the
+      inspector too, with where it is written.
 - [ ] **Hyperlinks** (`links:`) — drawn as links, `Cmd`+click follows one, and
       *Insert link* in the cell's menu with the URL or the `Sheet!A1` it goes to
 - [ ] **Data validation** (`validations:`) — a `list:` drawn as the dropdown a
@@ -2993,6 +3002,31 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-24 — The note a cell carries
+`comments:` was opaque. It is modelled now, from the loader through the compiled
+grid to the drawing, and a note can be written, changed, and taken off.
+
+- **Both forms are read**: the bare text, and `{ text:, author: }`. Editing a
+  note written the long way changes its `text` and leaves the `author` alone —
+  a note always carries one in the file, so there is nothing to lose there.
+- **The red corner Excel puts on the cell**, with the note itself on hover, the
+  author before it where one is named. A cell that holds nothing but a note is
+  drawn for the note.
+- **The cell's own menu offers it**: *Insert note* where there is none, *Edit
+  note* and *Delete note* where there is one. The note is typed in a box over
+  the cell, in the pale yellow Excel shows a note in — a webview has no dialog
+  to ask in, and the tab bar's rename already works this way.
+- **Which cell already carries a note is read from the file, not the
+  projection.** The projection is redrawn on a debounce, so two gestures inside
+  one redraw would see a stale grid and write the same address twice — a
+  duplicate key rather than a refusal. The sheet's node still comes from the
+  grid; everything about the note itself is read out of the CST.
+- **The note is in the inspector**, with where it is written — the note's own
+  entry, not the cell's.
+- The README and §6's gesture table said auto filters and conditional formatting
+  were still opaque. Both have been drawn since last week; the rows now say so.
+- Comment shape: export 2.2, private 1.0, inline 1.5, 0 over the limit — held.
 
 ### 2026-08-23 — Refactoring pass after the decorations (`AGENTS.md` §8)
 Walked §8's lenses over what Phase 13 has added so far. Findings, and what each

@@ -19,6 +19,7 @@ const CELL_KEYS = [...CELL_HOLDS, ...CELL_WEARS];
 export const KEY = {
   at: 'at',
   cells: 'cells',
+  comments: 'comments',
   filter: 'filter',
   data: 'data',
   format: 'format',
@@ -31,6 +32,7 @@ export const KEY = {
   name: 'name',
   overrides: 'overrides',
   style: 'style',
+  text: 'text',
   tabColor: 'tab_color',
   visibility: 'visibility',
 } as const;
@@ -58,9 +60,11 @@ export const MODELED_KEYS = {
     'split',
     'conditional',
     'filter',
+    'comments',
   ]),
   cell: keySet(CELL_KEYS),
   override: keySet(['at', 'reason', ...CELL_KEYS]),
+  note: keySet(['text', 'author']),
   richRun: keySet(['text', 'font']),
   style: keySet(['extends', 'font', 'fill', 'border', 'align', 'protection', 'format']),
   font: keySet(['bold', 'italic', 'underline', 'strike', 'size', 'name', 'color']),

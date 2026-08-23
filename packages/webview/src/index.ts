@@ -75,6 +75,9 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
   /** The tab being renamed, kept here so a redraw does not take the box away. */
   let naming: number | null = null;
 
+  /** The cell whose note is being written, kept here for the same reason. */
+  let noting: Showing['noting'] = null;
+
   /** The tab last gone to, so the second click on it is the one that renames. */
   let went: { index: number; at: number } | null = null;
 
@@ -99,6 +102,7 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
     looking,
     editable: editable(),
     naming,
+    noting,
   });
 
   const redraw = (): void => {
@@ -348,6 +352,17 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       said = null;
       const rect = spanned() ?? { top: 1, left: 1, bottom: 1, right: 1 };
       host.postMessage({ kind: 'filter', sheet: named(), on, ...rect });
+    },
+    noteAt: (at) => {
+      noting = at;
+      redraw();
+    },
+    note: (row, col, text) => {
+      refused = null;
+      said = null;
+      noting = null;
+      redraw();
+      host.postMessage({ kind: 'note', sheet: named(), row, col, text });
     },
     takeAll: () => {
       const of = drawing?.sheets[sheet];

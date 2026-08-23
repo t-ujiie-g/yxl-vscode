@@ -4,6 +4,7 @@ import type {
   DataBlock,
   DataRow,
   FormulaRange,
+  Note,
   RowBand,
   Sheet,
 } from '@yxl-vscode/spec';
@@ -31,6 +32,7 @@ import type {
   CompiledCell,
   CompiledFill,
   CompiledMerge,
+  CompiledNote,
   CompiledRule,
   CompiledSheet,
   CompiledTest,
@@ -71,6 +73,7 @@ export function compileSheet(ctx: Ctx, sheet: Sheet): Drafted {
       gridlines: sheet.gridlines ?? true,
       split: sheet.split,
       filter: filterOf(ctx, sheet),
+      notes: notesOf(ctx, sheet.comments),
       conditional: sheet.conditional
         .map((rule) => conditionalRule(ctx, rule))
         .filter((rule) => rule !== null),
@@ -288,6 +291,25 @@ function decides(ctx: Ctx, rule: Conditional): CompiledTest | null {
   }
 
   return test;
+}
+
+/** Each note by the address it sits on; the later of two notes on one cell is the one Excel keeps. */
+function notesOf(ctx: Ctx, comments: readonly Note[]): Map<string, CompiledNote> {
+  const notes = new Map<string, CompiledNote>();
+
+  for (const note of comments) {
+    const at = address(ctx, note.at, note);
+    if (at === null) continue;
+
+    notes.set(at, {
+      at,
+      text: text(ctx, note.text, note),
+      author: note.author === null ? null : text(ctx, note.author, note),
+      node: note.id,
+    });
+  }
+
+  return notes;
 }
 
 /** The header row a sheet hangs its filter off, as the range it is written as (`docs/spec.md` §10). */

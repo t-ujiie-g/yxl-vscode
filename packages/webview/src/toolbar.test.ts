@@ -20,6 +20,7 @@ function cell(of: Partial<DrawnCell>): DrawnCell {
     editable: 'direct',
     bar: null,
     icon: null,
+    note: null,
     style: {},
     ...of,
   };
@@ -75,6 +76,7 @@ function showing(of: {
     menu: of.menu ?? null,
     pointed: null,
     naming: null,
+    noting: null,
     comes: null,
   };
 }

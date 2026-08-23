@@ -482,3 +482,18 @@ describe('finding a sheet by the name a reader points at', () => {
     expect(sheetOf(drawn, 'Nowhere' as SheetName)).toBeNull();
   });
 });
+
+describe('the notes a sheet carries', () => {
+  it('are held by the address each sits on, with the author where one is named', () => {
+    const spec = `${SALES}    comments:\n      A1: check stock\n      B2: { text: from Finance, author: Ada }\n`;
+    const notes = sheet(spec).notes;
+
+    expect(notes.get('A1')).toMatchObject({ at: 'A1', text: 'check stock', author: null });
+    expect(notes.get('B2')).toMatchObject({ at: 'B2', text: 'from Finance', author: 'Ada' });
+  });
+
+  it('have their parameters filled in, text and address alike', () => {
+    const spec = `params:\n  who: Ada\n  where: C3\n${SALES}    comments:\n      \${where}: asked by \${who}\n`;
+    expect(sheet(spec).notes.get('C3')?.text).toBe('asked by Ada');
+  });
+});

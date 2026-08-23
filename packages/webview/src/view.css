@@ -622,6 +622,42 @@ body {
   border-color: transparent;
 }
 
+/* A note's corner, where Excel puts one; over the override's own mark, which
+   shares the corner and is the smaller of the two. */
+.grid td .noted {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 2;
+  border: 5px solid transparent;
+  border-top-color: #e81123;
+  border-right-color: #e81123;
+}
+
+/* A note is a sentence or two, which the one line a tooltip is cannot hold. */
+.grid td.saying::after {
+  width: max-content;
+  max-width: 22rem;
+  white-space: pre-wrap;
+}
+
+/* The box a note is written in, in the pale yellow Excel shows a note in. */
+.noting {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 5;
+  width: max(100%, 12rem);
+  box-sizing: border-box;
+  border: 2px solid #c8a800;
+  padding: 2px 3px;
+  background: #ffffe1;
+  color: #000000;
+  font: inherit;
+  resize: none;
+  white-space: pre-wrap;
+}
+
 /* A filtered header's mark, at the right of the cell as Excel puts it. */
 .grid td .dropdown {
   position: absolute;

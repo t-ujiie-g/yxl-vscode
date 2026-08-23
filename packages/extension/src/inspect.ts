@@ -33,6 +33,12 @@ export function inspect(nodes: Nodes, sheet: CompiledSheet, at: A1Addr, from: st
     if (!answered.has(property)) found.push(source);
   }
 
+  const note = sheet.notes.get(at) ?? null;
+  if (note !== null) {
+    const says = note.author === null ? note.text : `${note.text} — ${note.author}`;
+    found.push({ facet: 'note', says, ...sited(nodes.get(note.node)) });
+  }
+
   found.push(...reaching(nodes, sheet, at));
   return found;
 }
@@ -190,6 +196,7 @@ function inSheet(sheet: Sheet, put: (node: SpecNode, what: string) => void): voi
   for (const band of sheet.columns) put(band, `column \`${spelled(band.at)}\``);
   for (const band of sheet.rows) put(band, `row \`${spelled(band.at)}\``);
   for (const merge of sheet.merges) put(merge, `the merge \`${spelled(merge.at)}\``);
+  for (const note of sheet.comments) put(note, `the note on \`${spelled(note.at)}\``);
 }
 
 /** A value the loader kept as a template reads back as the text the spec wrote. */

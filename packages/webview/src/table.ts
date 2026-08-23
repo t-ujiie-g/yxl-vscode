@@ -1,7 +1,7 @@
 import type { Axis } from '@yxl-vscode/spec';
 import { columnLabel } from '@yxl-vscode/units';
 import { corner } from './boxes';
-import { drawCell, shows, spills, typeInto } from './cell';
+import { drawCell, noteInto, shows, spills, typeInto } from './cell';
 import { copying, filling, going, looking as lookingFor, pasting, undoing } from './keys';
 import { says } from './menus';
 import {
@@ -17,7 +17,7 @@ import {
   outline,
   type Span,
 } from './outline';
-import type { DrawnCell, DrawnMerge, DrawnSheet } from './protocol';
+import type { DrawnCell, DrawnMerge, DrawnNote, DrawnSheet } from './protocol';
 import {
   type Asks,
   cellKey,
@@ -388,6 +388,7 @@ function line(
 
     const here = held.get(cellKey(col, row));
     const filtered = filters(sheet, row, col);
+    const note = here?.note ?? null;
     const anchored = merged.anchored.get(cellKey(col, row));
     const drawn = drawCell(
       here,
@@ -396,6 +397,7 @@ function line(
     );
     if (drawn.querySelector('.spill') !== null) drawn.classList.add('spilling');
     if (filtered) drawn.append(dropdown());
+    if (note !== null) noted(drawn, note);
     drawn.setAttribute('data-at', cellKey(col, row));
     if (one.stays) stay(sheet, drawn, { col });
     if (showing.selected?.row === row && showing.selected.col === col) {
@@ -411,6 +413,13 @@ function line(
       drawn.classList.add('problem');
       drawn.title = said.join('\n');
     }
+    if (showing.noting?.row === row && showing.noting.col === col) {
+      noteInto(drawn, note, (text) => {
+        if (text === null) asks.noteAt(null);
+        else asks.note(row, col, text);
+      });
+    }
+
     const type = (seed?: string): void => {
       if (drawn.querySelector('.typing') !== null) return;
 
@@ -558,6 +567,14 @@ function filters(sheet: DrawnSheet, row: number, col: number): boolean {
   if (at === null) return false;
 
   return row === at.top && col >= at.left && col <= at.right;
+}
+
+/** The corner Excel puts on a cell that carries a note, with the note itself on hover. */
+function noted(cell: HTMLTableCellElement, note: DrawnNote): void {
+  const mark = document.createElement('span');
+  mark.className = 'noted';
+  cell.append(mark);
+  says(cell, note.author === null ? note.text : `${note.author}: ${note.text}`);
 }
 
 /** The mark Excel puts on a filtered header, which says a filter is there and nothing more. */

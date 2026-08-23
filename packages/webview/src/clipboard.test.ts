@@ -20,6 +20,7 @@ function cell(of: Partial<DrawnCell> = {}): DrawnCell {
     style: {},
     bar: null,
     icon: null,
+    note: null,
     ...of,
   };
 }

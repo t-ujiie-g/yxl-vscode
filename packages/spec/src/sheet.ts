@@ -33,6 +33,7 @@ export interface Sheet extends SpecNode {
   readonly split: Split | null;
   readonly conditional: readonly Conditional[];
   readonly filter: Templated<A1Range> | null;
+  readonly comments: readonly Note[];
   readonly keyOrder: readonly string[];
   readonly opaque: readonly Opaque[];
 }
@@ -45,6 +46,17 @@ export interface Sheet extends SpecNode {
 export interface FormulaRange extends SpecNode {
   readonly at: Templated<A1Range>;
   readonly formula: string;
+}
+
+/**
+ * One note on a cell, which Excel shows on hover and keeps beside the value
+ * rather than in place of it (`docs/spec.md` §10). A note in the file always
+ * carries an author, so `null` leaves Excel to write its generic one.
+ */
+export interface Note extends SpecNode {
+  readonly at: Templated<A1Addr>;
+  readonly text: string;
+  readonly author: string | null;
 }
 
 /** One merged region; Excel shows the top-left cell's value across it. */

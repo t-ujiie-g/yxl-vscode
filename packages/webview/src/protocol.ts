@@ -74,6 +74,14 @@ export interface Filtered extends Ranged {
   readonly on: boolean;
 }
 
+/** A cell's note, as it is written or `text: null` to take it off (`docs/spec.md` §10). */
+export interface Noted {
+  readonly sheet: string;
+  readonly row: number;
+  readonly col: number;
+  readonly text: string | null;
+}
+
 /** Where a sheet's panes are asked to be frozen, or `null` to take the freeze off. */
 export interface Frozen {
   readonly sheet: string;
@@ -128,6 +136,13 @@ export interface DrawnCell {
   readonly style: StyleValues;
   readonly bar: DrawnBar | null;
   readonly icon: DrawnIcon | null;
+  readonly note: DrawnNote | null;
+}
+
+/** The note a cell carries, which Excel shows on hover (`docs/spec.md` §10). */
+export interface DrawnNote {
+  readonly text: string;
+  readonly author: string | null;
 }
 
 /** Which icon of which set a cell wears; what one looks like is this view's to decide (ADR-029). */
@@ -211,6 +226,7 @@ export type About =
   | { readonly kind: 'deleteSheet'; readonly sheet: string }
   | { readonly kind: 'moveSheet'; readonly sheet: string; readonly to: number }
   | ({ readonly kind: 'filter' } & Filtered)
+  | ({ readonly kind: 'note' } & Noted)
   | {
       readonly kind: 'setTab';
       readonly sheet: string;
