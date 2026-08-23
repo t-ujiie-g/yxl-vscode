@@ -177,3 +177,23 @@ describe('what the inspector says about a conditional rule', () => {
     expect(sources(RULED, 'B2').filter((one) => one.facet === 'conditional')).toEqual([]);
   });
 });
+
+describe('what the inspector says about a note', () => {
+  const NOTED = `${SHEET}    cells:\n      A1: Region\n    comments:\n      A1: { text: check stock, author: Ada }\n      B1: sourced upstream\n`;
+
+  it('says the note, with the author where one is named', () => {
+    expect(saying(NOTED, 'A1', 'note')).toBe('check stock — Ada');
+    expect(saying(NOTED, 'B1', 'note')).toBe('sourced upstream');
+  });
+
+  it('takes a reader to where the note is written, not to the cell', () => {
+    const where = sources(NOTED, 'A1').find((one) => one.facet === 'note');
+    const spelled = NOTED.slice(where?.start, where?.end);
+
+    expect(spelled).toBe('A1: { text: check stock, author: Ada }');
+  });
+
+  it('says nothing about a cell carrying none', () => {
+    expect(sources(NOTED, 'C1').filter((one) => one.facet === 'note')).toEqual([]);
+  });
+});

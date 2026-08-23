@@ -115,6 +115,7 @@ function onCell(showing: Showing, asks: Asks, at: PointedCell): HTMLElement | nu
       { chord: 'Delete' },
       shut(() => asks.empty(at.row, at.col)),
     ),
+    ...noting(showing, asks, at, shut),
     ...(showing.drawing.sheets[showing.sheet]?.filter === null
       ? [
           entry(
@@ -133,6 +134,39 @@ function onCell(showing: Showing, asks: Asks, at: PointedCell): HTMLElement | nu
   ];
 
   return pointedAt(showing, asks, entries);
+}
+
+/** What a cell's note is worth offering: writing one, or changing and taking off the one it carries. */
+function noting(
+  showing: Showing,
+  asks: Asks,
+  at: PointedCell,
+  shut: (take: () => void) => () => void,
+): HTMLElement[] {
+  const cells = showing.drawing.sheets[showing.sheet]?.cells ?? [];
+  const here = cells.find((one) => one.row === at.row && one.col === at.col);
+  if ((here?.note ?? null) === null) {
+    return [
+      entry(
+        'Insert note',
+        {},
+        shut(() => asks.noteAt({ row: at.row, col: at.col })),
+      ),
+    ];
+  }
+
+  return [
+    entry(
+      'Edit note',
+      {},
+      shut(() => asks.noteAt({ row: at.row, col: at.col })),
+    ),
+    entry(
+      'Delete note',
+      {},
+      shut(() => asks.note(at.row, at.col, null)),
+    ),
+  ];
 }
 
 /** Paste, which only the keyboard can reach the clipboard for unless the preview copied it. */

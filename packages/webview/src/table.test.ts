@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { draw, restate } from './draw';
 import { asks, at, cell, drawing, scrolled, sheet, showingOf, shown } from './harness';
 import type { DrawnSheet } from './protocol';
-import type { Showing } from './showing';
+import type { Asks, Showing } from './showing';
 import { pinned } from './table';
 import { widthOf } from './window';
 
@@ -117,6 +117,7 @@ describe('a sheet larger than the window drawn of it', () => {
       menu: null,
       pointed: null,
       naming: null,
+      noting: null,
       comes: null,
     });
 
@@ -147,6 +148,7 @@ describe('a sheet larger than the window drawn of it', () => {
       menu: null,
       pointed: null,
       naming: null,
+      noting: null,
       comes: null,
     });
 
@@ -1023,5 +1025,59 @@ describe('a sheet with a filter on its header row', () => {
     expect(at(into, 1, 1)?.querySelector('.dropdown')).not.toBeNull();
     expect(at(into, 1, 2)?.querySelector('.dropdown')).not.toBeNull();
     expect(at(into, 2, 1)?.querySelector('.dropdown')).toBeNull();
+  });
+
+  it('says what the mark is while the pointer is over the header', () => {
+    const held = drawing({
+      sheets: [sheet({ rows: 1, columns: 1, filter: { top: 1, left: 1, bottom: 1, right: 1 } })],
+    });
+    const cell = at(shown({ drawing: held }), 1, 1);
+
+    cell?.dispatchEvent(new MouseEvent('mouseenter'));
+    expect(cell?.querySelector('.notice')?.textContent).toBe(
+      'This column has a filter; the preview does not filter by it',
+    );
+  });
+});
+
+describe('a cell that carries a note', () => {
+  const noted = (of: Partial<Showing> = {}, on: Asks = asks()) => {
+    const held = drawing({
+      sheets: [
+        sheet({
+          rows: 2,
+          columns: 2,
+          cells: [cell(1, 1, { value: 'Region', note: { text: 'check stock', author: 'Ada' } })],
+        }),
+      ],
+    });
+    return shown({ drawing: held, ...of }, on);
+  };
+
+  it('wears the corner, and says the note with its author while the pointer is over it', () => {
+    const into = noted();
+    const cell = at(into, 1, 1);
+
+    expect(cell?.querySelector('.noted')).not.toBeNull();
+    expect(at(into, 1, 2)?.querySelector('.noted')).toBeNull();
+
+    cell?.dispatchEvent(new MouseEvent('mouseenter'));
+    expect(cell?.querySelector('.notice')?.textContent).toBe('Ada: check stock');
+
+    cell?.dispatchEvent(new MouseEvent('mouseleave'));
+    expect(cell?.querySelector('.notice')).toBeNull();
+  });
+
+  it('is written in a box over the cell, which sends what was typed', () => {
+    const on = asks();
+    const into = noted({ noting: { row: 1, col: 1 } }, on);
+    const box = at(into, 1, 1)?.querySelector<HTMLTextAreaElement>('.noting');
+    if (box === null || box === undefined) throw new Error('there is no box');
+
+    expect(box.value).toBe('check stock');
+    box.value = 'checked with Finance';
+    box.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+
+    expect(on.note).toHaveBeenCalledWith(1, 1, 'checked with Finance');
   });
 });

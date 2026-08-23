@@ -33,9 +33,10 @@ describe('the menu a cell has of its own', () => {
       'Copy',
       'Paste',
       'Clear contents',
+      'Insert note',
       'Create a filter',
     ]);
-    expect(entries.map(said)).toEqual(['Ctrl+X', 'Ctrl+C', 'Ctrl+V', 'Delete', null]);
+    expect(entries.map(said)).toEqual(['Ctrl+X', 'Ctrl+C', 'Ctrl+V', 'Delete', null, null]);
   });
 
   it('cuts and copies the cell it was asked for, and shuts itself', () => {
@@ -88,7 +89,27 @@ describe('the filter a sheet may hang off its header row', () => {
   it('offers to create one where the sheet has none, over the selection header', () => {
     const { on, entries } = at(1, 1);
 
-    entries[4]?.click();
+    entries[5]?.click();
     expect(on.filter).toHaveBeenCalledWith(true);
+  });
+});
+
+describe('the note a cell may carry', () => {
+  it('offers to write one where the cell has none, at the cell pointed at', () => {
+    const { on, entries } = at(2, 3);
+
+    entries[4]?.click();
+    expect(on.noteAt).toHaveBeenCalledWith({ row: 2, col: 3 });
+  });
+
+  it('offers to change and to take off the one a cell carries', () => {
+    const noted = cell(1, 1, { note: { text: 'check stock', author: null } });
+    const { on, entries } = at(1, 1, {
+      drawing: drawing({ sheets: [sheet({ cells: [noted] })] }),
+    });
+
+    expect(entries.map((one) => one.firstChild?.textContent)).toContain('Edit note');
+    entries[5]?.click();
+    expect(on.note).toHaveBeenCalledWith(1, 1, null);
   });
 });

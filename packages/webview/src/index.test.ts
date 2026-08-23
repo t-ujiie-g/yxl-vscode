@@ -19,6 +19,7 @@ function cell(of: Partial<DrawnCell> = {}): DrawnCell {
     style: {},
     bar: null,
     icon: null,
+    note: null,
     ...of,
   };
 }
@@ -119,6 +120,27 @@ describe('what the view sends', () => {
     expect(sent.filter((one) => one.kind === 'edit')).toEqual([
       { kind: 'edit', sheet: 'Sales', row: 1, col: 1, text: 'EMEA' },
     ]);
+  });
+
+  it('sends a note from the box the cell menu opens, and takes the box away', () => {
+    const { into, sent } = view();
+
+    at(into, 1, 1)?.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true }));
+    const insert = [...into.querySelectorAll<HTMLButtonElement>('.entry')].find(
+      (one) => one.firstChild?.textContent === 'Insert note',
+    );
+    insert?.click();
+
+    const box = into.querySelector('.noting');
+    if (!(box instanceof HTMLTextAreaElement)) throw new Error('nothing to write a note in');
+
+    box.value = 'check stock';
+    box.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+
+    expect(sent.filter((one) => one.kind === 'note')).toEqual([
+      { kind: 'note', sheet: 'Sales', row: 1, col: 1, text: 'check stock' },
+    ]);
+    expect(into.querySelector('.noting')).toBeNull();
   });
 
   it('sends the colour picked to the cells the palette was opened over', () => {

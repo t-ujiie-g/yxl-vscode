@@ -10,6 +10,7 @@ import { group } from './group';
 import { hide } from './hidden';
 import { line } from './lines';
 import { wear } from './look';
+import { note } from './notes';
 import { filter, freeze } from './panes';
 import { add, move, remove, rename, tab } from './sheets';
 import { resize } from './size';
@@ -692,6 +693,25 @@ describe('a sheet auto filter, set from a cell menu', () => {
 
     await filter(spec, { sheet: 'Sales', top: 1, left: 1, bottom: 1, right: 1, on: false }, port);
     expect(files[ROOT]).toBe(`${SALES}    cells:\n      A1: Region\n`);
+  });
+});
+
+describe("a cell's note, written from its own menu", () => {
+  it('writes the note under `comments`, changes it, and takes it off again', async () => {
+    const { spec, port, files, told, refusals } = editor({
+      [ROOT]: `${SALES}    cells:\n      A1: Region\n`,
+    });
+    const cells = `${SALES}    cells:\n      A1: Region\n`;
+
+    await note(spec, { sheet: 'Sales', row: 1, col: 1, text: 'check stock' }, port);
+    expect(files[ROOT]).toBe(`${cells}    comments:\n      A1: check stock\n`);
+    expect(told).toEqual(['A1 carries a note.']);
+
+    await note(spec, { sheet: 'Sales', row: 1, col: 1, text: null }, port);
+    expect(files[ROOT]).toBe(cells);
+
+    await note(spec, { sheet: 'Sales', row: 1, col: 1, text: null }, port);
+    expect(refusals[0]).toBe('`A1` has no note to take off');
   });
 });
 

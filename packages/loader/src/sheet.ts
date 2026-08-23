@@ -7,6 +7,7 @@ import {
   type FormulaRange,
   type Merge,
   MODELED_KEYS,
+  type Note,
   type Opaque,
   type RowBand,
   type Sheet,
@@ -18,6 +19,7 @@ import { CODE } from './codes';
 import { readConditional } from './conditional';
 import { type Ctx, identify, keyOf, reject, type Site } from './ctx';
 import { readDataBlocks } from './data';
+import { readNotes } from './note';
 import {
   expectBool,
   expectNumber,
@@ -65,6 +67,7 @@ function readSheet(site: Site): Sheet | null {
   let split: Sheet['split'] = null;
   let conditional: Conditional[] = [];
   let filter: Sheet['filter'] = null;
+  let comments: Note[] = [];
   const opaque: Opaque[] = [];
 
   for (const entry of entries) {
@@ -112,6 +115,9 @@ function readSheet(site: Site): Sheet | null {
       case 'filter':
         filter = readAs(here, entry.value, `${what} \`filter\``, RANGE);
         break;
+      case 'comments':
+        comments = readNotes(here, entry.value, at);
+        break;
       default:
         opaque.push({ ...identify(here, at, entry.span), key });
     }
@@ -133,6 +139,7 @@ function readSheet(site: Site): Sheet | null {
     split,
     conditional,
     filter,
+    comments,
     keyOrder: entries.map(keyOf),
     opaque,
   };

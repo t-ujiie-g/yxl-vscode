@@ -73,9 +73,11 @@ merging, filling, sorting a block of rows, and the whole of the tab bar — addi
 renaming, deleting and reordering a sheet, hiding one, colouring its tab.
 Conditional formatting is **applied in the grid** — every kind of rule, over the
 computed values — and a sheet's auto filter is drawn and can be put on and taken
-off. What a spec writes *on* its cells besides those — a note, a hyperlink, a
-dropdown of allowed values — is carried through untouched and drawn as nothing,
-and is the rest of the phase in progress.
+off. A cell's note wears Excel's red corner, shows what it says on hover, and
+can be written, changed, or taken off from the cell's own menu. What a spec
+writes *on* its cells besides those — a hyperlink, a dropdown of allowed values,
+a table — is carried through untouched and drawn as nothing, and is the rest of
+the phase in progress.
 
 ## Where it is going
 

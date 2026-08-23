@@ -1,9 +1,8 @@
 import type { Axis } from '@yxl-vscode/spec';
 import { columnLabel } from '@yxl-vscode/units';
 import { corner } from './boxes';
-import { drawCell, shows, spills, typeInto } from './cell';
+import { drawCell, noteInto, shows, spills, typeInto } from './cell';
 import { copying, filling, going, looking as lookingFor, pasting, undoing } from './keys';
-import { says } from './menus';
 import {
   behind,
   drawOutline,
@@ -17,7 +16,7 @@ import {
   outline,
   type Span,
 } from './outline';
-import type { DrawnCell, DrawnMerge, DrawnSheet } from './protocol';
+import type { DrawnCell, DrawnMerge, DrawnNote, DrawnSheet } from './protocol';
 import {
   type Asks,
   cellKey,
@@ -388,6 +387,7 @@ function line(
 
     const here = held.get(cellKey(col, row));
     const filtered = filters(sheet, row, col);
+    const note = here?.note ?? null;
     const anchored = merged.anchored.get(cellKey(col, row));
     const drawn = drawCell(
       here,
@@ -396,6 +396,8 @@ function line(
     );
     if (drawn.querySelector('.spill') !== null) drawn.classList.add('spilling');
     if (filtered) drawn.append(dropdown());
+    if (note !== null) drawn.append(noted());
+    tells(drawn, [filtered ? FILTERED : '', note === null ? '' : noteSaid(note)]);
     drawn.setAttribute('data-at', cellKey(col, row));
     if (one.stays) stay(sheet, drawn, { col });
     if (showing.selected?.row === row && showing.selected.col === col) {
@@ -411,6 +413,13 @@ function line(
       drawn.classList.add('problem');
       drawn.title = said.join('\n');
     }
+    if (showing.noting?.row === row && showing.noting.col === col) {
+      noteInto(drawn, note, (text) => {
+        if (text === null) asks.noteAt(null);
+        else asks.note(row, col, text);
+      });
+    }
+
     const type = (seed?: string): void => {
       if (drawn.querySelector('.typing') !== null) return;
 
@@ -560,12 +569,47 @@ function filters(sheet: DrawnSheet, row: number, col: number): boolean {
   return row === at.top && col >= at.left && col <= at.right;
 }
 
+/** The corner Excel puts on a cell that carries a note. */
+function noted(): HTMLElement {
+  const mark = document.createElement('span');
+  mark.className = 'noted';
+
+  return mark;
+}
+
+/** A note as it reads on hover: the author first, as Excel writes one above the text. */
+function noteSaid(note: DrawnNote): string {
+  return note.author === null ? note.text : `${note.author}: ${note.text}`;
+}
+
 /** The mark Excel puts on a filtered header, which says a filter is there and nothing more. */
 function dropdown(): HTMLElement {
   const mark = document.createElement('span');
   mark.className = 'dropdown';
   mark.textContent = '▾';
-  says(mark, 'This column has a filter; the preview does not filter by it');
 
   return mark;
+}
+
+const FILTERED = 'This column has a filter; the preview does not filter by it';
+
+/** What a cell says on hover, drawn beside the cell and fixed to the page: a cell clips what is inside it. */
+function tells(cell: HTMLTableCellElement, lines: readonly string[]): void {
+  const said = lines.filter((one) => one !== '').join('\n');
+  if (said === '') return;
+
+  cell.setAttribute('aria-label', said);
+  cell.addEventListener('mouseenter', () => {
+    if (cell.querySelector('.notice') !== null) return;
+
+    const box = document.createElement('div');
+    box.className = 'notice';
+    box.textContent = said;
+
+    const at = cell.getBoundingClientRect();
+    box.style.top = `${at.bottom + 4}px`;
+    box.style.left = `${at.left}px`;
+    cell.append(box);
+  });
+  cell.addEventListener('mouseleave', () => cell.querySelector('.notice')?.remove());
 }

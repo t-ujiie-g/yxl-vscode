@@ -23,6 +23,7 @@ describe('what changes without redrawing the grid', () => {
       menu: null,
       pointed: null,
       naming: null,
+      noting: null,
       comes: null,
       ...of,
     };
@@ -275,6 +276,7 @@ describe('the switches over the grid', () => {
     menu: null,
     pointed: null,
     naming: null,
+    noting: null,
     comes: null,
   });
 

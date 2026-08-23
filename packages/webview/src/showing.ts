@@ -43,6 +43,9 @@ export interface Showing {
 
   /** The sheet whose tab is being renamed, by its place in the tab bar. */
   readonly naming: number | null;
+
+  /** The cell whose note is being written, where a reader is writing one. */
+  readonly noting: At | null;
 }
 
 /**
@@ -189,6 +192,8 @@ export interface Asks {
   readonly pointAt: (at: Pointed | null) => void;
   readonly freeze: (at: At | null) => void;
   readonly filter: (on: boolean) => void;
+  readonly note: (row: number, col: number, text: string | null) => void;
+  readonly noteAt: (at: At | null) => void;
   readonly look: (text: string | null) => void;
   readonly goOn: (by: number) => void;
   readonly goTo: (address: string) => void;

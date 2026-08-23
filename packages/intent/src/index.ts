@@ -17,6 +17,7 @@ export { type Grouping, setGroup } from './group';
 export { type Hiding, setHidden } from './hidden';
 export { drawLine, setLine } from './line';
 export { type Merging, setMerged } from './merge';
+export { type Noting, setNote } from './note';
 export { overridable, override, type Says } from './override';
 export {
   couldBlock,
