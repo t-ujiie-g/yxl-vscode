@@ -246,15 +246,15 @@ function writing(sheet: CompiledSheet, line: Line, read: Reading): Writing | Int
   return { kind: 'writing', file, ops: ops.get(file) ?? [], moves };
 }
 
-/** Why a column cannot go inside this block: its rows are written as `[a, b]`. */
+/** Why more than one column cannot come out of this block at once: its rows are `[a, b]`. */
 function flowing(found: Found, line: Line): string | null {
-  if (line.axis !== 'column' || found.kind === 'refused') return null;
+  if (line.axis !== 'column' || found.kind === 'refused' || line.by > -2) return null;
 
   const values = nodeAt(found.node, ['values']);
   const first = values?.kind === 'seq' ? values.items[0] : undefined;
   if (first === undefined || first.kind === 'scalar' || !first.flow) return null;
 
-  return 'the rows here are written as `[a, b]`, which this cannot put a field into';
+  return 'rows written as `[a, b]` give up one field at a time, so take these away one by one';
 }
 
 /** One address once the line is drawn. */
@@ -323,10 +323,10 @@ function opened(rect: Rect, line: Line, path: Path): readonly Op[] {
 
   const many = line.by < 0 ? -line.by : line.by;
   return Array.from({ length: rows + 1 }, (_, row) =>
-    Array.from({ length: many }, (_, one) =>
+    Array.from({ length: many }, () =>
       line.by < 0
         ? ({ op: 'remove', path: [...values, row, first] } as const)
-        : ({ op: 'insert', path: [...values, row], index: first + one, value: null } as const),
+        : ({ op: 'insert', path: [...values, row], index: first, value: null } as const),
     ),
   ).flat();
 }

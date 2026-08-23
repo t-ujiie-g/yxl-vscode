@@ -264,14 +264,36 @@ describe('entries of a collection', () => {
       );
     });
 
-    it('refuses a sequence with no item to copy a layout from', () => {
-      const { diagnostics } = edit('sheets: []\n', {
-        op: 'insert',
-        path: ['sheets'],
-        index: 0,
-        value: 'Sales',
-      });
-      expect(diagnostics[0]?.code).toBe(CODE.flowNotSupported);
+    it('fills an empty flow sequence between its brackets', () => {
+      const put = { op: 'insert', path: ['sheets'], index: 0, value: 'Sales' } as const;
+
+      expect(text('sheets: []\n', put)).toBe('sheets: [Sales]\n');
+    });
+
+    it('puts an item into a flow sequence, before the one it displaces', () => {
+      const source =
+        'sheets:\n  - name: Sales\n    data:\n      - values:\n          - [APAC, 1]\n';
+      const put = (index: number) =>
+        ({
+          op: 'insert',
+          path: ['sheets', 0, 'data', 0, 'values', 0],
+          index,
+          value: null,
+        }) as const;
+
+      expect(text(source, put(1))).toContain('- [APAC, null, 1]\n');
+      expect(text(source, put(2))).toContain('- [APAC, 1, null]\n');
+      expect(text(source, put(1), put(1))).toContain('- [APAC, null, null, 1]\n');
+    });
+
+    it('takes a field out of a flow row with the separator beside it', () => {
+      const source =
+        'sheets:\n  - name: Sales\n    data:\n      - values:\n          - [APAC, 1, 2]\n';
+      const out = (index: number) =>
+        ({ op: 'remove', path: ['sheets', 0, 'data', 0, 'values', 0, index] }) as const;
+
+      expect(text(source, out(1))).toContain('- [APAC, 2]\n');
+      expect(text(source, out(2))).toContain('- [APAC, 1]\n');
     });
 
     it('refuses to insert into something that is not a sequence', () => {

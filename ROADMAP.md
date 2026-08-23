@@ -336,9 +336,10 @@ has an inverse (ADR-010, ADR-026, ADR-027):
 
 `set` and `add` write a *value* and let the renderer choose how; `write`,
 `restore`, `insertSource` and `addSource` write *text*, which is what makes an
-undo byte-exact. Still to come, with the phases that need them: `rekeyMap` for
-the bulk A1 shift a row insertion is, and ops that address a companion CSV or
-JSON file.
+undo byte-exact. Still to come, with the phase that needs them: ops that address
+a companion CSV or JSON file. A bulk-rekey op is *not* coming — every op is
+located against the tree as it was, so a row insertion's four hundred
+`renameKey`s are four hundred disjoint edits (2026-08-23).
 
 What a patch is *allowed* to change is not part of the patch: it is an `Expects`
 passed beside it to §4.6's checker, so the same ops can be applied under a
@@ -1256,7 +1257,7 @@ Deliberately **not** here: a second selection with `Cmd`+click (every answer in
       the first.
 
 ### Phase 11 — Structural edits
-- [ ] `insertRow` / `insertCol` / `deleteRow` / `deleteCol`, with the
+- [x] `insertRow` / `insertCol` / `deleteRow` / `deleteCol`, with the
       consequence enumeration and the expected-diff-size preview (§4.4). The
       row *header* is where a reader reaches for this, so the headings becoming
       selectors (Phase 10) is the gesture it hangs off
@@ -1294,11 +1295,21 @@ Deliberately **not** here: a second selection with `Cmd`+click (every answer in
             `data:` conversion it should offer beside that is the item three
             below; until it exists the count says what the keys cost and no
             more.
-- [ ] **A field cannot go into rows written as `[a, b]`.** Inserting a column
+- [x] **A field cannot go into rows written as `[a, b]`.** Inserting a column
       through an inline `data:` block needs the CST to rewrite a flow sequence,
       which it does not do yet; the gesture refuses and says so. Rows written a
       line at a time take one either way.
-- [ ] `rekeyMap` for bulk A1 shifts in `cells:`
+      **In**: a field goes into a flow row at a **point**, not by rewriting the
+      row, so several go in at once and every other edit to that line stays
+      disjoint. Taking one out narrowed the same way. What is still refused is
+      taking *two* fields out of one row at once: each would claim the comma
+      between them, and no rule makes both disjoint — so the gesture says to
+      take them away one at a time.
+- [x] ~~`rekeyMap` for bulk A1 shifts in `cells:`~~ **Not needed** (2026-08-23).
+      Ops are located against the tree *as it was* and spliced at the end, so
+      four hundred `renameKey`s are four hundred disjoint edits — there is no
+      collision to sequence and no bulk op to write. The place §4.5 was holding
+      is given back.
 - [ ] `merge` / `unmerge`, and band creation
 - [ ] The "convert this rectangle to `data:`" offer, at the moment a `cells:`
       block proves it needs it — and with it **§4.4's `empty` ②**, the answer
@@ -2784,6 +2795,28 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-23 — A field into a row written as `[a, b]`
+The limit the last change wrote down, lifted — and the first Phase 11 item
+closed with it.
+
+- **A field goes into a flow row at a point**, not by rewriting the row: the
+  edit is a zero-width insertion before the field it displaces, so **several go
+  in at once** and every other edit to that line stays disjoint. Inserting two
+  columns through a four-hundred-row block is eight hundred edits that never
+  touch each other.
+- **Taking one out narrowed the same way**, so a removal claims its own field
+  and the one separator beside it rather than rewriting the brackets.
+- **What is still refused, and why:** *two* fields out of one row at once. Each
+  would claim the comma between them, and no rule makes both disjoint — so the
+  gesture says to take them away one at a time rather than refusing at the
+  splice with an internal message.
+- **`rekeyMap` is given back.** §4.5 had been holding a place for an op to do
+  the bulk A1 shift; there is nothing for it to do that four hundred
+  `renameKey`s do not already do disjointly.
+- 1820 → 1825 tests, and a column inserted into the reader's own sample: every
+  data row gains a blank field, `1月` moves from `B2` to `C2`, and the totals
+  range reads `O3:O402`.
 
 ### 2026-08-23 — Insert and delete, from the heading
 Phase 11's first item, finished: the gesture a reader reaches for on a row

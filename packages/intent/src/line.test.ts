@@ -106,12 +106,18 @@ describe('a column inserted', () => {
     expect(done).toContain('      - at: D2\n');
   });
 
-  it('will not put a field into rows written as `[a, b]`', () => {
+  it('puts a blank field into every row of a block it falls inside', () => {
+    const spec = `${SALES}    data:\n      - at: A2\n        values:\n          - [APAC, 1]\n          - [EMEA, 2]\n`;
+
+    expect(drawn(spec, column(2))).toContain(
+      '          - [APAC, null, 1]\n          - [EMEA, null, 2]\n',
+    );
+  });
+
+  it('puts as many in as the reader asked for, all at the one place', () => {
     const spec = `${SALES}    data:\n      - at: A2\n        values:\n          - [APAC, 1]\n`;
 
-    expect(drawn(spec, column(2))).toBe(
-      'refused: the rows here are written as `[a, b]`, which this cannot put a field into',
-    );
+    expect(drawn(spec, column(2, 2))).toContain('          - [APAC, null, null, 1]\n');
   });
 
   it('puts one into rows written a line at a time', () => {
@@ -119,6 +125,20 @@ describe('a column inserted', () => {
 
     expect(drawn(spec, column(2))).toContain(
       '          - - APAC\n            - null\n            - 1\n',
+    );
+  });
+
+  it('takes a field out again where the line takes the column away', () => {
+    const spec = `${SALES}    data:\n      - at: A2\n        values:\n          - [APAC, 1, 2]\n`;
+
+    expect(drawn(spec, column(2, -1))).toContain('          - [APAC, 2]\n');
+  });
+
+  it('takes them one at a time out of rows written as `[a, b]`', () => {
+    const spec = `${SALES}    data:\n      - at: A2\n        values:\n          - [APAC, 1, 2]\n`;
+
+    expect(drawn(spec, column(2, -2))).toBe(
+      'refused: rows written as `[a, b]` give up one field at a time, so take these away one by one',
     );
   });
 });

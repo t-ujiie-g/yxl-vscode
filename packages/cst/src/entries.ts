@@ -1,6 +1,6 @@
 import { type Span, span } from '@yxl-vscode/diag';
 import { CODE } from './codes';
-import { withEntry, withoutEntry } from './flow';
+import { cutOf, itemAt, withEntry, withoutEntry } from './flow';
 import { aboveComments, lineBreak, lineEnd, lineStart } from './lines';
 import { entryOf, formatPath, holds, locate, type Site } from './locate';
 import type { Mapping, Node, Sequence } from './node';
@@ -28,6 +28,11 @@ export function insertion(
   site: Site,
   refuse: Refuse,
 ): Edit | undefined {
+  const target = site.node;
+  if (target.kind === 'seq' && target.flow) {
+    return itemAt(target, op.index, renderScalar(op.value));
+  }
+
   const placed = intoSequence(source, op, site, refuse);
   if (placed === undefined) return undefined;
 
@@ -209,7 +214,13 @@ export function removal(source: string, path: Path, site: Site, refuse: Refuse):
     refuse(CODE.cannotRemoveRoot, 'the document root cannot be removed', site.node.span);
     return undefined;
   }
-  if (site.parent.flow) return { span: site.parent.span, text: withoutEntry(source, site) };
+  if (site.parent.flow) {
+    // Narrowly where it has a neighbour, so two fields can go out of one row.
+    const cut = cutOf(source, site);
+    return cut === null
+      ? { span: site.parent.span, text: withoutEntry(source, site) }
+      : { span: cut, text: '' };
+  }
   if (site.in === 'map' && opensAnItem(source, site.entry.span.start)) {
     refuse(CODE.itemMarker, carriesTheDash(path), site.node.span);
     return undefined;
