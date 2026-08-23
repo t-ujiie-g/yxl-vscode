@@ -21,7 +21,7 @@ import {
   type SheetName,
   sheetName,
 } from '@yxl-vscode/units';
-import { address, compileFacets, layer, type Spoke, spokenBy } from './cell';
+import { address, colour, compileFacets, layer, type Spoke, spokenBy } from './cell';
 import { CODE } from './codes';
 import { type Ctx, filled, reject, text } from './ctx';
 import type {
@@ -62,6 +62,8 @@ export function compileSheet(ctx: Ctx, sheet: Sheet): Drafted {
       rows: sheet.rows.map((band) => rowBand(ctx, band)).filter((band) => band !== null),
       merges: sheet.merges.map((one) => mergedRegion(ctx, one)).filter((one) => one !== null),
       freeze: sheet.freeze === null ? null : address(ctx, sheet.freeze, sheet),
+      visibility: sheet.visibility ?? 'visible',
+      tabColor: sheet.tabColor === null ? null : colour(ctx, sheet.tabColor, sheet),
     },
     cells,
   };

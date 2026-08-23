@@ -450,6 +450,23 @@ body {
   cursor: pointer;
 }
 
+/* The tab colour, picked from the tab's own menu. */
+.entry.tabbed {
+  display: block;
+}
+
+/* A sheet Excel would not show: drawn, so it can be unhidden from here. */
+.tab.away {
+  opacity: 0.55;
+  font-style: italic;
+}
+
+/* A tab that wears a `tab_color:`, which Excel draws as a line under it. */
+.tab.coloured {
+  border-bottom-width: 3px;
+  border-bottom-style: solid;
+}
+
 /* The tab a dragged one would land on. */
 .tab.under {
   border-color: var(--vscode-focusBorder);

@@ -13,7 +13,7 @@ import { faces, sizes } from './fonts';
 import { cleared, numbers, quickly } from './formats';
 import { HELD } from './keys';
 import { ACROSS, type Bar, DOWN, framed, frozen, marked, RAGGED } from './marks';
-import { entry, opens, says } from './menus';
+import { entry, opens, says, swatches } from './menus';
 import { type Asks, over, type Showing, wornBy } from './showing';
 
 /** What a reader reaches for first: the look of the cells they have selected, and where the sheet is frozen. */
@@ -141,30 +141,6 @@ const INKS: readonly Ink[] = [
   },
 ];
 
-/** The colours a palette offers: the two rows of standards a reader of Sheets or Excel knows. */
-const PALETTE: readonly string[] = [
-  '000000',
-  '434343',
-  '666666',
-  '999999',
-  'B7B7B7',
-  'CCCCCC',
-  'D9D9D9',
-  'EFEFEF',
-  'F3F3F3',
-  'FFFFFF',
-  '980000',
-  'FF0000',
-  'FF9900',
-  'FFFF00',
-  '00FF00',
-  '00FFFF',
-  '4A86E8',
-  '0000FF',
-  '9900FF',
-  'FF00FF',
-];
-
 /** A colour, as the swatch the selected cell wears over the palette that sets it. */
 function ink(of: Ink, showing: Showing, asks: Asks): HTMLElement {
   const now = wornBy(showing)[of.key] ?? null;
@@ -193,39 +169,12 @@ function palette(of: Ink, now: Color | null, showing: Showing, asks: Asks): HTML
   };
 
   panel.append(entry(of.clears, { disabled: now === null, className: 'clears' }, () => wear(null)));
+  panel.append(
+    ...swatches(now === null ? null : picked(now).slice(1), of.opens, (digits) =>
+      wear(parseColor(digits)),
+    ),
+  );
 
-  const swatches = document.createElement('div');
-  swatches.className = 'swatches';
-  for (const digits of PALETTE) {
-    const colour = parseColor(digits);
-    if (colour === null) continue;
-
-    const one = document.createElement('button');
-    one.type = 'button';
-    const here = now !== null && picked(now).toLowerCase() === `#${digits.toLowerCase()}`;
-    one.className = `swatch${here ? ' here' : ''}`;
-    one.title = `#${digits}`;
-    one.style.background = `#${digits}`;
-    one.addEventListener('click', () => wear(colour));
-    swatches.append(one);
-  }
-  panel.append(swatches);
-
-  const custom = document.createElement('label');
-  custom.className = 'entry custom';
-  custom.append('Custom\u2026');
-
-  const pick = document.createElement('input');
-  pick.type = 'color';
-  pick.className = 'pick';
-  pick.value = now === null ? of.opens : picked(now);
-  pick.addEventListener('change', () => {
-    // The picker says `#rrggbb`; a spec writes `RRGGBB` (`docs/spec.md` §6).
-    wear(parseColor(pick.value.replace('#', '').toUpperCase()));
-  });
-
-  custom.append(pick);
-  panel.append(custom);
   return panel;
 }
 

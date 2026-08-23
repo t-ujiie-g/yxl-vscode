@@ -1,11 +1,12 @@
 import { compile } from '@yxl-vscode/compile';
 import { parse } from '@yxl-vscode/cst';
 import { type IncludeReader, load } from '@yxl-vscode/loader';
+import type { Visibility } from '@yxl-vscode/spec';
 import { type FilePath, filePath, type SheetName } from '@yxl-vscode/units';
 import { type Ctx, checked } from '@yxl-vscode/verify';
 import { describe, expect, it } from 'vitest';
 import { reading } from './direct';
-import { addSheet, deleteSheet, moveSheet } from './sheets';
+import { addSheet, deleteSheet, moveSheet, setTab } from './sheets';
 
 const ROOT = filePath('spec.yxl.yaml') ?? ('' as FilePath);
 
@@ -49,6 +50,28 @@ function deleted(source: string, sheet: string): string {
 function moved(source: string, sheet: string, to: number): string {
   const { doc, grid, read } = files(source);
   const intent = moveSheet({ doc, grid }, { sheet: sheet as SheetName, to }, read);
+  if (intent.kind === 'refused') return `refused: ${intent.why}`;
+  if (intent.kind !== 'edit') throw new Error('a file was not written');
+
+  const { includes } = files(source);
+  const ctx: Ctx = { root: ROOT, file: intent.file, read: includes };
+  const done = checked(source, intent.patch, intent.expects, ctx);
+
+  return done.ok === false ? `refused: ${done.diagnostics[0]?.message ?? 'a surprise'}` : done.text;
+}
+
+/** The tab set, through the checker — the file, or why not. */
+function tabbed(
+  source: string,
+  sheet: string,
+  of: { visibility?: Visibility; color?: string | null },
+): string {
+  const { doc, grid, read } = files(source);
+  const intent = setTab(
+    { doc, grid },
+    { sheet: sheet as SheetName, ...of, color: of.color as never },
+    read,
+  );
   if (intent.kind === 'refused') return `refused: ${intent.why}`;
   if (intent.kind !== 'edit') throw new Error('a file was not written');
 
@@ -137,10 +160,12 @@ describe('a sheet taken out', () => {
     );
   });
 
-  it('is refused where it cannot tell another sheet would be left visible', () => {
+  it('is refused where the only other sheet is hidden, since one must show', () => {
     const source = `${ONE}  - name: Notes\n    visibility: hidden\n`;
 
-    expect(deleted(source, 'Sales')).toContain('refused: every other sheet sets `visibility:`');
+    expect(deleted(source, 'Sales')).toBe(
+      'refused: a workbook needs a sheet that shows, and this is the only one',
+    );
   });
 
   it('is refused where there is no such sheet', () => {
@@ -175,5 +200,46 @@ describe('a sheet moved along the tab bar', () => {
     expect(moved(TWO, 'Sales', 0)).toBe('refused: `Sales` is already there');
     expect(moved(TWO, 'Sales', 2)).toBe('refused: a sheet cannot go there');
     expect(moved(TWO, 'Gone', 0)).toBe('refused: there is no sheet named `Gone`');
+  });
+});
+
+describe("a tab's own two keys", () => {
+  it('hides a sheet by writing `visibility:`, and shows it by taking the key out', () => {
+    expect(tabbed(TWO, 'Notes', { visibility: 'hidden' })).toBe(`${TWO}    visibility: hidden\n`);
+
+    const hidden = `${TWO}    visibility: hidden\n`;
+    expect(tabbed(hidden, 'Notes', { visibility: 'visible' })).toBe(TWO);
+  });
+
+  it('writes and takes off a tab colour', () => {
+    expect(tabbed(TWO, 'Sales', { color: '1F77B4' })).toBe(
+      'sheets:\n  - name: Sales\n    cells:\n      A1: 1\n    tab_color: 1F77B4\n  - name: Notes\n    cells:\n      A1: hello\n',
+    );
+
+    const worn = 'sheets:\n  - name: Sales\n    tab_color: 1F77B4\n  - name: Notes\n';
+    expect(tabbed(worn, 'Sales', { color: null })).toBe(
+      'sheets:\n  - name: Sales\n  - name: Notes\n',
+    );
+  });
+
+  it('is refused where hiding it would leave nothing showing', () => {
+    expect(tabbed(ONE, 'Sales', { visibility: 'hidden' })).toBe(
+      'refused: a workbook needs a sheet that shows, and this is the only one',
+    );
+  });
+
+  it('leaves `very_hidden` to VBA, both ways round', () => {
+    expect(tabbed(TWO, 'Notes', { visibility: 'very_hidden' })).toBe(
+      'refused: `very_hidden` is not written by this editor',
+    );
+
+    const buried = `${TWO}    visibility: very_hidden\n`;
+    expect(tabbed(buried, 'Notes', { visibility: 'visible' })).toContain("only Excel's VBA undoes");
+  });
+
+  it('is refused where nothing about the tab would change', () => {
+    expect(tabbed(TWO, 'Notes', { visibility: 'visible' })).toBe(
+      'refused: nothing about this tab would change',
+    );
   });
 });

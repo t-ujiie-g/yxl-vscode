@@ -163,6 +163,8 @@ describe('a sheet with frozen panes', () => {
     at: { row: 51, col: 1 },
     of: { rows: 100, columns: 2 },
     freeze: { row: 3, col: 1 },
+    visibility: 'visible',
+    tabColor: null,
   });
 
   it('draws the frozen rows above the window, wherever the window is', () => {
@@ -200,6 +202,8 @@ describe('a sheet with frozen panes', () => {
       at: { row: 1, col: 3 },
       of: { rows: 2, columns: 10 },
       freeze: { row: 1, col: 2 },
+      visibility: 'visible',
+      tabColor: null,
     });
     const into = shown({ drawing: drawing({ sheets: [sideways] }) });
     const headings = [...into.querySelectorAll<HTMLElement>('thead th.stays')];
@@ -288,6 +292,8 @@ describe('a heading a reader clicks', () => {
       columns: 4,
       of: { rows: 40, columns: 4 },
       freeze: { row: 3, col: 2 },
+      visibility: 'visible',
+      tabColor: null,
       widths: [{ first: 2, last: 2, size: null, hidden: true, group: null }],
     });
     const into = shown({ drawing: drawing({ sheets: [frozen] }) }, on);

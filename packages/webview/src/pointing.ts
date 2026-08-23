@@ -1,7 +1,7 @@
 import type { Axis } from '@yxl-vscode/spec';
 import { spanSaid } from '@yxl-vscode/units';
 import { HELD } from './keys';
-import { entry, pointedAt, says } from './menus';
+import { entry, pointedAt, says, swatches } from './menus';
 import type { DrawnSheet } from './protocol';
 import {
   type Asks,
@@ -216,17 +216,53 @@ function hiddenNear(
 
 /** What a tab's own menu holds: what there is no room for on the tab itself. */
 function onTab(showing: Showing, asks: Asks, at: PointedTab): HTMLElement | null {
-  const name = showing.drawing.sheets[at.sheet]?.name ?? '';
+  const sheet = showing.drawing.sheets[at.sheet];
+  if (sheet === undefined) return null;
+
+  const shut = (take: () => void) => () => {
+    asks.pointAt(null);
+    take();
+  };
+  const buried = sheet.visibility === 'very_hidden';
+  const hidden = sheet.visibility !== 'visible';
+
   const entries = [
-    entry('Rename', {}, () => {
-      asks.pointAt(null);
-      asks.nameSheet(at.sheet);
-    }),
-    entry('Delete', {}, () => {
-      asks.pointAt(null);
-      asks.deleteSheet(name);
-    }),
+    entry(
+      'Rename',
+      { disabled: buried },
+      shut(() => asks.nameSheet(at.sheet)),
+    ),
+    entry(
+      'Delete',
+      { disabled: buried },
+      shut(() => asks.deleteSheet(sheet.name)),
+    ),
+    entry(
+      hidden ? 'Unhide' : 'Hide',
+      { disabled: buried },
+      shut(() => asks.setTab(sheet.name, { visibility: hidden ? 'visible' : 'hidden' })),
+    ),
   ];
 
-  return pointedAt(showing, asks, entries);
+  const panel = pointedAt(showing, asks, entries);
+  if (panel === null || buried) return panel;
+
+  const colours = document.createElement('div');
+  colours.className = 'entry tabbed';
+  colours.append('Tab colour');
+  colours.append(
+    ...swatches(sheet.tabColor, '#4A86E8', (digits) => {
+      asks.pointAt(null);
+      asks.setTab(sheet.name, { color: digits });
+    }),
+  );
+
+  const clears = entry(
+    'No tab colour',
+    { disabled: sheet.tabColor === null, className: 'clears' },
+    shut(() => asks.setTab(sheet.name, { color: null })),
+  );
+
+  panel.querySelector('.panel')?.append(clears, colours);
+  return panel;
 }

@@ -136,6 +136,8 @@ function drawSheet(
     at,
     of,
     freeze,
+    visibility: sheet.visibility,
+    tabColor: sheet.tabColor,
     widths: sheet.columns.map(sizedRun),
     heights: sheet.rows.map(sizedRun),
     cells: drawCells(sheet, { at, rows, columns, freeze }, evaluation),

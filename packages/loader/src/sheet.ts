@@ -15,8 +15,16 @@ import { readCells, withoutLeadingEquals } from './cell';
 import { CODE } from './codes';
 import { type Ctx, identify, keyOf, reject, type Site } from './ctx';
 import { readDataBlocks } from './data';
-import { expectText, findEntry, openEntries, readEach, rejectUnknownKey, scalarText } from './read';
-import { ADDRESS, RANGE, readAs, SHEET_NAME } from './template';
+import {
+  expectSpelling,
+  expectText,
+  findEntry,
+  openEntries,
+  readEach,
+  rejectUnknownKey,
+  scalarText,
+} from './read';
+import { ADDRESS, COLOR, RANGE, readAs, SHEET_NAME } from './template';
 
 /** The workbook's `sheets:` sequence, in tab order. */
 export function readSheets(ctx: Ctx, node: Node, path: Path): Sheet[] {
@@ -46,6 +54,8 @@ function readSheet(site: Site): Sheet | null {
   let rows: RowBand[] = [];
   let merges: Merge[] = [];
   let freeze: Sheet['freeze'] = null;
+  let visibility: Sheet['visibility'] = null;
+  let tabColor: Sheet['tabColor'] = null;
   const opaque: Opaque[] = [];
 
   for (const entry of entries) {
@@ -75,6 +85,12 @@ function readSheet(site: Site): Sheet | null {
       case 'freeze':
         freeze = readAs(here, entry.value, `${what} \`freeze\``, ADDRESS);
         break;
+      case 'visibility':
+        visibility = expectSpelling(here, entry.value, `${what} \`visibility\``, SHOWN);
+        break;
+      case 'tab_color':
+        tabColor = readAs(here, entry.value, `${what} \`tab_color\``, COLOR);
+        break;
       default:
         opaque.push({ ...identify(here, at, entry.span), key });
     }
@@ -90,10 +106,15 @@ function readSheet(site: Site): Sheet | null {
     rows,
     merges,
     freeze,
+    visibility,
+    tabColor,
     keyOrder: entries.map(keyOf),
     opaque,
   };
 }
+
+/** The spellings `visibility` takes (`docs/spec.md` §2). */
+const SHOWN = ['visible', 'hidden', 'very_hidden'] as const;
 
 function readMerges(ctx: Ctx, node: Node, path: Path, what: string): Merge[] {
   return readEach(ctx, node, path, `${what} \`merges\``, (site) => {

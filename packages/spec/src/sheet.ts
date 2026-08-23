@@ -1,8 +1,11 @@
-import type { A1Addr, A1Range, SheetName } from '@yxl-vscode/units';
+import type { A1Addr, A1Range, Color, SheetName } from '@yxl-vscode/units';
 import type { ColumnBand, RowBand } from './band';
 import type { Cell } from './cell';
 import type { DataBlock } from './data';
 import type { Opaque, SpecNode, Templated } from './node';
+
+/** Whether Excel shows a sheet's tab; `very_hidden` is undone only from VBA (`docs/spec.md` §2). */
+export type Visibility = 'visible' | 'hidden' | 'very_hidden';
 
 /**
  * One sheet. `keyOrder` is the sheet's keys as written, because where two
@@ -17,6 +20,8 @@ export interface Sheet extends SpecNode {
   readonly rows: readonly RowBand[];
   readonly merges: readonly Merge[];
   readonly freeze: Templated<A1Addr> | null;
+  readonly visibility: Visibility | null;
+  readonly tabColor: Templated<Color> | null;
   readonly keyOrder: readonly string[];
   readonly opaque: readonly Opaque[];
 }

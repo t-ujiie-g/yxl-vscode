@@ -1418,8 +1418,13 @@ are carried through untouched and shown as nothing (`docs/spec.md` §2).
       remove-and-insert pair would have been unsound, since a sequence's index
       paths shift under the removal and the inverse is read against the tree as
       it was (ADR-026).
-- [ ] **Hide and unhide** a sheet (`visibility: hidden`), and `very_hidden`
-      drawn as what it is and not offered; **tab colour** from the tab's menu
+- [x] **Hide and unhide** a sheet (`visibility: hidden`), and `very_hidden`
+      drawn as what it is and not offered; **tab colour** from the tab's menu.
+      Both keys are modelled now rather than opaque, so a hidden sheet is drawn
+      faded and italic — Excel takes the tab away, but a preview that hides it
+      leaves no way to bring it back. Hiding the last sheet that shows is
+      refused, which is also what turned the deletion's `visibility:` guess into
+      a real check.
 - [ ] **Gridlines off** drawn as off, and a switch for it in the sheet's menu
 - [ ] **`split:`** drawn as the splitter it is, read-only; the freeze gesture
       already refuses a split sheet with the reason
@@ -2941,6 +2946,28 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-23 — The tab's own two keys
+`visibility:` and `tab_color:` were opaque — preserved and invisible. They are
+modelled now, and the tab's menu sets both.
+
+- **Hide and unhide** from the tab's menu. Excel takes a hidden tab away
+  entirely; this draws it faded and italic instead, because a preview that hides
+  it leaves the reader no way to bring it back. Hiding the last sheet that shows
+  is refused — yxl refuses a workbook where every sheet is hidden.
+- **`very_hidden` is drawn as what it is and not offered.** Excel undoes it only
+  from VBA, so every entry on that tab's menu is disabled rather than writing a
+  key this editor cannot honestly undo.
+- **A tab colour** from the same menu, over the palette the toolbar already had:
+  the swatch grid and the reader's own colour moved into `menus.ts`, so there is
+  one palette in this view rather than two.
+- **The deletion's `visibility:` guess is a real check now.** It refused when
+  every other sheet merely *had* a `visibility:` key, since it could not read
+  the value; it reads it.
+- Also here: the extension-level test for the tab reorder that the last pass
+  meant to land and did not — the edit that was supposed to add it failed
+  silently, and the suite was green because nothing was there to fail.
+- Comment shape: export 2.2, private 1.0, inline 1.5, 9 over the limit — held.
 
 ### 2026-08-23 — The tabs, dragged into order
 The tab bar's fourth gesture, and the last of `sheets:` itself.

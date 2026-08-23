@@ -27,6 +27,8 @@ const sheet = (of: Partial<DrawnSheet> = {}): DrawnSheet => ({
   merges: [],
   problems: [],
   freeze: null,
+  visibility: 'visible',
+  tabColor: null,
   ...of,
 });
 

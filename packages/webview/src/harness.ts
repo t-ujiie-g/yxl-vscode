@@ -12,6 +12,7 @@ export function asks(): Asks {
     nameSheet: vi.fn(),
     deleteSheet: vi.fn(),
     moveSheet: vi.fn(),
+    setTab: vi.fn(),
     drawWith: vi.fn(),
     resize: vi.fn(),
     select: vi.fn(),
@@ -77,6 +78,8 @@ export function sheet(of: Partial<DrawnSheet> = {}): DrawnSheet {
     merges: [],
     problems: [],
     freeze: null,
+    visibility: 'visible',
+    tabColor: null,
     ...of,
   };
 }
