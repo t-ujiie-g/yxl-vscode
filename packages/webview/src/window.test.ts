@@ -15,6 +15,7 @@ function sheet(of: Partial<DrawnSheet> = {}): DrawnSheet {
     merges: [],
     visibility: 'visible',
     tabColor: null,
+    gridlines: true,
     problems: [],
     freeze: null,
     ...of,

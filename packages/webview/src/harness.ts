@@ -80,6 +80,7 @@ export function sheet(of: Partial<DrawnSheet> = {}): DrawnSheet {
     freeze: null,
     visibility: 'visible',
     tabColor: null,
+    gridlines: true,
     ...of,
   };
 }

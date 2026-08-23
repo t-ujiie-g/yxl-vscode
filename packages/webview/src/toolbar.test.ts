@@ -41,6 +41,7 @@ function showing(of: {
     merges: [],
     visibility: 'visible',
     tabColor: null,
+    gridlines: true,
     problems: [],
     freeze: of.freeze ?? null,
   };

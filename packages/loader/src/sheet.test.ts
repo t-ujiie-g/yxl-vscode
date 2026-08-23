@@ -38,15 +38,20 @@ describe('a sheet', () => {
   });
 
   it('carries a key it does not model, in place', () => {
-    const read = sheet('name: S\n    charts: []\n    gridlines: true\n');
-    expect(read.opaque.map((o) => o.key)).toEqual(['charts', 'gridlines']);
-    expect(read.keyOrder).toEqual(['name', 'charts', 'gridlines']);
+    const read = sheet('name: S\n    charts: []\n    filter: A1:D1\n');
+    expect(read.opaque.map((o) => o.key)).toEqual(['charts', 'filter']);
+    expect(read.keyOrder).toEqual(['name', 'charts', 'filter']);
   });
 
   it('spans an unmodeled key over its whole entry', () => {
-    const source = 'sheets:\n  - name: S\n    gridlines: true\n';
+    const source = 'sheets:\n  - name: S\n    filter: A1:D1\n';
     const opaque = load(parse(source, { file: 'f' })).doc?.sheets[0]?.opaque[0];
-    expect(source.slice(opaque?.span.start, opaque?.span.end)).toBe('gridlines: true');
+    expect(source.slice(opaque?.span.start, opaque?.span.end)).toBe('filter: A1:D1');
+  });
+
+  it('reads whether the sheet draws its own gridlines', () => {
+    expect(sheet('name: S\n    gridlines: false\n').gridlines).toBe(false);
+    expect(sheet('name: S\n').gridlines).toBeNull();
   });
 
   it('reads where the panes are frozen', () => {

@@ -173,11 +173,12 @@ export function moveSheet(spec: Projection, where: Ordering, read: Reading): Int
   return { kind: 'edit', file: found.file, patch: { ops }, expects: nothingChanges };
 }
 
-/** A sheet's tab as a gesture asks for it: whether it shows, and the colour it wears. */
+/** A sheet's own switches as a gesture asks for them: the tab's two keys, and its gridlines. */
 export interface Tabbed {
   readonly sheet: SheetName;
   readonly visibility?: Visibility;
   readonly color?: Color | null;
+  readonly gridlines?: boolean;
 }
 
 /**
@@ -209,7 +210,10 @@ export function setTab(spec: Projection, tabbed: Tabbed, read: Reading): Intent 
   if (tabbed.color !== undefined) {
     ops.push(...keyed(found.path, 'tab_color', tabbed.color, found.node));
   }
-  if (ops.length === 0) return refused('nothing about this tab would change');
+  if (tabbed.gridlines !== undefined) {
+    ops.push(...switched(found.path, 'gridlines', tabbed.gridlines, found.node));
+  }
+  if (ops.length === 0) return refused('nothing about this sheet would change');
 
   return { kind: 'edit', file: found.file, patch: { ops }, expects: nothingChanges };
 }
@@ -226,4 +230,13 @@ function keyed(path: Path, key: string, value: string | null, node: Node): Op[] 
   if (already) return [{ op: 'set', path: [...path, key], value }];
 
   return [{ op: 'add', path, key, value, before: null }];
+}
+
+/** The op that writes a sheet's switch, or takes the key out where it is back at Excel's default. */
+function switched(path: Path, key: string, on: boolean, node: Node): Op[] {
+  const already = holds(node, key);
+  if (on) return already ? [{ op: 'remove', path: [...path, key] }] : [];
+  if (already) return [{ op: 'set', path: [...path, key], value: false }];
+
+  return [{ op: 'add', path, key, value: false, before: null }];
 }

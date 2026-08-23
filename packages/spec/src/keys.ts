@@ -44,6 +44,7 @@ export const MODELED_KEYS = {
     'freeze',
     'visibility',
     'tab_color',
+    'gridlines',
   ]),
   cell: keySet(CELL_KEYS),
   override: keySet(['at', 'reason', ...CELL_KEYS]),

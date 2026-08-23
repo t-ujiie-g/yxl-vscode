@@ -16,6 +16,7 @@ import { CODE } from './codes';
 import { type Ctx, identify, keyOf, reject, type Site } from './ctx';
 import { readDataBlocks } from './data';
 import {
+  expectBool,
   expectSpelling,
   expectText,
   findEntry,
@@ -56,6 +57,7 @@ function readSheet(site: Site): Sheet | null {
   let freeze: Sheet['freeze'] = null;
   let visibility: Sheet['visibility'] = null;
   let tabColor: Sheet['tabColor'] = null;
+  let gridlines: Sheet['gridlines'] = null;
   const opaque: Opaque[] = [];
 
   for (const entry of entries) {
@@ -91,6 +93,9 @@ function readSheet(site: Site): Sheet | null {
       case 'tab_color':
         tabColor = readAs(here, entry.value, `${what} \`tab_color\``, COLOR);
         break;
+      case 'gridlines':
+        gridlines = expectBool(here, entry.value, `${what} \`gridlines\``);
+        break;
       default:
         opaque.push({ ...identify(here, at, entry.span), key });
     }
@@ -108,6 +113,7 @@ function readSheet(site: Site): Sheet | null {
     freeze,
     visibility,
     tabColor,
+    gridlines,
     keyOrder: entries.map(keyOf),
     opaque,
   };

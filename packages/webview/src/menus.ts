@@ -96,7 +96,7 @@ export function opens(
 /** One line of a panel: a name, and what taking it does. */
 export function entry(
   said: string,
-  of: { disabled?: boolean; className?: string; chord?: string },
+  of: { disabled?: boolean; className?: string; chord?: string; checked?: boolean },
   taken: () => void,
 ): HTMLElement {
   const one = document.createElement('button');
@@ -105,6 +105,11 @@ export function entry(
   one.textContent = said;
   one.disabled = of.disabled === true;
   one.addEventListener('click', taken);
+
+  if (of.checked !== undefined) {
+    one.classList.add('ticked');
+    one.setAttribute('aria-checked', String(of.checked));
+  }
 
   if (of.chord !== undefined) {
     const chord = document.createElement('span');

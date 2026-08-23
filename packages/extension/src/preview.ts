@@ -80,7 +80,12 @@ const WRITES = {
     move(spec, one.sheet, one.to, port),
   setTab: (
     spec: Spec,
-    one: { sheet: string; visibility?: 'visible' | 'hidden'; color?: string | null },
+    one: {
+      sheet: string;
+      visibility?: 'visible' | 'hidden';
+      color?: string | null;
+      gridlines?: boolean;
+    },
     port: Port,
   ) => tab(spec, one.sheet, worn(one), port),
   group: (spec: Spec, grouped: Grouped, port: Port, choice?: string) =>
@@ -497,9 +502,11 @@ export class Preview {
 function worn(one: {
   visibility?: 'visible' | 'hidden';
   color?: string | null;
+  gridlines?: boolean;
 }): Omit<Tabbed, 'sheet'> {
   const shown = one.visibility === undefined ? {} : { visibility: one.visibility };
-  if (one.color === undefined) return shown;
+  const lined = one.gridlines === undefined ? shown : { ...shown, gridlines: one.gridlines };
+  if (one.color === undefined) return lined;
 
-  return { ...shown, color: one.color === null ? null : parseColor(one.color) };
+  return { ...lined, color: one.color === null ? null : parseColor(one.color) };
 }

@@ -22,6 +22,7 @@ export interface Sheet extends SpecNode {
   readonly freeze: Templated<A1Addr> | null;
   readonly visibility: Visibility | null;
   readonly tabColor: Templated<Color> | null;
+  readonly gridlines: boolean | null;
   readonly keyOrder: readonly string[];
   readonly opaque: readonly Opaque[];
 }

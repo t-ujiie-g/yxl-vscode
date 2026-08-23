@@ -49,6 +49,7 @@ export interface DrawnSheet {
   readonly freeze: { readonly row: number; readonly col: number } | null;
   readonly visibility: 'visible' | 'hidden' | 'very_hidden';
   readonly tabColor: string | null;
+  readonly gridlines: boolean;
 }
 
 /** Rows of a `data:` block to be put in order, by the column the selection starts in. */
@@ -193,6 +194,7 @@ export type About =
       readonly sheet: string;
       readonly visibility?: 'visible' | 'hidden';
       readonly color?: string | null;
+      readonly gridlines?: boolean;
     };
 
 /**

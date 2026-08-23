@@ -38,6 +38,7 @@ export interface CompiledSheet {
   readonly freeze: A1Addr | null;
   readonly visibility: Visibility;
   readonly tabColor: Color | null;
+  readonly gridlines: boolean;
 }
 
 /** One `formulas:` range, kept as a range: `D2:D1048576` is two words, not a million cells (ADR-019). */

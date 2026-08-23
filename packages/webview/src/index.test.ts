@@ -36,6 +36,7 @@ function sheet(of: Partial<DrawnSheet> = {}): DrawnSheet {
     freeze: null,
     visibility: 'visible',
     tabColor: null,
+    gridlines: true,
     ...of,
   };
 }
@@ -1239,6 +1240,27 @@ describe('the bar over the grid', () => {
       sheet: 'Notes',
       visibility: 'visible',
     });
+  });
+
+  it("turns a sheet's gridlines off from its menu, and draws them off", () => {
+    const { into, sent, told } = view();
+
+    into
+      .querySelector<HTMLButtonElement>('.tabs .tab:not(.add)')
+      ?.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+
+    const lines = [...into.querySelectorAll<HTMLButtonElement>('.pointed .entry')].find(
+      (one) => one.firstChild?.textContent === 'Gridlines',
+    );
+    expect(lines?.getAttribute('aria-checked')).toBe('true');
+    lines?.click();
+
+    expect(sent.filter((one) => one.kind === 'setTab')).toEqual([
+      { kind: 'setTab', sheet: 'Sales', gridlines: false },
+    ]);
+
+    told({ ...drawing, sheets: [sheet({ gridlines: false })] });
+    expect(into.querySelector('.grid')?.classList.contains('bare')).toBe(true);
   });
 
   it('sets a tab colour from a swatch, and takes it off again', () => {
