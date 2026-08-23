@@ -1,5 +1,5 @@
 import { addrAt } from '@yxl-vscode/units';
-import { written } from './cell';
+import { breaking, written } from './cell';
 import { looking as lookingFor } from './keys';
 import { type Asks, GUTTER, type Looking, type Showing } from './showing';
 
@@ -61,18 +61,26 @@ export function formulaBar(showing: Showing, asks: Asks): HTMLElement {
   mark.className = 'fx';
   mark.textContent = 'fx';
 
-  const holds = document.createElement('input');
+  // A `textarea`: an `input` strips the line breaks out of its own value, so a
+  // cell holding two lines would be written back as one.
+  const holds = document.createElement('textarea');
   const cell = cellOf(showing);
-  holds.type = 'text';
   holds.className = 'holds';
   holds.value = written(cell);
+  holds.rows = rowsOf(holds.value);
   holds.disabled = showing.selected === null;
   holds.title = 'What this cell holds';
   holds.setAttribute('aria-label', 'What this cell holds');
+  holds.addEventListener('input', () => {
+    holds.rows = rowsOf(holds.value);
+  });
   holds.addEventListener('keydown', (event) => {
     event.stopPropagation();
     const where = showing.selected;
+
+    if (breaking(event)) return;
     if (event.key === 'Enter' && where !== null) {
+      event.preventDefault();
       asks.edit(where.row, where.col, holds.value);
       holds.blur();
     }
@@ -84,6 +92,11 @@ export function formulaBar(showing: Showing, asks: Asks): HTMLElement {
 
   bar.append(at, mark, holds);
   return bar;
+}
+
+/** How many lines the bar shows before it scrolls instead, so one long value cannot take the panel. */
+function rowsOf(text: string): number {
+  return Math.min(6, text.split('\n').length);
 }
 
 /** The cell the reader is on, where the drawing holds one. */

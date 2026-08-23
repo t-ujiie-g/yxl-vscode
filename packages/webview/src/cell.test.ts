@@ -211,7 +211,7 @@ describe('the box a reader types in', () => {
   function box(of: Partial<DrawnCell>): string {
     const at = document.createElement('td');
     typeInto(at, cell(of), undefined, () => {});
-    return at.querySelector<HTMLInputElement>('.typing')?.value ?? '';
+    return at.querySelector<HTMLTextAreaElement>('.typing')?.value ?? '';
   }
 
   it('holds what the spec holds, formula and value alike', () => {

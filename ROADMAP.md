@@ -419,7 +419,8 @@ not a date.
 | | |
 |---|---|
 | Type a value or a formula; `Enter`, `F2`, or just start typing | ✅ |
-| `Enter` commits and moves down; `Esc` abandons | ✅ |
+| `Enter` commits and moves down; `Esc` abandons | ✅ — `Shift`+`Enter` up, `Tab` right, `Shift`+`Tab` left, as both spreadsheets move |
+| A line break inside a cell | ✅ — `Alt`/`Cmd`/`Ctrl`+`Enter`, and the cell is drawn with the break |
 | Arrows, `Tab`, `PageUp` / `PageDown` | ✅ |
 | `Delete` empties a cell | ✅ |
 | Undo and redo | ✅ — from the grid without leaving it, and VS Code's own where the file has moved since (ADR-030) |
@@ -2591,6 +2592,67 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-22 — A line break inside a cell, and the keys that leave it
+The everyday half of the editor, brought to what a reader of Sheets already
+does with their hands.
+
+- **`Alt`+`Enter` — or `Cmd`/`Ctrl`+`Enter` — puts a line break in the cell**
+  rather than committing it, and `Enter` commits the whole of it. The box a cell
+  is typed into is a `textarea` now, grown to what is in it, so two lines are
+  two lines while they are being typed.
+- **The formula bar had to become one too, and that was a quiet bug.** An
+  `input` strips line breaks out of its own value, so a cell holding two lines
+  showed as one there — and pressing `Enter` in the bar would have written the
+  one back over the two.
+- **The keys that leave a cell are the ones both spreadsheets use**: `Enter`
+  down, `Shift`+`Enter` up, `Tab` right, `Shift`+`Tab` left. `Tab` used to blur
+  the box, which abandoned what was typed.
+- **A value with a break in it is drawn with the break**, wrapped or not: the
+  break is what the spec says, and the grid's `nowrap` was eating it. Where the
+  row has no height of its own it grows to fit, as it does in both
+  spreadsheets — and that is the one place the drawn geometry and `down()`
+  disagree, which is what a `rows:` height is for.
+- YAML holds it the way it always did: `A1: "one\ntwo"`, which the compiler
+  reads back as two lines. Nothing in `cst` needed changing — `isPlainSafe`
+  already refused a break and reached for the quoted form.
+- 1682 → 1690 tests.
+
+### 2026-08-22 — Refactoring pass over the whole tree (`AGENTS.md` §8)
+After the seven slices of Phase 10, which is where the debt was: three gestures
+that write a band arrived one at a time, and each brought a copy of the same
+algorithm.
+
+- **§8.2 — `hidden.ts` and `group.ts` were one algorithm with a different key.**
+  A hundred and twenty lines each, differing in four places: the key, the value,
+  what counts as *off*, and the wording. `setBandKey` in `bands.ts` is that
+  algorithm once — the band already over the run takes it, a run nothing covers
+  gets a band of its own, a band saying it about more than was named is a
+  question — and the two callers are 43 and 55 lines of vocabulary.
+  **The duplication was hiding an inconsistency**: hiding wrote `hidden: false`
+  where another band still hid the run, and grouping took its key out
+  regardless, leaving a wider band still grouping them. Sharing the answer fixed
+  it, and there is a test that says so.
+- **§8.3 — `table.ts` was 605 lines doing two subjects.** The outline is
+  `outline.ts` now (138 lines: the levels, the gutter cells, the bracket, the
+  controls, and the mark a hidden run leaves), and the table is what draws a
+  table.
+- **§8.3 — `preview.ts` answered seventeen messages with seventeen branches**
+  that differed only in which function they called. They are one table keyed by
+  the message kind; adding a gesture is a line rather than a branch, and the
+  method that dispatches is nine lines. 507 → 463.
+- **§8.3 — `draw.test.ts` was the largest file in the tree** at 1229 lines, and
+  had been since the source it tests was split in two. It is `draw.test.ts`
+  (303) and `table.test.ts` (810), with the fixtures in `harness.ts` — the
+  convention `compile` already uses for exactly this.
+- **§8.2 — `respelled` and `deindented`** were left exported when `splitBand`
+  took over as their only caller. Private again.
+- **§8.7 — checked rather than assumed**: no package imports upward, both
+  `port.put` call sites still go through `checked`, nothing on a write path
+  reads a computed value, and the grid still holds no state of its own.
+- 1681 → 1682 tests. Comment shape: exports 503 blocks / 1086 lines (avg 2.2),
+  private 342 / 370 (1.1), inline 70 / 100 (1.4), 9 over the limit — the same
+  nine.
 
 ### 2026-08-22 — The outline gets its gutter, and a right-click stops taking the heading
 Both from the real window, on the slice above.

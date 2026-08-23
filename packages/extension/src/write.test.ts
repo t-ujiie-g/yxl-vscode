@@ -550,6 +550,23 @@ describe('a look over a whole column', () => {
   });
 });
 
+describe('a cell typed with a line break in it', () => {
+  it('is written as one value, quoted the way YAML holds a break', async () => {
+    const spec = { [ROOT]: `${SALES}    cells:\n      A1: APAC\n` };
+    const { spec: read, port, files } = editor(spec);
+
+    await write(read, typed({ text: 'one\ntwo' }), port);
+    expect(files[ROOT]).toBe(`${SALES}    cells:\n      A1: "one\\ntwo"\n`);
+  });
+
+  it('comes back out of the file as the two lines it was', async () => {
+    const spec = { [ROOT]: `${SALES}    cells:\n      A1: "one\\ntwo"\n` };
+    const { spec: read } = editor(spec);
+
+    expect(read.grid.sheets[0]?.cells.get('A1')?.value).toBe('one\ntwo');
+  });
+});
+
 describe('columns hidden from the preview', () => {
   const hiding = (of: Partial<Parameters<typeof hide>[1]> = {}) => ({
     sheet: 'Sales' as const,

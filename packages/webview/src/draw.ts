@@ -2,6 +2,7 @@ import type { Axis } from '@yxl-vscode/spec';
 import { findBar, formulaBar, told } from './boxes';
 import { takingAll } from './keys';
 import { entry, fit, pointedAt } from './menus';
+import { spanSaid } from './outline';
 import {
   inspector,
   note,
@@ -22,7 +23,7 @@ import {
   ranged,
   type Showing,
 } from './showing';
-import { grid, headed, spanSaid } from './table';
+import { grid, headed } from './table';
 import { toolbar } from './toolbar';
 import { type Where, wanted } from './window';
 

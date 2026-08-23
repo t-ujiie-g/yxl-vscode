@@ -3,7 +3,19 @@ import { type Engine, univerEngine } from '@yxl-vscode/evaluate';
 import { did, type History, nothing } from '@yxl-vscode/patch';
 import type { Axis } from '@yxl-vscode/spec';
 import { addrAt, cellOf, filePath } from '@yxl-vscode/units';
-import type { FromView, PastedAt } from '@yxl-vscode/webview/protocol';
+import type {
+  FromView,
+  Frozen,
+  Grouped,
+  Hidden,
+  Pasted,
+  PastedAt,
+  PastedText,
+  Ranged,
+  Resized,
+  Typed,
+  Worn,
+} from '@yxl-vscode/webview/protocol';
 import * as vscode from 'vscode';
 import { paste, pastedWith, pasteFrom, whose } from './clipboard';
 import { asOpen, put, reveal, textOf } from './documents';
@@ -31,6 +43,38 @@ const SETTLE = 150;
 
 /** The same, for a cursor, which moves more often and costs less to answer. */
 const FOLLOW = 80;
+
+/** Every gesture that writes, by the kind that carries it: the message minus `kind` and `choice` is what it takes. */
+const WRITES = {
+  edit: (spec: Spec, typed: Typed, port: Port) => write(spec, typed, port),
+  resolve: (spec: Spec, typed: Typed, port: Port, choice?: string) =>
+    resolve(spec, typed, choice ?? '', port),
+  override: (spec: Spec, asked: Typed & { reason: string }, port: Port) => {
+    const { reason, ...typed } = asked;
+    return writeOverride(spec, typed, reason === '' ? undefined : reason, port);
+  },
+  empty: (spec: Spec, ranged: Ranged, port: Port) => empty(spec, ranged, port),
+  emptied: (spec: Spec, ranged: Ranged, port: Port, choice?: string) =>
+    emptied(spec, ranged, choice ?? '', port),
+  wear: (spec: Spec, worn: Worn, port: Port, choice?: string) => wear(spec, worn, port, choice),
+  worn: (spec: Spec, worn: Worn, port: Port, choice?: string) => wear(spec, worn, port, choice),
+  freeze: (spec: Spec, frozen: Frozen, port: Port) => freeze(spec, frozen, port),
+  group: (spec: Spec, grouped: Grouped, port: Port, choice?: string) =>
+    group(spec, grouped, port, choice),
+  grouped: (spec: Spec, one: Grouped, port: Port, choice?: string) =>
+    group(spec, one, port, choice),
+  hide: (spec: Spec, one: Hidden, port: Port, choice?: string) => hide(spec, one, port, choice),
+  hidden: (spec: Spec, one: Hidden, port: Port, choice?: string) => hide(spec, one, port, choice),
+  resize: (spec: Spec, one: Resized, port: Port, choice?: string) =>
+    resize(spec, one, port, choice),
+  resized: (spec: Spec, one: Resized, port: Port, choice?: string) =>
+    resize(spec, one, port, choice),
+  paste: (spec: Spec, one: Pasted, port: Port) => paste(spec, one, port),
+  pasted: (spec: Spec, one: Pasted, port: Port, choice?: string) =>
+    pastedWith(spec, one, choice ?? '', port),
+  pastedText: (spec: Spec, one: PastedText, port: Port, choice?: string) =>
+    pasteFrom(spec, one, port, choice),
+} as const;
 
 /** The preview: one panel per spec, beside the text, recomputed from the file on every change (ADR-001). */
 export class Preview {
@@ -214,29 +258,15 @@ export class Preview {
 
   /** What the view asked for. */
   private answer(asked: FromView): void {
+    const writes = WRITES[asked.kind as keyof typeof WRITES];
+    if (writes !== undefined) {
+      const { kind, choice, ...about } = asked as { kind: string; choice?: string };
+      this.writing((spec, port) => writes(spec, about as never, port, choice));
+      return;
+    }
+
     if (asked.kind === 'reveal') {
       void reveal(asked.file, asked.start, asked.end);
-      return;
-    }
-
-    if (asked.kind === 'window') {
-      // Answering a window that has not moved turns one stray scroll into a loop.
-      const at = this.windows.get(asked.sheet);
-      if (at?.row === asked.row && at.col === asked.col) return;
-
-      this.windows.set(asked.sheet, { row: asked.row, col: asked.col });
-      const drawn = this.drawn;
-      if (drawn !== undefined) {
-        const drawing = redraw(drawn, this.params, this.windows);
-        this.drawn = { ...drawn, drawing };
-        void this.panel.webview.postMessage(drawing);
-      }
-      return;
-    }
-
-    if (asked.kind === 'edit') {
-      const { kind, ...typed } = asked;
-      this.writing((spec, port) => write(spec, typed, port));
       return;
     }
 
@@ -245,107 +275,14 @@ export class Preview {
       return;
     }
 
-    if (asked.kind === 'empty') {
-      const { kind, ...ranged } = asked;
-      this.writing((spec, port) => empty(spec, ranged, port));
-      return;
-    }
-
-    if (asked.kind === 'emptied') {
-      const { kind, choice, ...ranged } = asked;
-      this.writing((spec, port) => emptied(spec, ranged, choice, port));
-      return;
-    }
-
-    if (asked.kind === 'wear') {
-      const { kind, ...worn } = asked;
-      this.writing((spec, port) => wear(spec, worn, port));
-      return;
-    }
-
-    if (asked.kind === 'worn') {
-      const { kind, choice, ...worn } = asked;
-      this.writing((spec, port) => wear(spec, worn, port, choice));
-      return;
-    }
-
-    if (asked.kind === 'freeze') {
-      const { kind, ...frozen } = asked;
-      this.writing((spec, port) => freeze(spec, frozen, port));
-      return;
-    }
-
-    if (asked.kind === 'group') {
-      const { kind, ...grouped } = asked;
-      this.writing((spec, port) => group(spec, grouped, port));
-      return;
-    }
-
-    if (asked.kind === 'grouped') {
-      const { kind, choice, ...grouped } = asked;
-      this.writing((spec, port) => group(spec, grouped, port, choice));
-      return;
-    }
-
-    if (asked.kind === 'hide') {
-      const { kind, ...hidden } = asked;
-      this.writing((spec, port) => hide(spec, hidden, port));
-      return;
-    }
-
-    if (asked.kind === 'hidden') {
-      const { kind, choice, ...hidden } = asked;
-      this.writing((spec, port) => hide(spec, hidden, port, choice));
-      return;
-    }
-
-    if (asked.kind === 'resize') {
-      const { kind, ...resized } = asked;
-      this.writing((spec, port) => resize(spec, resized, port));
-      return;
-    }
-
-    if (asked.kind === 'resized') {
-      const { kind, choice, ...resized } = asked;
-      this.writing((spec, port) => resize(spec, resized, port, choice));
-      return;
-    }
-
-    if (asked.kind === 'paste') {
-      const { kind, ...pasted } = asked;
-      this.writing((spec, port) => paste(spec, pasted, port));
-      return;
-    }
-
-    if (asked.kind === 'pasted') {
-      const { kind, choice, ...pasted } = asked;
-      this.writing((spec, port) => pastedWith(spec, pasted, choice, port));
+    if (asked.kind === 'window') {
+      this.looking(asked.sheet, asked.row, asked.col);
       return;
     }
 
     if (asked.kind === 'pasteAt') {
       const { kind, ...where } = asked;
       this.writing((spec, port) => this.pasteHere(spec, where, port));
-      return;
-    }
-
-    if (asked.kind === 'pastedText') {
-      const { kind, choice, ...text } = asked;
-      this.writing((spec, port) => pasteFrom(spec, text, port, choice));
-      return;
-    }
-
-    if (asked.kind === 'resolve') {
-      const { kind, choice, ...typed } = asked;
-      this.writing((spec, port) => resolve(spec, typed, choice, port));
-      return;
-    }
-
-    if (asked.kind === 'override') {
-      const { kind, reason, ...typed } = asked;
-      this.writing((spec, port) =>
-        writeOverride(spec, typed, reason === '' ? undefined : reason, port),
-      );
       return;
     }
 
@@ -367,20 +304,35 @@ export class Preview {
       return;
     }
 
-    const sheet = this.drawn?.grid?.sheets.find((one) => one.name === asked.sheet);
+    if (asked.kind === 'inspect') this.inspected(asked.sheet, asked.row, asked.col);
+  }
+
+  /** The window a sheet is looked at through, where the view has scrolled somewhere new. */
+  private looking(name: string, row: number, col: number): void {
+    // Answering a window that has not moved turns one stray scroll into a loop.
+    const at = this.windows.get(name);
+    if (at?.row === row && at.col === col) return;
+
+    this.windows.set(name, { row, col });
+    const drawn = this.drawn;
+    if (drawn === undefined) return;
+
+    const drawing = redraw(drawn, this.params, this.windows);
+    this.drawn = { ...drawn, drawing };
+    void this.panel.webview.postMessage(drawing);
+  }
+
+  /** Where each facet of one cell came from, for the cell that asked. */
+  private inspected(name: string, row: number, col: number): void {
+    const sheet = this.drawn?.grid?.sheets.find((one) => one.name === name);
     if (sheet === undefined) return;
 
     void this.panel.webview.postMessage({
       kind: 'inspected',
-      sheet: asked.sheet,
-      row: asked.row,
-      col: asked.col,
-      sources: inspect(
-        this.nodes,
-        sheet,
-        addrAt({ col: asked.col, row: asked.row }),
-        this.document.uri.fsPath,
-      ),
+      sheet: name,
+      row,
+      col,
+      sources: inspect(this.nodes, sheet, addrAt({ col, row }), this.document.uri.fsPath),
     });
   }
 

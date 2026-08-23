@@ -90,7 +90,7 @@ describe('what the view sends', () => {
 
     at(into, 1, 1)?.dispatchEvent(new MouseEvent('dblclick'));
     const box = into.querySelector('.typing');
-    if (!(box instanceof HTMLInputElement)) throw new Error('nothing to type into');
+    if (!(box instanceof HTMLTextAreaElement)) throw new Error('nothing to type into');
 
     box.value = 'EMEA';
     box.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
@@ -366,7 +366,7 @@ describe('what the view does with what it is told', () => {
 
     at(into, 1, 1)?.dispatchEvent(new MouseEvent('dblclick'));
     const box = into.querySelector('.typing');
-    if (!(box instanceof HTMLInputElement)) throw new Error('nothing to type into');
+    if (!(box instanceof HTMLTextAreaElement)) throw new Error('nothing to type into');
     box.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
 
     told({
@@ -386,7 +386,7 @@ describe('what the view does with what it is told', () => {
 
     at(into, 1, 1)?.dispatchEvent(new MouseEvent('dblclick'));
     const box = into.querySelector('.typing');
-    if (!(box instanceof HTMLInputElement)) throw new Error('nothing to type into');
+    if (!(box instanceof HTMLTextAreaElement)) throw new Error('nothing to type into');
     box.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
 
     told({
