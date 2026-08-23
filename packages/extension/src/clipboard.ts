@@ -49,7 +49,7 @@ export async function paste(
     const cells = some.kind === 'edit' ? some.expects.cells : new Set<string>();
     const apart = perOrigin(cells, (by) => pasteRange(spec, where, read, by), 'paste');
 
-    port.refuse(intent.why, theseOnly({ is: 'pasted', pasted }, PASTED, cells, apart));
+    port.refuse(intent.why, theseOnly({ ...pasted, kind: 'paste' }, PASTED, cells, apart));
     return;
   }
 
@@ -159,7 +159,7 @@ export async function pasteFrom(
     }
 
     port.refuse(counted(rows, spec.root), {
-      about: { is: 'text', text: asked },
+      about: { ...asked, kind: 'pasteText' },
       canOverride: false,
       choices: shapes,
     });
@@ -191,7 +191,7 @@ async function land(
       'paste',
     );
 
-    port.refuse(intent.why, theseOnly({ is: 'text', text: asked }, PASTED, cells, apart));
+    port.refuse(intent.why, theseOnly({ ...asked, kind: 'pasteText' }, PASTED, cells, apart));
     return;
   }
 

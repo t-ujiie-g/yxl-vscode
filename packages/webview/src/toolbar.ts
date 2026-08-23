@@ -11,6 +11,7 @@ import {
 import { addrAt, type Color, parseColor } from '@yxl-vscode/units';
 import { faces, sizes } from './fonts';
 import { cleared, numbers, quickly } from './formats';
+import { HELD } from './keys';
 import { ACROSS, type Bar, DOWN, framed, frozen, marked, RAGGED } from './marks';
 import { entry, opens, says } from './menus';
 import { type Asks, over, type Showing, wornBy } from './showing';
@@ -78,9 +79,6 @@ function divider(): HTMLElement {
   span.className = 'divider';
   return span;
 }
-
-/** How a shortcut is written on the reader's own keyboard. */
-const HELD = navigator.userAgent.includes('Mac') ? '\u2318' : 'Ctrl+';
 
 interface Toggle {
   readonly key: StyleProperty;

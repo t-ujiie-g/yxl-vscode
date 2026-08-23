@@ -151,19 +151,19 @@ export interface Refused {
 }
 
 /**
- * What a refusal is about — the gesture it came from, which the view sends back
- * when one of the answers is taken. `typed` is the only one an override is
- * offered beside (ADR-007).
+ * A message the host answers more than one way, and so may refuse as a
+ * question: the view sends the same message back with the answer taken
+ * (ADR-048).
  */
 export type About =
-  | { readonly is: 'typed'; readonly typed: Typed }
-  | { readonly is: 'ranged'; readonly ranged: Ranged }
-  | { readonly is: 'pasted'; readonly pasted: Pasted }
-  | { readonly is: 'text'; readonly text: PastedText }
-  | { readonly is: 'worn'; readonly worn: Worn }
-  | { readonly is: 'resized'; readonly resized: Resized }
-  | { readonly is: 'hidden'; readonly hidden: Hidden }
-  | { readonly is: 'grouped'; readonly grouped: Grouped };
+  | ({ readonly kind: 'edit' } & Typed)
+  | ({ readonly kind: 'empty' } & Ranged)
+  | ({ readonly kind: 'paste' } & Pasted)
+  | ({ readonly kind: 'pasteText' } & PastedText)
+  | ({ readonly kind: 'wear' } & Worn)
+  | ({ readonly kind: 'group' } & Grouped)
+  | ({ readonly kind: 'hide' } & Hidden)
+  | ({ readonly kind: 'resize' } & Resized);
 
 /**
  * `Cmd`+`V` in the grid: where it goes, what the grid holds of its own, and what
@@ -268,10 +268,15 @@ export type ToView =
   | Found
   | Summed;
 
+/** The answer a reader took; absent the first time a message is sent (ADR-048). */
+interface Answerable {
+  readonly choice?: string;
+}
+
 /**
- * Everything the view sends back. `edit`, `resolve` and `override` carry what
- * the reader typed, not what it means — that is decided once, on the host. A
- * sheet is named, not numbered (ADR-023).
+ * Everything the view sends back. `edit` and `override` carry what the reader
+ * typed, not what it means — that is decided once, on the host. A sheet is
+ * named, not numbered (ADR-023).
  */
 export type FromView =
   | { readonly kind: 'inspect'; readonly sheet: string; readonly row: number; readonly col: number }
@@ -284,25 +289,11 @@ export type FromView =
   | { readonly kind: 'setParam'; readonly name: string; readonly value: string }
   | { readonly kind: 'find'; readonly sheet: string; readonly text: string }
   | { readonly kind: 'fit'; readonly sheet: string; readonly axis: Axis; readonly at: number }
-  | ({ readonly kind: 'edit' } & Typed)
-  | ({ readonly kind: 'empty' } & Ranged)
-  | ({ readonly kind: 'emptied'; readonly choice: string } & Ranged)
+  | (About & Answerable)
   | { readonly kind: 'undo'; readonly redo: boolean }
-  | ({ readonly kind: 'paste' } & Pasted)
-  | ({ readonly kind: 'pasted'; readonly choice: string } & Pasted)
   | ({ readonly kind: 'pasteAt' } & PastedAt)
-  | ({ readonly kind: 'pastedText'; readonly choice: string } & PastedText)
-  | ({ readonly kind: 'wear' } & Worn)
-  | ({ readonly kind: 'worn'; readonly choice: string } & Worn)
   | ({ readonly kind: 'freeze' } & Frozen)
   | ({ readonly kind: 'sum' } & Ranged)
-  | ({ readonly kind: 'group' } & Grouped)
-  | ({ readonly kind: 'grouped'; readonly choice: string } & Grouped)
-  | ({ readonly kind: 'hide' } & Hidden)
-  | ({ readonly kind: 'hidden'; readonly choice: string } & Hidden)
-  | ({ readonly kind: 'resize' } & Resized)
-  | ({ readonly kind: 'resized'; readonly choice: string } & Resized)
-  | ({ readonly kind: 'resolve'; readonly choice: string } & Typed)
   | ({ readonly kind: 'override'; readonly reason: string } & Typed)
   | {
       readonly kind: 'window';

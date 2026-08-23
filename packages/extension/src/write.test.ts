@@ -41,9 +41,7 @@ function editor(sources: Record<string, string>) {
     },
     refuse: (why, offer) => {
       refusals.push(why);
-      offers.push(
-        offer?.canOverride === true && offer.about?.is === 'typed' ? offer.about.typed : null,
-      );
+      offers.push(offer?.canOverride === true && offer.about?.kind === 'edit' ? offer.about : null);
       answers.push([...(offer?.choices ?? [])]);
     },
     said: (what) => {
@@ -129,18 +127,17 @@ describe('the exception, when the ordinary edit is refused', () => {
     const { spec, port, offers } = editor({ [ROOT]: FILLED });
 
     await write(spec, typed({ col: 2, row: 2, text: '99' }), port);
-    expect(offers[0]).toEqual(typed({ col: 2, row: 2, text: '99' }));
+    expect(offers[0]).toEqual({ kind: 'edit', ...typed({ col: 2, row: 2, text: '99' }) });
   });
 
-  it('is offered as what was typed, and not as the message that carried it', async () => {
-    // What arrives at a write is a *message*, and a message carries its own
-    // `kind`. Handing that back for the view to send again is how an override
-    // went out as an edit and came back refused by the rule it excepted.
+  it('is offered under the kind it was refused as, whatever kind carried it', async () => {
+    // The view sends this back with its own `kind` last, which is how an
+    // override goes out as an override rather than as the edit it excepts.
     const { spec, port, offers } = editor({ [ROOT]: FILLED });
-    const message = { ...typed({ col: 2, row: 2, text: '99' }), kind: 'edit' } as Typed;
+    const message = { ...typed({ col: 2, row: 2, text: '99' }), kind: 'wear' } as Typed;
 
     await write(spec, message, port);
-    expect(offers[0]).not.toHaveProperty('kind');
+    expect(offers[0]).toMatchObject({ kind: 'edit' });
   });
 
   it('is not offered where there is no cell to make an exception of', async () => {

@@ -37,9 +37,7 @@ function editor(sources: Record<string, string>) {
     },
     refuse: (why, offer) => {
       refusals.push(why);
-      offers.push(
-        offer?.canOverride === true && offer.about?.is === 'typed' ? offer.about.typed : null,
-      );
+      offers.push(offer?.canOverride === true && offer.about?.kind === 'edit' ? offer.about : null);
       answers.push([...(offer?.choices ?? [])]);
     },
     said: (what) => {

@@ -1,5 +1,5 @@
 import { columnLabel } from '@yxl-vscode/units';
-import type { About, Choice, Drawing, Refused, Summed, Uncomputed } from './protocol';
+import type { Choice, Drawing, Refused, Summed, Uncomputed } from './protocol';
 import type { Asks, Reached, Showing } from './showing';
 
 /** The parameters as boxes to turn (`docs/spec.md` §7); emptying one gives the default back. */
@@ -89,11 +89,11 @@ export function refusal(refused: Refused, asks: Asks): HTMLElement {
     pick.className = 'choice';
     const says = moved(choice);
     pick.textContent = says === '' ? choice.what : `${choice.what} — ${says}`;
-    pick.addEventListener('click', () => taken(about, choice.id, asks));
+    pick.addEventListener('click', () => asks.answer(about, choice.id));
     said.append(' ', pick);
   }
 
-  if (about.is !== 'typed' || !refused.canOverride) return said;
+  if (about.kind !== 'edit' || !refused.canOverride) return said;
 
   const why = document.createElement('input');
   why.type = 'text';
@@ -104,25 +104,13 @@ export function refusal(refused: Refused, asks: Asks): HTMLElement {
   go.type = 'button';
   go.className = 'go';
   go.textContent = 'Write it as an override';
-  go.addEventListener('click', () => asks.overrideWith(about.typed, why.value));
+  go.addEventListener('click', () => asks.overrideWith(about, why.value));
   why.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter') asks.overrideWith(about.typed, why.value);
+    if (event.key === 'Enter') asks.overrideWith(about, why.value);
   });
 
   said.append(' ', why, ' ', go);
   return said;
-}
-
-/** An answer taken, back to the gesture the refusal was about. */
-function taken(about: About, choice: string, asks: Asks): void {
-  if (about.is === 'typed') asks.resolveWith(about.typed, choice);
-  if (about.is === 'ranged') asks.emptiedWith(about.ranged, choice);
-  if (about.is === 'pasted') asks.pastedWith(about.pasted, choice);
-  if (about.is === 'text') asks.pastedTextWith(about.text, choice);
-  if (about.is === 'worn') asks.wornWith(about.worn, choice);
-  if (about.is === 'resized') asks.resizedWith(about.resized, choice);
-  if (about.is === 'hidden') asks.hiddenWith(about.hidden, choice);
-  if (about.is === 'grouped') asks.groupedWith(about.grouped, choice);
 }
 
 /** What a choice would move, as a count a reader can act on and a few names; nothing where it moves no cell. */

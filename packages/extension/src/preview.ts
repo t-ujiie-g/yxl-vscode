@@ -47,33 +47,24 @@ const FOLLOW = 80;
 
 /** Every gesture that writes, by the kind that carries it: the message minus `kind` and `choice` is what it takes. */
 const WRITES = {
-  edit: (spec: Spec, typed: Typed, port: Port) => write(spec, typed, port),
-  resolve: (spec: Spec, typed: Typed, port: Port, choice?: string) =>
-    resolve(spec, typed, choice ?? '', port),
+  edit: (spec: Spec, typed: Typed, port: Port, choice?: string) =>
+    choice === undefined ? write(spec, typed, port) : resolve(spec, typed, choice, port),
   override: (spec: Spec, asked: Typed & { reason: string }, port: Port) => {
     const { reason, ...typed } = asked;
     return writeOverride(spec, typed, reason === '' ? undefined : reason, port);
   },
-  empty: (spec: Spec, ranged: Ranged, port: Port) => empty(spec, ranged, port),
-  emptied: (spec: Spec, ranged: Ranged, port: Port, choice?: string) =>
-    emptied(spec, ranged, choice ?? '', port),
+  empty: (spec: Spec, ranged: Ranged, port: Port, choice?: string) =>
+    choice === undefined ? empty(spec, ranged, port) : emptied(spec, ranged, choice, port),
   wear: (spec: Spec, worn: Worn, port: Port, choice?: string) => wear(spec, worn, port, choice),
-  worn: (spec: Spec, worn: Worn, port: Port, choice?: string) => wear(spec, worn, port, choice),
   freeze: (spec: Spec, frozen: Frozen, port: Port) => freeze(spec, frozen, port),
   group: (spec: Spec, grouped: Grouped, port: Port, choice?: string) =>
     group(spec, grouped, port, choice),
-  grouped: (spec: Spec, one: Grouped, port: Port, choice?: string) =>
-    group(spec, one, port, choice),
   hide: (spec: Spec, one: Hidden, port: Port, choice?: string) => hide(spec, one, port, choice),
-  hidden: (spec: Spec, one: Hidden, port: Port, choice?: string) => hide(spec, one, port, choice),
   resize: (spec: Spec, one: Resized, port: Port, choice?: string) =>
     resize(spec, one, port, choice),
-  resized: (spec: Spec, one: Resized, port: Port, choice?: string) =>
-    resize(spec, one, port, choice),
-  paste: (spec: Spec, one: Pasted, port: Port) => paste(spec, one, port),
-  pasted: (spec: Spec, one: Pasted, port: Port, choice?: string) =>
+  paste: (spec: Spec, one: Pasted, port: Port, choice?: string) =>
     pastedWith(spec, one, choice ?? '', port),
-  pastedText: (spec: Spec, one: PastedText, port: Port, choice?: string) =>
+  pasteText: (spec: Spec, one: PastedText, port: Port, choice?: string) =>
     pasteFrom(spec, one, port, choice),
 } as const;
 

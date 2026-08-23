@@ -126,6 +126,9 @@ export function looking(event: KeyboardEvent): 'open' | 'on' | 'back' | null {
   return event.shiftKey ? 'back' : 'on';
 }
 
+/** How a shortcut is written on the reader's own keyboard. */
+export const HELD = navigator.userAgent.includes('Mac') ? '\u2318' : 'Ctrl+';
+
 /** The look a shortcut asks for: `Cmd`/`Ctrl`+`B`, `I` and `U`, as both spreadsheets have them. */
 export function wearing(event: KeyboardEvent): 'bold' | 'italic' | 'underline' | null {
   if (!(event.metaKey || event.ctrlKey) || event.altKey || event.shiftKey) return null;

@@ -2421,6 +2421,38 @@ fourth: **a listener may say what happened and where; it may not say what is
 selected.** Anything a listener needs to know about the selection is an argument
 the view passes in, or a question the view answers.
 
+### ADR-048 — A refusal carries the message it was about
+**Accepted** 2026-08-23.
+
+*A question and its answer were two message kinds.* `wear` and `worn`, `hide`
+and `hidden`, `group` and `grouped`, `resize` and `resized`, `empty` and
+`emptied`, `edit` and `resolve`, and two more for paste: sixteen kinds where
+eight would do, and each pair carried the same payload to the same handler. The
+second of each existed only to say *and here is the answer the reader took*.
+
+*A message now carries its own answer.* `choice` is an optional field on the
+message a reader can be asked about, and a refusal carries **the message the
+host was handling** rather than a re-labelled copy of its payload. Taking an
+answer is `{ ...about, choice }` — one line, for every gesture there is and
+every one there will be.
+
+*What it removed.* Eight message kinds, eight `Asks` methods, the eight-armed
+`About` union and the eight-line `if` chain that turned one into the other,
+and eight rows of the host's dispatch table. What is left is one path: a
+listener reports, the host refuses with the message, the view sends it back.
+
+*The rule that comes with it: `kind` is written last.* A message carries its
+own, so an `about` built as `{ kind: 'edit', ...typed }` takes whatever kind the
+message arrived under. Spread first, name the kind last — that is also how an
+override goes out as an override rather than as the edit it excepts.
+
+*The same shape on the host.* Four gestures — a look, a size, hiding, grouping —
+were the same forty lines four times: parse the sheet name, ask §4.4 for the
+answers, refuse where there are none, apply the sole answer or ask, apply the
+answer taken, say what happened. That is now one function (`asked.ts`) and four
+vocabularies of five sentences each. Phase 11's insert and delete are a
+vocabulary, not another copy.
+
 ## 8. Open questions
 
 - **Q1 — `cells:` A1 keys and row insertion.** Inserting a row rewrites every
@@ -2681,6 +2713,31 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-23 — One answer, one path
+A refactoring pass over the whole tree before Phase 11, asked for after the
+third report of one bug wearing three faces. The theme is the one the reader
+named: **stop growing a branch where the shape is already the same.**
+
+- **A refusal carries the message it was about** (**ADR-048**). Sixteen message
+  kinds became eight, eight `Asks` methods became one, and the `if` chain that
+  turned a refusal back into a gesture became `{ ...about, choice }`.
+- **The four §4.4 gestures are one function and four vocabularies.** A look, a
+  size, hiding and grouping were the same forty lines four times; `asked.ts` is
+  that algorithm once, and each gesture now says only what it is called, what
+  answers it, and the four sentences a reader hears.
+- **`spanSaid` lived in two packages** — byte-identical in the host and in the
+  view. It is `units`' now, with `Axis` beside it: which way a band runs is a
+  fact about a grid, not about the schema, and `spec` re-exports the name so
+  nothing above it had to move.
+- **The shortcut spelling had two definitions** a fortnight apart in age and one
+  character apart in behaviour. One `HELD`, in `keys.ts`.
+- **The last listener that read the selection now asks the view.** `Cmd`+`F` in
+  a cell passed the search text as the *grid was drawn with it*, so a search
+  opened after typing in the box reopened on the old text (ADR-047).
+- 1751 → 1754 tests, and 119 fewer lines of source (404 deleted against 285 written,
+  most of the new lines being the tests and the ADR). Comment shape unchanged at 9 over the
+  limit.
 
 ### 2026-08-23 — A right-click menu on a cell
 Phase 10's last item, and the phase with it.
