@@ -1320,12 +1320,22 @@ Deliberately **not** here: a second selection with `Cmd`+click (every answer in
       **Band creation** was already done, and by the gestures that need one: a
       look or a size over a whole column writes a band of its own where none is
       over exactly that span (ADR-041, ADR-042).
-- [ ] The "convert this rectangle to `data:`" offer, at the moment a `cells:`
+- [x] The "convert this rectangle to `data:`" offer, at the moment a `cells:`
       block proves it needs it — and with it **§4.4's `empty` ②**, the answer
       that extends the `data:` rectangle next to an address rather than writing
       a `cells:` entry beside it. Carried here from Phase 7 (2026-08-19): it is
       the same judgement about when a spec wants a table, asked from the other
       end, and answering it twice in two phases would answer it twice
+      **The conversion is in**, as a gesture of its own on the rectangle
+      selected, and the line question points at it where the count it is showing
+      is `cells:` keys. Each field is taken **as the file wrote it**, not as the
+      value it compiled to, so a quoted `"007"` is still text afterwards. A cell
+      that says more than a value is refused by name: a table has nowhere to
+      keep a look.
+- [ ] **§4.4's `empty` ②** — typing into the cell *beside* a `data:` block
+      offering to extend the block, rather than writing a `cells:` entry over
+      it. The judgement is the same as the conversion's and the machinery is
+      now there; what is left is the row in the resolution table.
 - [ ] Fill down and fill right, and the drag handle — which is reference
       translation, and waits on §8 Q2
 - [ ] Sorting a `data:` rectangle: its rows rewritten, and nothing else touched
@@ -2804,6 +2814,28 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-23 — Keep this as a table
+The answer §8 Q1 promised: where a spec's addresses have become the thing that
+moves, the format already has somewhere better to put them.
+
+- **Make this a data table**, in the cell's own menu, over the rectangle
+  selected: the `cells:` entries go, and one anchored `data:` block takes their
+  place. Inserting a row under it is a one-line diff from then on.
+- **Each field is taken as the file wrote it**, not as the value it compiled to.
+  A quoted `"007"` is still text on the other side; that is the difference
+  between rewriting a spec and re-typing it.
+- **A cell that says more than a value is refused by name.** A table has nowhere
+  to keep a look (`docs/spec.md` §9), so the gesture says which cell and stops
+  rather than dropping it.
+- **The line question points at it** where the count it is showing is `cells:`
+  keys — which is what §4.4 asked for: show the diff a row insertion would make,
+  and say what the format offers instead.
+- **A gap is `null`**, the block's own word for a cell it does not fill, and the
+  `cells:` key goes when the table takes every entry that was under it.
+- 1837 → 1849 tests, one of them Tier 4: four cells of the quickstart become a
+  table, and the workbook the pinned compiler builds is unchanged — including
+  `SUM(B2:B3)`, which still finds them.
 
 ### 2026-08-23 — Merge, and take apart again
 Phase 11's third item.

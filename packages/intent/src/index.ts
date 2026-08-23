@@ -28,5 +28,6 @@ export { type Candidate, candidates, type Resolving } from './resolve';
 export { type Does, lineSaid, type Moving, type Shift, shifting } from './shift';
 export { type Dragged, setSize } from './size';
 export { type Projection, setStyle } from './style';
+export { asTable, type Tabling } from './table';
 export { tabular } from './tabular';
 export { type Meaning, meaning } from './typed';

@@ -333,6 +333,14 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       said = null;
       host.postMessage({ kind: 'hide', sheet: named(), axis, first, last, hidden });
     },
+    table: () => {
+      const rect = spanned();
+      if (rect === null) return;
+
+      refused = null;
+      said = null;
+      host.postMessage({ kind: 'table', sheet: named(), ...rect });
+    },
     merge: (merged) => {
       const rect = spanned();
       if (rect === null && merged) return;

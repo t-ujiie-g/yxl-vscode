@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import { type CompiledGrid, cellAt, compile, resolve } from '@yxl-vscode/compile';
 import { parse } from '@yxl-vscode/cst';
-import { drawLine, reading, setMerged, setStyle } from '@yxl-vscode/intent';
+import { asTable, drawLine, reading, setMerged, setStyle } from '@yxl-vscode/intent';
 import { load } from '@yxl-vscode/loader';
 import { type A1Addr, type FilePath, filePath, type SheetName } from '@yxl-vscode/units';
 import type { Typed } from '@yxl-vscode/webview/protocol';
@@ -336,6 +336,25 @@ describe('the loop, closed', () => {
     const { grid } = built(dir, root);
     expect(cell(grid, 'Sales', 'A1')?.value).toBe('Region');
     expect(cell(grid, 'Sales', 'B1')?.value).toBe('Revenue');
+  });
+
+  it('keeps a rectangle as a table without moving a cell of it', async () => {
+    if (!QUICKSTART) return;
+    const { dir, root, port, spec, refusals } = opened(QUICKSTART);
+
+    // A2:B3 is `APAC 2400000` over `EMEA 1750000`, four plain `cells:` entries.
+    const intent = asTable(
+      spec(),
+      { sheet: 'Sales' as SheetName, rect: at(2, 1, 3, 2) },
+      reading(port.text),
+    );
+    await applied(spec(), intent, port, { anyway: false, from: 'table', about: null });
+    expect(refusals).toEqual([]);
+
+    const { grid } = built(dir, root);
+    expect(cell(grid, 'Sales', 'A2')?.value).toBe('APAC');
+    expect(cell(grid, 'Sales', 'B3')?.value).toBe(1750000);
+    expect(cell(grid, 'Sales', 'B5')?.formula).toBe('SUM(B2:B3)');
   });
 
   it('takes a cell back out of the workbook when it is emptied', async () => {

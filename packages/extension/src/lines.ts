@@ -16,8 +16,14 @@ const LINE: Asking<Lined> = {
   about: (lined) => ({ ...lined, kind: 'line' }),
   answers: (spec, lined, sheet, read) => setLine(spec, { ...lined, sheet }, read),
   nothing: (lined) => `nothing here moves when ${run(lined)} is drawn`,
-  why: (_lined, answers) =>
-    `this moves more than a handful of things, so it is worth seeing first: ${answers[0]?.what ?? ''}`,
+  why: (_lined, answers) => {
+    const what = answers[0]?.what ?? '';
+    const keys = what.includes('`cells:` keys');
+
+    return `this moves more than a handful of things, so it is worth seeing first: ${what}${
+      keys ? ' — a `data:` table keeps its addresses in one place, and moves in one line' : ''
+    }`;
+  },
   done: (lined) => `${run(lined)} ${lined.by < 0 ? 'taken away' : 'put in'}.`,
 };
 

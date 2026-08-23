@@ -36,6 +36,7 @@ export function asks(): Asks {
     group: vi.fn(),
     line: vi.fn(),
     merge: vi.fn(),
+    table: vi.fn(),
   };
 }
 

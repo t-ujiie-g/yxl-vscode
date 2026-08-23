@@ -168,6 +168,7 @@ export interface Asks {
   readonly group: (axis: Axis, first: number, last: number, level: number) => void;
   readonly line: (axis: Axis, at: number, by: number) => void;
   readonly merge: (merged: boolean) => void;
+  readonly table: () => void;
   readonly pointAt: (at: Pointed | null) => void;
   readonly freeze: (at: At | null) => void;
   readonly look: (text: string | null) => void;

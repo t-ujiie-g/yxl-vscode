@@ -1102,6 +1102,23 @@ describe('the bar over the grid', () => {
     expect(sent.filter((one) => one.kind === 'find').at(-1)).toMatchObject({ text: 'APAC' });
   });
 
+  it('asks to keep a rectangle of rows as a table', () => {
+    const { into, sent } = view();
+
+    reachFrom(into, { row: 1, col: 1 }, { row: 2, col: 2 });
+    at(into, 2, 2)?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 2 }));
+    at(into, 2, 2)?.dispatchEvent(
+      new MouseEvent('contextmenu', { bubbles: true, cancelable: true }),
+    );
+
+    const entries = [...into.querySelectorAll<HTMLButtonElement>('.pointed .entry')];
+    entries.find((one) => one.textContent === 'Make this a data table')?.click();
+
+    expect(sent.filter((one) => one.kind === 'table')).toEqual([
+      { kind: 'table', sheet: 'Sales', top: 1, left: 1, bottom: 2, right: 2 },
+    ]);
+  });
+
   it('asks for a merge over the rectangle the reader has selected', () => {
     const { into, sent } = view();
 
@@ -1112,9 +1129,9 @@ describe('the bar over the grid', () => {
     );
 
     const entries = [...into.querySelectorAll<HTMLButtonElement>('.pointed .entry')];
-    expect(entries[0]?.textContent).toBe('Merge cells');
+    const merge = entries.find((one) => one.textContent === 'Merge cells');
 
-    entries[0]?.click();
+    merge?.click();
     expect(sent.filter((one) => one.kind === 'merge')).toEqual([
       { kind: 'merge', sheet: 'Sales', top: 1, left: 1, bottom: 2, right: 2, merged: true },
     ]);

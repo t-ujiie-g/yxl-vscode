@@ -31,6 +31,7 @@ import { freeze } from './panes';
 import { drawRun, type Projected, project, redraw, type Window } from './project';
 import { resize } from './size';
 import { summed } from './summing';
+import { table } from './tables';
 import { goBack } from './undo';
 import {
   emptied,
@@ -62,6 +63,7 @@ const WRITES = {
   wear: (spec: Spec, worn: Worn, port: Port, choice?: string) => wear(spec, worn, port, choice),
   freeze: (spec: Spec, frozen: Frozen, port: Port) => freeze(spec, frozen, port),
   merge: (spec: Spec, one: Merged, port: Port) => merge(spec, one, port),
+  table: (spec: Spec, one: Ranged, port: Port) => table(spec, one, port),
   group: (spec: Spec, grouped: Grouped, port: Port, choice?: string) =>
     group(spec, grouped, port, choice),
   hide: (spec: Spec, one: Hidden, port: Port, choice?: string) => hide(spec, one, port, choice),
