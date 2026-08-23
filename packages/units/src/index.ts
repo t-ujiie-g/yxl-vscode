@@ -7,7 +7,7 @@ export {
   type RowSpan,
   spanSaid,
 } from './band';
-export { type Color, parseColor } from './color';
+export { type Color, painted, parseColor } from './color';
 export { decimalsIn, MOST_DECIMALS, withDecimals } from './format';
 export {
   type Line,

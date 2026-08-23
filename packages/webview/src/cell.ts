@@ -1,4 +1,5 @@
 import { BORDER_EDGES, type ScalarValue, type StyleValues } from '@yxl-vscode/spec';
+import { painted } from '@yxl-vscode/units';
 import { format as excel } from 'numfmt';
 import type { DrawnCell, DrawnMerge, DrawnRun } from './protocol';
 
@@ -214,13 +215,13 @@ function told(cell: DrawnCell): string {
 /** The look as the inline CSS another spreadsheet reads off the clipboard (ADR-028). */
 export function styleText(style: StyleValues): string {
   return declarations(style)
-    .map(([name, value]) => `${name}: ${opaque(value)}`)
+    .map(([name, value]) => `${name}: ${value}`)
     .join('; ');
 }
 
 /** A cell's fill as an importer that reads no CSS takes one, or `null` where it has none (ADR-028). */
 export function fillOf(style: StyleValues): string | null {
-  return style.fill === undefined ? null : opaque(colour(style.fill));
+  return style.fill === undefined ? null : painted(style.fill);
 }
 
 /** The look a cell wears, as the CSS declarations that draw it. */
@@ -236,10 +237,10 @@ function declarations(style: StyleValues): [string, string][] {
   if (style['font.strike'] === true) put('text-decoration', 'line-through');
   if (style['font.size'] !== undefined) put('font-size', `${style['font.size']}pt`);
   if (style['font.name'] !== undefined) put('font-family', style['font.name']);
-  if (style['font.color'] !== undefined) put('color', colour(style['font.color']));
+  if (style['font.color'] !== undefined) put('color', painted(style['font.color']));
   // `background`, not `background-color`: Excel's clipboard reader takes the
   // shorthand and passes over the long form, which is what ate the fill.
-  if (style.fill !== undefined) put('background', colour(style.fill));
+  if (style.fill !== undefined) put('background', painted(style.fill));
   if (style['align.horizontal'] !== undefined) put('text-align', horizontal(style));
   if (style['align.vertical'] !== undefined) put('vertical-align', vertical(style));
   if (style['align.wrap'] === true) put('white-space', 'pre-wrap');
@@ -249,7 +250,7 @@ function declarations(style: StyleValues): [string, string][] {
     if (line === undefined) continue;
 
     const edge = style[`border.${side}.color`];
-    const drawnWith = edge === undefined ? 'currentColor' : colour(edge);
+    const drawnWith = edge === undefined ? 'currentColor' : painted(edge);
     put(`border-${side}`, `${thickness(line)} solid ${drawnWith}`);
   }
 
@@ -260,17 +261,6 @@ function apply(drawn: HTMLElement, style: StyleValues): void {
   for (const [name, value] of declarations(style)) {
     if (!name.startsWith('border-')) drawn.style.setProperty(name, value);
   }
-}
-
-/** A colour as another spreadsheet reads one: six digits, since a cell's fill has no alpha there. */
-function opaque(value: string): string {
-  return value.replace(/#([0-9a-fA-F]{6})[0-9a-fA-F]{2}\b/g, '#$1');
-}
-
-/** A spec's colour is `RRGGBB` or `AARRGGBB`, and CSS wants the alpha last. */
-function colour(hex: string): string {
-  const digits = hex.startsWith('#') ? hex.slice(1) : hex;
-  return digits.length === 8 ? `#${digits.slice(2)}${digits.slice(0, 2)}` : `#${digits}`;
 }
 
 function horizontal(style: StyleValues): string {

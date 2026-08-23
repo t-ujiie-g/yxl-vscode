@@ -1,4 +1,4 @@
-import { columnLabel, nextSheetName, type SheetName } from '@yxl-vscode/units';
+import { columnLabel, nextSheetName, painted, type SheetName } from '@yxl-vscode/units';
 import { says } from './menus';
 import type { Choice, Drawing, Refused, Summed, Uncomputed } from './protocol';
 import type { Asks, Reached, Showing } from './showing';
@@ -215,7 +215,7 @@ export function tabs(showing: Showing, asks: Asks): HTMLElement {
     if (sheet.visibility !== 'visible') tab.classList.add('away');
     if (sheet.tabColor !== null) {
       tab.classList.add('coloured');
-      tab.style.borderBottomColor = `#${sheet.tabColor}`;
+      tab.style.borderBottomColor = painted(sheet.tabColor);
     }
     says(
       tab,
