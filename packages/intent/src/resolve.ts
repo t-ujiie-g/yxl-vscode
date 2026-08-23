@@ -33,6 +33,7 @@ import {
   type Reading,
   type Text,
 } from './direct';
+import { blocks } from './shift';
 import { meaning } from './typed';
 
 /**
@@ -60,7 +61,9 @@ export function candidates(
   const cell = cellAt(sheet, where.at);
   if (cell === null) {
     const written = newCell(sheet, where, typed, spec.read);
-    return written === null ? [] : [written];
+    const onto = ontoBlock(sheet, where, typed, spec.read);
+
+    return [written, onto].filter((one) => one !== null);
   }
 
   const origin = cell.provenance.value;
@@ -213,6 +216,56 @@ function nextToData(sheet: CompiledSheet, at: A1Addr): boolean {
     const kind = cellAt(sheet, addrAt(one))?.provenance.value.kind;
     return kind === 'inline' || kind === 'external';
   });
+}
+
+/** The `empty` row's second answer: the row goes into the `data:` block above it (§8 Q1). */
+function ontoBlock(
+  sheet: CompiledSheet,
+  where: { sheet: SheetName; at: A1Addr },
+  typed: string,
+  read: Reading,
+): Candidate | null {
+  const holds = holding(typed);
+  if (typed === '' || 'formula' in holds) return null;
+
+  const cell = cellOf(where.at);
+  const block = blocks(sheet).find(
+    (one) =>
+      one.file === null &&
+      one.rect.bottom === cell.row - 1 &&
+      one.rect.left <= cell.col &&
+      cell.col <= one.rect.right,
+  );
+  if (block === undefined) return null;
+
+  const found = located(block.node, read);
+  if (found.kind === 'refused') return null;
+
+  const fields = Array.from({ length: cell.col - block.rect.left }, () => 'null');
+  const anchor = addrAt({ col: block.rect.left, row: block.rect.top });
+  const rows = block.rect.bottom - block.rect.top + 1;
+
+  return {
+    id: 'ontoBlock',
+    what: `Add a row to the table at \`${anchor}\``,
+    moves: [{ sheet: where.sheet, at: where.at }],
+    alone: false,
+    intent: {
+      kind: 'edit',
+      file: found.file,
+      patch: {
+        ops: [
+          {
+            op: 'insertSource',
+            path: [...found.path, 'values'],
+            index: rows,
+            source: `[${[...fields, renderScalar(holds.value)].join(', ')}]`,
+          },
+        ],
+      },
+      expects: { cells: new Set([qualified(where.sheet, where.at)]), beyond: 'refuse' },
+    },
+  };
 }
 
 /** The `empty` row: a new `cells:` entry, at the end of the mapping. */
