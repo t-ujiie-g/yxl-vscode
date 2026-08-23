@@ -24,15 +24,15 @@ export function setFreeze(spec: Projection, frozen: Frozen, read: Reading): Inte
     return refused('`A1` freezes nothing — freeze at the first cell that is to scroll');
   }
 
-  const found = located(sheet.node, read);
-  if (found.kind === 'refused') return found;
-  if (found.node.kind !== 'map') return refused(`\`${frozen.sheet}\` is not written as a sheet`);
-
-  if (holds(found.node, 'split')) {
+  if (sheet.split !== null) {
     return refused(
       `\`${frozen.sheet}\` is split, and a sheet cannot have both a \`split\` and a \`freeze\``,
     );
   }
+
+  const found = located(sheet.node, read);
+  if (found.kind === 'refused') return found;
+  if (found.node.kind !== 'map') return refused(`\`${frozen.sheet}\` is not written as a sheet`);
 
   const op = written(found.path, at, holds(found.node, 'freeze'));
   if (op === null) return refused(`\`${frozen.sheet}\` freezes nothing to take off`);

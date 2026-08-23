@@ -1,5 +1,12 @@
 import type { Diagnostic } from '@yxl-vscode/diag';
-import type { CellType, ScalarValue, StyleSays, StyleValues, Visibility } from '@yxl-vscode/spec';
+import type {
+  CellType,
+  ScalarValue,
+  Split,
+  StyleSays,
+  StyleValues,
+  Visibility,
+} from '@yxl-vscode/spec';
 import type { A1Addr, Color, NodeId, Rect, SheetName, StyleName } from '@yxl-vscode/units';
 import type { CellProvenance } from './provenance';
 import type { StyleLayer } from './style';
@@ -39,6 +46,7 @@ export interface CompiledSheet {
   readonly visibility: Visibility;
   readonly tabColor: Color | null;
   readonly gridlines: boolean;
+  readonly split: Split | null;
 }
 
 /** One `formulas:` range, kept as a range: `D2:D1048576` is two words, not a million cells (ADR-019). */

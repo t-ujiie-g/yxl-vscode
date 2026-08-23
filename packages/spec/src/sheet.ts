@@ -4,6 +4,12 @@ import type { Cell } from './cell';
 import type { DataBlock } from './data';
 import type { Opaque, SpecNode, Templated } from './node';
 
+/** A sheet's splitter, in points from the top-left; `0` on an axis leaves it unsplit (`docs/spec.md` §2). */
+export interface Split {
+  readonly x: number;
+  readonly y: number;
+}
+
 /** Whether Excel shows a sheet's tab; `very_hidden` is undone only from VBA (`docs/spec.md` §2). */
 export type Visibility = 'visible' | 'hidden' | 'very_hidden';
 
@@ -23,6 +29,7 @@ export interface Sheet extends SpecNode {
   readonly visibility: Visibility | null;
   readonly tabColor: Templated<Color> | null;
   readonly gridlines: boolean | null;
+  readonly split: Split | null;
   readonly keyOrder: readonly string[];
   readonly opaque: readonly Opaque[];
 }

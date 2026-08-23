@@ -16,6 +16,7 @@ function sheet(of: Partial<DrawnSheet> = {}): DrawnSheet {
     visibility: 'visible',
     tabColor: null,
     gridlines: true,
+    split: null,
     problems: [],
     freeze: null,
     ...of,

@@ -9,6 +9,7 @@ import {
   type Opaque,
   type RowBand,
   type Sheet,
+  type Split,
 } from '@yxl-vscode/spec';
 import { readColumnBands, readRowBands } from './band';
 import { readCells, withoutLeadingEquals } from './cell';
@@ -17,6 +18,7 @@ import { type Ctx, identify, keyOf, reject, type Site } from './ctx';
 import { readDataBlocks } from './data';
 import {
   expectBool,
+  expectNumber,
   expectSpelling,
   expectText,
   findEntry,
@@ -58,6 +60,7 @@ function readSheet(site: Site): Sheet | null {
   let visibility: Sheet['visibility'] = null;
   let tabColor: Sheet['tabColor'] = null;
   let gridlines: Sheet['gridlines'] = null;
+  let split: Sheet['split'] = null;
   const opaque: Opaque[] = [];
 
   for (const entry of entries) {
@@ -96,6 +99,9 @@ function readSheet(site: Site): Sheet | null {
       case 'gridlines':
         gridlines = expectBool(here, entry.value, `${what} \`gridlines\``);
         break;
+      case 'split':
+        split = readSplit(here, entry.value, `${what} \`split\``);
+        break;
       default:
         opaque.push({ ...identify(here, at, entry.span), key });
     }
@@ -114,9 +120,25 @@ function readSheet(site: Site): Sheet | null {
     visibility,
     tabColor,
     gridlines,
+    split,
     keyOrder: entries.map(keyOf),
     opaque,
   };
+}
+
+/** A `split:` mapping, in points from the top-left; a missing axis is `0`, which is unsplit. */
+function readSplit(ctx: Ctx, node: Node, what: string): Split | null {
+  const opened = openEntries(ctx, node, [], what);
+  if (opened === null) return null;
+
+  const read = (key: 'x' | 'y'): number | null => {
+    const found = findEntry(opened.entries, key);
+    return found === undefined ? 0 : expectNumber(ctx, found.value, `${what} \`${key}\``);
+  };
+
+  const x = read('x');
+  const y = read('y');
+  return x === null || y === null ? null : { x, y };
 }
 
 /** The spellings `visibility` takes (`docs/spec.md` §2). */

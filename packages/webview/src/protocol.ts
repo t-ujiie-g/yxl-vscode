@@ -50,6 +50,7 @@ export interface DrawnSheet {
   readonly visibility: 'visible' | 'hidden' | 'very_hidden';
   readonly tabColor: string | null;
   readonly gridlines: boolean;
+  readonly split: { readonly x: number; readonly y: number } | null;
 }
 
 /** Rows of a `data:` block to be put in order, by the column the selection starts in. */

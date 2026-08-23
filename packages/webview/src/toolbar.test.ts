@@ -42,6 +42,7 @@ function showing(of: {
     visibility: 'visible',
     tabColor: null,
     gridlines: true,
+    split: null,
     problems: [],
     freeze: of.freeze ?? null,
   };
