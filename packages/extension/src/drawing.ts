@@ -1,9 +1,11 @@
 import {
+  addressesIn,
   type CompiledCell,
   type CompiledGrid,
   type CompiledSheet,
   cellAt,
   editabilityOf,
+  REACH,
   reaches,
   resolve,
   type Setting,
@@ -14,7 +16,7 @@ import {
 import type { Diagnostic } from '@yxl-vscode/diag';
 import type { Evaluation } from '@yxl-vscode/evaluate';
 import type { Axis, ScalarValue, SpecDoc } from '@yxl-vscode/spec';
-import { addrAt, cellOf, qualified } from '@yxl-vscode/units';
+import { type A1Addr, addrAt, cellOf, qualified } from '@yxl-vscode/units';
 import type {
   Drawing,
   DrawnCell,
@@ -26,7 +28,7 @@ import type {
   Sized,
   Uncomputed,
 } from '@yxl-vscode/webview/protocol';
-import { applied } from './conditional';
+import { applied, overRanges } from './conditional';
 import { type Nodes, nodeUnder } from './inspect';
 
 /** A compiled grid as the view is handed it: one window per sheet, the cells with anything to show (ADR-019). */
@@ -204,6 +206,11 @@ function drawCells(
   evaluation: Evaluation | null,
 ): DrawnCell[] {
   const drawn: DrawnCell[] = [];
+  const held = (at: A1Addr): ScalarValue => {
+    const computed = evaluation?.values.get(qualified(sheet.name, at)) ?? null;
+    return computed?.kind === 'value' ? computed.value : (cellAt(sheet, at)?.value ?? null);
+  };
+  const ranked = overRanges(sheet.conditional, addressesIn(sheet, REACH), held);
 
   for (const row of lines(drawing.at.row, drawing.rows, drawing.freeze?.row ?? 1)) {
     for (const col of lines(drawing.at.col, drawing.columns, drawing.freeze?.col ?? 1)) {
@@ -215,7 +222,7 @@ function drawCells(
       // looks sit above a cell's style (`docs/spec.md` §10).
       const layers = [
         ...styleAt(sheet, addr),
-        ...applied(sheet.conditional, { at: addr, value: cell?.value ?? null, computed }),
+        ...applied(sheet.conditional, { at: addr, value: cell?.value ?? null, computed }, ranked),
       ];
       const style = settled(resolve(layers));
       const holds =
