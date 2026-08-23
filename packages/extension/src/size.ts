@@ -1,7 +1,6 @@
 import { setSize } from '@yxl-vscode/intent';
-import { spanSaid } from '@yxl-vscode/units';
 import type { Resized } from '@yxl-vscode/webview/protocol';
-import { type Asking, asked } from './asked';
+import { type Asking, asked, many } from './asked';
 import type { Port, Spec } from './write';
 
 /**
@@ -20,8 +19,3 @@ const SIZE: Asking<Resized> = {
     `${many(resized)} takes its size from a band over more than that, so there is more than one way to change it`,
   done: (resized) => `${many(resized)} resized.`.replace(/^./, (one) => one.toUpperCase()),
 };
-
-/** What was dragged, as the reader is told about it: one column, or the run they had selected. */
-function many(resized: Resized): string {
-  return spanSaid(resized.axis, resized.first, resized.last);
-}

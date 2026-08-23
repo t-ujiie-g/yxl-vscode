@@ -1,11 +1,8 @@
 import { type CompiledGrid, type CompiledSheet, cellAt, sheetOf } from '@yxl-vscode/compile';
 import { nodeAt, type Op, renderScalar, type Value } from '@yxl-vscode/cst';
-import type { Templated } from '@yxl-vscode/spec';
+import { KEY, type Templated } from '@yxl-vscode/spec';
 import { type A1Addr, type QualifiedAddr, qualified, type SheetName } from '@yxl-vscode/units';
 import { type Intent, type Projection, type Reading, refused } from './direct';
-
-/** The key this all writes into (`docs/spec.md` §23). */
-const OVERRIDES = 'overrides';
 
 /** What an override says about one cell, beside where it says it. */
 export interface Says {
@@ -92,7 +89,7 @@ export function overrides(
   return {
     kind: 'edit',
     file,
-    patch: { ops: writing(written, nodeAt(root, [OVERRIDES]) !== null, doc.overrides.length) },
+    patch: { ops: writing(written, nodeAt(root, [KEY.overrides]) !== null, doc.overrides.length) },
     expects: {
       cells: new Set(these.map((one) => qualified(where, one.at))),
       beyond: 'ask',
@@ -104,13 +101,13 @@ export function overrides(
 function writing(written: readonly string[], held: boolean, at: number): Op[] {
   if (!held) {
     const source = written.map((one) => `- ${indented(one)}`).join('\n');
-    return [{ op: 'addSource', path: [], key: OVERRIDES, source }];
+    return [{ op: 'addSource', path: [], key: KEY.overrides, source }];
   }
 
   // Entries added at one place are spliced from the end, so the last laid down reads first.
   return [...written]
     .reverse()
-    .map((source) => ({ op: 'insertSource', path: [OVERRIDES], index: at, source }));
+    .map((source) => ({ op: 'insertSource', path: [KEY.overrides], index: at, source }));
 }
 
 /** Which of the two rules stood in the way, said as the reader would ask it. */

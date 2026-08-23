@@ -1,8 +1,9 @@
 import type { Candidate, Reading } from '@yxl-vscode/intent';
 import { reading } from '@yxl-vscode/intent';
-import { type SheetName, sheetName } from '@yxl-vscode/units';
+import type { Axis } from '@yxl-vscode/spec';
+import { type SheetName, spanSaid } from '@yxl-vscode/units';
 import type { About } from '@yxl-vscode/webview/protocol';
-import { applied, type Port, type Spec, shown } from './write';
+import { ANYWAY, applied, type Port, type Spec, sheetNamed, shown } from './write';
 
 /**
  * What a gesture the §4.4 tables answer needs to say for itself, and nothing
@@ -29,11 +30,8 @@ export async function asked<T extends { readonly sheet: string }>(
   choice: string | undefined,
   how: Asking<T>,
 ): Promise<void> {
-  const sheet = sheetName(one.sheet);
-  if (sheet === null) {
-    port.refuse(`\`${one.sheet}\` is not a name a sheet can have`, null);
-    return;
-  }
+  const sheet = sheetNamed(one.sheet, port);
+  if (sheet === null) return;
 
   // *Apply it anyway* is the same gesture again, with the surprises accepted.
   const again = ANYWAY.exec(choice ?? '');
@@ -71,5 +69,7 @@ export async function asked<T extends { readonly sheet: string }>(
   if (done) port.said(how.done(one, taken));
 }
 
-/** *Apply it anyway*, for the gesture itself or for one of its answers. */
-const ANYWAY = /^anyway:?(.*)$/;
+/** The run a gesture named, as the reader is told about it: `column B`, `rows 3-7`. */
+export function many(one: { readonly axis: Axis; readonly first: number; readonly last: number }) {
+  return spanSaid(one.axis, one.first, one.last);
+}

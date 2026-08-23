@@ -1,7 +1,7 @@
 import { addrAt } from '@yxl-vscode/units';
 import { breaking, written } from './cell';
 import { looking as lookingFor } from './keys';
-import { type Asks, GUTTER, type Looking, type Showing } from './showing';
+import { type Asks, cellOf, GUTTER, type Looking, type Showing } from './showing';
 
 /**
  * The boxes outside the grid, said again. The bar is *rebuilt* rather than
@@ -97,15 +97,6 @@ export function formulaBar(showing: Showing, asks: Asks): HTMLElement {
 /** How many lines the bar shows before it scrolls instead, so one long value cannot take the panel. */
 function rowsOf(text: string): number {
   return Math.min(6, text.split('\n').length);
-}
-
-/** The cell the reader is on, where the drawing holds one. */
-function cellOf(showing: Showing) {
-  const at = showing.selected;
-  if (at === null) return undefined;
-
-  const cells = showing.drawing.sheets[showing.sheet]?.cells ?? [];
-  return cells.find((one) => one.row === at.row && one.col === at.col);
 }
 
 /** The bar `Cmd`+`F` opens: what is being looked for, how much of it there is, and the way through it. */

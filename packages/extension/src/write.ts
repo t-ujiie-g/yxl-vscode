@@ -21,7 +21,7 @@ import {
 import type { IncludeReader } from '@yxl-vscode/loader';
 import type { Step } from '@yxl-vscode/patch';
 import type { SpecDoc } from '@yxl-vscode/spec';
-import { addrAt, type FilePath, qualified, sheetName } from '@yxl-vscode/units';
+import { addrAt, type FilePath, qualified, type SheetName, sheetName } from '@yxl-vscode/units';
 import { type Change, checked, checkedText } from '@yxl-vscode/verify';
 import type { About, Choice, Ranged, Typed } from '@yxl-vscode/webview/protocol';
 
@@ -63,11 +63,8 @@ export interface Spec {
  * back (ADR-026). Every refusal is a sentence.
  */
 export async function write(spec: Spec, typed: Typed, port: Port, anyway = false): Promise<void> {
-  const sheet = sheetName(typed.sheet);
-  if (sheet === null) {
-    port.refuse(`\`${typed.sheet}\` is not a name a sheet can have`, null);
-    return;
-  }
+  const sheet = sheetNamed(typed.sheet, port);
+  if (sheet === null) return;
 
   const at = addrAt({ col: typed.col, row: typed.row });
   const where = { sheet, at };
@@ -108,11 +105,8 @@ export async function write(spec: Spec, typed: Typed, port: Port, anyway = false
  * with `only` those that can (ADR-001).
  */
 export async function empty(spec: Spec, ranged: Ranged, port: Port, only = false): Promise<void> {
-  const sheet = sheetName(ranged.sheet);
-  if (sheet === null) {
-    port.refuse(`\`${ranged.sheet}\` is not a name a sheet can have`, null);
-    return;
-  }
+  const sheet = sheetNamed(ranged.sheet, port);
+  if (sheet === null) return;
 
   const read = reading(port.text);
   const { top, left, bottom, right } = ranged;
@@ -224,11 +218,8 @@ export async function resolve(
   port: Port,
   anyway = false,
 ): Promise<void> {
-  const sheet = sheetName(typed.sheet);
-  if (sheet === null) {
-    port.refuse(`\`${typed.sheet}\` is not a name a sheet can have`, null);
-    return;
-  }
+  const sheet = sheetNamed(typed.sheet, port);
+  if (sheet === null) return;
 
   // *Apply it anyway* is the same gesture again, with the surprises accepted.
   const again = ANYWAY.exec(choice);
@@ -263,7 +254,7 @@ function about(typed: Typed): About {
 const ASKED: Asked = { anyway: false, from: null, about: null };
 
 /** *Apply it anyway*, for the gesture itself or for one of its answers. */
-const ANYWAY = /^anyway:?(.*)$/;
+export const ANYWAY = /^anyway:?(.*)$/;
 
 /** What an override says a cell holds, where the reader did not type a formula. */
 function value(meant: Meaning): string | number | boolean | null {
@@ -292,11 +283,8 @@ export async function writeOverride(
   reason: string | undefined,
   port: Port,
 ): Promise<void> {
-  const sheet = sheetName(typed.sheet);
-  if (sheet === null) {
-    port.refuse(`\`${typed.sheet}\` is not a name a sheet can have`, null);
-    return;
-  }
+  const sheet = sheetNamed(typed.sheet, port);
+  if (sheet === null) return;
 
   const at = addrAt({ col: typed.col, row: typed.row });
   const meant = meaning(typed.text);
@@ -309,6 +297,14 @@ export async function writeOverride(
     about: about(typed),
   });
   if (done) port.said(`${sheet}!${at} is now written as an override.`);
+}
+
+/** The sheet a gesture named, or `null` once the reader has been told it is not a name. */
+export function sheetNamed(said: string, port: Port): SheetName | null {
+  const read = sheetName(said);
+  if (read === null) port.refuse(`\`${said}\` is not a name a sheet can have`, null);
+
+  return read;
 }
 
 /** What is needed to ask this edit again where the checker finds it moves more than it named. */

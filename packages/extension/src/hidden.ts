@@ -1,7 +1,6 @@
 import { setHidden } from '@yxl-vscode/intent';
-import { spanSaid } from '@yxl-vscode/units';
 import type { Hidden } from '@yxl-vscode/webview/protocol';
-import { type Asking, asked } from './asked';
+import { type Asking, asked, many } from './asked';
 import type { Port, Spec } from './write';
 
 /**
@@ -21,8 +20,3 @@ const HIDE: Asking<Hidden> = {
     `${many(hidden)} take that from a band over more than them, so there is more than one way to change it`,
   done: (hidden) => `${many(hidden)} ${hidden.hidden ? 'hidden' : 'shown again'}.`,
 };
-
-/** What was named, as the reader is told about it — by the letter on the heading, not by its number. */
-function many(hidden: Hidden): string {
-  return spanSaid(hidden.axis, hidden.first, hidden.last);
-}

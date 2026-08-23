@@ -1,7 +1,7 @@
 import { filePath, nodeId, type SheetName } from '@yxl-vscode/units';
 import { describe, expect, it } from 'vitest';
 import { CODE } from './codes';
-import { sheetOf } from './compile';
+import { addressesIn, REACH, sheetOf } from './compile';
 import type { DataReader } from './ctx';
 import { cell as at, codes, grid, sheet } from './harness';
 import { reaches } from './impact';
@@ -47,6 +47,18 @@ describe('a compiled grid', () => {
   it('draws a merge as the rectangle it covers', () => {
     const drawn = sheet(`${SALES}    merges: [A1:C1]\n`);
     expect(drawn.merges[0]?.rect).toEqual({ top: 1, left: 1, bottom: 1, right: 3 });
+  });
+});
+
+describe('every address a sheet holds a cell at', () => {
+  const spec = `${SALES}    cells:\n      A1: 2\n    formulas:\n      - at: C1:C3\n        formula: "A1*2"\n`;
+
+  it('is what it writes and what a range fills, since the range holds no cells of its own', () => {
+    expect(addressesIn(sheet(spec), REACH).sort()).toEqual(['A1', 'C1', 'C2', 'C3']);
+  });
+
+  it('leaves the inside of a range out past the reach one walk is given', () => {
+    expect(addressesIn(sheet(spec), 1)).toEqual(['A1', 'C1']);
   });
 });
 
