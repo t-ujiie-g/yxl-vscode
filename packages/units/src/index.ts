@@ -12,12 +12,15 @@ export { decimalsIn, MOST_DECIMALS, withDecimals } from './format';
 export { type Line, type Moved, moved, type Offset, shifted } from './formula';
 export {
   addrAt,
+  addressesOf,
   type Band,
   type CellRef,
   cellOf,
   columnLabel,
   columnsOf,
+  overlapping,
   type Rect,
+  rangeOf,
   rectOf,
   rowsOf,
   within,

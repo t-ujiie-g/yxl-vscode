@@ -14,6 +14,7 @@ import {
   type Line,
   qualified,
   type Rect,
+  rangeOf,
   type SheetName,
   shifted,
 } from '@yxl-vscode/units';
@@ -187,7 +188,7 @@ function writing(sheet: CompiledSheet, line: Line, read: Reading): Writing | Int
     const rect = grown(fill.rect, line, does);
     const now = shifted(fill.formula, sheet.name, line);
     put(found, (path) => [
-      { op: 'set', path: [...path, 'at'], value: ranged(rect) },
+      { op: 'set', path: [...path, 'at'], value: rangeOf(rect) },
       ...(now.ok && now.formula !== fill.formula
         ? [{ op: 'set', path: [...path, 'formula'], value: now.formula } as const]
         : []),
@@ -201,7 +202,7 @@ function writing(sheet: CompiledSheet, line: Line, read: Reading): Writing | Int
     put(located(merge.node, read), (path) =>
       does === 'goes'
         ? [{ op: 'remove', path }]
-        : [{ op: 'set', path, value: ranged(grown(merge.rect, line, does)) }],
+        : [{ op: 'set', path, value: rangeOf(grown(merge.rect, line, does)) }],
     );
   }
 
@@ -296,10 +297,6 @@ function held(
     line.by < 0 ? Math.min(last, line.at - line.by - 1) - Math.max(first, line.at) + 1 : 0;
 
   return { first, last: line.by < 0 ? last - gone : last + line.by };
-}
-
-function ranged(rect: Rect): string {
-  return `${addrAt({ col: rect.left, row: rect.top })}:${addrAt({ col: rect.right, row: rect.bottom })}`;
 }
 
 /** The gap a line opens inside an inline `data:` block, or the row it takes out of one. */

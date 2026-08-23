@@ -13,7 +13,7 @@ import { normalize, written as spell } from '@yxl-vscode/normalize';
 import { ordered, propertiesOf, type StyleProperty, type StyleSays } from '@yxl-vscode/spec';
 import {
   type A1Addr,
-  addrAt,
+  addressesOf,
   cellOf,
   qualified,
   type Rect,
@@ -57,7 +57,7 @@ export function setStyle(
   const wanted = propertiesOf(want);
   if (sheet === null || wanted.length === 0) return [];
 
-  const from = origins(sheet, spread(where.rect), wanted);
+  const from = origins(sheet, addressesOf(where.rect), wanted);
   const answers =
     from.length > 1
       ? apart(spec, sheet, where, from, want, read)
@@ -170,7 +170,7 @@ function fromOne(
     const band = asBand(spec, sheet, span, want, read);
     if (band !== null) answers.push(band);
   } else if (supplier === null || !excepted(supplier)) {
-    const own = onCells(spec, sheet, where.sheet, everyone(spread(where.rect), want), read);
+    const own = onCells(spec, sheet, where.sheet, everyone(addressesOf(where.rect), want), read);
     if (own === null) answers.push(...inFill(spec, sheet, where, want, read));
     else answers.push(own);
   }
@@ -189,7 +189,7 @@ function inFill(
   want: StyleSays,
   read: Reading,
 ): readonly Candidate[] {
-  const [at, ...rest] = spread(where.rect);
+  const [at, ...rest] = addressesOf(where.rect);
   if (at === undefined || rest.length > 0) return [];
 
   const fill = sheet.fills.find((one) => within(cellOf(at), one.rect));
@@ -276,7 +276,7 @@ function apart(
   want: StyleSays,
   read: Reading,
 ): readonly Candidate[] {
-  const addresses = spread(where.rect);
+  const addresses = addressesOf(where.rect);
   const wants = everyone(addresses, want);
   const hidden = from.some((one) => one.layer !== null && excepted(one.layer));
   const alike = hidden ? null : onEvery(spec, sheet, where.sheet, wants, read);
@@ -443,16 +443,6 @@ function naming(supplier: StyleLayer): string {
   return supplier.through === 'column'
     ? 'Change the column it is set on, which is the whole column'
     : 'Change the row it is set on, which is the whole row';
-}
-
-/** The addresses of a rectangle, in reading order. */
-function spread(rect: Rect): A1Addr[] {
-  const addresses: A1Addr[] = [];
-  for (let row = rect.top; row <= rect.bottom; row += 1) {
-    for (let col = rect.left; col <= rect.right; col += 1) addresses.push(addrAt({ col, row }));
-  }
-
-  return addresses;
 }
 
 /** The rectangle as a reader would name it in an answer. */
