@@ -51,6 +51,10 @@ export function shifting(sheet: CompiledSheet, line: Line): Shift {
       moves.push({ of: 'cell', node: cell.provenance.value.node, at, does });
     }
 
+    // A cell the line takes away is not asked to survive it: its formula goes
+    // with it, which is what Excel does rather than leaving `#REF!`.
+    if (does === 'goes') continue;
+
     const why = keeps(sheet, cell, line);
     if (why !== null) stops.push(why);
   }

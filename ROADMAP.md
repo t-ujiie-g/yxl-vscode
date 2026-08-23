@@ -2804,7 +2804,15 @@ number.
   compiler, comes back with `EMEA` a row down, `SUM(B2:B3)` reading
   `SUM(B2:B4)`, the `data:` block at `A10`, and the filled `C4` applying
   `B4*0.05`.
-- 1813 → 1818 tests.
+- **A row's own total does not stand in its way.** Every row of a table totals
+  itself, so deleting one was refused by the formula that goes *with* it. A cell
+  the line takes away is not asked to survive it — which is Excel's rule, and the
+  reason `#REF!` never comes up there either.
+- **A refusal keeps its reason.** The one answer is offered whatever the intent
+  turns out to be, so a reader is told what stood in the way rather than
+  `nothing here moves`, which is what the flow says when there is no answer at
+  all.
+- 1813 → 1820 tests.
 
 ### 2026-08-23 — A line drawn in the sheet
 Phase 11's third piece: the write. Every construct the line reaches, moved where

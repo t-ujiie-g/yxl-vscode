@@ -61,9 +61,9 @@ export function setLine(spec: Projection, line: Line, read: Reading): readonly C
   const sheet = sheetOf(spec.grid, line.sheet);
   if (sheet === null) return [];
 
+  // The one answer, whatever the intent turns out to be: a refusal carries its
+  // own reason, and swallowing it here would leave the reader with none.
   const intent = drawLine(spec, line, read);
-  if (intent.kind !== 'edit') return [];
-
   const { moves } = shifting(sheet, line);
   const keys = moves.filter((one) => one.of === 'cell').length;
 
@@ -71,7 +71,7 @@ export function setLine(spec: Projection, line: Line, read: Reading): readonly C
     {
       id: 'line',
       what: `${said(line)}, moving ${counted(moves.length, keys)}`,
-      moves: [...intent.expects.cells].map(named),
+      moves: intent.kind === 'edit' ? [...intent.expects.cells].map(named) : [],
       alone: moves.length <= MANY,
       intent,
     },

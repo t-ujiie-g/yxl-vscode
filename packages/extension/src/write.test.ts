@@ -653,6 +653,14 @@ describe('rows put in and taken away from the heading', () => {
     expect(files[ROOT]).toContain('      A32: 29\n');
   });
 
+  it('says why it will not, rather than saying nothing moves', async () => {
+    const spec = `${SALES}    cells:\n      A5: 2\n      B1: { formula: "A5*2" }\n`;
+    const { spec: read, port, refusals } = editor({ [ROOT]: spec });
+
+    await line(read, { sheet: 'Sales', axis: 'row', at: 5, by: -1 }, port);
+    expect(refusals[0]).toBe('`B1` holds `=A5*2`, and `A5` names a row this would take away');
+  });
+
   it('says so where nothing it reaches moves', async () => {
     const { spec, port, refusals } = editor({ [ROOT]: SHEET });
 

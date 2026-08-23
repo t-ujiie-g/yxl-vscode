@@ -153,6 +153,14 @@ describe('a row taken away', () => {
     );
   });
 
+  it('takes the row’s own formula away with it, rather than asking it to survive', () => {
+    // Every row of a table totals itself; deleting one must not be refused by
+    // the total that goes with it.
+    const spec = `${SALES}    cells:\n      A4: 1\n      A5: 2\n      A6: 3\n    formulas:\n      - at: B4:B6\n        formula: "SUM(A4:A4)"\n`;
+
+    expect(drawn(spec, row(5, -1))).toContain('      - at: B4:B5\n');
+  });
+
   it('refuses where a formula names a row it would take away', () => {
     const spec = `${SALES}    cells:\n      A5: 2\n      B1: { formula: "A5*2" }\n`;
 
