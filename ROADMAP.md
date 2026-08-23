@@ -1332,10 +1332,17 @@ Deliberately **not** here: a second selection with `Cmd`+click (every answer in
       value it compiled to, so a quoted `"007"` is still text afterwards. A cell
       that says more than a value is refused by name: a table has nowhere to
       keep a look.
-- [ ] **§4.4's `empty` ②** — typing into the cell *beside* a `data:` block
+- [x] **§4.4's `empty` ②** — typing into the cell *beside* a `data:` block
       offering to extend the block, rather than writing a `cells:` entry over
       it. The judgement is the same as the conversion's and the machinery is
       now there; what is left is the row in the resolution table.
+      **In**, for the row *under* a block whose columns reach the address: the
+      answer puts a row into `values:`, with nothing in the fields before it.
+      Only for a block written **here** — a block that reads a file has its rows
+      in the file — and only for a value, since `values:` has nowhere to keep a
+      formula. The question was already being asked (the `newCell` answer has
+      not been `alone` beside a block since Phase 7); it now has the second
+      answer it was asking about.
 - [ ] Fill down and fill right, and the drag handle — which is reference
       translation, and waits on §8 Q2
 - [ ] Sorting a `data:` rectangle: its rows rewritten, and nothing else touched
@@ -2814,6 +2821,24 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-23 — A row onto the table beside it
+§4.4's `empty` ②, and the last thing Phase 7 left half-built.
+
+- **Typing under a table offers to put the row in it**, beside the answer that
+  writes a `cells:` entry. Which one the reader takes is the judgement §8 Q1 is
+  about — a hundred keyed cells, or one anchor — and it is theirs to make, so it
+  is asked rather than decided (ADR-001).
+- **The row goes in with nothing in the fields before it**: typing `3` into `B4`
+  under a block anchored at `A2` writes `- [null, 3]`, which is the block's own
+  way of saying a field it does not fill.
+- **Only where the block is written here**, since a block that reads a CSV keeps
+  its rows in the file, and **only for a value** — `values:` has nowhere to keep
+  a formula, so a typed `=…` gets the one answer it always had.
+- **The question was already there.** The `newCell` answer has not been `alone`
+  beside a block since Phase 7, so a reader has been asked a question with one
+  answer in it all this time. It has the second one now.
+- 1849 → 1854 tests.
 
 ### 2026-08-23 — Keep this as a table
 The answer §8 Q1 promised: where a spec's addresses have become the thing that

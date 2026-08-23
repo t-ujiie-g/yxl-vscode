@@ -323,9 +323,22 @@ describe('a cell nothing has written yet', () => {
     await write(spec, typed({ row: 3, col: 1, text: 'Total' }), port);
     expect(answers[0]).toEqual([
       { id: 'newCell', what: 'Write `A3` as a new cell', moves: 1, sample: ['A3'] },
+      { id: 'ontoBlock', what: 'Add a row to the table at `A1`', moves: 1, sample: ['A3'] },
     ]);
     expect(offers[0]).toBeNull();
     expect(files[ROOT]).toBe(BESIDE_DATA);
+  });
+
+  it('puts the row into the table where that is the answer taken', async () => {
+    const { spec, port, files } = editor({ [ROOT]: BESIDE_DATA });
+    const at = typed({ row: 3, col: 1, text: 'Total' });
+
+    await write(spec, at, port);
+    await resolve(spec, at, 'ontoBlock', port);
+
+    expect(files[ROOT]).toBe(
+      BESIDE_DATA.replace('- [EMEA, 2]\n', '- [EMEA, 2]\n          - [Total]\n'),
+    );
   });
 
   it('is written as the answer says when the reader takes it', async () => {

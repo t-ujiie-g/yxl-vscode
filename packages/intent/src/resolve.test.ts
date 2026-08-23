@@ -196,6 +196,39 @@ describe('a cell nothing has written yet', () => {
     expect(taken(SPEC, candidate)).toContain('      A5:\n        formula: "B1+B2"');
   });
 
+  it('offers the table below it as well, where one ends on the row above', () => {
+    const table = `sheets:\n  - name: Sales\n    data:\n      - at: A2\n        values:\n          - [APAC, 1]\n          - [EMEA, 2]\n`;
+    const answers = offered(table, 'A4', 'LATAM');
+
+    expect(answers.map((one) => [one.id, one.what])).toEqual([
+      ['newCell', 'Write `A4` as a new cell'],
+      ['ontoBlock', 'Add a row to the table at `A2`'],
+    ]);
+  });
+
+  it('puts the row in where the table is, with nothing in the fields before it', () => {
+    const table = `sheets:\n  - name: Sales\n    data:\n      - at: A2\n        values:\n          - [APAC, 1]\n          - [EMEA, 2]\n`;
+    const [, onto] = offered(table, 'B4', '3');
+    if (onto === undefined) throw new Error('the table was not offered');
+
+    expect(taken(table, onto)).toBe(
+      `${table}`.replace('- [EMEA, 2]\n', '- [EMEA, 2]\n          - [null, 3]\n'),
+    );
+  });
+
+  it('does not offer it where the table is not the row above', () => {
+    const table = `sheets:\n  - name: Sales\n    data:\n      - at: A2\n        values:\n          - [APAC, 1]\n`;
+
+    expect(offered(table, 'A9', 'LATAM').map((one) => one.id)).toEqual(['newCell']);
+    expect(offered(table, 'D3', 'far').map((one) => one.id)).toEqual(['newCell']);
+  });
+
+  it('does not offer it for a formula, which a table has nowhere to keep', () => {
+    const table = `sheets:\n  - name: Sales\n    data:\n      - at: A2\n        values:\n          - [APAC, 1]\n`;
+
+    expect(offered(table, 'B3', '=A3*2').map((one) => one.id)).toEqual(['newCell']);
+  });
+
   it('writes the `cells:` key too, where the sheet has none', () => {
     const bare = 'sheets:\n  - name: Sales\n    columns:\n      - at: A\n        width: 12\n';
     const [candidate] = offered(bare, 'A1', 'Region');
