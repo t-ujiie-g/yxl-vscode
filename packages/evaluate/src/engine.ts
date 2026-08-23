@@ -1,5 +1,5 @@
 import type { ScalarValue } from '@yxl-vscode/spec';
-import type { A1Addr, SheetName } from '@yxl-vscode/units';
+import type { A1Addr, NodeId, SheetName } from '@yxl-vscode/units';
 
 /**
  * What a formula came to. An `error` carries Excel's own text (`#DIV/0!`);
@@ -23,15 +23,16 @@ export interface HeldSheet {
 }
 
 /**
- * One formula to compute. `offset` is `[across, down]` from a filled range's
- * anchor, by which the relative references shift — Excel's own shared-formula
- * rule.
+ * One formula to compute: `offset` is `[across, down]` from the anchor it was
+ * written for, by which the relative references shift, and `asks` names the
+ * conditional rule where the formula tests a cell rather than filling one.
  */
 export interface Asked {
   readonly sheet: SheetName;
   readonly at: A1Addr;
   readonly formula: string;
   readonly offset: readonly [number, number];
+  readonly asks?: NodeId;
 }
 
 /**

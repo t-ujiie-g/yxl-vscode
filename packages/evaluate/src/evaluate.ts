@@ -1,8 +1,9 @@
-import type { CompiledGrid, CompiledSheet } from '@yxl-vscode/compile';
+import { addressesIn, type CompiledGrid, type CompiledSheet, REACH } from '@yxl-vscode/compile';
 import {
   type A1Addr,
   addrAt,
   cellOf,
+  type NodeId,
   names,
   qualified,
   type SheetName,
@@ -17,9 +18,15 @@ import type { Asked, Computed, Engine, Held, HeldSheet } from './engine';
  */
 export interface Evaluation {
   readonly values: ReadonlyMap<string, Computed>;
+  readonly conditions: ReadonlyMap<string, Computed>;
   readonly stopped: boolean;
   readonly limit: number;
   readonly unknown: readonly string[];
+}
+
+/** How a condition's answer is keyed: the rule that asked, and the cell it was asked about. */
+export function conditionKey(rule: NodeId, sheet: SheetName, at: A1Addr): string {
+  return `${rule}@${qualified(sheet, at)}`;
 }
 
 /**
@@ -33,15 +40,29 @@ export function evaluate(grid: CompiledGrid, engine: Engine, limit = LIMIT): Eva
   const deep = new Map(grid.sheets.map((sheet) => [named(sheet), lastRow(sheet)]));
   for (const sheet of grid.sheets) gather(sheet, held, asked, deep);
 
-  if (asked.length > limit) return { values: new Map(), stopped: true, limit, unknown: [] };
+  if (asked.length > limit) {
+    return { values: new Map(), conditions: new Map(), stopped: true, limit, unknown: [] };
+  }
 
   const doubted = doubt(asked, engine);
   const computed = new Map<SheetName, Map<A1Addr, Computed>>();
+  const conditions = new Map<string, Computed>();
   const answer = (one: Asked, said: Computed): void => {
+    if (one.asks !== undefined) {
+      conditions.set(conditionKey(one.asks, one.sheet, one.at), said);
+      return;
+    }
+
     const sheet = computed.get(one.sheet) ?? new Map<A1Addr, Computed>();
     sheet.set(one.at, said);
     computed.set(one.sheet, sheet);
   };
+
+  /** What the last pass answered this one, which is what says whether it settled. */
+  const answered = (one: Asked): Computed | undefined =>
+    one.asks === undefined
+      ? computed.get(one.sheet)?.get(one.at)
+      : conditions.get(conditionKey(one.asks, one.sheet, one.at));
 
   for (const one of asked) {
     const why = doubted.why.get(one.sheet);
@@ -54,24 +75,30 @@ export function evaluate(grid: CompiledGrid, engine: Engine, limit = LIMIT): Eva
 
     let settled = true;
     for (const one of computable) {
-      const before = computed.get(one.sheet)?.get(one.at);
+      const before = answered(one);
       const now = engine.compute(one);
       if (!same(before, now)) settled = false;
       answer(one, now);
     }
 
     if (settled) {
-      return { values: flat(computed), stopped: false, limit, unknown: doubted.unknown };
+      return {
+        values: flat(computed),
+        conditions,
+        stopped: false,
+        limit,
+        unknown: doubted.unknown,
+      };
     }
   }
 
   for (const one of computable) {
-    if (computed.get(one.sheet)?.get(one.at)?.kind === 'value') {
+    if (answered(one)?.kind === 'value') {
       answer(one, { kind: 'unsupported', why: 'this never settles — it may be circular' });
     }
   }
 
-  return { values: flat(computed), stopped: false, limit, unknown: doubted.unknown };
+  return { values: flat(computed), conditions, stopped: false, limit, unknown: doubted.unknown };
 }
 
 /** The answers as one map, which is how a consumer asks about one address. */
@@ -168,6 +195,8 @@ function gather(
   // A range's columns are the spec's; its rows run out where the cells it reads do.
   for (const fill of sheet.fills) columns = Math.max(columns, fill.rect.right);
 
+  asked.push(...conditionsOf(sheet, name));
+
   for (const fill of sheet.fills) {
     const anchor = cellOf(fill.anchor);
     const rect = fill.rect;
@@ -237,4 +266,33 @@ function reaching(formula: string, own: SheetName, deep: ReadonlyMap<SheetName, 
   }
 
   return far;
+}
+
+/** One ask per written cell a `formula:` rule covers, at that cell's offset from the range's corner. */
+function conditionsOf(sheet: CompiledSheet, name: SheetName): Asked[] {
+  const rules = sheet.conditional.filter((rule) => rule.test.kind === 'formula');
+  if (rules.length === 0) return [];
+
+  const asked: Asked[] = [];
+  const written = addressesIn(sheet, REACH);
+
+  for (const rule of rules) {
+    if (rule.test.kind !== 'formula') continue;
+
+    for (const at of written) {
+      const { row, col } = cellOf(at);
+      const rect = rule.rect;
+      if (row < rect.top || row > rect.bottom || col < rect.left || col > rect.right) continue;
+
+      asked.push({
+        sheet: name,
+        at,
+        formula: rule.test.body,
+        offset: [col - rect.left, row - rect.top],
+        asks: rule.node,
+      });
+    }
+  }
+
+  return asked;
 }

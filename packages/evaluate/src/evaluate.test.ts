@@ -4,7 +4,7 @@ import { load } from '@yxl-vscode/loader';
 import { type A1Addr, qualified, type SheetName, sheetName } from '@yxl-vscode/units';
 import { describe, expect, it } from 'vitest';
 import type { Asked, Engine, HeldSheet } from './engine';
-import { evaluate } from './evaluate';
+import { conditionKey, evaluate } from './evaluate';
 
 /** An engine that answers `A1` with what `A1` holds: the passes are under test here, not the engine. */
 function reader(): Engine & { readonly asked: Asked[] } {
@@ -112,6 +112,16 @@ describe('what a pass asks the engine for', () => {
     expect(asks(spec).map((one) => one.at)).toEqual(['B1', 'B2', 'B3']);
   });
 
+  it('asks a `formula:` rule once per written cell it covers, at that cell offset', () => {
+    const spec = `${SALES}    cells:\n      A1: 1\n      A2: 2\n    conditional:\n      - at: A1:A9\n        formula: "A1"\n        style: { font: { bold: true } }\n`;
+    const asked = asks(spec).filter((one) => one.asks !== undefined);
+
+    expect(asked.map((one) => [one.at, one.offset])).toEqual([
+      ['A1', [0, 0]],
+      ['A2', [0, 1]],
+    ]);
+  });
+
   it('gives the engine every sheet, including one that holds no value at all', () => {
     const spec = `sheets:\n  - name: Sales\n    cells:\n      A1: { formula: "A2" }\n  - name: Notes\n    cells:\n      A1: 4\n`;
     const engine = reader();
@@ -188,5 +198,24 @@ describe('what a pass makes of the answers', () => {
   it('computes a workbook that fits, and says so', () => {
     const spec = `${SALES}    cells:\n      A1: 1\n      B1: { formula: "A1" }\n`;
     expect(computed(spec, 1).stopped).toBe(false);
+  });
+});
+
+describe('what a `formula:` rule came to', () => {
+  it('is answered under the rule that asked, and never as the cell own value', () => {
+    const spec = `${SALES}    cells:\n      A1: 2\n      B1: { formula: "A1" }\n    conditional:\n      - at: A1:A9\n        formula: "A1"\n        style: { font: { bold: true } }\n`;
+    const { doc } = load(parse(spec, { file: 'spec.yxl.yaml' }));
+    if (doc === null) throw new Error('did not load');
+
+    const grid = compile(doc);
+    const rule = grid.sheets[0]?.conditional[0];
+    if (rule === undefined) throw new Error('compiled no rule');
+
+    const done = evaluate(grid, reader());
+    expect(done.conditions.get(conditionKey(rule.node, named('Sales'), 'A1' as A1Addr))).toEqual({
+      kind: 'value',
+      value: 2,
+    });
+    expect(done.values.get(qualified(named('Sales'), 'A1' as A1Addr))).toBeUndefined();
   });
 });

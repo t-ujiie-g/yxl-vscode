@@ -80,15 +80,38 @@ describe('the rules a cell is drawn under', () => {
       '      - at: A1:A9\n        cell: { equals: x }\n        style: a\n      - at: A1:A9\n        top: 3\n        style: b\n      - at: A1:A9\n        duplicate: true\n        style: a\n      - at: A1:A9\n        formula: "A1>0"\n        style: b\n      - at: A1:A9\n        icon_set: 3Arrows\n',
     );
 
-    expect(kinds.map(decidable)).toEqual([true, true, true, false, false]);
+    expect(kinds.map(decidable)).toEqual([true, true, true, true, false]);
   });
 
   it('applies nothing for a rule it cannot decide, and does not let it stop the run', () => {
     const kinds = rulesOf(
-      '      - at: A1:A9\n        formula: "A1>0"\n        style: a\n        stop_if_true: true\n      - at: A1:A9\n        cell: { equals: x }\n        style: b\n',
+      '      - at: A1:A9\n        icon_set: 3Arrows\n      - at: A1:A9\n        cell: { equals: x }\n        style: b\n',
     );
 
     expect(wears(kinds, 'A1', 'x')).toEqual(['font.italic']);
+  });
+
+  it('takes a `formula` rule from what the engine answered for that cell', () => {
+    const rules = rulesOf('      - at: A1:A9\n        formula: "A1>0"\n        style: a\n');
+    const said = (value: boolean) =>
+      applied(rules, {
+        at: at('A1'),
+        value: 1,
+        computed: null,
+        conditions: () => ({ kind: 'value', value }),
+      });
+
+    expect(Object.keys(settled(resolve(said(true))))).toEqual(['font.bold']);
+    expect(Object.keys(settled(resolve(said(false))))).toEqual([]);
+  });
+
+  it('applies nothing for a `formula` rule the engine could not answer', () => {
+    const rules = rulesOf(
+      '      - at: A1:A9\n        formula: "A1>0"\n        style: a\n        stop_if_true: true\n      - at: A1:A9\n        cell: { equals: x }\n        style: b\n',
+    );
+    const layers = applied(rules, { at: at('A1'), value: 'x', computed: null });
+
+    expect(Object.keys(settled(resolve(layers)))).toEqual(['font.italic']);
   });
 });
 
