@@ -21,7 +21,7 @@ import {
   type SheetName,
   sheetName,
 } from '@yxl-vscode/units';
-import { address, compileFacets } from './cell';
+import { address, compileFacets, layer, type Spoke, spokenBy } from './cell';
 import { CODE } from './codes';
 import { type Ctx, filled, reject, text } from './ctx';
 import type {
@@ -70,10 +70,16 @@ export function compileSheet(ctx: Ctx, sheet: Sheet): Drafted {
 function placeCells(ctx: Ctx, sheet: Sheet, cells: Map<string, CompiledCell>): void {
   for (const cell of sheet.cells) {
     const at = address(ctx, cell.at, cell);
-    if (at !== null)
-      cells.set(at, compileFacets(ctx, cell, at, { kind: 'literal', node: cell.id }, 'cell'));
+    if (at === null) continue;
+
+    const written = compileFacets(ctx, cell, at, { kind: 'literal', node: cell.id }, 'cell');
+    const under = cells.get(at);
+    cells.set(at, under === undefined ? written : layer(under, written, spokenBy(cell)));
   }
 }
+
+/** A field of a data block speaks of what the cell holds and of nothing else (`docs/spec.md` §9). */
+const HOLDS: Spoke = { holds: true, format: false, style: false };
 
 /** A `data:` block's rows laid down from its anchor; a `null` field writes no cell (`docs/spec.md` §9). */
 function placeData(ctx: Ctx, block: DataBlock, cells: Map<string, CompiledCell>): void {
@@ -143,7 +149,7 @@ function place(
       if (field === null) continue;
 
       const at = addrAt({ col: corner.col + col, row: corner.row + row });
-      cells.set(at, {
+      const written: CompiledCell = {
         at,
         value: field,
         type: null,
@@ -152,7 +158,10 @@ function place(
         rich: null,
         style: [],
         provenance: { value: origin(row, col), format: null },
-      });
+      };
+
+      const under = cells.get(at);
+      cells.set(at, under === undefined ? written : layer(under, written, HOLDS));
     }
   }
 }

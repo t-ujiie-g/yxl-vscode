@@ -1,13 +1,21 @@
 import { cpSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
-import { type CompiledGrid, cellAt, compile } from '@yxl-vscode/compile';
+import { type CompiledGrid, cellAt, compile, resolve } from '@yxl-vscode/compile';
 import { parse } from '@yxl-vscode/cst';
+import { reading, setStyle } from '@yxl-vscode/intent';
 import { load } from '@yxl-vscode/loader';
 import { type A1Addr, type FilePath, filePath, type SheetName } from '@yxl-vscode/units';
 import type { Typed } from '@yxl-vscode/webview/protocol';
 import { describe, expect, it } from 'vitest';
-import { type Port, resolve, type Spec, write, writeOverride } from 'yxl-vscode/write';
+import {
+  applied,
+  type Port,
+  resolve as resolveWith,
+  type Spec,
+  write,
+  writeOverride,
+} from 'yxl-vscode/write';
 import { includeReader, yxlExamples } from './corpus';
 import { build, extract, oracleVersion, PINNED } from './oracle';
 
@@ -73,6 +81,8 @@ function cell(grid: CompiledGrid, sheet: string, at: string) {
 
 const typed = (of: Partial<Typed>): Typed => ({ sheet: 'Sales', row: 1, col: 1, text: '', ...of });
 
+const at = (row: number, col: number) => ({ top: row, left: col, bottom: row, right: col });
+
 describe('the loop, closed', () => {
   it('has the pinned compiler to close it with', () => {
     expect(oracleVersion(), `install yxl ${PINNED}, or point YXL_BIN at it`).toBe(PINNED);
@@ -131,7 +141,7 @@ describe('the loop, closed', () => {
     await write(spec(), at, port);
     expect(refusals).toHaveLength(1);
 
-    await resolve(spec(), at, 'rangeFormula', port);
+    await resolveWith(spec(), at, 'rangeFormula', port);
     expect(refusals).toHaveLength(1);
 
     // The range stores one formula and the second cell holds it a row down,
@@ -196,7 +206,7 @@ describe('the loop, closed', () => {
     await write(spec(), at, port);
     expect(refusals).toHaveLength(1);
 
-    await resolve(spec(), at, 'definition', port);
+    await resolveWith(spec(), at, 'definition', port);
     expect(refusals).toHaveLength(1);
 
     expect(readFileSync(join(dir, 'workbook', 'defs.yaml'), 'utf8')).toContain(
@@ -222,7 +232,7 @@ describe('the loop, closed', () => {
     await write(spec(), at, port);
     expect(refusals).toHaveLength(1);
 
-    await resolve(spec(), at, 'parameter', port);
+    await resolveWith(spec(), at, 'parameter', port);
     expect(refusals).toHaveLength(1);
 
     const { grid } = built(dir, root);
@@ -240,12 +250,31 @@ describe('the loop, closed', () => {
     await write(spec(), at, port);
     expect(refusals).toHaveLength(1);
 
-    await resolve(spec(), at, 'dataFile', port);
+    await resolveWith(spec(), at, 'dataFile', port);
     expect(refusals).toHaveLength(1);
 
     const csv = readFileSync(join(dir, 'workbook', 'masters', 'stores.csv'), 'utf8');
     expect(csv.split('\n')[0]).toBe('S001,Shinjuku West,East');
     expect(cell(built(dir, root).grid, 'Masters', 'B2')?.value).toBe('Shinjuku West');
+  });
+
+  it('carries a look on a cell a data block fills, and leaves the value where it is', async () => {
+    if (!QUICKSTART) return;
+    const { dir, root, port, spec, refusals } = opened(QUICKSTART);
+
+    // A9 is the corner of an inline `data:` block, which carries no formatting
+    // of its own (`docs/spec.md` §9): the look goes in a `cells:` entry beside
+    // it, and the value stays where the block writes it.
+    const where = { sheet: 'Sales' as SheetName, rect: at(9, 1), whole: null };
+    const [answer] = setStyle(spec(), where, { 'font.bold': true }, reading(port.text));
+    if (answer === undefined) throw new Error('nothing was offered');
+
+    await applied(spec(), answer.intent, port, { anyway: false, from: answer.id, typed: null });
+    expect(refusals).toEqual([]);
+
+    const { grid } = built(dir, root);
+    expect(cell(grid, 'Sales', 'A9')?.value).toBe('Quarter');
+    expect(resolve(cell(grid, 'Sales', 'A9')?.style ?? [])['font.bold']).toBe(true);
   });
 
   it('takes a cell back out of the workbook when it is emptied', async () => {

@@ -8,7 +8,7 @@ import {
   type SheetName,
   within,
 } from '@yxl-vscode/units';
-import { compileFacets } from './cell';
+import { compileFacets, layer, spokenBy } from './cell';
 import { CODE } from './codes';
 import { type Ctx, context, type DataReader, reject, type Setting, text } from './ctx';
 import type { CompiledCell, CompiledGrid, CompiledSheet, DeclaredStyle } from './grid';
@@ -120,7 +120,7 @@ function applyOverride(ctx: Ctx, override: Override, drafts: readonly Drafted[])
   const under = cellAt(draft.sheet, read.at);
   const own = { kind: 'override', node: override.id } as const;
   const written = compileFacets(ctx, override, read.at, own, 'override');
-  draft.cells.set(read.at, under === null ? written : layer(under, written, override));
+  draft.cells.set(read.at, under === null ? written : layer(under, written, spokenBy(override)));
 }
 
 /** Where an override lands, read now if a `${...}` stopped the loader reading it. */
@@ -132,24 +132,4 @@ function overrideAddr(ctx: Ctx, override: Override): QualifiedAddr | null {
   if (read === null)
     reject(ctx, CODE.badAddress, `\`${spelled}\` is not a sheet and a cell`, override);
   return read;
-}
-
-/** What the override said, over what was there. */
-function layer(under: CompiledCell, over: CompiledCell, override: Override): CompiledCell {
-  const writesValue =
-    override.value !== null || override.formula !== null || override.rich !== null;
-
-  return {
-    at: under.at,
-    value: writesValue ? over.value : under.value,
-    type: writesValue ? over.type : under.type,
-    formula: writesValue ? over.formula : under.formula,
-    rich: writesValue ? over.rich : under.rich,
-    format: override.format === null ? under.format : over.format,
-    style: [...under.style, ...over.style],
-    provenance: {
-      value: writesValue ? over.provenance.value : under.provenance.value,
-      format: override.format === null ? under.provenance.format : over.provenance.format,
-    },
-  };
 }
