@@ -1,6 +1,7 @@
 import type { Axis } from '@yxl-vscode/spec';
+import { spanSaid } from '@yxl-vscode/units';
+import { HELD } from './keys';
 import { entry, pointedAt, says } from './menus';
-import { spanSaid } from './outline';
 import type { DrawnSheet } from './protocol';
 import type { Asks, PointedCell, PointedHeading, Showing } from './showing';
 
@@ -11,9 +12,6 @@ export function pointing(showing: Showing, asks: Asks): HTMLElement | null {
 
   return at.kind === 'cell' ? onCell(showing, asks, at) : onHeading(showing, asks, at);
 }
-
-/** How a shortcut is written on the reader's own keyboard. */
-const HELD = navigator.userAgent.includes('Mac') ? '\u2318' : 'Ctrl+';
 
 /** What a cell's own menu holds: the clipboard, and clearing what the cells hold. */
 function onCell(showing: Showing, asks: Asks, at: PointedCell): HTMLElement | null {

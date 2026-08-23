@@ -2,20 +2,14 @@ import type { Axis, BorderStyle, StyleSays, StyleValues } from '@yxl-vscode/spec
 import type { Rect } from '@yxl-vscode/units';
 import { type At, between, within } from './keys';
 import type {
+  About,
   Drawing,
   DrawnCell,
   Editable,
-  Grouped,
-  Hidden,
-  Pasted,
-  PastedText,
-  Ranged,
   Refused,
-  Resized,
   Source,
   Summed,
   Typed,
-  Worn,
 } from './protocol';
 
 /** What the view is showing: the drawing, and the little it holds of its own. */
@@ -163,8 +157,6 @@ export interface Asks {
   readonly undo: (redo: boolean) => void;
   readonly copy: (row: number, col: number, cut: boolean) => void;
   readonly paste: (row: number, col: number) => void;
-  readonly resolveWith: (typed: Typed, choice: string) => void;
-  readonly emptiedWith: (ranged: Ranged, choice: string) => void;
   readonly wear: (want: StyleSays, over: Rect) => void;
   readonly drawWith: (line: BorderStyle) => void;
   readonly openMenu: (name: string | null) => void;
@@ -173,19 +165,14 @@ export interface Asks {
   readonly takeAll: () => void;
   readonly fit: (axis: Axis, at: number) => void;
   readonly hide: (axis: Axis, first: number, last: number, hidden: boolean) => void;
-  readonly hiddenWith: (hidden: Hidden, choice: string) => void;
   readonly group: (axis: Axis, first: number, last: number, level: number) => void;
-  readonly groupedWith: (grouped: Grouped, choice: string) => void;
   readonly pointAt: (at: Pointed | null) => void;
   readonly freeze: (at: At | null) => void;
-  readonly resizedWith: (resized: Resized, choice: string) => void;
-  readonly wornWith: (worn: Worn, choice: string) => void;
-  readonly pastedWith: (pasted: Pasted, choice: string) => void;
-  readonly pastedTextWith: (text: PastedText, choice: string) => void;
-  readonly look: (text: string) => void;
+  readonly look: (text: string | null) => void;
   readonly goOn: (by: number) => void;
   readonly goTo: (address: string) => void;
   readonly stopLooking: () => void;
+  readonly answer: (asked: About, choice: string) => void;
   readonly overrideWith: (typed: Typed, reason: string) => void;
 }
 

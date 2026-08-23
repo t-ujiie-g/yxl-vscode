@@ -440,7 +440,7 @@ function line(
       const through = lookingFor(event);
       if (through !== null) {
         event.preventDefault();
-        if (through === 'open') asks.look(showing.looking?.text ?? '');
+        if (through === 'open') asks.look(null);
         else asks.goOn(through === 'on' ? 1 : -1);
         return;
       }

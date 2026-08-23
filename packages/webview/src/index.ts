@@ -271,9 +271,6 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
         ours,
       });
     },
-    resolveWith: (typed, choice) => {
-      host.postMessage({ ...typed, choice, kind: 'resolve' });
-    },
     drawWith: (chosen) => {
       line = chosen;
       restated();
@@ -341,16 +338,6 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       said = null;
       host.postMessage({ kind: 'group', sheet: named(), axis, first, last, level });
     },
-    groupedWith: (grouped, choice) => {
-      refused = null;
-      said = null;
-      host.postMessage({ ...grouped, choice, kind: 'grouped' });
-    },
-    hiddenWith: (hidden, choice) => {
-      refused = null;
-      said = null;
-      host.postMessage({ ...hidden, choice, kind: 'hidden' });
-    },
     fit: (axis, at) => {
       refused = null;
       said = null;
@@ -361,37 +348,15 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       said = null;
       host.postMessage({ kind: 'resize', sheet: named(), axis, ...dragging(axis, at), size });
     },
-    resizedWith: (resized, choice) => {
-      refused = null;
-      said = null;
-      host.postMessage({ ...resized, choice, kind: 'resized' });
-    },
     wear: (want, over) => {
       refused = null;
       said = null;
       host.postMessage({ kind: 'wear', sheet: named(), ...over, want, whole: taken });
     },
-    wornWith: (worn, choice) => {
-      refused = null;
-      said = null;
-      host.postMessage({ kind: 'worn', choice, ...worn });
-    },
-    emptiedWith: (ranged, choice) => {
-      refused = null;
-      said = null;
-      host.postMessage({ ...ranged, choice, kind: 'emptied' });
-    },
-    pastedWith: (pasted, choice) => {
-      refused = null;
-      said = null;
-      host.postMessage({ ...pasted, choice, kind: 'pasted' });
-    },
-    pastedTextWith: (text, choice) => {
-      refused = null;
-      said = null;
-      host.postMessage({ ...text, choice, kind: 'pastedText' });
-    },
-    look: (text) => {
+    look: (asked) => {
+      // `null` is the key asking for the search, which is about whatever it
+      // already holds — the grid was drawn before the reader typed (ADR-047).
+      const text = asked ?? looking?.text ?? '';
       const first = looking === null;
       looking = { text, cells: [], at: -1 };
       host.postMessage({ kind: 'find', sheet: named(), text });
@@ -422,6 +387,13 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
     stopLooking: () => {
       looking = null;
       redraw();
+    },
+    // One path for every question the host asks: the message it refused comes
+    // back with the answer taken, and the host reads its own `kind` (ADR-048).
+    answer: (asked, choice) => {
+      refused = null;
+      said = null;
+      host.postMessage({ ...asked, choice });
     },
     overrideWith: (typed, reason) => {
       // `kind` last, or a spread message carrying its own `kind` is that message.

@@ -91,10 +91,8 @@ export async function write(spec: Spec, typed: Typed, port: Port, anyway = false
       return;
     }
 
-    // Rebuilt rather than spread: the incoming message carries its own `kind`.
-    const offer = { sheet: typed.sheet, row: typed.row, col: typed.col, text: typed.text };
     port.refuse(intent.why, {
-      about: { is: 'typed', typed: offer },
+      about: { ...typed, kind: 'edit' },
       canOverride: overridable(spec.grid, where),
       choices: answers.map(shown),
     });
@@ -125,7 +123,7 @@ export async function empty(spec: Spec, ranged: Ranged, port: Port, only = false
     const some = clearRange(spec.grid, where, read, true);
     const cells = some.kind === 'edit' ? some.expects.cells : null;
 
-    port.refuse(intent.why, theseOnly({ is: 'ranged', ranged }, EMPTIED, cells));
+    port.refuse(intent.why, theseOnly({ ...ranged, kind: 'empty' }, EMPTIED, cells));
     return;
   }
 
@@ -351,7 +349,7 @@ export async function applied(
       typed === null
         ? null
         : {
-            about: { is: 'typed', typed },
+            about: { kind: 'edit', ...typed },
             canOverride: false,
             choices: [anyhow(done.surprises, asked.from)],
           },
