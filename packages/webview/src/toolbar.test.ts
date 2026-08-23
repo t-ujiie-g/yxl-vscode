@@ -86,9 +86,9 @@ describe('the switches a reader reaches for first', () => {
       true,
     );
     expect(buttons.map((one) => one.title)).toEqual([
-      'Bold',
-      'Italic',
-      'Underline',
+      'Bold (Ctrl+B)',
+      'Italic (Ctrl+I)',
+      'Underline (Ctrl+U)',
       'Strikethrough',
       'Text colour',
       'Fill',
@@ -102,6 +102,14 @@ describe('the switches a reader reaches for first', () => {
       'Borders',
       'Freeze panes',
     ]);
+  });
+
+  it('writes the shortcut on the three switches that have one', () => {
+    const bar = toolbar(showing({ selected: { row: 1, col: 1 } }), asks());
+    const said = (name: string) =>
+      bar.querySelector<HTMLButtonElement>(`button.look.${name}`)?.title;
+
+    expect([said('bold'), said('strike')]).toEqual(['Bold (Ctrl+B)', 'Strikethrough']);
   });
 
   it('asks for the other of what the selected cell wears', () => {

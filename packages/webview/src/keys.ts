@@ -126,6 +126,25 @@ export function looking(event: KeyboardEvent): 'open' | 'on' | 'back' | null {
   return event.shiftKey ? 'back' : 'on';
 }
 
+/** The look a shortcut asks for: `Cmd`/`Ctrl`+`B`, `I` and `U`, as both spreadsheets have them. */
+export function wearing(event: KeyboardEvent): 'bold' | 'italic' | 'underline' | null {
+  if (!(event.metaKey || event.ctrlKey) || event.altKey || event.shiftKey) return null;
+
+  switch (event.key) {
+    case 'b':
+    case 'B':
+      return 'bold';
+    case 'i':
+    case 'I':
+      return 'italic';
+    case 'u':
+    case 'U':
+      return 'underline';
+    default:
+      return null;
+  }
+}
+
 /** Whether this is the key that takes the whole sheet. */
 export function takingAll(event: KeyboardEvent): boolean {
   return event.key === 'a' && (event.metaKey || event.ctrlKey) && !event.altKey;

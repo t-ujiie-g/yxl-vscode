@@ -1177,8 +1177,14 @@ gestures on a *heading*, and the headings are not selectors yet.
       (ADR-019), so a sum taken there would be the sum of what happened to be
       drawn. It is asked for only where the selection is more than one cell,
       which is when a spreadsheet shows one.
-- [ ] **The keys a look has**: `Cmd`/`Ctrl`+`B`, `I`, `U` — the toolbar has
+- [x] **The keys a look has**: `Cmd`/`Ctrl`+`B`, `I`, `U` — the toolbar has
       them and the keyboard does not.
+      **In**, answered at the page rather than at the cell, and by *pressing the
+      switch the toolbar draws*: the toolbar is rebuilt on every restate, so it
+      already knows the rectangle and what that rectangle wears, and the key
+      cannot drift from the button. The shortcut is written on the button as
+      both spreadsheets write it. A box of text keeps its own keys — which the
+      `Cmd`+`A` guard had missed since the cell editor became a `textarea`.
 - [ ] **The rest of the bar a reader expects**: the font face and size
       (`docs/spec.md` §6 has both, the toolbar offers neither), the quick number
       formats Sheets keeps beside the menu — currency, percent, more and fewer
@@ -2597,6 +2603,22 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-23 — The keys a look has
+Phase 10's tenth item: `Cmd`/`Ctrl`+`B`, `I` and `U`.
+
+- **The keyboard puts a look on**, over whatever is selected — a cell, a reach,
+  a whole column taken from its heading — and takes it off again where it is
+  already worn.
+- **The key presses the button.** The toolbar is rebuilt on every restate, so it
+  is the thing that already knows the rectangle and what that rectangle wears;
+  the shortcut finds the switch and clicks it, and so cannot drift from it.
+- **The shortcut is written on the button**, `⌘B` or `Ctrl+B` as the reader's
+  own keyboard has it.
+- **A box of text keeps its own keys.** The guard that held `Cmd`+`A` back from
+  the grid only knew about `<input>`, and had let it through since the cell
+  editor became a `<textarea>`.
+- 1699 → 1706 tests.
 
 ### 2026-08-23 — What the selection comes to
 Phase 10's ninth item, and the third thing the host answers because the view can
