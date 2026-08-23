@@ -141,12 +141,14 @@ describe('what a cell looks like', () => {
     expect(drawn.style.textAlign).toBe('center');
   });
 
-  it('reads a colour with an alpha byte, which CSS wants last', () => {
-    // `FF00FF00` is opaque green in Excel's `AARRGGBB`. Handed to CSS as
-    // written it would be transparent magenta, so the answer being green is
-    // the reordering working.
-    const drawn = drawCell(cell({ value: 'x', style: { fill: colour('FF00FF00') } }), undefined);
-    expect(drawn.style.backgroundColor).toBe('rgb(0, 255, 0)');
+  it('drops the alpha byte of a colour, whichever byte it is', () => {
+    // Excel ignores it: `0000FF00` is the same opaque green as `FF00FF00`, and
+    // a `00` handed to CSS would be an invisible cell.
+    const opaque = drawCell(cell({ value: 'x', style: { fill: colour('FF00FF00') } }), undefined);
+    expect(opaque.style.backgroundColor).toBe('rgb(0, 255, 0)');
+
+    const clear = drawCell(cell({ value: 'x', style: { fill: colour('0000FF00') } }), undefined);
+    expect(clear.style.backgroundColor).toBe('rgb(0, 255, 0)');
   });
 
   it('draws each border edge it was given', () => {

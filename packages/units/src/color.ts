@@ -12,3 +12,13 @@ const HEX = /^#?(?:[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$/;
 export function parseColor(text: string): Color | null {
   return HEX.test(text) ? (text as Color) : null;
 }
+
+/**
+ * A colour as a screen paints it: `#RRGGBB`, with the alpha byte of an
+ * `AARRGGBB` spelling dropped — Excel ignores it, and a `00` there is opaque
+ * black to Excel and invisible to CSS.
+ */
+export function painted(color: Color | string): string {
+  const digits = color.startsWith('#') ? color.slice(1) : color;
+  return `#${digits.length === 8 ? digits.slice(2) : digits}`;
+}
