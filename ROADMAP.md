@@ -2751,7 +2751,18 @@ The other half of the last change: the cells a `formulas:` range fills, where a
   `Excepting { doc, grid }` were two names for what a write needs; they are one
   now, which is what let a *look* reach the override path at all. Every caller
   in the extension passes its `Spec` straight through.
-- 1764 → 1767 tests, one of them Tier 4: the exception goes through the real
+- **A band names what a range fills.** The cells a `formulas:` range covers are
+  worked out on demand, not held in the sheet's map, so a look over the column
+  named none of them and the checker called all four hundred a surprise. Which
+  addresses a sheet holds a cell at is a question `compile` owns and `verify`
+  already answered for itself; it answers it once now, and `intent` asks the
+  same question.
+- **Any gesture can be confirmed, not just a typed edit.** *Apply it anyway* was
+  offered only where the refusal carried what the reader typed, so a look that
+  surprised the checker was a sentence with no way past it. The message a
+  refusal carries is the way back for every gesture now (ADR-048), and the
+  shared flow reads `anyway:` the way the typed path always has.
+- 1764 → 1769 tests, one of them Tier 4: the exception goes through the real
   compiler and the cell comes back bold with its formula still filling it.
 
 ### 2026-08-23 — A look on a cell a data block fills

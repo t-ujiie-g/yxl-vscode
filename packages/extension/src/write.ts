@@ -87,19 +87,19 @@ export async function write(spec: Spec, typed: Typed, port: Port, anyway = false
     // An edit with one meaning applies; only one with several is a question (ADR-001).
     const sole = answers.length === 1 ? answers[0] : undefined;
     if (sole?.alone === true) {
-      await applied(spec, sole.intent, port, { anyway, from: sole.id, typed });
+      await applied(spec, sole.intent, port, { anyway, from: sole.id, about: about(typed) });
       return;
     }
 
     port.refuse(intent.why, {
-      about: { ...typed, kind: 'edit' },
+      about: about(typed),
       canOverride: overridable(spec.grid, where),
       choices: answers.map(shown),
     });
     return;
   }
 
-  await applied(spec, intent, port, { anyway, from: null, typed });
+  await applied(spec, intent, port, { anyway, from: null, about: about(typed) });
 }
 
 /**
@@ -127,7 +127,7 @@ export async function empty(spec: Spec, ranged: Ranged, port: Port, only = false
     return;
   }
 
-  const done = await applied(spec, intent, port, { anyway: false, from: null, typed: null });
+  const done = await applied(spec, intent, port, ASKED);
   if (done && intent.kind === 'edit') {
     const cells = intent.expects.cells.size;
     port.said(`${cells} cell${cells === 1 ? '' : 's'} emptied.`);
@@ -246,9 +246,21 @@ export async function resolve(
     return;
   }
 
-  const done = await applied(spec, taken.intent, port, { anyway, from: taken.id, typed });
+  const done = await applied(spec, taken.intent, port, {
+    anyway,
+    from: taken.id,
+    about: about(typed),
+  });
   if (done) port.said(`${taken.what.replace(/^C/, 'c')}: ${taken.moves.length} cells changed.`);
 }
+
+/** The message an edit came in as, which is what the reader sends back to confirm it (ADR-048). */
+function about(typed: Typed): About {
+  return { ...typed, kind: 'edit' };
+}
+
+/** Nothing to send back: a gesture the reader cannot be asked again about. */
+const ASKED: Asked = { anyway: false, from: null, about: null };
 
 /** *Apply it anyway*, for the gesture itself or for one of its answers. */
 const ANYWAY = /^anyway:?(.*)$/;
@@ -294,7 +306,7 @@ export async function writeOverride(
   const done = await applied(spec, override(spec, { sheet, at }, says, reading(port.text)), port, {
     anyway: false,
     from: null,
-    typed,
+    about: about(typed),
   });
   if (done) port.said(`${sheet}!${at} is now written as an override.`);
 }
@@ -303,7 +315,7 @@ export async function writeOverride(
 export interface Asked {
   readonly anyway: boolean;
   readonly from: string | null;
-  readonly typed: Typed | null;
+  readonly about: About | null;
 }
 
 /** The half of a write that is the same whichever intent produced it. */
@@ -342,13 +354,12 @@ export async function applied(
   }
   if (done.ok === 'ask' && !asked.anyway) {
     // Asked about, not refused (ADR-009); the same gesture again confirms it.
-    const typed = asked.typed;
     port.refuse(
       surprising(done.surprises),
-      typed === null
+      asked.about === null
         ? null
         : {
-            about: { kind: 'edit', ...typed },
+            about: asked.about,
             canOverride: false,
             choices: [anyhow(done.surprises, asked.from)],
           },

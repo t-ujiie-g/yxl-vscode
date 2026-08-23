@@ -1,7 +1,9 @@
 import {
+  addressesIn,
   type CompiledBand,
   type CompiledSheet,
   type FullAddr,
+  REACH,
   type StyleLayer,
   sheetOf,
   styleAt,
@@ -149,7 +151,7 @@ function inSpan(sheet: CompiledSheet, span: Span): A1Addr[] {
     return one >= span.first && one <= span.last;
   };
 
-  return [...sheet.cells.keys()].map((key) => key as A1Addr).filter(inside);
+  return addressesIn(sheet, REACH).filter(inside);
 }
 
 /** The answers where every cell of the rectangle takes the look from the same place. */

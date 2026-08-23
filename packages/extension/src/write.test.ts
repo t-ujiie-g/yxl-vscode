@@ -602,6 +602,14 @@ describe('columns hidden from the preview', () => {
     expect(files[ROOT]).toBe(spec);
   });
 
+  it('takes an answer confirmed with *apply it anyway*, which names the answer inside it', async () => {
+    const spec = `${SALES}    cells:\n      A1: 1\n    columns:\n      - at: A-F\n        hidden: true\n`;
+    const { spec: read, port, files } = editor({ [ROOT]: spec });
+
+    await hide(read, hiding({ hidden: false }), port, 'anyway:apart');
+    expect(files[ROOT]).toContain('      - at: B-C\n        hidden: false\n');
+  });
+
   it('says so where nothing hides them', async () => {
     const { spec, port, refusals } = editor({ [ROOT]: `${SALES}    cells:\n      A1: 1\n` });
 

@@ -192,6 +192,13 @@ describe('a look on a cell something else fills', () => {
     );
   });
 
+  it('names every cell the range fills, since the run reaches them too', () => {
+    const [, band] = offered(RANGE, at(2, 3), BOLD);
+
+    // C1 and C2 are the range; without them the checker would call them a surprise.
+    expect(band?.moves.map((one) => one.at).sort()).toEqual(['C1', 'C2']);
+  });
+
   it('offers only the run where the range keeps its formula, which is its top-left', () => {
     expect(offered(RANGE, at(1, 3), BOLD).map((one) => one.id)).toEqual(['ofItsOwn']);
   });

@@ -35,6 +35,11 @@ export async function asked<T extends { readonly sheet: string }>(
     return;
   }
 
+  // *Apply it anyway* is the same gesture again, with the surprises accepted.
+  const again = ANYWAY.exec(choice ?? '');
+  const anyway = again !== null;
+  const wanted = anyway ? (again[1] === '' ? undefined : again[1]) : choice;
+
   const answers = how.answers(spec, one, sheet, reading(port.text));
   if (answers.length === 0) {
     port.refuse(how.nothing(one), null);
@@ -42,9 +47,9 @@ export async function asked<T extends { readonly sheet: string }>(
   }
 
   const sole = answers.length === 1 ? answers[0] : undefined;
-  const taken = choice === undefined ? sole : answers.find((it) => it.id === choice);
+  const taken = wanted === undefined ? sole : answers.find((it) => it.id === wanted);
 
-  if (taken === undefined || (choice === undefined && taken.alone !== true)) {
+  if (taken === undefined || (wanted === undefined && !anyway && taken.alone !== true)) {
     if (choice !== undefined) {
       port.refuse('that answer is no longer one of the ways this edit could be made', null);
       return;
@@ -59,9 +64,12 @@ export async function asked<T extends { readonly sheet: string }>(
   }
 
   const done = await applied(spec, taken.intent, port, {
-    anyway: false,
+    anyway,
     from: taken.id,
-    typed: null,
+    about: how.about(one),
   });
   if (done) port.said(how.done(one, taken));
 }
+
+/** *Apply it anyway*, for the gesture itself or for one of its answers. */
+const ANYWAY = /^anyway:?(.*)$/;

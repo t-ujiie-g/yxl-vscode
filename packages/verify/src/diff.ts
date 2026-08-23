@@ -1,14 +1,16 @@
 import {
+  addressesIn,
   type CompiledCell,
   type CompiledGrid,
   type CompiledSheet,
   cellAt,
+  REACH,
   resolve,
   settled,
   styleAt,
 } from '@yxl-vscode/compile';
 import type { StyleValues } from '@yxl-vscode/spec';
-import { type A1Addr, addrAt, type SheetName } from '@yxl-vscode/units';
+import type { A1Addr, SheetName } from '@yxl-vscode/units';
 
 /** One thing an edit changed: a cell, by what about it moved, or a sheet. */
 export type Change =
@@ -77,24 +79,8 @@ function held(cell: CompiledCell | null) {
 
 /** Every address either compilation holds a cell at, each named once. */
 function addresses(before: CompiledSheet, after: CompiledSheet): A1Addr[] {
-  const all = new Set<string>([...before.cells.keys(), ...after.cells.keys()]);
-
-  for (const sheet of [before, after]) {
-    for (const fill of sheet.fills) {
-      for (let row = fill.rect.top; row <= fill.rect.bottom; row += 1) {
-        for (let col = fill.rect.left; col <= fill.rect.right; col += 1) {
-          if (all.size > REACH) return [...all] as A1Addr[];
-          all.add(addrAt({ col, row }));
-        }
-      }
-    }
-  }
-
-  return [...all] as A1Addr[];
+  return [...new Set([...addressesIn(before, REACH), ...addressesIn(after, REACH)])] as A1Addr[];
 }
-
-/** How many addresses one comparison looks at; past it, the inside of a `formulas:` range is dropped. */
-const REACH = 50_000;
 
 function alike(before: StyleValues, after: StyleValues): boolean {
   const keys = new Set([...Object.keys(before), ...Object.keys(after)]);

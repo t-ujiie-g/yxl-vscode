@@ -269,7 +269,7 @@ describe('the loop, closed', () => {
     const [answer] = setStyle(spec(), where, { 'font.bold': true }, reading(port.text));
     if (answer === undefined) throw new Error('nothing was offered');
 
-    await applied(spec(), answer.intent, port, { anyway: false, from: answer.id, typed: null });
+    await applied(spec(), answer.intent, port, { anyway: false, from: answer.id, about: null });
     expect(refusals).toEqual([]);
 
     const { grid } = built(dir, root);
@@ -288,7 +288,7 @@ describe('the loop, closed', () => {
     const taken = answers.find((one) => one.id === 'exception');
     if (taken === undefined) throw new Error('the exception was not offered');
 
-    await applied(spec(), taken.intent, port, { anyway: false, from: taken.id, typed: null });
+    await applied(spec(), taken.intent, port, { anyway: false, from: taken.id, about: null });
     expect(refusals).toEqual([]);
 
     const { grid } = built(dir, root);
