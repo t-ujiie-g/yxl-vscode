@@ -69,6 +69,9 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
   /** What the host last said the selection comes to, which only a rectangle has. */
   let comes: Showing['comes'] = null;
 
+  /** The sheet the reader asked for and has not seen yet. */
+  let adding: string | null = null;
+
   /** Where the last edit was typed, so a refusal can put the reader back at it. */
   let typedAt: { row: number; col: number } | null = null;
 
@@ -196,6 +199,12 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       sources = null;
       reached = null;
       redraw();
+    },
+    addSheet: (name) => {
+      refused = null;
+      said = null;
+      adding = name;
+      host.postMessage({ kind: 'addSheet', name });
     },
     select: (row, col) => {
       selected = { row, col };
@@ -473,6 +482,15 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       } else if (was !== undefined) {
         sheet = sheetAgain(sent.sheets, { name: was.name, index: sheet });
       }
+
+      // The sheet the reader just asked for, once the drawing that has it arrives.
+      const made = adding === null ? -1 : sent.sheets.findIndex((one) => one.name === adding);
+      if (made >= 0) {
+        sheet = made;
+        selected = null;
+        anchor = null;
+      }
+      adding = null;
       drawing = sent;
       sources = null;
       reached = null;

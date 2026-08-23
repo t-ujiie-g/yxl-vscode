@@ -7,11 +7,12 @@ import { type FilePath, qualified } from '@yxl-vscode/units';
 import { type Change, diff } from './diff';
 
 /**
- * What a patch says it may change — `cells`, as `Sheet!A1` — and what a change
- * beyond that means: ask about it, or refuse (ADR-009).
+ * What a patch says it may change — `cells` as `Sheet!A1`, and `sheets` it adds
+ * or takes away — and what a change beyond that means: ask, or refuse (ADR-009).
  */
 export interface Expects {
   readonly cells: ReadonlySet<string>;
+  readonly sheets?: ReadonlySet<string>;
   readonly beyond: 'ask' | 'refuse';
 }
 
@@ -107,7 +108,9 @@ function against(
 }
 
 function covers(expects: Expects, change: Change): boolean {
-  return change.kind === 'cell' && expects.cells.has(qualified(change.sheet, change.at));
+  if (change.kind === 'sheet') return expects.sheets?.has(change.name) === true;
+
+  return expects.cells.has(qualified(change.sheet, change.at));
 }
 
 interface Read {

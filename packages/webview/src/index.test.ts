@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { type Host, wire } from './index';
 import type { Drawing, DrawnCell, DrawnSheet, FromView, Refused, Typed } from './protocol';
 
@@ -1122,6 +1122,27 @@ describe('the bar over the grid', () => {
     const entries = [...into.querySelectorAll<HTMLButtonElement>('.pointed .entry')];
     entries.find((one) => one.firstChild?.textContent === 'Fill right')?.click();
     expect(sent.filter((one) => one.kind === 'fill').at(-1)).toMatchObject({ axis: 'column' });
+  });
+
+  it('asks for a sheet from the `+` on the tabs, and goes to it when it arrives', () => {
+    const { into, sent, told } = view();
+    const prompt = vi.spyOn(window, 'prompt').mockReturnValue('Notes');
+
+    into.querySelector<HTMLButtonElement>('.tabs .add')?.click();
+    expect(prompt).toHaveBeenCalledWith('Name for the new sheet', 'Sheet2');
+    expect(sent.filter((one) => one.kind === 'addSheet')).toEqual([
+      { kind: 'addSheet', name: 'Notes' },
+    ]);
+
+    told({ ...drawing, sheets: [sheet(), sheet({ name: 'Notes', cells: [] })] });
+    expect(into.querySelector('.tab.showing')?.textContent).toBe('Notes');
+    prompt.mockRestore();
+  });
+
+  it('shows the tabs even for one sheet, so there is somewhere to press', () => {
+    const { into } = view();
+
+    expect(into.querySelectorAll('.tabs .tab:not(.add)')).toHaveLength(1);
   });
 
   it('asks for the rows to be put in order, either way round', () => {

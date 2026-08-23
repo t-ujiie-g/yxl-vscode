@@ -34,6 +34,35 @@ export function sheetName(text: string): SheetName | null {
   return text === '' ? null : (text as SheetName);
 }
 
+/**
+ * Why a name a reader typed is not one a sheet can have, or `null` where it is:
+ * Excel's own rules, which the compiler refuses a spec over (`docs/spec.md` §2).
+ * For a name about to be *written*; a name read from a file is the compiler's.
+ */
+export function whyNotASheetName(text: string): string | null {
+  if (text === '') return 'a sheet needs a name';
+  if ([...text].length > 31) return 'a sheet name is at most 31 characters';
+
+  const bad = [...text].find((one) => FORBIDDEN.has(one));
+  if (bad !== undefined) return `a sheet name cannot hold \`${bad}\``;
+  if (text.startsWith("'") || text.endsWith("'")) {
+    return 'a sheet name cannot start or end with an apostrophe';
+  }
+  if (text === 'History') return '`History` is a name Excel keeps for itself';
+
+  return null;
+}
+
+/** The name a new sheet is offered under — `Sheet2`, `Sheet3`, … — past the ones there are. */
+export function nextSheetName(taken: readonly SheetName[]): SheetName {
+  for (let n = taken.length + 1; ; n += 1) {
+    const name = `Sheet${n}` as SheetName;
+    if (!taken.includes(name)) return name;
+  }
+}
+
+const FORBIDDEN: ReadonlySet<string> = new Set([':', '\\', '/', '?', '*', '[', ']']);
+
 /** Read a style definition's name. */
 export function styleName(text: string): StyleName | null {
   return text === '' ? null : (text as StyleName);

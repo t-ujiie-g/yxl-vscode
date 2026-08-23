@@ -44,7 +44,7 @@ export function draw(into: HTMLElement, showing: Showing, asks: Asks): void {
 
   if (showing.looking !== null) into.append(findBar(showing.looking, asks));
   if (drawing.params.length > 0) into.append(parameters(drawing, asks));
-  if (drawing.sheets.length > 1) into.append(tabs(drawing, showing.sheet, asks.showSheet));
+  into.append(tabs(drawing, showing.sheet, asks));
   into.append(toolbar(showing, asks));
   into.append(formulaBar(showing, asks));
 

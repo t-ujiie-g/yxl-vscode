@@ -11,6 +11,7 @@ import { hide } from './hidden';
 import { line } from './lines';
 import { wear } from './look';
 import { freeze } from './panes';
+import { add } from './sheets';
 import { resize } from './size';
 import { sort } from './sorts';
 import { table } from './tables';
@@ -632,6 +633,27 @@ describe('columns hidden from the preview', () => {
 
     await hide(spec, hiding({ hidden: false }), port);
     expect(refusals[0]).toContain('nothing hides columns B-C');
+  });
+});
+
+describe('a sheet added from the tab bar', () => {
+  it('goes last in `sheets:` and says so', async () => {
+    const { spec, port, files, told, refusals } = editor({
+      [ROOT]: `${SALES}    cells:\n      A1: 1\n`,
+    });
+
+    await add(spec, 'Notes', port);
+
+    expect(refusals).toEqual([]);
+    expect(files[ROOT]).toBe(`${SALES}    cells:\n      A1: 1\n  - name: Notes\n`);
+    expect(told).toEqual(['`Notes` added.']);
+  });
+
+  it('is refused under a name a sheet already has', async () => {
+    const { spec, port, refusals } = editor({ [ROOT]: `${SALES}    cells:\n      A1: 1\n` });
+
+    await add(spec, 'Sales', port);
+    expect(refusals[0]).toBe('there is already a sheet named `Sales`');
   });
 });
 

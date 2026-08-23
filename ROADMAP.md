@@ -1380,9 +1380,15 @@ A workbook is more than one sheet, and a spreadsheet user reaches for the tab ba
 before the toolbar. Today the tabs *switch*; they do nothing else, and the keys
 that say what a sheet is — `visibility`, `tab_color`, `gridlines`, `split` —
 are carried through untouched and shown as nothing (`docs/spec.md` §2).
-- [ ] **A new sheet**, from a `+` on the tab bar: one `- name:` entry at the end
+- [x] **A new sheet**, from a `+` on the tab bar: one `- name:` entry at the end
       of `sheets:`, and the tab bar shown even for one sheet so there is
       somewhere to press
+      **In.** The name is asked for, offered as `Sheet2`, `Sheet3`, … past the
+      ones there are, and checked at the writing edge against Excel's own rules
+      (`docs/spec.md` §2) — which yxl refuses a spec over, so a name it would
+      refuse is refused here first, by the rule it breaks. `verify` learned to
+      take a **sheet** as something an edit may claim, beside the cells it may
+      claim, which is what every other item in this phase will need.
 - [ ] **Rename a sheet** by double-clicking its tab — the sheet's `name:`, and
       every `Sheet!A1` reference that names it, through `shifted`'s parser
 - [ ] **Delete a sheet** from the tab's menu, refused where it is the last
@@ -2911,6 +2917,25 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-23 — A new sheet
+Phase 12 opens: the first thing a spreadsheet user does with the tab bar that
+this one could not do.
+
+- **A `+` on the tab bar**, and the bar shown even for one sheet so there is
+  somewhere to press. The name is asked for, offered as `Sheet2`, `Sheet3`, …
+  past the ones there are — the name both spreadsheets offer — and the new sheet
+  is shown as soon as the drawing that has it arrives.
+- **One `- name:` entry, last**, which is tab order (`docs/spec.md` §2). Holding
+  nothing yet; the first thing typed into it makes its `cells:`.
+- **Excel's own name rules at the writing edge.** yxl refuses a spec over a bad
+  sheet name, so a name it would refuse is refused here first — by the rule it
+  breaks, not by a generic "cannot". A name *read* from a file stays the
+  compiler's to judge (ADR-011); the rule is for what is about to be written.
+- **`verify` can be told about a sheet.** An edit's claim was cells only, so a
+  new sheet was a surprise the reader had to wave through; `Expects.sheets` is
+  the claim, and every other Phase 12 item will make it.
+- 1885 → 1898 tests.
 
 ### 2026-08-23 — What the project is for, said again
 A tidy of this document and a pass over the tree, between Phase 11 and what
