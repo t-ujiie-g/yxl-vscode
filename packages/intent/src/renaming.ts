@@ -1,6 +1,5 @@
-import { addressesIn, cellAt, REACH } from '@yxl-vscode/compile';
 import type { Op, Path } from '@yxl-vscode/cst';
-import type { Sheet, Templated } from '@yxl-vscode/spec';
+import type { Templated } from '@yxl-vscode/spec';
 import {
   type FilePath,
   type NodeId,
@@ -12,7 +11,15 @@ import {
   sheetName,
   whyNotASheetName,
 } from '@yxl-vscode/units';
-import { type Intent, located, type Projection, type Reading, refused } from './direct';
+import {
+  cellsNaming,
+  type Intent,
+  located,
+  nameOf,
+  type Projection,
+  type Reading,
+  refused,
+} from './direct';
 
 /** A sheet a reader asked to call something else. */
 export interface Renaming {
@@ -33,7 +40,7 @@ export function renameSheet(spec: Projection, where: Renaming, read: Reading): I
     return refused(`there is already a sheet named \`${to}\``);
   }
 
-  const sheet = spec.doc.sheets.find((one) => named(one) === where.sheet);
+  const sheet = spec.doc.sheets.find((one) => nameOf(one) === where.sheet);
   if (sheet === undefined) return refused(`there is no sheet named \`${where.sheet}\``);
 
   const ops = new Map<FilePath, Op[]>();
@@ -57,7 +64,7 @@ export function renameSheet(spec: Projection, where: Renaming, read: Reading): I
                 id: cell.id,
                 key: 'formula',
                 body: cell.formula.body,
-                what: `a cell of \`${named(one)}\``,
+                what: `a cell of \`${nameOf(one)}\``,
               },
             ]
           : [],
@@ -66,7 +73,7 @@ export function renameSheet(spec: Projection, where: Renaming, read: Reading): I
         id: range.id,
         key: 'formula',
         body: range.formula,
-        what: `a range of \`${named(one)}\``,
+        what: `a range of \`${nameOf(one)}\``,
       })),
     ]),
     ...spec.doc.defs.formulas.map((def) => ({
@@ -104,38 +111,14 @@ export function renameSheet(spec: Projection, where: Renaming, read: Reading): I
     file,
     patch: { ops: ops.get(file) ?? [] },
     expects: {
-      cells: rewritten(spec, where.sheet, to),
+      cells: cellsNaming(spec, where.sheet),
       sheets: new Set([where.sheet, to]),
       beyond: 'ask',
     },
   };
 }
 
-/** The name a sheet is written under, where a `${...}` has not stopped it being read. */
-function named(sheet: Sheet): SheetName | null {
-  return typeof sheet.name === 'string' ? sheet.name : null;
-}
-
 /** What an override's `at:` says, or `null` where a template stands in its place. */
 function spelled(at: Templated<QualifiedAddr>): string | null {
   return typeof at === 'string' || !('kind' in at) ? qualified(at.sheet, at.at) : null;
-}
-
-/** Every cell on the other sheets whose formula the rename rewrites, as `Sheet!A1`. */
-function rewritten(spec: Projection, from: SheetName, to: SheetName): Set<string> {
-  const cells = new Set<string>();
-
-  for (const sheet of spec.grid.sheets) {
-    if (sheet.name === from) continue;
-
-    for (const at of addressesIn(sheet, REACH)) {
-      const body = cellAt(sheet, at)?.formula ?? null;
-      if (body === null) continue;
-
-      const now = renamed(body, from, to);
-      if (now.ok && now.formula !== body) cells.add(qualified(sheet.name, at));
-    }
-  }
-
-  return cells;
 }

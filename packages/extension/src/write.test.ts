@@ -11,7 +11,7 @@ import { hide } from './hidden';
 import { line } from './lines';
 import { wear } from './look';
 import { freeze } from './panes';
-import { add, rename } from './sheets';
+import { add, remove, rename } from './sheets';
 import { resize } from './size';
 import { sort } from './sorts';
 import { table } from './tables';
@@ -677,6 +677,29 @@ describe('a sheet renamed from its tab', () => {
 
     await rename(spec, 'Sales', 'Notes', port);
     expect(refusals[0]).toBe('there is already a sheet named `Notes`');
+  });
+});
+
+describe('a sheet taken out from its tab', () => {
+  it('takes its entry, and says so', async () => {
+    const { spec, port, files, told, refusals } = editor({
+      [ROOT]: `${SALES}    cells:\n      A1: 1\n  - name: Notes\n    cells:\n      A1: hello\n`,
+    });
+
+    await remove(spec, 'Notes', port);
+
+    expect(refusals).toEqual([]);
+    expect(files[ROOT]).toBe(`${SALES}    cells:\n      A1: 1\n`);
+    expect(told).toEqual(['`Notes` taken out.']);
+  });
+
+  it('is refused where a surviving formula names it', async () => {
+    const { spec, port, refusals } = editor({
+      [ROOT]: `${SALES}    cells:\n      A1: 1\n  - name: Notes\n    cells:\n      A1: { formula: "Sales!A1*2" }\n`,
+    });
+
+    await remove(spec, 'Sales', port);
+    expect(refusals[0]).toContain('would be left with `#REF!`');
   });
 });
 

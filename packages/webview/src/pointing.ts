@@ -216,10 +216,15 @@ function hiddenNear(
 
 /** What a tab's own menu holds: what there is no room for on the tab itself. */
 function onTab(showing: Showing, asks: Asks, at: PointedTab): HTMLElement | null {
+  const name = showing.drawing.sheets[at.sheet]?.name ?? '';
   const entries = [
     entry('Rename', {}, () => {
       asks.pointAt(null);
       asks.nameSheet(at.sheet);
+    }),
+    entry('Delete', {}, () => {
+      asks.pointAt(null);
+      asks.deleteSheet(name);
     }),
   ];
 

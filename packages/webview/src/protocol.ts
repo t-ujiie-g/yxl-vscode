@@ -183,7 +183,8 @@ export type About =
   | ({ readonly kind: 'fill' } & Filled)
   | ({ readonly kind: 'sort' } & Sorted)
   | { readonly kind: 'addSheet'; readonly name: string }
-  | { readonly kind: 'renameSheet'; readonly sheet: string; readonly name: string };
+  | { readonly kind: 'renameSheet'; readonly sheet: string; readonly name: string }
+  | { readonly kind: 'deleteSheet'; readonly sheet: string };
 
 /**
  * `Cmd`+`V` in the grid: where it goes, what the grid holds of its own, and what

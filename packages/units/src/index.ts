@@ -13,6 +13,7 @@ export {
   type Line,
   type Moved,
   moved,
+  names,
   type Offset,
   renamed,
   sheetSpelled,

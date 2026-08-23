@@ -236,7 +236,7 @@ function opensAnItem(source: string, start: number): boolean {
 
 type Held = Extract<Site, { in: 'map' } | { in: 'seq' }>;
 
-/** The text a removal covers: the entry, the comment block above it, and the blank line under it. */
+/** The entry, the comments above it, and the gap under it — or above, where it is last. */
 function taken(source: string, site: Held): Span {
   const own = site.in === 'map' ? site.entry.span : site.node.span;
   const next = siblingsOf(site)[site.index + 1];
@@ -246,9 +246,15 @@ function taken(source: string, site: Held): Span {
   // A block scalar's body already ends at a line break; asking for the end of
   // *that* line would take the next entry too.
   const end = source[own.end - 1] === '\n' ? own.end : lineEnd(source, own.end);
-  if (next === undefined) return span(start, end);
+  if (next !== undefined) {
+    return span(start, blankLines(source, end, lineStart(source, next.span.start)));
+  }
 
-  return span(start, blankLines(source, end, lineStart(source, next.span.start)));
+  const previous = siblingsOf(site)[site.index - 1];
+  if (previous === undefined) return span(start, end);
+
+  const after = lineEnd(source, previous.span.end);
+  return span(blankLines(source, after, start) === start ? after : start, end);
 }
 
 function siblingsOf(site: Held): readonly { readonly span: Span }[] {

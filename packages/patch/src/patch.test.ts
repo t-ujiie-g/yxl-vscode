@@ -130,13 +130,19 @@ describe('what will not be applied', () => {
   });
 
   it('refuses a removal whose lines could not go back where they were', () => {
-    // The blank line stays behind, and a last entry goes back after the one
-    // before it — which would put it above the gap it used to be under.
-    const source = 'cells:\n  A1: 1\n\n  B1: 2\n';
+    const source = 'cells:\n  A1: 1\n\n  # counted twice\n\n  B1: 2\n';
     const done = changed(source, { op: 'remove', path: ['cells', 'B1'] });
 
     expect(done.text).toBe(source);
     expect(done.diagnostics[0]?.code).toBe(CODE.noInverse);
+  });
+
+  it('takes the gap above a last entry with it, and puts it back', () => {
+    const source = 'cells:\n  A1: 1\n\n  B1: 2\n';
+    const done = changed(source, { op: 'remove', path: ['cells', 'B1'] });
+
+    expect(done.text).toBe('cells:\n  A1: 1\n');
+    expect(roundTrip(source, { op: 'remove', path: ['cells', 'B1'] })).toBe(source);
   });
 
   it('refuses an edit to a path that is not there', () => {

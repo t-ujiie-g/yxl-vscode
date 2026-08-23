@@ -577,8 +577,15 @@ describe('entries of a collection', () => {
       expect(removing(source, ['sheets', 0])).toMatchObject({ key: 0, before: null });
     });
 
-    it('gives the reason when the lines could not go back where they were', () => {
+    it('takes the gap above a last entry, which is the only gap it has', () => {
       const source = 'cells:\n  A1: 1\n\n  B1: 2\n';
+      const found = removing(source, ['cells', 'B1']);
+
+      expect(found).toMatchObject({ inexact: null, text: '\n  B1: 2\n' });
+    });
+
+    it('gives the reason when the lines could not go back where they were', () => {
+      const source = 'cells:\n  A1: 1\n\n  # counted twice\n\n  B1: 2\n';
       const found = removing(source, ['cells', 'B1']);
       expect(found?.of === 'entry' && found.inexact).toContain('lines above it');
     });
