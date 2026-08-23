@@ -1,4 +1,4 @@
-import type { ColumnSpan, RowSpan } from '@yxl-vscode/units';
+import type { Axis, ColumnSpan, RowSpan } from '@yxl-vscode/units';
 import type { SpecNode, Templated } from './node';
 import type { StyleUse } from './style';
 
@@ -27,7 +27,7 @@ export interface RowBand extends BandBase {
 }
 
 /** Which way a band runs, which is the only thing that differs between the two (`docs/spec.md` §4). */
-export type Axis = 'column' | 'row';
+export type { Axis };
 
 /** What each axis calls its sequence and the size it writes there. */
 export const BAND_KEYS: Readonly<Record<Axis, { readonly at: string; readonly size: string }>> = {

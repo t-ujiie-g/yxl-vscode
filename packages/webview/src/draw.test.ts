@@ -145,7 +145,7 @@ describe('what the view says about a spec', () => {
     const refused = {
       kind: 'refused',
       why: 'B5 is filled by a range',
-      about: { is: 'typed', typed },
+      about: { kind: 'edit', ...typed },
       canOverride: true,
       choices: [
         {
@@ -163,7 +163,7 @@ describe('what the view says about a spec', () => {
     expect(pick?.textContent).toBe('Change the range at B2 — 4 cells (B2, B3, B4, …)');
 
     pick?.dispatchEvent(new MouseEvent('click'));
-    expect(on.resolveWith).toHaveBeenCalledWith(typed, 'rangeFormula');
+    expect(on.answer).toHaveBeenCalledWith({ kind: 'edit', ...typed }, 'rangeFormula');
   });
 
   it('offers the exception where there is a cell it could be about', () => {
@@ -171,7 +171,7 @@ describe('what the view says about a spec', () => {
     const refused = {
       kind: 'refused',
       why: 'B5 is filled by a range',
-      about: { is: 'typed', typed },
+      about: { kind: 'edit', ...typed },
       canOverride: true,
       choices: [],
     } as const;
@@ -179,7 +179,7 @@ describe('what the view says about a spec', () => {
     const into = shown({ refused }, on);
 
     into.querySelector<HTMLElement>('.refused .go')?.click();
-    expect(on.overrideWith).toHaveBeenCalledWith(typed, '');
+    expect(on.overrideWith).toHaveBeenCalledWith({ kind: 'edit', ...typed }, '');
   });
 
   it('takes the reason from the box beside it, where one was given', () => {
@@ -187,7 +187,7 @@ describe('what the view says about a spec', () => {
     const refused = {
       kind: 'refused',
       why: 'B5 is filled by a range',
-      about: { is: 'typed', typed },
+      about: { kind: 'edit', ...typed },
       canOverride: true,
       choices: [],
     } as const;
@@ -200,7 +200,10 @@ describe('what the view says about a spec', () => {
     why.value = 'the audit settled this row';
     into.querySelector<HTMLElement>('.refused .go')?.click();
 
-    expect(on.overrideWith).toHaveBeenCalledWith(typed, 'the audit settled this row');
+    expect(on.overrideWith).toHaveBeenCalledWith(
+      { kind: 'edit', ...typed },
+      'the audit settled this row',
+    );
   });
 
   it('takes Enter in that box as the same answer', () => {
@@ -208,7 +211,7 @@ describe('what the view says about a spec', () => {
     const refused = {
       kind: 'refused',
       why: 'B5 is filled by a range',
-      about: { is: 'typed', typed },
+      about: { kind: 'edit', ...typed },
       canOverride: true,
       choices: [],
     } as const;
@@ -221,7 +224,7 @@ describe('what the view says about a spec', () => {
     why.value = 'settled';
     why.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
 
-    expect(on.overrideWith).toHaveBeenCalledWith(typed, 'settled');
+    expect(on.overrideWith).toHaveBeenCalledWith({ kind: 'edit', ...typed }, 'settled');
   });
 
   it('offers nothing where there is nothing an override could name', () => {

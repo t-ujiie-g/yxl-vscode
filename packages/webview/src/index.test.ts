@@ -342,11 +342,10 @@ describe('what the view sends', () => {
     // Spread into the next one it overwrote it, and the override went out as
     // the edit it was the exception to — refused by the rule it excepted.
     const { into, sent, told } = view();
-    const offer = { ...typed, kind: 'edit' } as unknown as Typed;
     const refused: Refused = {
       kind: 'refused',
       why: 'filled by a range',
-      about: { is: 'typed', typed: offer },
+      about: { kind: 'edit', ...typed },
       canOverride: true,
       choices: [],
     };
@@ -359,21 +358,21 @@ describe('what the view sends', () => {
     ]);
   });
 
-  it('sends a chosen answer as a resolution, naming the answer and not the edit', () => {
+  it('sends a chosen answer as the message it was refused, with the answer on it', () => {
     const { into, sent, told } = view();
     const choices = [{ id: 'rangeFormula', what: 'Change the range', moves: 2, sample: ['C2'] }];
 
     told({
       kind: 'refused',
       why: 'filled by a range',
-      about: { is: 'typed', typed },
+      about: { kind: 'edit', ...typed },
       canOverride: true,
       choices,
     });
     into.querySelector<HTMLElement>('.refused .choice')?.click();
 
-    expect(sent.filter((one) => one.kind === 'resolve')).toEqual([
-      { kind: 'resolve', sheet: 'Sales', row: 1, col: 1, text: '99', choice: 'rangeFormula' },
+    expect(sent.filter((one) => one.kind === 'edit')).toEqual([
+      { kind: 'edit', sheet: 'Sales', row: 1, col: 1, text: '99', choice: 'rangeFormula' },
     ]);
   });
 
@@ -382,7 +381,7 @@ describe('what the view sends', () => {
     told({
       kind: 'refused',
       why: 'filled by a range',
-      about: { is: 'typed', typed },
+      about: { kind: 'edit', ...typed },
       canOverride: true,
       choices: [],
     });
@@ -548,7 +547,7 @@ describe('an answer offered about a rectangle', () => {
   const held: Refused = {
     kind: 'refused',
     why: '2 of the 4 cells here cannot be emptied, so none were',
-    about: { is: 'ranged', ranged: { sheet: 'Sales', top: 1, left: 1, bottom: 2, right: 2 } },
+    about: { kind: 'empty', sheet: 'Sales', top: 1, left: 1, bottom: 2, right: 2 },
     canOverride: false,
     choices: [{ id: 'only', what: 'Empty the ones that can be', moves: 2, sample: ['Sales!A1'] }],
   };
@@ -559,8 +558,8 @@ describe('an answer offered about a rectangle', () => {
 
     into.querySelector<HTMLElement>('.refused .choice')?.click();
 
-    expect(sent.filter((one) => one.kind === 'emptied')).toEqual([
-      { kind: 'emptied', sheet: 'Sales', top: 1, left: 1, bottom: 2, right: 2, choice: 'only' },
+    expect(sent.filter((one) => one.kind === 'empty')).toEqual([
+      { kind: 'empty', sheet: 'Sales', top: 1, left: 1, bottom: 2, right: 2, choice: 'only' },
     ]);
   });
 
@@ -1078,6 +1077,28 @@ describe('the bar over the grid', () => {
 
     into.querySelector<HTMLButtonElement>('.pointed .entry')?.click();
     expect(sent.filter((one) => one.kind === 'hide').at(-1)).toMatchObject({ first: 1, last: 2 });
+  });
+
+  it('opens the search on what it already holds, not on what the grid was drawn with', () => {
+    const { into, sent } = view();
+    const box = () => into.querySelector<HTMLInputElement>('.looking .for');
+
+    at(into, 1, 1)?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    at(into, 1, 1)?.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'f', metaKey: true, bubbles: true, cancelable: true }),
+    );
+
+    const asked = box();
+    if (asked === null) throw new Error('the search did not open');
+    asked.value = 'APAC';
+    asked.dispatchEvent(new Event('input'));
+
+    // The grid was drawn before any of that: only the view knows the text now.
+    at(into, 1, 1)?.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'f', metaKey: true, bubbles: true, cancelable: true }),
+    );
+
+    expect(sent.filter((one) => one.kind === 'find').at(-1)).toMatchObject({ text: 'APAC' });
   });
 
   it('takes the whole sheet from the corner, as whole columns', () => {

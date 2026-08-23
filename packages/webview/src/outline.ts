@@ -1,5 +1,5 @@
 import type { Axis } from '@yxl-vscode/spec';
-import { columnLabel } from '@yxl-vscode/units';
+import { spanSaid } from '@yxl-vscode/units';
 import type { DrawnSheet, Sized } from './protocol';
 import { type Asks, OUTLINE } from './showing';
 
@@ -115,14 +115,6 @@ export function hidden(heading: HTMLElement, axis: Axis, run: Span, asks: Asks):
 
   heading.classList.add('hides');
   heading.append(mark);
-}
-
-/** A run of columns or rows as the reader sees it named: `column B`, `rows 3-7`. */
-export function spanSaid(axis: Axis, first: number, last: number): string {
-  const said = (at: number) => (axis === 'column' ? columnLabel(at) : String(at));
-  const one = axis === 'column' ? 'column' : 'row';
-
-  return first === last ? `${one} ${said(first)}` : `${one}s ${said(first)}-${said(last)}`;
 }
 
 /** The run hidden between the last one drawn and this one, where there is one. */
