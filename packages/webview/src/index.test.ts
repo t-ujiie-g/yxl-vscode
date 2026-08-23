@@ -72,6 +72,13 @@ function at(into: HTMLElement, row: number, col: number): HTMLTableCellElement |
 
 const typed: Typed = { sheet: 'Sales', row: 1, col: 1, text: '99' };
 
+/** A shortcut held down on a cell, which is where the reader's keyboard is. */
+function press(into: HTMLElement, row: number, col: number, key: string): void {
+  at(into, row, col)?.dispatchEvent(
+    new KeyboardEvent('keydown', { key, metaKey: true, bubbles: true, cancelable: true }),
+  );
+}
+
 /** Select `from`, then reach to `to` with the shift key, as a reader would. */
 function reachFrom(
   into: HTMLElement,
@@ -920,6 +927,113 @@ describe('the bar over the grid', () => {
 
     box?.dispatchEvent(event);
     expect(event.defaultPrevented).toBe(false);
+  });
+
+  it('puts a look on with `Cmd`+`B`, exactly as the toolbar switch does', () => {
+    const { into, sent } = view();
+
+    at(into, 1, 1)?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    press(into, 1, 1, 'b');
+
+    expect(sent.filter((one) => one.kind === 'wear')).toEqual([
+      {
+        kind: 'wear',
+        sheet: 'Sales',
+        top: 1,
+        left: 1,
+        bottom: 1,
+        right: 1,
+        want: { 'font.bold': true },
+        whole: null,
+      },
+    ]);
+  });
+
+  it('answers them after a whole column is taken from its heading', () => {
+    const { into, sent } = view();
+
+    into
+      .querySelector<HTMLElement>('thead th[data-col="2"]')
+      ?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+
+    // The keyboard is on the grid, which is what a heading click used to lose.
+    const on = document.activeElement;
+    expect(into.contains(on)).toBe(true);
+
+    on?.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'b', metaKey: true, bubbles: true, cancelable: true }),
+    );
+
+    expect(sent.filter((one) => one.kind === 'wear').at(-1)).toMatchObject({
+      top: 1,
+      left: 2,
+      bottom: 2,
+      right: 2,
+      want: { 'font.bold': true },
+      whole: 'columns',
+    });
+  });
+
+  it('answers them from the heading itself, where the cell it starts at is not drawn', () => {
+    const { into, sent, told } = view();
+    told({ ...drawing, sheets: [sheet({ at: { row: 5, col: 1 }, of: { rows: 20, columns: 2 } })] });
+
+    const heading = into.querySelector<HTMLElement>('thead th[data-col="2"]');
+    heading?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    expect(document.activeElement).toBe(heading);
+
+    heading?.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'b', metaKey: true, bubbles: true, cancelable: true }),
+    );
+
+    expect(sent.filter((one) => one.kind === 'wear').at(-1)).toMatchObject({ whole: 'columns' });
+  });
+
+  it('takes it off again where the cell wears it already', () => {
+    const { into, sent, told } = view();
+    told({ ...drawing, sheets: [sheet({ cells: [cell({ style: { 'font.bold': true } })] })] });
+
+    at(into, 1, 1)?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    press(into, 1, 1, 'b');
+
+    expect(sent.filter((one) => one.kind === 'wear').at(-1)).toMatchObject({
+      want: { 'font.bold': false },
+    });
+  });
+
+  it('takes the whole reach with it, as the switch above it would', () => {
+    const { into, sent } = view();
+
+    reachFrom(into, { row: 1, col: 1 }, { row: 2, col: 2 });
+    press(into, 2, 2, 'i');
+
+    expect(sent.filter((one) => one.kind === 'wear').at(-1)).toMatchObject({
+      top: 1,
+      left: 1,
+      bottom: 2,
+      right: 2,
+      want: { 'font.italic': true },
+    });
+  });
+
+  it('leaves the look keys to the box the reader is typing in', () => {
+    const { into, sent } = view();
+
+    at(into, 1, 1)?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    at(into, 1, 1)?.dispatchEvent(new MouseEvent('dblclick'));
+    const box = into.querySelector('.typing');
+    if (!(box instanceof HTMLTextAreaElement)) throw new Error('nothing to type into');
+
+    const event = new KeyboardEvent('keydown', {
+      key: 'b',
+      metaKey: true,
+      bubbles: true,
+      cancelable: true,
+    });
+    box.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(false);
+    expect(sent.filter((one) => one.kind === 'wear')).toEqual([]);
   });
 
   it('takes the whole sheet from the corner, as whole columns', () => {

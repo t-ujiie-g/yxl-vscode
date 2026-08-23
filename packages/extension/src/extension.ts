@@ -23,6 +23,9 @@ export function activate(context: vscode.ExtensionContext): void {
       const document = specInFocus();
       if (document !== undefined) void compiler.build(document.uri);
     }),
+    // Bound to the look shortcuts while the preview is active, so that VS Code
+    // does not answer the keys the view has already taken (ADR-046).
+    vscode.commands.registerCommand('yxl.keepKey', () => {}),
   );
 }
 

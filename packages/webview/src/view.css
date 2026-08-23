@@ -74,6 +74,44 @@ body {
   cursor: pointer;
 }
 
+/* The tooltip: a webview never shows the browser's own, and both spreadsheets
+   put the shortcut in theirs. */
+.saying {
+  position: relative;
+}
+
+.saying::after {
+  content: attr(data-says);
+  position: absolute;
+  top: calc(100% + 0.25rem);
+  left: 0;
+  z-index: 30;
+  padding: 0.1rem 0.35rem;
+  border: 1px solid var(--vscode-editorHoverWidget-border, #454545);
+  border-radius: 3px;
+  background: var(--vscode-editorHoverWidget-background, #252526);
+  color: var(--vscode-editorHoverWidget-foreground, #cccccc);
+  font: 400 0.85em / 1.4 var(--vscode-font-family);
+  font-style: normal;
+  text-decoration: none;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 80ms linear 400ms;
+}
+
+.saying:hover::after {
+  opacity: 1;
+}
+
+/* Hung from the right where the button is near the panel's edge, or the
+   tooltip would run off it. */
+.toolbar > .saying:nth-last-child(-n + 2)::after,
+.menu:nth-last-child(-n + 2) > .saying::after {
+  left: auto;
+  right: 0;
+}
+
 .look:disabled {
   opacity: 0.4;
   cursor: default;

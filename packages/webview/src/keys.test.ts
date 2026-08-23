@@ -1,7 +1,17 @@
 // @vitest-environment jsdom
 
 import { describe, expect, it } from 'vitest';
-import { between, copying, going, looking, pasting, takingAll, undoing, within } from './keys';
+import {
+  between,
+  copying,
+  going,
+  looking,
+  pasting,
+  takingAll,
+  undoing,
+  wearing,
+  within,
+} from './keys';
 import type { DrawnCell, DrawnSheet } from './protocol';
 
 const sheet = (of: Partial<DrawnSheet> = {}): DrawnSheet => ({
@@ -143,6 +153,19 @@ describe('the keys a gesture is asked for by', () => {
     expect(pasting(pressed('V', { ctrlKey: true }))).toBe(true);
     expect(pasting(pressed('v'))).toBe(false);
     expect(pasting(pressed('c', { metaKey: true }))).toBe(false);
+  });
+
+  it('puts a look on with cmd-B, cmd-I and cmd-U, in either case', () => {
+    expect(wearing(pressed('b', { metaKey: true }))).toBe('bold');
+    expect(wearing(pressed('I', { ctrlKey: true }))).toBe('italic');
+    expect(wearing(pressed('u', { metaKey: true }))).toBe('underline');
+    expect(wearing(pressed('b'))).toBeNull();
+    expect(wearing(pressed('s', { metaKey: true }))).toBeNull();
+  });
+
+  it('leaves the shifted and alted ones alone, which belong to somebody else', () => {
+    expect(wearing(pressed('b', { metaKey: true, shiftKey: true }))).toBeNull();
+    expect(wearing(pressed('i', { ctrlKey: true, altKey: true }))).toBeNull();
   });
 
   it('opens the search on cmd-F, and goes through it on cmd-G', () => {

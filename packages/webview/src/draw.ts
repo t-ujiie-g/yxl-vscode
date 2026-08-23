@@ -1,6 +1,6 @@
 import type { Axis } from '@yxl-vscode/spec';
 import { findBar, formulaBar, told } from './boxes';
-import { takingAll } from './keys';
+import { takingAll, wearing } from './keys';
 import { entry, fit, pointedAt } from './menus';
 import { spanSaid } from './outline';
 import {
@@ -74,7 +74,7 @@ export function draw(into: HTMLElement, showing: Showing, asks: Asks): void {
   into.append(under);
   say(under, showing, asks);
   fit(into);
-  into.addEventListener('keydown', (event) => taking(event, asks));
+  into.addEventListener('keydown', (event) => keyed(into, event, asks));
 
   if (held) focusCell(into, showing);
 }
@@ -154,10 +154,21 @@ function hiddenNear(
   return hides.length === 0 ? null : { first, last };
 }
 
-/** `Cmd`+`A` anywhere but a box being typed in; without it the browser selects the panel as text. */
-function taking(event: KeyboardEvent, asks: Asks): void {
-  if (!takingAll(event) || event.target instanceof HTMLInputElement) return;
+/** The keys the page answers rather than a cell, and never where a box of text has them. */
+function keyed(into: HTMLElement, event: KeyboardEvent, asks: Asks): void {
+  if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
+    return;
+  }
 
+  const look = wearing(event);
+  if (look !== null) {
+    event.preventDefault();
+    into.querySelector<HTMLButtonElement>(`button.look.${look}`)?.click();
+    return;
+  }
+
+  // Without taking it, `Cmd`+`A` selects the panels around the grid as text.
+  if (!takingAll(event)) return;
   event.preventDefault();
   asks.takeAll();
 }

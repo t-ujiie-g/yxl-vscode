@@ -97,6 +97,11 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
     if (drawing !== null) restate(into, showing(drawing), asks);
   };
 
+  /** The keyboard put on the cell the selection starts at, where the grid is drawing it. */
+  const focused = (): void => {
+    if (drawing !== null) focusCell(into, showing(drawing));
+  };
+
   const named = (): string => drawing?.sheets[sheet]?.name ?? '';
 
   /** The selection put on a cell, and the window moved where the cell is outside the one drawn. */
@@ -284,6 +289,7 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       host.postMessage({ kind: 'inspect', sheet: named(), row: 1, col: 1 });
       summing();
       restated();
+      focused();
     },
     takeBand: (axis, at, extend) => {
       const of = drawing?.sheets[sheet];
@@ -301,6 +307,7 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       host.postMessage({ kind: 'inspect', sheet: named(), row: near.row, col: near.col });
       summing();
       restated();
+      focused();
     },
     pointAt: (at) => {
       pointed = at;
