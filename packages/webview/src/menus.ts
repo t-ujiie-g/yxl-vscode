@@ -96,16 +96,24 @@ export function opens(
 
 /** One line of a panel: a name, and what taking it does. */
 export function entry(
-  says: string,
-  of: { disabled?: boolean; className?: string },
+  said: string,
+  of: { disabled?: boolean; className?: string; chord?: string },
   taken: () => void,
 ): HTMLElement {
   const one = document.createElement('button');
   one.type = 'button';
   one.className = `entry${of.className === undefined ? '' : ` ${of.className}`}`;
-  one.textContent = says;
+  one.textContent = said;
   one.disabled = of.disabled === true;
   one.addEventListener('click', taken);
+
+  if (of.chord !== undefined) {
+    const chord = document.createElement('span');
+    chord.className = 'chord';
+    chord.textContent = of.chord;
+    one.append(chord);
+  }
+
   return one;
 }
 

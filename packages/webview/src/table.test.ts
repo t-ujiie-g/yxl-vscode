@@ -370,7 +370,7 @@ describe('a heading a reader clicks', () => {
     at?.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
 
     expect(on.takeBand).not.toHaveBeenCalled();
-    expect(on.pointAt).toHaveBeenCalledWith({ axis: 'column', at: 2, x: 0, y: 0 });
+    expect(on.pointAt).toHaveBeenCalledWith({ kind: 'heading', axis: 'column', at: 2, x: 0, y: 0 });
   });
 
   it('takes the one under the pointer where the menu is asked for outside the run', () => {
@@ -398,14 +398,14 @@ describe('a heading a reader clicks', () => {
     into
       .querySelector<HTMLElement>('thead th[data-col="2"]')
       ?.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
-    expect(on.pointAt).toHaveBeenCalledWith({ axis: 'column', at: 2, x: 0, y: 0 });
+    expect(on.pointAt).toHaveBeenCalledWith({ kind: 'heading', axis: 'column', at: 2, x: 0, y: 0 });
 
     const menu = shown(
       {
         drawing: drawing({ sheets: [wide] }),
         selected: { row: 1, col: 2 },
         anchor: { row: 40, col: 3 },
-        pointed: { axis: 'column', at: 2, x: 10, y: 20 },
+        pointed: { kind: 'heading', axis: 'column', at: 2, x: 10, y: 20 },
       },
       on,
     );
@@ -423,6 +423,37 @@ describe('a heading a reader clicks', () => {
     expect(on.group).toHaveBeenCalledWith('column', 2, 3, 1);
   });
 
+  it('opens a cell’s own menu at the pointer, taking the cell it was asked on', () => {
+    const on = asks();
+    const into = shown({ drawing: drawing({ sheets: [wide] }) }, on);
+
+    at(into, 1, 2)?.dispatchEvent(
+      new MouseEvent('contextmenu', { bubbles: true, cancelable: true }),
+    );
+
+    expect(on.select).toHaveBeenCalledWith(1, 2);
+    expect(on.pointAt).toHaveBeenCalledWith({ kind: 'cell', row: 1, col: 2, x: 0, y: 0 });
+  });
+
+  it('leaves a selection the right button lands inside of, as both spreadsheets do', () => {
+    const on = asks();
+    const into = shown(
+      {
+        drawing: drawing({ sheets: [wide] }),
+        selected: { row: 1, col: 1 },
+        anchor: { row: 2, col: 3 },
+      },
+      on,
+    );
+
+    at(into, 2, 2)?.dispatchEvent(
+      new MouseEvent('contextmenu', { bubbles: true, cancelable: true }),
+    );
+
+    expect(on.select).not.toHaveBeenCalled();
+    expect(on.pointAt).toHaveBeenCalledWith({ kind: 'cell', row: 2, col: 2, x: 0, y: 0 });
+  });
+
   it('offers the way back where a run beside the heading is hidden', () => {
     const on = asks();
     const hides = sheet({
@@ -434,7 +465,7 @@ describe('a heading a reader clicks', () => {
     const menu = shown(
       {
         drawing: drawing({ sheets: [hides] }),
-        pointed: { axis: 'column', at: 4, x: 10, y: 20 },
+        pointed: { kind: 'heading', axis: 'column', at: 4, x: 10, y: 20 },
       },
       on,
     );

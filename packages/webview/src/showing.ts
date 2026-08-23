@@ -80,6 +80,12 @@ export function ranged(showing: Showing, at: At): boolean {
   return within(at, selected, anchor);
 }
 
+/** Whether the selection reaches this cell, a lone selected cell included. */
+export function reaches(showing: Showing, at: At): boolean {
+  const { selected, anchor } = showing;
+  return selected !== null && within(at, selected, anchor ?? selected);
+}
+
 /** Whether this cell is one of those the search turned up. */
 export function lookedUp(showing: Showing, at: At): boolean {
   return showing.looking?.cells.some((one) => one.row === at.row && one.col === at.col) === true;
@@ -99,9 +105,22 @@ export function copiedFrom(showing: Showing, at: At): boolean {
 }
 
 /** A heading a menu was asked for on, and the point on the page it was asked at. */
-export interface Pointed {
+export type Pointed = PointedHeading | PointedCell;
+
+/** A menu asked for on a column letter or a row number. */
+export interface PointedHeading {
+  readonly kind: 'heading';
   readonly axis: Axis;
   readonly at: number;
+  readonly x: number;
+  readonly y: number;
+}
+
+/** A menu asked for on a cell of the grid. */
+export interface PointedCell {
+  readonly kind: 'cell';
+  readonly row: number;
+  readonly col: number;
   readonly x: number;
   readonly y: number;
 }

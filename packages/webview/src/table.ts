@@ -26,6 +26,7 @@ import {
   lookedUp,
   OUTLINE,
   ranged,
+  reaches,
   type Showing,
 } from './showing';
 import { across, down, heightOf, sizeOf, widthOf } from './window';
@@ -251,7 +252,7 @@ function takes(heading: HTMLElement, axis: Axis, at: number, showing: Showing, a
     // Inside what is already selected the selection stands, as it does in both
     // spreadsheets; outside it, the right button takes this one first.
     if (!headed(showing, axis, at)) asks.takeBand(axis, at, false);
-    asks.pointAt({ axis, at, x: event.clientX, y: event.clientY });
+    asks.pointAt({ kind: 'heading', axis, at, x: event.clientX, y: event.clientY });
   });
 
   // Focusable so the page's keys reach it, as a cell is; not tab-reachable.
@@ -422,6 +423,13 @@ function line(
       if ((event.buttons & 1) === 1) asks.reachTo(row, col);
     });
     drawn.addEventListener('dblclick', () => type());
+    drawn.addEventListener('contextmenu', (event) => {
+      event.preventDefault();
+      // Inside what is already selected the selection stands, as it does in both
+      // spreadsheets; outside it, the right button takes this cell first.
+      if (!reaches(showing, { row, col })) asks.select(row, col);
+      asks.pointAt({ kind: 'cell', row, col, x: event.clientX, y: event.clientY });
+    });
     drawn.addEventListener('keydown', (event) => {
       // The edit box is a child of the cell, so its keys bubble here.
       if (event.target !== drawn) return;

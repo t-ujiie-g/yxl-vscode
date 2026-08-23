@@ -1,8 +1,6 @@
-import type { Axis } from '@yxl-vscode/spec';
 import { findBar, formulaBar, told } from './boxes';
 import { takingAll, wearing } from './keys';
-import { entry, fit, pointedAt } from './menus';
-import { spanSaid } from './outline';
+import { fit } from './menus';
 import {
   comesTo,
   inspector,
@@ -14,16 +12,9 @@ import {
   tabs,
   uncomputed,
 } from './panels';
+import { pointing } from './pointing';
 import type { DrawnSheet } from './protocol';
-import {
-  type Asks,
-  cellKey,
-  copiedFrom,
-  lookedUp,
-  type Pointed,
-  ranged,
-  type Showing,
-} from './showing';
+import { type Asks, cellKey, copiedFrom, lookedUp, ranged, type Showing } from './showing';
 import { grid, headed } from './table';
 import { toolbar } from './toolbar';
 import { type Where, wanted } from './window';
@@ -77,81 +68,6 @@ export function draw(into: HTMLElement, showing: Showing, asks: Asks): void {
   into.addEventListener('keydown', (event) => keyed(into, event, asks));
 
   if (held) focusCell(into, showing);
-}
-
-/** What a heading's own menu holds today: hiding what is selected, and showing back what is not. */
-function pointing(showing: Showing, asks: Asks): HTMLElement | null {
-  const at = showing.pointed;
-  const sheet = showing.drawing.sheets[showing.sheet];
-  if (at === null || sheet === undefined) return null;
-
-  const run = about(showing, at);
-  const many = run.last - run.first + 1;
-  const behind = hiddenNear(sheet, at.axis, run);
-
-  const hide = (first: number, last: number, hidden: boolean) => () => {
-    asks.pointAt(null);
-    asks.hide(at.axis, first, last, hidden);
-  };
-  const group = (level: number) => () => {
-    asks.pointAt(null);
-    asks.group(at.axis, run.first, run.last, level);
-  };
-
-  const entries = [
-    entry(
-      many === 1 ? `Hide this ${at.axis}` : `Hide these ${many} ${at.axis}s`,
-      {},
-      hide(run.first, run.last, true),
-    ),
-    ...(behind === null
-      ? []
-      : [
-          entry(
-            `Show ${spanSaid(at.axis, behind.first, behind.last)} again`,
-            {},
-            hide(behind.first, behind.last, false),
-          ),
-        ]),
-    entry(many === 1 ? `Group this ${at.axis}` : `Group these ${many} ${at.axis}s`, {}, group(1)),
-    ...(grouping(sheet, at.axis, run) ? [entry('Take out of the outline', {}, group(0))] : []),
-  ];
-
-  return pointedAt(showing, asks, entries);
-}
-
-/** What a menu on a heading is about: the run the reader had selected, where this heading is in it. */
-function about(showing: Showing, at: Pointed): { first: number; last: number } {
-  const { selected, anchor } = showing;
-  if (selected === null || anchor === null) return { first: at.at, last: at.at };
-
-  const one = at.axis === 'column' ? selected.col : selected.row;
-  const than = at.axis === 'column' ? anchor.col : anchor.row;
-  const run = { first: Math.min(one, than), last: Math.max(one, than) };
-
-  return at.at >= run.first && at.at <= run.last ? run : { first: at.at, last: at.at };
-}
-
-/** Whether anything already puts what the menu is about into an outline. */
-function grouping(sheet: DrawnSheet, axis: Axis, run: { first: number; last: number }): boolean {
-  const runs = axis === 'column' ? sheet.widths : sheet.heights;
-  return runs.some((one) => (one.group ?? 0) > 0 && one.first <= run.last && one.last >= run.first);
-}
-
-/** The run hidden either side of what the menu is about, which is what there is to show again. */
-function hiddenNear(
-  sheet: DrawnSheet,
-  axis: Axis,
-  run: { first: number; last: number },
-): { first: number; last: number } | null {
-  const runs = axis === 'column' ? sheet.widths : sheet.heights;
-  const hides = runs.filter(
-    (one) => one.hidden && one.last >= run.first - 1 && one.first <= run.last + 1,
-  );
-  const first = Math.min(...hides.map((one) => one.first));
-  const last = Math.max(...hides.map((one) => one.last));
-
-  return hides.length === 0 ? null : { first, last };
 }
 
 /** The keys the page answers rather than a cell, and never where a box of text has them. */
