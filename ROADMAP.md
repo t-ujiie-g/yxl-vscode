@@ -1466,8 +1466,15 @@ of its colours and why a header row showed no filter.
       one, and must never become that cell's value (ADR-014). Only a truthy
       value matches; an error or a name the engine has nothing behind matches
       nothing rather than everything.
-- [ ] `color_scale`, `data_bar` and `icon_set` **drawn**, which is an appearance
-      of their own rather than a look laid over the cell
+- [x] `color_scale` and `data_bar` **drawn**, against the thresholds yxl
+      actually writes — read out of a built workbook rather than recalled: a
+      scale is `min` / `percentile 50` / `max`, a bar `min` / `max`. A scale is
+      a fill and goes in as one more style layer, so the inspector answers for
+      it like any other; a bar is drawn behind the value, and `bar_only` hides
+      the value as it says.
+- [ ] `icon_set` **drawn** — the thresholds are `percent 0/33/67` and are the
+      easy half; the seventeen sets need a glyph each that is enough to
+      recognise and never Excel's own rendering (ADR-029)
 - [ ] **Auto filter** (`filter:`) — the dropdown mark on the header row where
       the sheet has one, and *Create a filter* / *Remove filter* on a selection.
       Per-column criteria are not in the schema yet, so neither is filtering
@@ -2978,6 +2985,22 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-23 — Colour scales and data bars
+The looks that are not a look: two of the three rules that draw an appearance of
+their own rather than dressing the cell.
+
+- **Against the thresholds yxl actually writes**, read out of a built workbook
+  rather than recalled — `<cfvo type="min"/><cfvo type="percentile" val="50"/>
+  <cfvo type="max"/>` for a scale, `min`/`max` for a bar. So a three-colour
+  scale turns at the range's **median**, not at the arithmetic middle.
+- **A scale is a fill**, so it goes in as one more style layer with the rule as
+  its node: the inspector answers for it exactly as it does for a band or a
+  style, and nothing new had to learn about colour.
+- **A bar is drawn behind the value**, as far along as the value is between the
+  low and the high, and `bar_only` hides the value as it says to.
+- A cell holding no number gets neither, which is what Excel does with one.
+- Comment shape: export 2.2, private 1.0, inline 1.5, 0 over the limit — held.
 
 ### 2026-08-23 — A conditional rule that is a formula
 The third of conditional formatting's four, and the one that needed the engine.

@@ -622,6 +622,16 @@ body {
   border-color: transparent;
 }
 
+/* A `data_bar` rule's bar: behind the value, from the cell's left edge. */
+.grid td .bar {
+  position: absolute;
+  top: 1px;
+  bottom: 1px;
+  left: 0;
+  opacity: 0.55;
+  pointer-events: none;
+}
+
 /* A cell whose text runs over the empty cells beside it, as both spreadsheets
    let it: the cell keeps its width, and the text clips where the empty ones
    end. */

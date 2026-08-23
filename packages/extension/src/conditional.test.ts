@@ -3,7 +3,7 @@ import { parse } from '@yxl-vscode/cst';
 import { load } from '@yxl-vscode/loader';
 import { type A1Addr, parseA1Addr } from '@yxl-vscode/units';
 import { describe, expect, it } from 'vitest';
-import { applied, decidable, overRanges } from './conditional';
+import { applied, barAt, decidable, overRanges, spreads } from './conditional';
 
 /** The rules of a spec, compiled, which is what the drawing is handed. */
 function rulesOf(body: string): readonly CompiledRule[] {
@@ -180,5 +180,69 @@ describe('the rules that need the whole range to decide', () => {
 
     expect(over(once, { A1: null, A2: 'x' }, 'A1')).toEqual([]);
     expect(over(once, { A1: null, A2: 'x' }, 'A2')).toEqual(['font.bold']);
+  });
+});
+
+describe('the rules that draw a look of their own', () => {
+  /** The range's values as the sheet holds them, and what the rules make of one cell. */
+  function over(rules: readonly CompiledRule[], values: Record<string, number>) {
+    const written = Object.keys(values).map(at);
+    const held = (one: A1Addr) => (values[String(one)] ?? null) as never;
+    const spread = spreads(rules, written, held);
+
+    return {
+      fill: (address: string) =>
+        settled(
+          resolve(
+            applied(
+              rules,
+              { at: at(address), value: held(at(address)), computed: null },
+              new Map(),
+              spread,
+            ),
+          ),
+        ).fill,
+      bar: (address: string) =>
+        barAt(rules, { at: at(address), value: held(at(address)), computed: null }, spread),
+    };
+  }
+
+  it('fills a three-colour scale from the low, the median, and the high', () => {
+    const rules = rulesOf(
+      '      - at: A1:A9\n        color_scale: { low: "FF0000", middle: "00FF00", high: "0000FF" }\n',
+    );
+    const said = over(rules, { A1: 0, A2: 5, A3: 10 });
+
+    expect(said.fill('A1')).toBe('FF0000');
+    expect(said.fill('A2')).toBe('00FF00');
+    expect(said.fill('A3')).toBe('0000FF');
+  });
+
+  it('mixes a scale in RGB, part of the way between two of its colours', () => {
+    const rules = rulesOf(
+      '      - at: A1:A9\n        color_scale: { low: "000000", high: "FFFFFF" }\n',
+    );
+
+    expect(over(rules, { A1: 0, A2: 1, A3: 2 }).fill('A2')).toBe('808080');
+  });
+
+  it('draws a bar as far along as the value is between the low and the high', () => {
+    const rules = rulesOf('      - at: A1:A9\n        data_bar: { color: "638EC6" }\n');
+    const said = over(rules, { A1: 0, A2: 5, A3: 10 });
+
+    expect(said.bar('A1')?.fraction).toBe(0);
+    expect(said.bar('A2')?.fraction).toBe(0.5);
+    expect(said.bar('A3')?.fraction).toBe(1);
+    expect(said.bar('A2')?.color).toBe('638EC6');
+  });
+
+  it('draws neither for a cell holding no number, and neither outside the range', () => {
+    const rules = rulesOf(
+      '      - at: A1:A2\n        data_bar: { color: "638EC6" }\n      - at: A1:A2\n        color_scale: { low: "000000", high: "FFFFFF" }\n',
+    );
+    const said = over(rules, { A1: 1, A2: 2 });
+
+    expect(said.bar('B1')).toBeNull();
+    expect(said.fill('B1')).toBeUndefined();
   });
 });

@@ -18,6 +18,7 @@ function cell(of: Partial<DrawnCell> = {}): DrawnCell {
     overridden: false,
     editable: 'direct',
     style: {},
+    bar: null,
     ...of,
   };
 }
@@ -272,5 +273,29 @@ describe('what a format would make of the number a cell shows', () => {
   it('is nothing where the cell holds no number to make anything of', () => {
     expect(underFormat(cell({ value: 'APAC' }), '#,##0')).toBeNull();
     expect(underFormat(cell({ value: null }), '#,##0')).toBeNull();
+  });
+});
+
+describe('a cell a data bar reaches', () => {
+  it('draws the bar behind the value, as wide as the fraction says', () => {
+    const drawn = drawCell(
+      cell({ value: 5, bar: { color: '638EC6', fraction: 0.5, barOnly: false } }),
+      undefined,
+    );
+    const bar = drawn.querySelector<HTMLElement>('.bar');
+
+    expect(bar?.style.width).toBe('50%');
+    expect(bar?.style.background).toBe('rgb(99, 142, 198)');
+    expect(drawn.textContent).toContain('5');
+  });
+
+  it('hides the value behind the bar where the rule says to', () => {
+    const drawn = drawCell(
+      cell({ value: 5, bar: { color: '638EC6', fraction: 1, barOnly: true } }),
+      undefined,
+    );
+
+    expect(drawn.querySelector('.bar')).not.toBeNull();
+    expect(drawn.textContent).toBe('');
   });
 });

@@ -32,6 +32,7 @@ import type {
   CompiledMerge,
   CompiledRule,
   CompiledSheet,
+  CompiledTest,
 } from './grid';
 import type { FacetOrigin } from './provenance';
 import { layersOf } from './style';
@@ -257,11 +258,32 @@ function conditionalRule(ctx: Ctx, rule: Conditional): CompiledRule | null {
     return null;
   }
 
+  const test = decides(ctx, rule);
+  if (test === null) return null;
+
   return {
     rect: rectOf(read),
-    test: rule.test,
+    test,
     style: layersOf(ctx, rule, 'conditional', rule.style, rule.format),
     stopIfTrue: rule.stopIfTrue,
     node: rule.id,
   };
+}
+
+/** What decides a rule, with the colours of the three that draw their own look substituted. */
+function decides(ctx: Ctx, rule: Conditional): CompiledTest | null {
+  const test = rule.test;
+  if (test.kind === 'colorScale') {
+    const low = colour(ctx, test.low, rule);
+    const high = colour(ctx, test.high, rule);
+    const middle = test.middle === null ? null : colour(ctx, test.middle, rule);
+    return low === null || high === null ? null : { kind: 'colorScale', low, middle, high };
+  }
+
+  if (test.kind === 'dataBar') {
+    const color = colour(ctx, test.color, rule);
+    return color === null ? null : { kind: 'dataBar', color, barOnly: test.barOnly };
+  }
+
+  return test;
 }

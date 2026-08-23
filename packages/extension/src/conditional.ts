@@ -2,7 +2,7 @@ import type { CompiledRule, StyleLayer } from '@yxl-vscode/compile';
 import type { Computed } from '@yxl-vscode/evaluate';
 import type { Comparison, ScalarValue, TextTest } from '@yxl-vscode/spec';
 import type { A1Addr } from '@yxl-vscode/units';
-import { cellOf, type NodeId } from '@yxl-vscode/units';
+import { type Color, cellOf, type NodeId, painted } from '@yxl-vscode/units';
 
 /** What a cell holds for a rule to decide on: the computed value where there is one (ADR-014). */
 export interface Deciding {
@@ -25,11 +25,18 @@ export function applied(
   rules: readonly CompiledRule[],
   cell: Deciding,
   ranked: Ranked = new Map(),
+  over: Spreads = new Map(),
 ): StyleLayer[] {
   const layers: StyleLayer[] = [];
 
   for (const rule of rules) {
     if (!covers(rule, cell.at)) continue;
+
+    const scale = scaleAt(rule, cell, over);
+    if (scale !== null) {
+      layers.push(scale);
+      continue;
+    }
 
     const matched = matches(rule, cell, ranked);
     if (matched !== true) continue;
@@ -47,9 +54,129 @@ const ALONE = new Set(['cell', 'text', 'formula']);
 /** The kinds that need every value in the range before any one cell can be decided. */
 const OVER_RANGE = new Set(['top', 'bottom', 'duplicate', 'unique']);
 
+/** The kinds that draw an appearance of their own rather than a look over the cell. */
+const OWN_LOOK = new Set(['colorScale', 'dataBar']);
+
 /** Whether this preview can decide a rule at all, which the inspector says where it cannot. */
 export function decidable(rule: CompiledRule): boolean {
-  return ALONE.has(rule.test.kind) || OVER_RANGE.has(rule.test.kind);
+  return (
+    ALONE.has(rule.test.kind) || OVER_RANGE.has(rule.test.kind) || OWN_LOOK.has(rule.test.kind)
+  );
+}
+
+/** What a range's numbers come to, which is what a scale and a bar are drawn against. */
+export interface Spread {
+  readonly low: number;
+  readonly middle: number;
+  readonly high: number;
+}
+
+/** The spread of each rule that draws its own look, worked out once for the sheet. */
+export type Spreads = ReadonlyMap<NodeId, Spread>;
+
+/**
+ * What the numbers of each scale's and bar's range come to: `min`, the median,
+ * and `max`, which is what yxl writes as the thresholds (`percentile 50`
+ * between `min` and `max`).
+ */
+export function spreads(
+  rules: readonly CompiledRule[],
+  written: readonly A1Addr[],
+  held: (at: A1Addr) => ScalarValue,
+): Spreads {
+  const found = new Map<NodeId, Spread>();
+
+  for (const rule of rules) {
+    if (!OWN_LOOK.has(rule.test.kind)) continue;
+
+    const numbers = written
+      .filter((at) => covers(rule, at))
+      .map((at) => held(at))
+      .filter((value): value is number => typeof value === 'number')
+      .sort((one, two) => one - two);
+
+    const low = numbers[0];
+    const high = numbers[numbers.length - 1];
+    if (low === undefined || high === undefined) continue;
+
+    found.set(rule.node, { low, middle: median(numbers), high });
+  }
+
+  return found;
+}
+
+/** The bar a `data_bar` rule draws behind a cell, or `null` where none reaches it. */
+export function barAt(rules: readonly CompiledRule[], cell: Deciding, over: Spreads): Bar | null {
+  for (const rule of rules) {
+    if (rule.test.kind !== 'dataBar' || !covers(rule, cell.at)) continue;
+
+    const spread = over.get(rule.node);
+    const value = shown(cell);
+    if (spread === undefined || typeof value !== 'number') continue;
+
+    return {
+      color: rule.test.color,
+      fraction: along(value, spread.low, spread.high),
+      barOnly: rule.test.barOnly,
+    };
+  }
+
+  return null;
+}
+
+/** A bar drawn behind a cell's value, as far along as the value is through the range. */
+export interface Bar {
+  readonly color: string;
+  readonly fraction: number;
+  readonly barOnly: boolean;
+}
+
+/** The fill a `color_scale` rule gives a cell, as the layer every other look is one of. */
+function scaleAt(rule: CompiledRule, cell: Deciding, over: Spreads): StyleLayer | null {
+  if (rule.test.kind !== 'colorScale') return null;
+
+  const spread = over.get(rule.node);
+  const value = shown(cell);
+  if (spread === undefined || typeof value !== 'number') return null;
+
+  const test = rule.test;
+  const fill =
+    test.middle === null
+      ? between(test.low, test.high, along(value, spread.low, spread.high))
+      : value <= spread.middle
+        ? between(test.low, test.middle, along(value, spread.low, spread.middle))
+        : between(test.middle, test.high, along(value, spread.middle, spread.high));
+
+  return { through: 'conditional', key: 'style', node: rule.node, name: null, gives: { fill } };
+}
+
+/** How far along a range a value sits, `0` where the range has no width at all. */
+function along(value: number, low: number, high: number): number {
+  if (high <= low) return value >= high ? 1 : 0;
+
+  return Math.min(1, Math.max(0, (value - low) / (high - low)));
+}
+
+/** A colour part of the way between two, mixed as Excel mixes them: in RGB. */
+function between(low: string, high: string, part: number): Color {
+  const one = rgb(low);
+  const two = rgb(high);
+  const mixed = one.map((piece, at) => Math.round(piece + ((two[at] ?? piece) - piece) * part));
+
+  return mixed.map((piece) => piece.toString(16).padStart(2, '0').toUpperCase()).join('') as Color;
+}
+
+function rgb(colour: string): number[] {
+  const digits = painted(colour).slice(1);
+  return [0, 2, 4].map((at) => Number.parseInt(digits.slice(at, at + 2), 16));
+}
+
+function median(sorted: readonly number[]): number {
+  const half = Math.floor(sorted.length / 2);
+  const one = sorted[half] ?? 0;
+  if (sorted.length % 2 === 1) return one;
+
+  return ((sorted[half - 1] ?? one) + one) / 2;
 }
 
 /**
