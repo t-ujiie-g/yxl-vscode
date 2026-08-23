@@ -416,6 +416,10 @@ function line(
     // Focusable, so keys reach it; not tab-reachable, or the page cannot be left.
     drawn.tabIndex = -1;
     drawn.addEventListener('mousedown', (event) => {
+      // Not the right button, which fires this before the menu it is opening
+      // and would throw away the selection that menu is about.
+      if (event.button !== 0) return;
+
       if (event.shiftKey) asks.reachTo(row, col);
       else asks.select(row, col);
     });

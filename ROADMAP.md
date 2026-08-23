@@ -2666,7 +2666,8 @@ Phase 10's last item, and the phase with it.
   that does it written on the right as both spreadsheets write it.
 - **The selection stands where the right button lands inside it**, and is taken
   where it lands outside — which is what a reader who selected a rectangle and
-  reached for the menu meant.
+  reached for the menu meant. The right button presses the cell before it opens
+  anything, so a cell now ignores it exactly as a heading already did.
 - **Paste is the browser's to give.** It hands the clipboard to the keyboard and
   to nothing else, so the entry acts on what was copied inside the preview and,
   where there is none, says to press the key instead. Cut and copy have no such

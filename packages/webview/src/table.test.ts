@@ -446,6 +446,8 @@ describe('a heading a reader clicks', () => {
       on,
     );
 
+    // The button that opens the menu presses the cell first, as a mouse does.
+    at(into, 2, 2)?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 2 }));
     at(into, 2, 2)?.dispatchEvent(
       new MouseEvent('contextmenu', { bubbles: true, cancelable: true }),
     );
