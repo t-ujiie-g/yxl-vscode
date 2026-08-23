@@ -73,6 +73,9 @@ function showing(of: {
 
 const asks = (wear = vi.fn()): Asks => ({ wear, openMenu: vi.fn() }) as unknown as Asks;
 
+/** What a control's own tooltip says, which is where its name lives. */
+const said = (on: Element | null) => on?.getAttribute('data-says') ?? null;
+
 /** The rectangle the one selected cell of these fixtures names. */
 const ONE = { top: 1, left: 1, bottom: 1, right: 1 };
 
@@ -82,10 +85,10 @@ describe('the switches a reader reaches for first', () => {
     const buttons = [...bar.querySelectorAll('button')];
 
     // Freezing is not a look: it wants a cell, but taking a freeze off does not.
-    expect(buttons.filter((one) => one.title !== 'Freeze panes').every((one) => one.disabled)).toBe(
+    expect(buttons.filter((one) => said(one) !== 'Freeze panes').every((one) => one.disabled)).toBe(
       true,
     );
-    expect(buttons.map((one) => one.title)).toEqual([
+    expect(buttons.map((one) => said(one))).toEqual([
       'Bold (Ctrl+B)',
       'Italic (Ctrl+I)',
       'Underline (Ctrl+U)',
@@ -104,12 +107,19 @@ describe('the switches a reader reaches for first', () => {
     ]);
   });
 
-  it('writes the shortcut on the three switches that have one', () => {
+  it('writes the shortcut in the tooltip of the three switches that have one', () => {
     const bar = toolbar(showing({ selected: { row: 1, col: 1 } }), asks());
-    const said = (name: string) =>
-      bar.querySelector<HTMLButtonElement>(`button.look.${name}`)?.title;
+    const of = (name: string) => said(bar.querySelector(`button.look.${name}`));
 
-    expect([said('bold'), said('strike')]).toEqual(['Bold (Ctrl+B)', 'Strikethrough']);
+    expect([of('bold'), of('strike')]).toEqual(['Bold (Ctrl+B)', 'Strikethrough']);
+  });
+
+  it('draws the tooltip itself, since a webview never shows the browser’s', () => {
+    const bar = toolbar(showing({ selected: { row: 1, col: 1 } }), asks());
+    const button = bar.querySelector<HTMLButtonElement>('button.look.bold');
+
+    expect(button?.title).toBe('');
+    expect(button?.getAttribute('aria-label')).toBe('Bold (Ctrl+B)');
   });
 
   it('asks for the other of what the selected cell wears', () => {
@@ -356,7 +366,7 @@ describe('a border a reader draws', () => {
     const bar = toolbar(showing({ cells: [cell({})], selected: { row: 1, col: 1 } }), asks());
 
     expect(bar.querySelectorAll('button.edge')).toHaveLength(0);
-    expect(bar.querySelector<HTMLButtonElement>('button.borders')?.title).toBe('Borders');
+    expect(said(bar.querySelector('button.borders'))).toBe('Borders');
   });
 
   it('puts the line the toolbar is set to on the edges it names', () => {
@@ -445,7 +455,7 @@ describe('where the sheet is frozen', () => {
 
   it('is one button that opens what a spreadsheet keeps under View', () => {
     const bar = toolbar(showing({ selected: { row: 2, col: 2 } }), asksFreeze());
-    expect(bar.querySelector<HTMLButtonElement>('button.freeze')?.title).toBe('Freeze panes');
+    expect(said(bar.querySelector('button.freeze'))).toBe('Freeze panes');
   });
 
   it('freezes up to the cell the reader has selected, and says which', () => {

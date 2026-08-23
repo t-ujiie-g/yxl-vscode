@@ -13,7 +13,7 @@ import { addrAt, type Color, parseColor, type Rect } from '@yxl-vscode/units';
 import { underFormat } from './cell';
 import { between } from './keys';
 import { ACROSS, type Bar, DOWN, framed, frozen, marked, RAGGED } from './marks';
-import { entry, opens } from './menus';
+import { entry, opens, says } from './menus';
 import type { DrawnCell } from './protocol';
 import type { Asks, Showing } from './showing';
 
@@ -125,7 +125,7 @@ function toggle(of: Toggle, showing: Showing, asks: Asks): HTMLElement {
   button.type = 'button';
   button.className = `look ${of.name}${on ? ' on' : ''}`;
   button.textContent = of.mark;
-  button.title = of.chord === undefined ? of.says : `${of.says} (${of.chord})`;
+  says(button, of.chord === undefined ? of.says : `${of.says} (${of.chord})`);
   button.disabled = showing.selected === null;
   button.setAttribute('aria-pressed', on ? 'true' : 'false');
   button.addEventListener('click', () => asks.wear({ [of.key]: !on } as StyleSays, over(showing)));
@@ -320,7 +320,7 @@ function pick(of: Pick, showing: Showing, asks: Asks): HTMLElement {
 
   button.type = 'button';
   button.className = `look ${of.name}${on ? ' on' : ''}`;
-  button.title = of.says;
+  says(button, of.says);
   button.disabled = showing.selected === null;
   button.setAttribute('aria-pressed', on ? 'true' : 'false');
   button.append(marked(of.bars));
@@ -373,7 +373,7 @@ function edge(of: Edge, showing: Showing, asks: Asks): HTMLElement {
 
   button.type = 'button';
   button.className = `look edge ${of.name}`;
-  button.title = of.says;
+  says(button, of.says);
   button.disabled = showing.selected === null;
   button.append(marked(framed(of.sides)));
   button.addEventListener('click', () => {
@@ -451,7 +451,7 @@ function numbers(showing: Showing, asks: Asks): HTMLElement {
   for (const code of known ? NUMBERS : [...NUMBERS, now]) {
     const option = document.createElement('option');
     option.value = code ?? '';
-    option.textContent = says(code, of);
+    option.textContent = called(code, of);
     option.title = code ?? '';
     option.selected = code === now;
     box.append(option);
@@ -466,7 +466,7 @@ function numbers(showing: Showing, asks: Asks): HTMLElement {
 }
 
 /** What a format is called here: what it would make of this cell's number, or the code where there is none. */
-function says(code: string | null, of: DrawnCell | undefined): string {
+function called(code: string | null, of: DrawnCell | undefined): string {
   if (code === null) return 'General';
 
   return (of === undefined ? null : underFormat(of, code)) ?? code;

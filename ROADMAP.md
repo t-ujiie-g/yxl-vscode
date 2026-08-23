@@ -1187,7 +1187,9 @@ gestures on a *heading*, and the headings are not selectors yet.
       `Cmd`+`A` guard had missed since the cell editor became a `textarea`.
       A heading click **keeps the keyboard on the grid**: the browser was
       putting it on the page, since nothing there could hold it, and every key
-      the page answers was lost with it.
+      the page answers was lost with it. VS Code answers the forwarded key too,
+      so the extension binds all three to a command that does nothing while the
+      preview is the active panel (**ADR-046**).
 - [ ] **The rest of the bar a reader expects**: the font face and size
       (`docs/spec.md` §6 has both, the toolbar offers neither), the quick number
       formats Sheets keeps beside the menu — currency, percent, more and fewer
@@ -2346,6 +2348,29 @@ stands aside for it either way, so one run never wears two marks.
 for; a gutter has as much room as it takes, so a level is 18px and the control
 13px — which is what makes a `+` legible beside a column letter.
 
+### ADR-046 — The view draws its own tooltips, and the extension keeps the keys
+**Accepted** 2026-08-23.
+
+*A webview never shows the browser's `title` tooltip.* Reported from the running
+preview, on an enabled button, with a cell selected: nothing appears. So every
+control in the toolbar carries its name in `data-says` and an `aria-label`, and
+the stylesheet draws the bubble — dark, under the button, after the pause a
+tooltip waits. This is also the only way a *disabled* control can be named,
+which is exactly when a reader most wants to know what it is.
+
+*It is the toolbar's, not the grid's.* Inside the scroller a bubble would be
+clipped by the pane it is drawn in and would fight the sticky ladder that holds
+the frozen band. The marks in the grid — a hidden run, an outline control — keep
+`title` and their position says most of it.
+
+*A webview forwards its keys to VS Code, which answers some of them.* `Cmd`+`B`
+closed the side bar behind the preview even though the view had taken the event:
+the forwarding happens whatever the view does with it. The extension binds the
+three to a command that does nothing, `when` the preview is the active panel, so
+VS Code's own keybinding does not match and the view's answer is the only one.
+The gesture stays in the view, where a shell that is not VS Code
+(`ROADMAP.md` Phase 15) will still have it.
+
 ## 8. Open questions
 
 - **Q1 — `cells:` A1 keys and row insertion.** Inserting a row rewrites every
@@ -2626,7 +2651,16 @@ Phase 10's tenth item: `Cmd`/`Ctrl`+`B`, `I` and `U`.
   these three and `Cmd`+`A` — was lost until a cell was clicked. The heading
   takes it, and hands it on to the cell the selection starts at where the grid
   is drawing that cell.
-- 1699 → 1708 tests.
+- **The tooltip is the view's own now** (**ADR-046**). A webview never shows the
+  browser's `title`, so no toolbar control has ever named itself in the running
+  preview — including the disabled ones, which is when a reader most wants to
+  know. Every control in the bar carries its name and the stylesheet draws the
+  bubble.
+- **VS Code no longer answers the shortcut as well.** A webview forwards its keys
+  whatever the view does with them, so `Cmd`+`B` was closing the side bar behind
+  the preview. The three are bound to a command that does nothing while the
+  preview is the active panel.
+- 1699 → 1709 tests.
 
 ### 2026-08-23 — What the selection comes to
 Phase 10's ninth item, and the third thing the host answers because the view can

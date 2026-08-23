@@ -68,7 +68,27 @@
           "markdownDescription": "The `yxl` compiler this extension runs. A bare name is looked up on `PATH`; an absolute path is used as given."
         }
       }
-    }
+    },
+    "keybindings": [
+      {
+        "command": "yxl.keepKey",
+        "key": "ctrl+b",
+        "mac": "cmd+b",
+        "when": "activeWebviewPanelId == 'yxl.preview'"
+      },
+      {
+        "command": "yxl.keepKey",
+        "key": "ctrl+i",
+        "mac": "cmd+i",
+        "when": "activeWebviewPanelId == 'yxl.preview'"
+      },
+      {
+        "command": "yxl.keepKey",
+        "key": "ctrl+u",
+        "mac": "cmd+u",
+        "when": "activeWebviewPanelId == 'yxl.preview'"
+      }
+    ]
   },
   "scripts": {
     "build": "node build.mjs"

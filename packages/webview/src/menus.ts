@@ -12,6 +12,13 @@ export interface Menu {
 }
 
 /** The control, and where it is open the panel with the scrim that closes it. */
+/** The tooltip a webview draws itself: the browser's own never appears in one. */
+export function says(on: HTMLElement, text: string): void {
+  on.classList.add('saying');
+  on.setAttribute('data-says', text);
+  on.setAttribute('aria-label', text);
+}
+
 export function opens(
   of: Menu,
   showing: Showing,
@@ -25,7 +32,7 @@ export function opens(
   const button = document.createElement('button');
   button.type = 'button';
   button.className = `look opener ${of.name}${open ? ' on' : ''}`;
-  button.title = of.title;
+  says(button, of.title);
   button.disabled = of.disabled;
   button.setAttribute('aria-haspopup', 'true');
   button.setAttribute('aria-expanded', open ? 'true' : 'false');
