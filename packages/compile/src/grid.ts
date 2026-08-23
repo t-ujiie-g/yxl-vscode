@@ -1,6 +1,7 @@
 import type { Diagnostic } from '@yxl-vscode/diag';
 import type {
   CellType,
+  ConditionalTest,
   ScalarValue,
   Split,
   StyleSays,
@@ -47,6 +48,19 @@ export interface CompiledSheet {
   readonly tabColor: Color | null;
   readonly gridlines: boolean;
   readonly split: Split | null;
+  readonly conditional: readonly CompiledRule[];
+}
+
+/**
+ * One `conditional:` rule with its range read: what decides it is the spec's
+ * own, and the look it applies is resolved like any other (`docs/spec.md` §10).
+ */
+export interface CompiledRule {
+  readonly rect: Rect;
+  readonly test: ConditionalTest;
+  readonly style: readonly StyleLayer[];
+  readonly stopIfTrue: boolean;
+  readonly node: NodeId;
 }
 
 /** One `formulas:` range, kept as a range: `D2:D1048576` is two words, not a million cells (ADR-019). */

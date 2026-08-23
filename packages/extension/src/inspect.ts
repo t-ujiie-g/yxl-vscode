@@ -1,8 +1,9 @@
 import { dirname, relative } from 'node:path';
 import { type CompiledSheet, cellAt, type FacetOrigin, styleAt } from '@yxl-vscode/compile';
-import type { Sheet, SpecDoc, SpecNode } from '@yxl-vscode/spec';
-import type { A1Addr, NodeId } from '@yxl-vscode/units';
+import type { Comparison, ConditionalTest, Sheet, SpecDoc, SpecNode } from '@yxl-vscode/spec';
+import { type A1Addr, cellOf, type NodeId, rangeOf } from '@yxl-vscode/units';
 import type { Source } from '@yxl-vscode/webview/protocol';
+import { decidable } from './conditional';
 
 /** Where every facet of one cell came from, in a reader's words, with the place to go to. */
 export function inspect(nodes: Nodes, sheet: CompiledSheet, at: A1Addr, from: string): Source[] {
@@ -33,7 +34,64 @@ export function inspect(nodes: Nodes, sheet: CompiledSheet, at: A1Addr, from: st
     if (!answered.has(property)) found.push(source);
   }
 
+  found.push(...reaching(nodes, sheet, at));
   return found;
+}
+
+/** Every `conditional:` rule whose range reaches this cell, said whether or not it is drawn. */
+function reaching(nodes: Nodes, sheet: CompiledSheet, at: A1Addr): Source[] {
+  const { row, col } = cellOf(at);
+
+  return sheet.conditional
+    .filter(
+      (rule) =>
+        row >= rule.rect.top &&
+        row <= rule.rect.bottom &&
+        col >= rule.rect.left &&
+        col <= rule.rect.right,
+    )
+    .map((rule) => {
+      const where = nodes.get(rule.node);
+      const said = decidable(rule)
+        ? `${ruleSaid(rule.test)}, over ${rangeOf(rule.rect)}`
+        : `${ruleSaid(rule.test)}, over ${rangeOf(rule.rect)} — not drawn by this preview yet`;
+
+      return { facet: 'conditional', says: said, ...sited(where) };
+    });
+}
+
+/** What decides a rule, in the words the spec writes it in. */
+function ruleSaid(test: ConditionalTest): string {
+  switch (test.kind) {
+    case 'cell':
+      return `\`cell\` ${saidOf(test.compares)}`;
+    case 'text':
+      return `\`text\` ${test.asks.kind} \`${test.asks.text}\``;
+    case 'formula':
+      return `\`formula\` \`${test.body}\``;
+    case 'top':
+    case 'bottom':
+      return `\`${test.kind}\` ${test.count}${test.percent ? '%' : ''}`;
+    case 'duplicate':
+    case 'unique':
+      return `\`${test.kind}\``;
+    case 'colorScale':
+      return '`color_scale`';
+    case 'dataBar':
+      return '`data_bar`';
+    case 'iconSet':
+      return `\`icon_set\` ${test.name}`;
+  }
+}
+
+function saidOf(compares: Comparison): string {
+  switch (compares.kind) {
+    case 'between':
+    case 'not_between':
+      return `${compares.kind} ${String(compares.low)} and ${String(compares.high)}`;
+    default:
+      return `${compares.kind} \`${String(compares.bound)}\``;
+  }
 }
 
 function facet(nodes: Nodes, name: string, origin: FacetOrigin, from: string): Source[] {

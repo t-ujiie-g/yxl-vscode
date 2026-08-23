@@ -73,14 +73,15 @@ describe('the corpus of specs that use what this editor does not model', () => {
   });
 
   it('holds enough specs where an edit and a carried construct meet', () => {
-    // A suite that skipped every spec would still be green.
+    // A suite that skipped every spec would still be green. The floor falls by
+    // one each time a construct stops being opaque, which is the point of it.
     const both = specs.filter(
       (sample) =>
         anEdit(sample.source, sample.path) !== null &&
         carried(read(sample, sample.source), sample.path).length > 0,
     );
 
-    expect(both.length).toBeGreaterThanOrEqual(7);
+    expect(both.length).toBeGreaterThanOrEqual(6);
   });
 });
 

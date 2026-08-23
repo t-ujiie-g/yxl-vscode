@@ -55,6 +55,7 @@ export const MODELED_KEYS = {
     'tab_color',
     'gridlines',
     'split',
+    'conditional',
   ]),
   cell: keySet(CELL_KEYS),
   override: keySet(['at', 'reason', ...CELL_KEYS]),
@@ -70,6 +71,22 @@ export const MODELED_KEYS = {
   rowBand: keySet(['at', 'style', 'format', 'height', 'hidden', 'group']),
   data: keySet(['at', 'values', 'csv', 'json', 'columns']),
   formulaRange: keySet(['at', 'formula']),
+  conditional: keySet([
+    'at',
+    'cell',
+    'text',
+    'formula',
+    'top',
+    'bottom',
+    'duplicate',
+    'unique',
+    'color_scale',
+    'data_bar',
+    'icon_set',
+    'style',
+    'format',
+    'stop_if_true',
+  ]),
 };
 
 function keySet(names: readonly string[]): ReadonlySet<string> {

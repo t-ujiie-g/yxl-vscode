@@ -1442,9 +1442,21 @@ them. All of them are opaque today (ADR-011) — preserved byte for byte, and
 invisible. Ordered by what a real spec turned out to use: the first two came
 back from `torchrelay-docs`, where a reader asked why a status column drew none
 of its colours and why a header row showed no filter.
-- [ ] **Conditional formatting** (`conditional:`) — the rules *applied* in the
-      drawing, over the evaluated values (display only, ADR-014); the rule
-      itself read-only in the inspector to begin with
+- [x] **Conditional formatting** (`conditional:`) — modelled rather than opaque,
+      every kind of rule read: the eight `cell` comparisons, the four `text`
+      tests, `formula`, `top`/`bottom`, `duplicate`/`unique`, `color_scale`,
+      `data_bar`, `icon_set`, with `style`/`format` and `stop_if_true`. The two
+      this preview can decide on a cell alone — `cell` and `text` — are
+      **applied in the drawing**, over the evaluated value where there is one
+      (display only, ADR-014), in the order written, which is Excel's priority
+      order. Every rule that reaches the selected cell is named in the
+      inspector, and the ones not drawn say so.
+- [ ] The rules that need the **whole range** to decide — `top`, `bottom`,
+      `duplicate`, `unique` — applied too; they are read and shown already
+- [ ] `formula` rules applied, which means evaluating one per cell of the range
+      with the range's top-left as the origin (`docs/spec.md` §10)
+- [ ] `color_scale`, `data_bar` and `icon_set` **drawn**, which is an appearance
+      of their own rather than a look laid over the cell
 - [ ] **Auto filter** (`filter:`) — the dropdown mark on the header row where
       the sheet has one, and *Create a filter* / *Remove filter* on a selection.
       Per-column criteria are not in the schema yet, so neither is filtering
@@ -2955,6 +2967,26 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-23 — Conditional formatting, drawn
+Phase 13 opens with the construct a real spec turned out to lean on: a status
+column whose colours came from `conditional:` and drew as nothing here.
+
+- **Modelled rather than opaque.** Every kind of rule is read — the eight `cell`
+  comparisons, the four `text` tests, `formula`, `top`/`bottom`,
+  `duplicate`/`unique`, `color_scale`, `data_bar`, `icon_set` — with its range,
+  its `style`/`format`, and `stop_if_true`.
+- **The two a cell can be decided by alone are applied in the drawing**: `cell`
+  and `text`, over the evaluated value where there is one (ADR-014 — nothing
+  evaluated is written), in the order written, which is Excel's priority order.
+  A rule that stops the run stops it; a rule this preview cannot decide applies
+  nothing and stops nothing.
+- **The rest are read, kept, and named.** Every rule whose range reaches the
+  selected cell is a line in the inspector saying what decides it, and the ones
+  not drawn say *not drawn by this preview yet* rather than being silent.
+- The preservation corpus lost a spec from its edit-meets-opaque set, which is
+  what modelling a construct does; the floor moved from 7 to 6.
+- Comment shape: export 2.2, private 1.0, inline 1.5, 0 over the limit — held.
 
 ### 2026-08-23 — Refactoring pass over the whole tree (`AGENTS.md` §8)
 Walked §8's lenses in order at the Phase 12 boundary. Findings, and what each

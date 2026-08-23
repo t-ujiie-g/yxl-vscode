@@ -14,7 +14,7 @@ import { CODE } from './codes';
 import { type Ctx, reject, text } from './ctx';
 
 /** How a look reaches a cell — which construct applies it, which is a different edit from which one holds it. */
-export type StyleSource = 'column' | 'row' | 'cell' | 'override';
+export type StyleSource = 'column' | 'row' | 'cell' | 'override' | 'conditional';
 
 /** Which key of that construct set it: its `style:`, or the `format:` written beside it (`docs/spec.md` §4). */
 export type StyleKey = 'style' | 'format';

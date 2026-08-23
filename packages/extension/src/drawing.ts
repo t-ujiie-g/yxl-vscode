@@ -26,6 +26,7 @@ import type {
   Sized,
   Uncomputed,
 } from '@yxl-vscode/webview/protocol';
+import { applied } from './conditional';
 import { type Nodes, nodeUnder } from './inspect';
 
 /** A compiled grid as the view is handed it: one window per sheet, the cells with anything to show (ADR-019). */
@@ -208,10 +209,15 @@ function drawCells(
     for (const col of lines(drawing.at.col, drawing.columns, drawing.freeze?.col ?? 1)) {
       const addr = addrAt({ col, row });
       const cell = cellAt(sheet, addr);
-      const layers = styleAt(sheet, addr);
-      const style = settled(resolve(layers));
-
       const computed = evaluation?.values.get(qualified(sheet.name, addr)) ?? null;
+
+      // The rules go over what the cell wears, since Excel's own conditional
+      // looks sit above a cell's style (`docs/spec.md` §10).
+      const layers = [
+        ...styleAt(sheet, addr),
+        ...applied(sheet.conditional, { at: addr, value: cell?.value ?? null, computed }),
+      ];
+      const style = settled(resolve(layers));
       const holds =
         cell !== null && (cell.value !== null || cell.formula !== null || cell.rich !== null);
       if (!holds && Object.keys(style).length === 0) continue;
