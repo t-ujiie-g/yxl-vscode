@@ -1269,8 +1269,13 @@ Deliberately **not** here: a second selection with `Cmd`+click (every answer in
             reference out of it. A reference into what a delete takes away is
             **refused, never written as `#REF!`**: a spec is read by people, and
             a file that says `#REF!` is a file nobody can fix from.
-      - [ ] The consequence enumeration over a sheet: what each construct does,
-            counted, before anything is written
+      - [x] **The consequence enumeration** over a sheet: what each construct
+            does, counted, before anything is written. One entry per line of
+            YAML the edit would touch, which is the size §4.4 says to show —
+            and where the entries are mostly `cells:` keys, that count *is* the
+            case for offering the conversion instead. Beside them, what stands
+            in the way: a formula naming a row a delete would take, and rows
+            that come from a CSV, which this cannot open a gap in.
       - [ ] The write itself, construct by construct, and the gesture on the
             heading
 - [ ] `rekeyMap` for bulk A1 shifts in `cells:`
@@ -2759,6 +2764,25 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-23 — What a line would move
+Phase 11's second piece: the answer to *what happens if I insert a row here*,
+worked out before anything is written.
+
+- **Every construct the line reaches, and what becomes of it**: a `cells:` entry
+  shifts or goes, a `data:` block or a `formulas:` range or a merge or a band
+  **grows** where the line falls inside it and **shifts** where it falls above,
+  and the freeze moves with the cell it names. The same four verbs for all of
+  them, on both axes, for an insert and for a delete.
+- **One entry per line of YAML the edit would touch.** That is the number §4.4
+  says to show a reader before they decide — and where the entries are mostly
+  `cells:` keys, the count *is* the case for offering the `data:` conversion
+  instead (§8 Q1).
+- **What stands in the way is enumerated too**, not discovered halfway: a
+  formula that names a row a delete would take (from `shifted`), and rows that
+  come from a CSV, which this cannot open a gap in. A line with anything in its
+  way is not drawn at all.
+- 1784 → 1797 tests.
 
 ### 2026-08-23 — What a reference does when a row is inserted
 Phase 11's first piece, and the one everything structural stands on.
