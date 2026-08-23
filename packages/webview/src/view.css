@@ -630,6 +630,8 @@ body {
 }
 
 .spill {
+  position: relative;
+  z-index: 1;
   display: inline-block;
   overflow: hidden;
   white-space: inherit;
@@ -729,6 +731,12 @@ body {
 
 .grid tr.frozen td {
   z-index: 3;
+}
+
+/* A frozen row's cells are sticky and carry a white ground of their own, which
+   would paint over the text spilling from the cell before them. */
+.grid tr.frozen td.spilling {
+  z-index: 4;
 }
 
 .grid tr.frozen td.stays {

@@ -2966,6 +2966,10 @@ made a real sheet look like it had lost its title.
   (that is what wrapping is for), where the text is not left-aligned (Excel runs
   right-aligned text the other way, which is a later item), where the text holds
   a line break, or where the cell is merged and already spans.
+- **It runs over a frozen row too**, which took a second pass: a frozen row's
+  cells are `position: sticky` and carry a white ground of their own, so the
+  cell after the spilling one painted over the text. The spilling cell is lifted
+  one step above its row-mates, and the text a step above its own cell.
 - Comment shape: export 2.2, private 1.0, inline 1.5, 9 over the limit — held.
 
 ### 2026-08-23 — A colour written `00RRGGBB` is not invisible
