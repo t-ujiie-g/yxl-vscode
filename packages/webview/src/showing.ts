@@ -148,6 +148,7 @@ export function cellKey(col: number, row: number): string {
 export interface Asks {
   readonly showSheet: (index: number) => void;
   readonly addSheet: (name: string) => void;
+  readonly renameSheet: (sheet: string, name: string) => void;
   readonly select: (row: number, col: number) => void;
   readonly reachTo: (row: number, col: number) => void;
   readonly reveal: (source: Source) => void;

@@ -24,6 +24,32 @@ export function moved(formula: string, by: Offset): Moved {
   return walked(formula, sliding(by));
 }
 
+/**
+ * A formula with every reference to `from` naming `to` instead — the sheet's
+ * own name, quoted again where the new one needs it (`docs/spec.md` §2).
+ */
+export function renamed(formula: string, from: SheetName, to: SheetName): Moved {
+  if (from === to) return { ok: true, formula };
+
+  return walked(formula, calling(from, to));
+}
+
+/** Renaming a sheet: only the name before a `!` moves, and every reference keeps its address. */
+function calling(from: SheetName, to: SheetName): Rule {
+  return {
+    cell: (text) => text,
+    column: (text) => text,
+    row: (text) => text,
+    why: (word) => `\`${word}\` could not be written again`,
+    named: (name) => (name === from ? sheetSpelled(to) : name),
+  };
+}
+
+/** A sheet name as a formula writes it: quoted where anything but a word would need it. */
+export function sheetSpelled(name: SheetName): string {
+  return /^[A-Za-z_][A-Za-z0-9_.]*$/.test(name) ? name : `'${name.replaceAll("'", "''")}'`;
+}
+
 /** A row or a column inserted (`by` above zero) or taken away, in one sheet. */
 export interface Line {
   readonly sheet: SheetName;
@@ -58,8 +84,9 @@ function walked(formula: string, rule: Rule): Moved {
       if (end === null) return { ok: false, why: `there is a \`${char}\` here that never closes` };
 
       const text = formula.slice(at, end);
-      named = char === "'" && formula[end] === '!' ? text.slice(1, -1) : null;
-      out.push(text);
+      const quotes = char === "'" && formula[end] === '!';
+      named = quotes ? text.slice(1, -1) : null;
+      out.push(quotes && rule.named !== undefined ? rule.named(named as string) : text);
       at = end;
       continue;
     }
@@ -108,6 +135,8 @@ interface Rule {
   readonly column: (text: string, of: string | null) => string | null;
   readonly row: (text: string, of: string | null) => string | null;
   readonly why: (word: string) => string;
+  /** How the sheet a reference names is written, where a rule rewrites that instead. */
+  readonly named?: (name: string) => string;
 }
 
 /** Moving a shared formula: relative halves slide, `$`-anchored ones hold still. */
@@ -180,7 +209,8 @@ function word(formula: string, at: number, rule: Rule, of: string | null): Taken
   const text = formula.slice(at, end);
   const after = formula[skipSpace(formula, end)] ?? '';
   if (after === '(' || after === '[' || after === '!') {
-    return { is: 'text', text, end, names: after === '!' ? text : null };
+    const sheet = after === '!' && rule.named !== undefined ? rule.named(text) : text;
+    return { is: 'text', text: sheet, end, names: after === '!' ? text : null };
   }
 
   if (CELL.test(text)) {

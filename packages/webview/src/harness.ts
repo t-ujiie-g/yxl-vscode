@@ -8,6 +8,7 @@ export function asks(): Asks {
   return {
     showSheet: vi.fn(),
     addSheet: vi.fn(),
+    renameSheet: vi.fn(),
     drawWith: vi.fn(),
     resize: vi.fn(),
     select: vi.fn(),

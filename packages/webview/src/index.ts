@@ -206,6 +206,12 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       adding = name;
       host.postMessage({ kind: 'addSheet', name });
     },
+    renameSheet: (sheet, name) => {
+      refused = null;
+      said = null;
+      adding = name;
+      host.postMessage({ kind: 'renameSheet', sheet, name });
+    },
     select: (row, col) => {
       selected = { row, col };
       anchor = { row, col };

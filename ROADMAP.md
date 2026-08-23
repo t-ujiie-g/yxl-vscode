@@ -1392,8 +1392,15 @@ are carried through untouched and shown as nothing (`docs/spec.md` §2).
       refuse is refused here first, by the rule it breaks. `verify` learned to
       take a **sheet** as something an edit may claim, beside the cells it may
       claim, which is what every other item in this phase will need.
-- [ ] **Rename a sheet** by double-clicking its tab — the sheet's `name:`, and
-      every `Sheet!A1` reference that names it, through `shifted`'s parser
+- [x] **Rename a sheet** by double-clicking its tab — the tab becomes the box
+      the new name is typed in, since a webview has no dialog to ask in. One
+      edit rewrites the sheet's `name:`, every inline cell formula, every
+      `formulas:` range body, every `defs.formulas` body, and every override's
+      `at:`. `renamed` is the third rule over the one formula parser in `units`
+      (beside `moved` and `shifted`): it rewrites only the word before a `!`,
+      quotes the new name where Excel's grammar needs it, and leaves a name
+      inside a string alone. The edit claims exactly the cells whose formula it
+      rewrites, so `verify` still catches anything else that moved.
 - [ ] **Delete a sheet** from the tab's menu, refused where it is the last
       visible one (§2) or where another sheet's formula names it
 - [ ] **Reorder** by dragging a tab — the `sheets:` sequence is tab order
@@ -2920,6 +2927,28 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-23 — A sheet renamed, and everything that named it
+The tab bar's second gesture, and the first edit in this project that rewrites
+formulas the reader never looked at.
+
+- **Double-click a tab to rename it.** The tab itself becomes the box the new
+  name is typed in — Enter takes it, Escape leaves it, clicking away takes it —
+  since a webview has no dialog to ask in. The same name back asks for nothing.
+- **One edit, everywhere the name is written**: the sheet's `name:`, every
+  inline cell formula, every `formulas:` range body, every `defs.formulas` body,
+  and every override's `at:`. Split across files it is refused rather than half
+  done.
+- **`renamed`, the third rule over one formula parser.** `units/formula.ts` now
+  carries `moved` (a shared formula translated), `shifted` (rows and columns
+  inserted or deleted) and `renamed` over the same walk: it rewrites only the
+  word before a `!`, quotes the new name where Excel's grammar needs it
+  (`'Q3 data'!A1`), doubles an apostrophe inside one, and leaves a sheet name
+  that appears inside a string literal alone.
+- **The edit claims exactly the cells whose formula it rewrites**, so `verify`'s
+  double-compile diff still catches anything else that moved (ADR-009).
+- Comment shape after the pass: export 2.2, private 1.0, inline 1.5, 9 over the
+  limit — held.
 
 ### 2026-08-23 — A new sheet
 Phase 12 opens: the first thing a spreadsheet user does with the tab bar that

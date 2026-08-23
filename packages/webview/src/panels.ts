@@ -205,6 +205,7 @@ export function tabs(drawing: Drawing, showing: number, asks: Asks): HTMLElement
     tab.textContent = sheet.name;
     tab.className = index === showing ? 'tab showing' : 'tab';
     tab.addEventListener('click', () => asks.showSheet(index));
+    tab.addEventListener('dblclick', () => renaming(tab, sheet.name, asks));
     bar.append(tab);
   }
 
@@ -221,6 +222,33 @@ export function tabs(drawing: Drawing, showing: number, asks: Asks): HTMLElement
   bar.append(add);
 
   return bar;
+}
+
+/** The tab, made a box the new name is typed in — a webview has no dialog to ask in. */
+function renaming(tab: HTMLElement, was: string, asks: Asks): void {
+  const box = document.createElement('input');
+  box.type = 'text';
+  box.className = 'tab naming';
+  box.value = was;
+
+  const done = (take: boolean) => {
+    if (box.parentElement === null) return;
+
+    const name = box.value.trim();
+    box.replaceWith(tab);
+    if (take && name !== '' && name !== was) asks.renameSheet(was, name);
+  };
+
+  box.addEventListener('keydown', (event) => {
+    event.stopPropagation();
+    if (event.key === 'Enter') done(true);
+    if (event.key === 'Escape') done(false);
+  });
+  box.addEventListener('blur', () => done(true));
+
+  tab.replaceWith(box);
+  box.focus();
+  box.select();
 }
 
 export function note(text: string): HTMLElement {

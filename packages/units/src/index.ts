@@ -9,7 +9,15 @@ export {
 } from './band';
 export { type Color, parseColor } from './color';
 export { decimalsIn, MOST_DECIMALS, withDecimals } from './format';
-export { type Line, type Moved, moved, type Offset, shifted } from './formula';
+export {
+  type Line,
+  type Moved,
+  moved,
+  type Offset,
+  renamed,
+  sheetSpelled,
+  shifted,
+} from './formula';
 export {
   addrAt,
   addressesOf,
