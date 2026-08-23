@@ -1,5 +1,6 @@
 import type {
   ColumnBand,
+  Conditional,
   DataBlock,
   DataRow,
   FormulaRange,
@@ -29,6 +30,7 @@ import type {
   CompiledCell,
   CompiledFill,
   CompiledMerge,
+  CompiledRule,
   CompiledSheet,
 } from './grid';
 import type { FacetOrigin } from './provenance';
@@ -66,6 +68,9 @@ export function compileSheet(ctx: Ctx, sheet: Sheet): Drafted {
       tabColor: sheet.tabColor === null ? null : colour(ctx, sheet.tabColor, sheet),
       gridlines: sheet.gridlines ?? true,
       split: sheet.split,
+      conditional: sheet.conditional
+        .map((rule) => conditionalRule(ctx, rule))
+        .filter((rule) => rule !== null),
     },
     cells,
   };
@@ -241,4 +246,22 @@ function mergedRegion(ctx: Ctx, merge: Sheet['merges'][number]): CompiledMerge |
     return null;
   }
   return { rect: rectOf(read), node: merge.id };
+}
+
+/** One `conditional:` rule, its range read and its look resolved (`docs/spec.md` §10). */
+function conditionalRule(ctx: Ctx, rule: Conditional): CompiledRule | null {
+  const spelled = text(ctx, rule.at, rule);
+  const read = parseA1Range(spelled);
+  if (read === null) {
+    reject(ctx, CODE.badRange, `\`${spelled}\` is not a range`, rule);
+    return null;
+  }
+
+  return {
+    rect: rectOf(read),
+    test: rule.test,
+    style: layersOf(ctx, rule, 'conditional', rule.style, rule.format),
+    stopIfTrue: rule.stopIfTrue,
+    node: rule.id,
+  };
 }

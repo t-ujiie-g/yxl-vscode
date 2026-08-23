@@ -2,6 +2,7 @@ import type { Node, Path } from '@yxl-vscode/cst';
 import {
   type Cell,
   type ColumnBand,
+  type Conditional,
   type DataBlock,
   type FormulaRange,
   type Merge,
@@ -14,6 +15,7 @@ import {
 import { readColumnBands, readRowBands } from './band';
 import { readCells, withoutLeadingEquals } from './cell';
 import { CODE } from './codes';
+import { readConditional } from './conditional';
 import { type Ctx, identify, keyOf, reject, type Site } from './ctx';
 import { readDataBlocks } from './data';
 import {
@@ -61,6 +63,7 @@ function readSheet(site: Site): Sheet | null {
   let tabColor: Sheet['tabColor'] = null;
   let gridlines: Sheet['gridlines'] = null;
   let split: Sheet['split'] = null;
+  let conditional: Conditional[] = [];
   const opaque: Opaque[] = [];
 
   for (const entry of entries) {
@@ -102,6 +105,9 @@ function readSheet(site: Site): Sheet | null {
       case 'split':
         split = readSplit(here, entry.value, `${what} \`split\``);
         break;
+      case 'conditional':
+        conditional = readConditional(here, entry.value, at);
+        break;
       default:
         opaque.push({ ...identify(here, at, entry.span), key });
     }
@@ -121,6 +127,7 @@ function readSheet(site: Site): Sheet | null {
     tabColor,
     gridlines,
     split,
+    conditional,
     keyOrder: entries.map(keyOf),
     opaque,
   };

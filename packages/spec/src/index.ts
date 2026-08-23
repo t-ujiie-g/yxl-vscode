@@ -8,6 +8,12 @@ export {
   type FormulaBody,
   type RichRun,
 } from './cell';
+export type {
+  Comparison,
+  Conditional,
+  ConditionalTest,
+  TextTest,
+} from './conditional';
 export type { DataBlock, DataRow, DataSource } from './data';
 export type { Defs, FormulaDef, Override, Param, SpecDoc, StyleDef, ValueDef } from './doc';
 export { CELL_HOLDS, CELL_WEARS, INCLUDE_KEY, KEY, MODELED_KEYS, REF_KEY } from './keys';

@@ -155,3 +155,22 @@ describe('where the inspector would take you', () => {
     expect(sources(`${SHEET}    cells:\n      A1: 1\n`, 'B9')).toEqual([]);
   });
 });
+
+describe('what the inspector says about a conditional rule', () => {
+  const RULED = `${SHEET}    cells:\n      A2: done\n    conditional:\n      - at: A1:A9\n        cell: { equals: done }\n        style: { font: { bold: true } }\n      - at: A1:A9\n        formula: "A1>0"\n        style: { font: { italic: true } }\n`;
+
+  it('names every rule whose range reaches the cell, and what decides it', () => {
+    const said = sources(RULED, 'A2')
+      .filter((one) => one.facet === 'conditional')
+      .map((one) => one.says);
+
+    expect(said).toEqual([
+      '`cell` equals `done`, over A1:A9',
+      '`formula` `A1>0`, over A1:A9 — not drawn by this preview yet',
+    ]);
+  });
+
+  it('says nothing about a cell no rule reaches', () => {
+    expect(sources(RULED, 'B2').filter((one) => one.facet === 'conditional')).toEqual([]);
+  });
+});

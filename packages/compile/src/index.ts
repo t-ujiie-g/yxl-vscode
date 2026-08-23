@@ -17,6 +17,7 @@ export type {
   CompiledFill,
   CompiledGrid,
   CompiledMerge,
+  CompiledRule,
   CompiledRun,
   CompiledSheet,
   DeclaredStyle,
