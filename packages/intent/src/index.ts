@@ -26,6 +26,7 @@ export {
   type Standing,
 } from './paste';
 export { type Candidate, candidates, type Resolving } from './resolve';
+export { type Adding, addSheet } from './sheets';
 export { type Does, lineSaid, type Moving, type Shift, shifting } from './shift';
 export { type Dragged, setSize } from './size';
 export { type Sorting, setSorted } from './sort';

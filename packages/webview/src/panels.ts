@@ -1,4 +1,5 @@
-import { columnLabel } from '@yxl-vscode/units';
+import { columnLabel, nextSheetName, type SheetName } from '@yxl-vscode/units';
+import { says } from './menus';
 import type { Choice, Drawing, Refused, Summed, Uncomputed } from './protocol';
 import type { Asks, Reached, Showing } from './showing';
 
@@ -193,11 +194,8 @@ export function inspector(showing: Showing, asks: Asks): HTMLElement {
   return panel;
 }
 
-export function tabs(
-  drawing: Drawing,
-  showing: number,
-  onShow: (index: number) => void,
-): HTMLElement {
+/** The sheets, as the tabs both spreadsheets keep under the grid, and the `+` that makes another. */
+export function tabs(drawing: Drawing, showing: number, asks: Asks): HTMLElement {
   const bar = document.createElement('nav');
   bar.className = 'tabs';
 
@@ -206,9 +204,21 @@ export function tabs(
     tab.type = 'button';
     tab.textContent = sheet.name;
     tab.className = index === showing ? 'tab showing' : 'tab';
-    tab.addEventListener('click', () => onShow(index));
+    tab.addEventListener('click', () => asks.showSheet(index));
     bar.append(tab);
   }
+
+  const add = document.createElement('button');
+  add.type = 'button';
+  add.className = 'tab add';
+  add.textContent = '+';
+  says(add, 'Add a sheet');
+  // Added under the next free name at once, as both spreadsheets do — a webview
+  // has no `prompt`, and renaming is the tab's own gesture.
+  add.addEventListener('click', () =>
+    asks.addSheet(nextSheetName(drawing.sheets.map((one) => one.name as SheetName))),
+  );
+  bar.append(add);
 
   return bar;
 }

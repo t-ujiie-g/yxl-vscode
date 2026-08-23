@@ -68,6 +68,24 @@ describe('an edit that does what it said', () => {
   });
 });
 
+describe('an edit that adds a sheet', () => {
+  const added: Op = { op: 'insertSource', path: ['sheets'], index: 1, source: 'name: Notes' };
+
+  it('is a surprise where the claim named cells only', () => {
+    const done = edit(SPEC, about(), added);
+
+    expect(done.ok).toBe('ask');
+    if (done.ok !== 'ask') return;
+    expect(done.surprises).toEqual([{ kind: 'sheet', name: 'Notes', what: 'added' }]);
+  });
+
+  it('is what it said where the claim named the sheet', () => {
+    const claim: Expects = { cells: new Set(), sheets: new Set(['Notes']), beyond: 'ask' };
+
+    expect(edit(SPEC, claim, added).ok).toBe(true);
+  });
+});
+
 describe('an edit that did more than it said', () => {
   const wider: Op = { op: 'set', path: ['defs', 'styles', 'money', 'format'], value: '0.00' };
 

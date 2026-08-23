@@ -31,6 +31,7 @@ export {
   filePath,
   formulaName,
   type NodeId,
+  nextSheetName,
   nodeId,
   type ParamName,
   paramName,
@@ -40,5 +41,6 @@ export {
   styleName,
   type ValueName,
   valueName,
+  whyNotASheetName,
 } from './name';
 export { parseQualifiedAddr, type QualifiedAddr, qualified } from './qualified';

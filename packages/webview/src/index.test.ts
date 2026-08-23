@@ -1124,6 +1124,24 @@ describe('the bar over the grid', () => {
     expect(sent.filter((one) => one.kind === 'fill').at(-1)).toMatchObject({ axis: 'column' });
   });
 
+  it('asks for a sheet from the `+` on the tabs, under the next free name, and goes to it', () => {
+    const { into, sent, told } = view();
+
+    into.querySelector<HTMLButtonElement>('.tabs .add')?.click();
+    expect(sent.filter((one) => one.kind === 'addSheet')).toEqual([
+      { kind: 'addSheet', name: 'Sheet2' },
+    ]);
+
+    told({ ...drawing, sheets: [sheet(), sheet({ name: 'Sheet2', cells: [] })] });
+    expect(into.querySelector('.tab.showing')?.textContent).toBe('Sheet2');
+  });
+
+  it('shows the tabs even for one sheet, so there is somewhere to press', () => {
+    const { into } = view();
+
+    expect(into.querySelectorAll('.tabs .tab:not(.add)')).toHaveLength(1);
+  });
+
   it('asks for the rows to be put in order, either way round', () => {
     const { into, sent } = view();
 

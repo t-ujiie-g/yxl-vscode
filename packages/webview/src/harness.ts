@@ -7,6 +7,7 @@ import type { Asks, Showing } from './showing';
 export function asks(): Asks {
   return {
     showSheet: vi.fn(),
+    addSheet: vi.fn(),
     drawWith: vi.fn(),
     resize: vi.fn(),
     select: vi.fn(),
