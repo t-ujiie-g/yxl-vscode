@@ -51,13 +51,24 @@ export interface CompiledSheet {
   readonly conditional: readonly CompiledRule[];
 }
 
+/** What decides a rule, its colours substituted; everything else is the spec's own (`docs/spec.md` §10). */
+export type CompiledTest =
+  | Exclude<ConditionalTest, { kind: 'colorScale' | 'dataBar' }>
+  | {
+      readonly kind: 'colorScale';
+      readonly low: Color;
+      readonly middle: Color | null;
+      readonly high: Color;
+    }
+  | { readonly kind: 'dataBar'; readonly color: Color; readonly barOnly: boolean };
+
 /**
  * One `conditional:` rule with its range read: what decides it is the spec's
  * own, and the look it applies is resolved like any other (`docs/spec.md` §10).
  */
 export interface CompiledRule {
   readonly rect: Rect;
-  readonly test: ConditionalTest;
+  readonly test: CompiledTest;
   readonly style: readonly StyleLayer[];
   readonly stopIfTrue: boolean;
   readonly node: NodeId;

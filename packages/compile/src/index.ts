@@ -20,6 +20,7 @@ export type {
   CompiledRule,
   CompiledRun,
   CompiledSheet,
+  CompiledTest,
   DeclaredStyle,
 } from './grid';
 export { type FullAddr, reaches } from './impact';

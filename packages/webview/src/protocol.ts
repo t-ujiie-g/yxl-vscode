@@ -120,6 +120,14 @@ export interface DrawnCell {
   readonly overridden: boolean;
   readonly editable: Editable;
   readonly style: StyleValues;
+  readonly bar: DrawnBar | null;
+}
+
+/** A `data_bar` rule's bar behind a cell: how far along the range its value is (`docs/spec.md` §10). */
+export interface DrawnBar {
+  readonly color: string;
+  readonly fraction: number;
+  readonly barOnly: boolean;
 }
 
 export interface DrawnMerge {

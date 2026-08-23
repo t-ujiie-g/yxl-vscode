@@ -61,6 +61,7 @@ export function cell(row: number, col: number, of: Partial<DrawnCell> = {}): Dra
     overridden: false,
     editable: 'direct',
     style: {},
+    bar: null,
     ...of,
   };
 }
