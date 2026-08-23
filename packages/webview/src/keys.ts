@@ -171,9 +171,3 @@ export function between(one: At, two: At): Rect {
     right: Math.max(one.col, two.col),
   };
 }
-
-/** Whether a cell is inside the selected rectangle. */
-export function within(at: At, one: At, two: At): boolean {
-  const rect = between(one, two);
-  return at.row >= rect.top && at.row <= rect.bottom && at.col >= rect.left && at.col <= rect.right;
-}

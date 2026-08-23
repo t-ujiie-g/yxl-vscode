@@ -1,7 +1,7 @@
 import { dirname, relative } from 'node:path';
 import { type CompiledSheet, cellAt, type FacetOrigin, styleAt } from '@yxl-vscode/compile';
 import type { Comparison, ConditionalTest, Sheet, SpecDoc, SpecNode } from '@yxl-vscode/spec';
-import { type A1Addr, cellOf, type NodeId, rangeOf } from '@yxl-vscode/units';
+import { type A1Addr, cellOf, type NodeId, rangeOf, within } from '@yxl-vscode/units';
 import type { Source } from '@yxl-vscode/webview/protocol';
 
 /** Where every facet of one cell came from, in a reader's words, with the place to go to. */
@@ -39,16 +39,10 @@ export function inspect(nodes: Nodes, sheet: CompiledSheet, at: A1Addr, from: st
 
 /** Every `conditional:` rule whose range reaches this cell, said whether or not it is drawn. */
 function reaching(nodes: Nodes, sheet: CompiledSheet, at: A1Addr): Source[] {
-  const { row, col } = cellOf(at);
+  const cell = cellOf(at);
 
   return sheet.conditional
-    .filter(
-      (rule) =>
-        row >= rule.rect.top &&
-        row <= rule.rect.bottom &&
-        col >= rule.rect.left &&
-        col <= rule.rect.right,
-    )
+    .filter((rule) => within(cell, rule.rect))
     .map((rule) => ({
       facet: 'conditional',
       says: `${ruleSaid(rule.test)}, over ${rangeOf(rule.rect)}`,

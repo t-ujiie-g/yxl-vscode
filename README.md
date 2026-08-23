@@ -70,10 +70,12 @@ sheet and going to it are in. A rectangle that lands on cells written in several
 different ways is answered a group at a time rather than refused whole. The
 formatting toolbar is in, and so are inserting and deleting rows and columns,
 merging, filling, sorting a block of rows, and the whole of the tab bar — adding,
-renaming, deleting and reordering a sheet, hiding one, colouring its tab. What a
-spec writes *on* its cells — an auto filter, a note, a hyperlink, conditional
-formatting — is carried through untouched and drawn as nothing, and is the next
-phase.
+renaming, deleting and reordering a sheet, hiding one, colouring its tab.
+Conditional formatting is **applied in the grid** — every kind of rule, over the
+computed values — and a sheet's auto filter is drawn and can be put on and taken
+off. What a spec writes *on* its cells besides those — a note, a hyperlink, a
+dropdown of allowed values — is carried through untouched and drawn as nothing,
+and is the rest of the phase in progress.
 
 ## Where it is going
 

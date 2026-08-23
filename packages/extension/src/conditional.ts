@@ -2,7 +2,7 @@ import type { CompiledRule, StyleLayer } from '@yxl-vscode/compile';
 import type { Computed } from '@yxl-vscode/evaluate';
 import type { Comparison, ScalarValue, TextTest } from '@yxl-vscode/spec';
 import type { A1Addr } from '@yxl-vscode/units';
-import { type Color, cellOf, type NodeId, painted } from '@yxl-vscode/units';
+import { type Color, cellOf, type NodeId, painted, within } from '@yxl-vscode/units';
 
 /** What a cell holds for a rule to decide on: the computed value where there is one (ADR-014). */
 export interface Deciding {
@@ -289,10 +289,7 @@ function seenOnce(
 }
 
 function covers(rule: CompiledRule, at: A1Addr): boolean {
-  const { row, col } = cellOf(at);
-  const rect = rule.rect;
-
-  return row >= rect.top && row <= rect.bottom && col >= rect.left && col <= rect.right;
+  return within(cellOf(at), rule.rect);
 }
 
 /** Whether a rule matches, or `null` where this preview does not decide that kind. */

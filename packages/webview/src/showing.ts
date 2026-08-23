@@ -1,6 +1,6 @@
 import type { Axis, BorderStyle, StyleSays, StyleValues } from '@yxl-vscode/spec';
-import type { Rect } from '@yxl-vscode/units';
-import { type At, between, within } from './keys';
+import { type Rect, within } from '@yxl-vscode/units';
+import { type At, between } from './keys';
 import type {
   About,
   Drawing,
@@ -74,13 +74,13 @@ export function ranged(showing: Showing, at: At): boolean {
   if (selected === null || anchor === null) return false;
   if (selected.row === anchor.row && selected.col === anchor.col) return false;
 
-  return within(at, selected, anchor);
+  return within(at, between(selected, anchor));
 }
 
 /** Whether the selection reaches this cell, a lone selected cell included. */
 export function reaches(showing: Showing, at: At): boolean {
   const { selected, anchor } = showing;
-  return selected !== null && within(at, selected, anchor ?? selected);
+  return selected !== null && within(at, between(selected, anchor ?? selected));
 }
 
 /** Whether this cell is one of those the search turned up. */
@@ -93,12 +93,7 @@ export function copiedFrom(showing: Showing, at: At): boolean {
   const { copied } = showing;
   if (copied === null || copied.sheet !== showing.drawing.sheets[showing.sheet]?.name) return false;
 
-  return (
-    at.row >= copied.rect.top &&
-    at.row <= copied.rect.bottom &&
-    at.col >= copied.rect.left &&
-    at.col <= copied.rect.right
-  );
+  return within(at, copied.rect);
 }
 
 /** A heading a menu was asked for on, and the point on the page it was asked at. */
