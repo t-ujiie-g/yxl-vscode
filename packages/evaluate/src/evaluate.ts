@@ -3,6 +3,7 @@ import {
   type A1Addr,
   addrAt,
   cellOf,
+  names,
   qualified,
   type SheetName,
   sheetName,
@@ -29,7 +30,8 @@ export interface Evaluation {
 export function evaluate(grid: CompiledGrid, engine: Engine, limit = LIMIT): Evaluation {
   const held = new Map<SheetName, Held[]>();
   const asked: Asked[] = [];
-  for (const sheet of grid.sheets) gather(sheet, held, asked);
+  const deep = new Map(grid.sheets.map((sheet) => [named(sheet), lastRow(sheet)]));
+  for (const sheet of grid.sheets) gather(sheet, held, asked, deep);
 
   if (asked.length > limit) return { values: new Map(), stopped: true, limit, unknown: [] };
 
@@ -141,17 +143,20 @@ const LIMIT = 20_000;
 const PASSES = 20;
 
 /** The cells one sheet holds and the formulas it asks for, over the box the sheet writes: `D2:D1048576` is legal. */
-function gather(sheet: CompiledSheet, held: Map<SheetName, Held[]>, asked: Asked[]): void {
-  const name = sheetName(sheet.name) ?? (sheet.name as SheetName);
+function gather(
+  sheet: CompiledSheet,
+  held: Map<SheetName, Held[]>,
+  asked: Asked[],
+  deep: ReadonlyMap<SheetName, number>,
+): void {
+  const name = named(sheet);
   const holds = held.get(name) ?? [];
   held.set(name, holds);
 
-  let rows = 0;
   let columns = 0;
 
   for (const cell of sheet.cells.values()) {
-    const { row, col } = cellOf(cell.at);
-    rows = Math.max(rows, row);
+    const { col } = cellOf(cell.at);
     columns = Math.max(columns, col);
 
     if (cell.formula !== null) {
@@ -161,10 +166,7 @@ function gather(sheet: CompiledSheet, held: Map<SheetName, Held[]>, asked: Asked
     }
   }
 
-  for (const merge of sheet.merges) {
-    rows = Math.max(rows, merge.rect.bottom);
-    columns = Math.max(columns, merge.rect.right);
-  }
+  for (const merge of sheet.merges) columns = Math.max(columns, merge.rect.right);
 
   // A range's columns are the spec's; its rows run out where the cells it reads do.
   for (const fill of sheet.fills) columns = Math.max(columns, fill.rect.right);
@@ -172,6 +174,7 @@ function gather(sheet: CompiledSheet, held: Map<SheetName, Held[]>, asked: Asked
   for (const fill of sheet.fills) {
     const anchor = cellOf(fill.anchor);
     const rect = fill.rect;
+    const rows = reaching(fill.formula, name, deep);
 
     for (let row = rect.top; row <= Math.min(rect.bottom, rows); row += 1) {
       for (let col = rect.left; col <= Math.min(rect.right, columns); col += 1) {
@@ -214,4 +217,27 @@ function same(before: Computed | undefined, now: Computed): boolean {
   if (before.kind === 'value' && now.kind === 'value') return before.value === now.value;
   if (before.kind === 'error' && now.kind === 'error') return before.error === now.error;
   return true;
+}
+
+function named(sheet: CompiledSheet): SheetName {
+  return sheetName(sheet.name) ?? (sheet.name as SheetName);
+}
+
+/** The last row a sheet writes itself, which is where the cells reading it run out. */
+function lastRow(sheet: CompiledSheet): number {
+  let rows = 0;
+  for (const cell of sheet.cells.values()) rows = Math.max(rows, cellOf(cell.at).row);
+  for (const merge of sheet.merges) rows = Math.max(rows, merge.rect.bottom);
+
+  return rows;
+}
+
+/** How far down a range computes: the last row written on any sheet its formula reads. */
+function reaching(formula: string, own: SheetName, deep: ReadonlyMap<SheetName, number>): number {
+  let far = deep.get(own) ?? 0;
+  for (const [sheet, rows] of deep) {
+    if (sheet !== own && names(formula, sheet)) far = Math.max(far, rows);
+  }
+
+  return far;
 }

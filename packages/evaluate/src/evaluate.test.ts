@@ -106,6 +106,12 @@ describe('what a pass asks the engine for', () => {
     expect(asks(spec)).toHaveLength(2);
   });
 
+  it('runs a range on past its own rows, to the rows of the sheet it reads', () => {
+    const spec = `sheets:\n  - name: Sales\n    cells:\n      A1: 1\n      A2: 2\n      A3: 3\n  - name: Summary\n    cells:\n      A1: total\n    formulas:\n      - at: B1:B3\n        formula: "Sales!A1"\n`;
+
+    expect(asks(spec).map((one) => one.at)).toEqual(['B1', 'B2', 'B3']);
+  });
+
   it('gives the engine every sheet, including one that holds no value at all', () => {
     const spec = `sheets:\n  - name: Sales\n    cells:\n      A1: { formula: "A2" }\n  - name: Notes\n    cells:\n      A1: 4\n`;
     const engine = reader();

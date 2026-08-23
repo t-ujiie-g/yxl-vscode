@@ -2936,6 +2936,18 @@ than widening it silently.
 
 ## 11. Living changelog
 
+### 2026-08-23 — A range reaches as far as what it reads
+A `formulas:` range is meant to be written past the data (`docs/spec.md` §3:
+`at: D2:D500` over twenty rows is the point of the construct), so the preview
+computes it only as far down as there is anything to read — otherwise a wall of
+zeros. It measured that against the rows of *the sheet the range sits on*, so a
+range reading another sheet stopped at its own last row and drew its formula
+instead of a value from there down.
+
+It now measures against the last row of every sheet the formula names, which is
+`names` over the one formula parser again. A range reading only its own sheet
+stops exactly where it did. Comment shape held at 9 over the limit.
+
 ### 2026-08-23 — A sheet taken out
 The tab bar's third gesture, and the first deletion in this project that has to
 reason about what else the file says.
