@@ -82,6 +82,11 @@ export interface Noted {
   readonly text: string | null;
 }
 
+/** A `list:` validation over a range, or `choices: null` to take off the ones it touches. */
+export interface Validated extends Ranged {
+  readonly choices: readonly string[] | null;
+}
+
 /** A cell's link as it is written, or `link: null` to take it off (`docs/spec.md` §10). */
 export interface Linked {
   readonly sheet: string;
@@ -146,6 +151,16 @@ export interface DrawnCell {
   readonly icon: DrawnIcon | null;
   readonly note: DrawnNote | null;
   readonly link: DrawnLink | null;
+  readonly validation: DrawnValidation | null;
+}
+
+/**
+ * What a validation asks of a cell, as the view draws it: the choices to offer
+ * where it is a list, and what it asks in words (`docs/spec.md` §10).
+ */
+export interface DrawnValidation {
+  readonly choices: readonly string[] | null;
+  readonly says: string;
 }
 
 /**
@@ -248,6 +263,7 @@ export type About =
   | ({ readonly kind: 'filter' } & Filtered)
   | ({ readonly kind: 'note' } & Noted)
   | ({ readonly kind: 'link' } & Linked)
+  | ({ readonly kind: 'validate' } & Validated)
   | {
       readonly kind: 'setTab';
       readonly sheet: string;

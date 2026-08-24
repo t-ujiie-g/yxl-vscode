@@ -1,4 +1,4 @@
-import { type A1Addr, parseA1Addr } from './a1';
+import { type A1Addr, type A1Range, parseA1Addr, parseA1Range } from './a1';
 import { type SheetName, sheetName } from './name';
 
 /** A cell named together with its sheet — `Sales!E37` — as an override's `at:` is. */
@@ -23,6 +23,28 @@ export function parseQualifiedAddr(text: string): QualifiedAddr | null {
 
   const sheet = sheetName(split.name);
   const at = parseA1Addr(split.rest);
+  return sheet === null || at === null ? null : { sheet, at };
+}
+
+/**
+ * A range that may name its sheet — `Statuses!A1:A3` or `A1:A3`, where `null`
+ * is the sheet it was written on — as a validation's `from:` is.
+ */
+export interface QualifiedRange {
+  readonly sheet: SheetName | null;
+  readonly at: A1Range;
+}
+
+/** The same for a range, in both spellings and unqualified; one cell is not a range. */
+export function parseQualifiedRange(text: string): QualifiedRange | null {
+  const split = text.startsWith("'") ? quoted(text) : plain(text);
+  if (split === null) {
+    const here = parseA1Range(text);
+    return here === null ? null : { sheet: null, at: here };
+  }
+
+  const sheet = sheetName(split.name);
+  const at = parseA1Range(split.rest);
   return sheet === null || at === null ? null : { sheet, at };
 }
 

@@ -469,7 +469,7 @@ not a date.
 | See that a sheet has an auto filter, and put one on | ✅ — every header cell wears the mark, and the cell's menu puts one on or takes it off; the preview does not filter *by* it, since the schema carries no per-column criteria |
 | A note on a cell | ✅ — the red corner, the note on hover, and *Insert note* / *Edit note* / *Delete note* in the cell's own menu |
 | A link on a cell, and following it | ✅ — drawn as a link, `Cmd`+click follows it, and the menu writes one to a page or to a cell; the two are never told apart by how the target reads |
-| A dropdown list of allowed values | **Phase 13** — `validations:` is opaque today |
+| A dropdown list of allowed values | ✅ — a `list:` offers its choices in the cell, the other kinds say what they ask on hover, and *Data validation…* writes a list over the selection |
 | Conditional formatting, applied in the drawing | ✅ — every kind of rule, over the evaluated values, display only (ADR-014) |
 | Format a region as a table | **Phase 13** |
 | See a chart, an image, a sparkline that the spec declares | **Phase 14** |
@@ -1509,10 +1509,16 @@ of its colours and why a header row showed no filter.
       *Edit link* keeps the kind it was written with, and its `tip`. Only
       `http`, `https` and `mailto` are opened — a spec is a file, and a file may
       come from anywhere. The link is in the inspector with where it came from.
-- [ ] **Data validation** (`validations:`) — a `list:` drawn as the dropdown a
-      spreadsheet shows, its choices offered when the cell is edited; the other
-      kinds drawn as the mark and the prompt; *Data validation…* on a selection
-      for the `list` kind first, since that is the one a reader makes by hand
+- [x] **Data validation** (`validations:`) — modelled rather than opaque, every
+      kind read: `list:` as the choices themselves or the cells holding them,
+      and `whole` / `decimal` / `text_length` / `date` in the comparison a
+      `cell:` rule is spelled in, which is now read by one function for both. A
+      `list:` wears the dropdown and offers its choices when the cell is typed
+      into — the written value of each cell, never a computed one, since a
+      choice picked is a value written (ADR-014). The other kinds wear a quiet
+      corner and say what they ask on hover, the `prompt` first. *Data
+      validation…* over a selection writes a `list:`, the kind a reader makes by
+      hand; a range that already has one is refused rather than given a second.
 - [ ] **Tables** (`tables:`) — the banded region drawn with its header, the
       *Format as table* gesture over a selection, and structured references
       left alone by `moved` and `shifted` as they already are
@@ -3034,6 +3040,42 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-24 — What a cell will accept
+`validations:` was opaque. It is modelled now, drawn, and a `list:` can be
+written over a selection and taken off again.
+
+- **Every kind is read**: `list:` as the choices themselves or as `{ from: }`
+  naming the cells holding them, and `whole` / `decimal` / `text_length` /
+  `date` as a comparison. The comparison reader the `conditional:` loader
+  already had is now one exported function used by both — `docs/spec.md` §10
+  says a validation is spelled exactly as a `cell:` rule, and now it is read
+  that way too.
+- **A `list:` offers its choices** in a panel under the cell being typed into;
+  picking one is the edit. The choices are the **written** values of the cells
+  a `from:` names — never a computed one, because a choice picked here becomes a
+  value written into a cell (ADR-014).
+- **The other kinds wear a quiet corner** and say what they ask on hover, in a
+  reader's words — *A whole number between 1 and 1000* — with the spec's own
+  `prompt` above it and what a refusal would say below.
+- **A cell takes one validation**, so a range that already has one is refused
+  rather than given a second: which of the two Excel would ask is not ours to
+  pick (ADR-001).
+- **A gesture acts on the cell the reader is on.** `spanned()` answers *the
+  rectangle of more than one cell*, and reading its `null` as "no rectangle"
+  had the filter and the validation write over `A1:A1` whenever the reader had
+  a single cell selected. Both take the selection now, a lone cell included, and
+  say the range they wrote in the line under the grid.
+- **A mark is drawn where it says something.** A validation covers two hundred
+  rows; its mark on every empty one of them is noise, so it shows on the cells
+  that hold something and on the one the reader is on — which is where a
+  dropdown is the way to fill it.
+- `parseQualifiedRange` joins `parseQualifiedAddr` in `units`: a `from:` may
+  name a sheet or not, and *not* means the sheet it was written on.
+- What is already written is read from the **file**, not the projection, as the
+  note and the link now are: the projection is redrawn on a delay, and two
+  gestures inside one redraw would otherwise write over each other.
+- Comment shape: export 2.2, private 1.0, inline 1.5, 0 over the limit — held.
 
 ### 2026-08-24 — A press is not a drag
 *The link did take the reader to the wrong cell, and the reason was the mouse.*

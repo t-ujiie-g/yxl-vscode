@@ -117,6 +117,7 @@ function onCell(showing: Showing, asks: Asks, at: PointedCell): HTMLElement | nu
     ),
     ...noting(showing, asks, at, shut),
     ...linking(showing, asks, at, shut),
+    ...validating(showing, asks, at, shut),
     ...(showing.drawing.sheets[showing.sheet]?.filter === null
       ? [
           entry(
@@ -178,6 +179,32 @@ function linking(
       'Remove link',
       {},
       shut(() => asks.link(at.row, at.col, null)),
+    ),
+  ];
+}
+
+/** What a cell's validation is worth offering; a `list:` is the kind a reader makes by hand. */
+function validating(
+  showing: Showing,
+  asks: Asks,
+  at: PointedCell,
+  shut: (take: () => void) => () => void,
+): HTMLElement[] {
+  if ((cellAt(showing, at)?.validation ?? null) === null) {
+    return [
+      entry(
+        'Data validation…',
+        {},
+        shut(() => asks.askAt({ at: { row: at.row, col: at.col }, what: 'list' })),
+      ),
+    ];
+  }
+
+  return [
+    entry(
+      'Remove validation',
+      {},
+      shut(() => asks.validate(null)),
     ),
   ];
 }

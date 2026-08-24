@@ -21,6 +21,7 @@ function cell(of: Partial<DrawnCell> = {}): DrawnCell {
     icon: null,
     note: null,
     link: null,
+    validation: null,
     ...of,
   };
 }
@@ -188,6 +189,51 @@ describe('what the view sends', () => {
 
     expect(into.querySelector('td.selected')?.getAttribute('data-at')).toBe('1:1');
     expect(sent.filter((one) => one.kind === 'inspect').at(-1)).toMatchObject({ row: 1, col: 1 });
+  });
+
+  it('acts on the cell selected where the reader selected only one', () => {
+    // A lone cell is a rectangle of one, not "no rectangle": a gesture that
+    // read it as none used to write over `A1`, wherever the reader was.
+    const { into, sent, told } = view();
+    const wide = sheet({ rows: 4, columns: 4, of: { rows: 4, columns: 4 } });
+    told({ ...drawing, sheets: [wide] });
+
+    at(into, 2, 2)?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    at(into, 2, 2)?.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true }));
+    const entries = [...into.querySelectorAll<HTMLButtonElement>('.entry')];
+    entries.find((one) => one.firstChild?.textContent === 'Data validation…')?.click();
+
+    const box = into.querySelector('.linking');
+    if (!(box instanceof HTMLTextAreaElement)) throw new Error('nothing to type into');
+    box.value = 'xxx, yyy';
+    box.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+
+    expect(sent.filter((one) => one.kind === 'validate')).toEqual([
+      {
+        kind: 'validate',
+        sheet: 'Sales',
+        top: 2,
+        left: 2,
+        bottom: 2,
+        right: 2,
+        choices: ['xxx', 'yyy'],
+      },
+    ]);
+  });
+
+  it('hangs a filter off the row the reader is on, not off the first one', () => {
+    const { into, sent, told } = view();
+    const wide = sheet({ rows: 4, columns: 4, of: { rows: 4, columns: 4 } });
+    told({ ...drawing, sheets: [wide] });
+
+    at(into, 3, 2)?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    at(into, 3, 2)?.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true }));
+    const entries = [...into.querySelectorAll<HTMLButtonElement>('.entry')];
+    entries.find((one) => one.firstChild?.textContent === 'Create a filter')?.click();
+
+    expect(sent.filter((one) => one.kind === 'filter')).toMatchObject([
+      { top: 3, left: 2, bottom: 3, right: 2, on: true },
+    ]);
   });
 
   it('sends the colour picked to the cells the palette was opened over', () => {

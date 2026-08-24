@@ -203,6 +203,12 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
     host.postMessage({ kind: 'sum', sheet: named(), ...rect });
   };
 
+  /** The rectangle a gesture acts on: everything selected, a lone cell included. */
+  const acting = (): Rect => {
+    const at = selected ?? { row: 1, col: 1 };
+    return between(at, anchor ?? at);
+  };
+
   /** The rectangle selected, read live: the grid restates rather than redraws on a selection. */
   const spanned = (): Rect | null => {
     if (selected === null || anchor === null) return null;
@@ -372,8 +378,7 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
     filter: (on) => {
       refused = null;
       said = null;
-      const rect = spanned() ?? { top: 1, left: 1, bottom: 1, right: 1 };
-      host.postMessage({ kind: 'filter', sheet: named(), on, ...rect });
+      host.postMessage({ kind: 'filter', sheet: named(), on, ...acting() });
     },
     askAt: (asked) => {
       asking = asked;
@@ -392,6 +397,13 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       asking = null;
       redraw();
       host.postMessage({ kind: 'link', sheet: named(), row, col, link: to });
+    },
+    validate: (choices) => {
+      refused = null;
+      said = null;
+      asking = null;
+      redraw();
+      host.postMessage({ kind: 'validate', sheet: named(), ...acting(), choices });
     },
     follow: (row, col) => {
       refused = null;

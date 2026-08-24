@@ -17,6 +17,7 @@ import { add, move, remove, rename, tab } from './sheets';
 import { resize } from './size';
 import { sort } from './sorts';
 import { table } from './tables';
+import { validate } from './validations';
 import { emptied, empty, type Port, resolve, type Spec, write, writeOverride } from './write';
 
 const ROOT = filePath('/specs/report.yxl.yaml') ?? ('' as FilePath);
@@ -735,6 +736,26 @@ describe("a cell's link, written from its own menu", () => {
     await link(spec, { ...where, link: null }, port);
     await link(spec, { ...where, link: null }, port);
     expect(refusals[0]).toBe('`A1` has no link to take off');
+  });
+});
+
+describe('a list validation, written over a selection', () => {
+  it('writes the choices, says how many, and takes the entry off again', async () => {
+    const cells = `${SALES}    cells:\n      A1: Region\n`;
+    const { spec, port, files, told, refusals } = editor({ [ROOT]: cells });
+    const over = { sheet: 'Sales', top: 2, left: 2, bottom: 9, right: 2 };
+
+    await validate(spec, { ...over, choices: ['Draft', 'Sent'] }, port);
+    expect(files[ROOT]).toBe(
+      `${cells}    validations:\n      - at: B2:B9\n        list: [Draft, Sent]\n`,
+    );
+    expect(told).toEqual(['B2:B9 takes one of 2.']);
+
+    await validate(spec, { ...over, choices: null }, port);
+    expect(files[ROOT]).toBe(cells);
+
+    await validate(spec, { ...over, choices: null }, port);
+    expect(refusals[0]).toBe('nothing here has a validation to take off');
   });
 });
 

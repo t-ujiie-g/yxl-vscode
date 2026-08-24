@@ -518,3 +518,33 @@ describe('the links a sheet carries', () => {
     expect(sheet(spec).links.get('C3')?.target.text).toBe('https://example.com/orders/1001');
   });
 });
+
+describe('the validations a sheet carries', () => {
+  it('reads the range each covers, and the sheet a list is sourced from', () => {
+    const spec = `${SALES}    validations:\n      - at: B2:B9\n        list: [Draft, Sent]\n      - at: C2:C9\n        list: { from: "Statuses!A1:A3" }\n        allow_blank: false\n`;
+    const [choices, sourced] = sheet(spec).validations;
+
+    expect(choices).toMatchObject({
+      rect: { top: 2, left: 2, bottom: 9, right: 2 },
+      asks: { kind: 'list', choices: ['Draft', 'Sent'] },
+      allowBlank: true,
+    });
+    expect(sourced).toMatchObject({
+      asks: { kind: 'listFrom', sheet: 'Statuses', rect: { top: 1, left: 1, bottom: 3, right: 1 } },
+      allowBlank: false,
+    });
+  });
+
+  it('reads a `from` that names no sheet as this one', () => {
+    const spec = `${SALES}    validations:\n      - at: B2:B9\n        list: { from: "A1:A3" }\n`;
+    expect(sheet(spec).validations[0]?.asks).toMatchObject({ kind: 'listFrom', sheet: null });
+  });
+
+  it('carries a comparison as the spec wrote it', () => {
+    const spec = `${SALES}    validations:\n      - at: D2:D9\n        whole: { between: [1, 1000] }\n`;
+    expect(sheet(spec).validations[0]?.asks).toEqual({
+      kind: 'whole',
+      compares: { kind: 'between', low: 1, high: 1000 },
+    });
+  });
+});

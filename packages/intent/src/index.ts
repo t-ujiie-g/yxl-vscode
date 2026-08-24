@@ -47,3 +47,4 @@ export { type Projection, setStyle } from './style';
 export { asTable, type Tabling } from './table';
 export { tabular } from './tabular';
 export { type Meaning, meaning } from './typed';
+export { setValidation, type Validating } from './validation';

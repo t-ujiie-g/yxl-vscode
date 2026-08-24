@@ -22,6 +22,7 @@ import type {
   Resized,
   Sorted,
   Typed,
+  Validated,
   Worn,
 } from '@yxl-vscode/webview/protocol';
 import * as vscode from 'vscode';
@@ -44,6 +45,7 @@ import { sort } from './sorts';
 import { summed } from './summing';
 import { table } from './tables';
 import { goBack } from './undo';
+import { validate } from './validations';
 import {
   emptied,
   empty,
@@ -76,6 +78,7 @@ const WRITES = {
   filter: (spec: Spec, asked: Filtered, port: Port) => filter(spec, asked, port),
   note: (spec: Spec, asked: Noted, port: Port) => note(spec, asked, port),
   link: (spec: Spec, asked: Linked, port: Port) => link(spec, asked, port),
+  validate: (spec: Spec, asked: Validated, port: Port) => validate(spec, asked, port),
   merge: (spec: Spec, one: Merged, port: Port) => merge(spec, one, port),
   table: (spec: Spec, one: Ranged, port: Port) => table(spec, one, port),
   fill: (spec: Spec, one: Filled, port: Port, choice?: string) => fill(spec, one, port, choice),

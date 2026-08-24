@@ -1,8 +1,11 @@
 import type { Diagnostic } from '@yxl-vscode/diag';
 import type {
   CellType,
+  Comparison,
   ConditionalTest,
+  ErrorStyle,
   LinkTarget,
+  Said,
   ScalarValue,
   Split,
   StyleSays,
@@ -53,6 +56,30 @@ export interface CompiledSheet {
   readonly filter: Rect | null;
   readonly notes: ReadonlyMap<string, CompiledNote>;
   readonly links: ReadonlyMap<string, CompiledLink>;
+  readonly validations: readonly CompiledValidation[];
+}
+
+/**
+ * What a validation asks of a cell, its range read. A `listFrom` keeps the
+ * range it names rather than its cells: they may be on another sheet, which is
+ * the whole grid's to answer for (`docs/spec.md` §10).
+ */
+export type CompiledAsk =
+  | { readonly kind: 'list'; readonly choices: readonly ScalarValue[] }
+  | { readonly kind: 'listFrom'; readonly sheet: SheetName | null; readonly rect: Rect }
+  | {
+      readonly kind: 'whole' | 'decimal' | 'text_length' | 'date';
+      readonly compares: Comparison;
+    };
+
+/** One `validations:` entry: what it covers, what it asks, and what it says about it. */
+export interface CompiledValidation {
+  readonly rect: Rect;
+  readonly asks: CompiledAsk;
+  readonly allowBlank: boolean;
+  readonly prompt: Said | null;
+  readonly error: (Said & { readonly style: ErrorStyle }) | null;
+  readonly node: NodeId;
 }
 
 /** One link on a cell, its target substituted; where it goes is the spec's own (`docs/spec.md` §10). */

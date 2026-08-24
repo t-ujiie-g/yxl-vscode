@@ -16,7 +16,14 @@ import {
   outline,
   type Span,
 } from './outline';
-import type { DrawnCell, DrawnLink, DrawnMerge, DrawnNote, DrawnSheet } from './protocol';
+import type {
+  DrawnCell,
+  DrawnLink,
+  DrawnMerge,
+  DrawnNote,
+  DrawnSheet,
+  DrawnValidation,
+} from './protocol';
 import {
   type Asked,
   type Asks,
@@ -390,6 +397,7 @@ function line(
     const filtered = filters(sheet, row, col);
     const note = here?.note ?? null;
     const link = here?.link ?? null;
+    const checks = here?.validation ?? null;
     const anchored = merged.anchored.get(cellKey(col, row));
     const drawn = drawCell(
       here,
@@ -400,10 +408,13 @@ function line(
     if (filtered) drawn.append(dropdown());
     if (note !== null) drawn.append(noted());
     if (link !== null) drawn.classList.add('linked');
+    if (checks !== null) drawn.append(validated(checks));
+    if (shows(here)) drawn.classList.add('holds');
     tells(drawn, [
       filtered ? FILTERED : '',
       note === null ? '' : noteSaid(note),
       link === null ? '' : linkSaid(link),
+      checks?.says ?? '',
     ]);
     drawn.setAttribute('data-at', cellKey(col, row));
     if (one.stays) stay(sheet, drawn, { col });
@@ -425,6 +436,7 @@ function line(
       askInto(drawn, asking(asked.what, note, link), (text) => {
         if (text === null) asks.askAt(null);
         else if (asked.what === 'note') asks.note(row, col, text);
+        else if (asked.what === 'list') asks.validate(choicesIn(text));
         else asks.link(row, col, { kind: asked.what, text });
       });
     }
@@ -591,10 +603,21 @@ function noted(): HTMLElement {
   return mark;
 }
 
+/** The choices a reader typed, which Excel keeps as one comma-joined string (`docs/spec.md` §10). */
+function choicesIn(text: string): string[] {
+  return text
+    .split(',')
+    .map((one) => one.trim())
+    .filter((one) => one !== '');
+}
+
 /** What the box over a cell asks for, by what the menu opened it for. */
 function asking(what: Asked['what'], note: DrawnNote | null, link: DrawnLink | null): Asking {
   if (what === 'note') {
     return { className: 'noting', value: note?.text ?? '', rows: 3, placeholder: 'a note' };
+  }
+  if (what === 'list') {
+    return { className: 'linking', value: '', rows: 1, placeholder: 'Draft, Sent, Paid' };
   }
 
   const holds = link?.kind === what ? link.target : '';
@@ -612,6 +635,15 @@ function linkSaid(link: DrawnLink): string {
 /** A note as it reads on hover: the author first, as Excel writes one above the text. */
 function noteSaid(note: DrawnNote): string {
   return note.author === null ? note.text : `${note.author}: ${note.text}`;
+}
+
+/** A validated cell's mark: the dropdown a list offers, and a quiet corner for what only asks. */
+function validated(asked: DrawnValidation): HTMLElement {
+  const mark = asked.choices === null ? document.createElement('span') : dropdown();
+  mark.classList.add('asks');
+  if (asked.choices === null) mark.classList.add('asked');
+
+  return mark;
 }
 
 /** The mark Excel puts on a filtered header, which says a filter is there and nothing more. */

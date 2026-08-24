@@ -56,4 +56,10 @@ export {
   V_ALIGNS,
   type VAlign,
 } from './style';
+export type {
+  ErrorStyle,
+  Said,
+  Validation,
+  ValidationTest,
+} from './validation';
 export type { ScalarValue } from './value';

@@ -104,7 +104,7 @@ export function typeInto(
   let sent = false;
   const leave = (): void => {
     // Every box in the cell: one left behind is a white rectangle over the grid.
-    for (const other of cell.querySelectorAll('.typing')) other.remove();
+    for (const other of cell.querySelectorAll('.typing, .choices')) other.remove();
     cell.classList.remove('editing');
   };
 
@@ -136,9 +136,52 @@ export function typeInto(
   for (const other of cell.querySelectorAll('.typing')) other.remove();
   cell.classList.add('editing');
   cell.append(box);
+
+  const choices = drawn?.validation?.choices ?? null;
+  if (choices !== null && choices.length > 0) {
+    cell.append(
+      offered(cell, choices, (choice) => {
+        sent = true;
+        done(choice, { rows: 1, cols: 0 });
+        leave();
+      }),
+    );
+  }
+
   box.focus({ preventScroll: true });
   grown(box);
   if (seed === undefined) box.select();
+}
+
+/** The choices a `list:` validation offers, under the cell: fixed to the page, which the cell's clip cannot reach. */
+function offered(
+  cell: HTMLTableCellElement,
+  choices: readonly string[],
+  take: (choice: string) => void,
+): HTMLElement {
+  const box = document.createElement('div');
+  box.className = 'choices';
+
+  const at = cell.getBoundingClientRect();
+  box.style.top = `${at.bottom}px`;
+  box.style.left = `${at.left}px`;
+  box.style.minWidth = `${at.width}px`;
+
+  for (const choice of choices) {
+    const one = document.createElement('button');
+    one.type = 'button';
+    one.className = 'offer';
+    one.textContent = choice;
+    // Down rather than up: the box loses focus on the way to a click, and a
+    // blur takes the whole thing away before the click could land.
+    one.addEventListener('mousedown', (event) => {
+      event.preventDefault();
+      take(choice);
+    });
+    box.append(one);
+  }
+
+  return box;
 }
 
 /**

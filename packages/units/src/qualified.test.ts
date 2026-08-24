@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseQualifiedAddr } from './qualified';
+import { parseQualifiedAddr, parseQualifiedRange } from './qualified';
 
 describe('parseQualifiedAddr', () => {
   it('reads a bare sheet name', () => {
@@ -35,5 +35,17 @@ describe('parseQualifiedAddr', () => {
   it('refuses a reference that is not one', () => {
     expect(parseQualifiedAddr('Sales!')).toBeNull();
     expect(parseQualifiedAddr('Sales!E0')).toBeNull();
+  });
+});
+
+describe('parseQualifiedRange', () => {
+  it('reads a range on a sheet, quoted or not', () => {
+    expect(parseQualifiedRange('Statuses!A1:A3')).toEqual({ sheet: 'Statuses', at: 'A1:A3' });
+    expect(parseQualifiedRange("'Q3 data'!B2:C4")).toEqual({ sheet: 'Q3 data', at: 'B2:C4' });
+  });
+
+  it('reads one that names no sheet as this sheet, and refuses a lone cell', () => {
+    expect(parseQualifiedRange('A1:A3')).toEqual({ sheet: null, at: 'A1:A3' });
+    expect(parseQualifiedRange('Statuses!A1')).toBeNull();
   });
 });

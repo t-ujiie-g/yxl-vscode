@@ -55,7 +55,7 @@ export interface Showing {
  */
 export interface Asked {
   readonly at: At;
-  readonly what: 'note' | 'url' | 'to';
+  readonly what: 'note' | 'url' | 'to' | 'list';
 }
 
 /**
@@ -208,6 +208,7 @@ export interface Asks {
   readonly link: (row: number, col: number, to: Linked['link']) => void;
   readonly askAt: (asked: Asked | null) => void;
   readonly follow: (row: number, col: number) => void;
+  readonly validate: (choices: readonly string[] | null) => void;
   readonly look: (text: string | null) => void;
   readonly goOn: (by: number) => void;
   readonly goTo: (address: string) => void;

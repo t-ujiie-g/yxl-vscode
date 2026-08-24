@@ -3,7 +3,7 @@
 import { describe, expect, it } from 'vitest';
 import { draw, restate } from './draw';
 import { asks, at, cell, drawing, scrolled, sheet, showingOf, shown } from './harness';
-import type { DrawnSheet } from './protocol';
+import type { DrawnCell, DrawnSheet } from './protocol';
 import type { Asks, Showing } from './showing';
 import { pinned } from './table';
 import { widthOf } from './window';
@@ -1144,5 +1144,79 @@ describe('a cell that carries a link', () => {
   it('opens an empty box for the other kind, since the two are not the same target', () => {
     const into = linked({ asking: { at: { row: 1, col: 1 }, what: 'to' } });
     expect(at(into, 1, 1)?.querySelector<HTMLTextAreaElement>('.linking')?.value).toBe('');
+  });
+});
+
+describe('a cell a validation covers', () => {
+  const asked = (of: Partial<DrawnCell>, showing: Partial<Showing> = {}, on: Asks = asks()) => {
+    const held = drawing({
+      sheets: [sheet({ rows: 1, columns: 2, cells: [cell(1, 1, { value: 'Draft', ...of })] })],
+    });
+    return shown({ drawing: held, ...showing }, on);
+  };
+
+  it('wears the dropdown where it offers a list, and a corner where it only asks', () => {
+    const list = { choices: ['Draft', 'Sent'], says: 'One of the values in the list.' };
+    expect(at(asked({ validation: list }), 1, 1)?.querySelector('.dropdown')).not.toBeNull();
+
+    const whole = { choices: null, says: 'A whole number at least 1.' };
+    const cell = at(asked({ validation: whole }), 1, 1);
+    expect(cell?.querySelector('.asked')).not.toBeNull();
+    expect(cell?.querySelector('.dropdown')).toBeNull();
+  });
+
+  it('marks a cell that holds something, and leaves an empty one of the range quiet', () => {
+    // A range is two hundred rows: a mark on every empty one of them is noise.
+    const list = { choices: ['Draft'], says: '' };
+    const held = drawing({
+      sheets: [
+        sheet({
+          rows: 2,
+          columns: 1,
+          cells: [
+            cell(1, 1, { value: 'Draft', validation: list }),
+            cell(2, 1, { value: null, validation: list }),
+          ],
+        }),
+      ],
+    });
+    const into = shown({ drawing: held });
+
+    expect(at(into, 1, 1)?.classList.contains('holds')).toBe(true);
+    expect(at(into, 2, 1)?.classList.contains('holds')).toBe(false);
+    expect(at(into, 2, 1)?.querySelector('.asks')).not.toBeNull();
+  });
+
+  it('says what it asks while the pointer is over it', () => {
+    const whole = { choices: null, says: 'A whole number at least 1.' };
+    const cell = at(asked({ validation: whole }), 1, 1);
+
+    cell?.dispatchEvent(new MouseEvent('mouseenter'));
+    expect(cell?.querySelector('.notice')?.textContent).toBe('A whole number at least 1.');
+  });
+
+  it('offers its choices while the cell is typed into, and one picked is the edit', () => {
+    const on = asks();
+    const list = { choices: ['Draft', 'Sent'], says: '' };
+    const cell = at(asked({ validation: list }, {}, on), 1, 1);
+
+    cell?.dispatchEvent(new MouseEvent('dblclick'));
+    const choices = [...(cell?.querySelectorAll<HTMLButtonElement>('.choices .offer') ?? [])];
+    expect(choices.map((one) => one.textContent)).toEqual(['Draft', 'Sent']);
+
+    choices[1]?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+    expect(on.edit).toHaveBeenCalledWith(1, 1, 'Sent');
+    expect(cell?.querySelector('.choices')).toBeNull();
+  });
+
+  it('takes the choices typed into the box as a list, commas and all', () => {
+    const on = asks();
+    const into = asked({}, { asking: { at: { row: 1, col: 1 }, what: 'list' } }, on);
+    const box = at(into, 1, 1)?.querySelector<HTMLTextAreaElement>('.linking');
+    if (box === null || box === undefined) throw new Error('there is no box');
+
+    box.value = 'Draft, Sent , Paid';
+    box.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    expect(on.validate).toHaveBeenCalledWith(['Draft', 'Sent', 'Paid']);
   });
 });

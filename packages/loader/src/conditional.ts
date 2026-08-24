@@ -130,7 +130,8 @@ const COMPARES = [
   'less_than',
 ] as const;
 
-function readComparison(ctx: Ctx, node: Node, what: string): Comparison | null {
+/** A comparison as a `cell:` rule and a validation both spell it (`docs/spec.md` §10). */
+export function readComparison(ctx: Ctx, node: Node, what: string): Comparison | null {
   const opened = openEntries(ctx, node, [], what);
   const entry = opened?.entries[0];
   if (opened === null || entry === undefined) return null;
