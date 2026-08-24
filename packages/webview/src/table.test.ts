@@ -266,7 +266,7 @@ describe('a heading a reader clicks', () => {
     expect(on.takeBand).toHaveBeenCalledWith('column', 1, true);
 
     heading?.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true, buttons: 1 }));
-    expect(on.takeBand).toHaveBeenLastCalledWith('column', 1, true);
+    expect(on.dragBand).toHaveBeenCalledWith('column', 1);
   });
 
   it('sizes rather than selects where the grip is what was pressed', () => {
@@ -800,8 +800,8 @@ describe('moving about the grid with the keys', () => {
     at(into, 3, 3)?.dispatchEvent(new MouseEvent('mouseenter', { buttons: 1 }));
     at(into, 4, 4)?.dispatchEvent(new MouseEvent('mouseenter', { buttons: 0 }));
 
-    expect(on.reachTo).toHaveBeenCalledTimes(1);
-    expect(on.reachTo).toHaveBeenCalledWith(3, 3);
+    expect(on.dragTo).toHaveBeenCalledTimes(1);
+    expect(on.dragTo).toHaveBeenCalledWith(3, 3);
   });
 
   it('takes the range with it on shift-arrow, and leaves it behind on arrow', () => {

@@ -81,6 +81,9 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
   /** The tab last gone to, so the second click on it is the one that renames. */
   let went: { index: number; at: number } | null = null;
 
+  /** Whether a press is being held. A button down is not a drag: it is still down after a link was followed. */
+  let pressed = false;
+
   /** Where the last edit was typed, so a refusal can put the reader back at it. */
   let typedAt: { row: number; col: number } | null = null;
 
@@ -108,6 +111,19 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
   const redraw = (): void => {
     if (drawing !== null) draw(into, showing(drawing), asks);
   };
+
+  // Taken before the cell's own listener, which is where following a link says
+  // this press is not a drag.
+  into.addEventListener(
+    'mousedown',
+    () => {
+      pressed = true;
+    },
+    { capture: true },
+  );
+  into.addEventListener('mouseup', () => {
+    pressed = false;
+  });
 
   /** The same, for what the view holds of its own: the grid stays as it is. */
   const restated = (): void => {
@@ -269,6 +285,12 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       host.postMessage({ kind: 'inspect', sheet: named(), row, col });
       restated();
     },
+    dragTo: (row, col) => {
+      if (pressed) asks.reachTo(row, col);
+    },
+    dragBand: (axis, at) => {
+      if (pressed) asks.takeBand(axis, at, true);
+    },
     reachTo: (row, col) => {
       anchor ??= selected;
       selected = { row, col };
@@ -374,6 +396,7 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
     follow: (row, col) => {
       refused = null;
       said = null;
+      pressed = false;
       host.postMessage({ kind: 'follow', sheet: named(), row, col });
     },
     takeAll: () => {

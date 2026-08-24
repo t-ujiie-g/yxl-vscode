@@ -267,7 +267,7 @@ function takes(heading: HTMLElement, axis: Axis, at: number, showing: Showing, a
     asks.takeBand(axis, at, event.shiftKey);
   });
   heading.addEventListener('mouseenter', (event) => {
-    if ((event.buttons & 1) === 1) asks.takeBand(axis, at, true);
+    if ((event.buttons & 1) === 1) asks.dragBand(axis, at);
   });
 }
 
@@ -454,7 +454,7 @@ function line(
       else asks.select(row, col);
     });
     drawn.addEventListener('mouseenter', (event) => {
-      if ((event.buttons & 1) === 1) asks.reachTo(row, col);
+      if ((event.buttons & 1) === 1) asks.dragTo(row, col);
     });
     drawn.addEventListener('dblclick', () => type());
     drawn.addEventListener('contextmenu', (event) => {
