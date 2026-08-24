@@ -23,6 +23,7 @@ export type {
   CompiledRule,
   CompiledRun,
   CompiledSheet,
+  CompiledTable,
   CompiledTest,
   CompiledValidation,
   DeclaredStyle,

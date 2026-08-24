@@ -34,6 +34,7 @@ export function asks(): Asks {
     wear: vi.fn(),
     freeze: vi.fn(),
     filter: vi.fn(),
+    formatTable: vi.fn(),
     note: vi.fn(),
     link: vi.fn(),
     askAt: vi.fn(),
@@ -96,6 +97,7 @@ export function sheet(of: Partial<DrawnSheet> = {}): DrawnSheet {
     gridlines: true,
     split: null,
     filter: null,
+    tables: [],
     ...of,
   };
 }

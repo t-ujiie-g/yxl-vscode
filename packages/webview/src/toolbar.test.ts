@@ -49,6 +49,7 @@ function showing(of: {
     gridlines: true,
     split: null,
     filter: null,
+    tables: [],
     problems: [],
     freeze: of.freeze ?? null,
   };

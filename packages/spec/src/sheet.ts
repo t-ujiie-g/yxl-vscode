@@ -37,6 +37,7 @@ export interface Sheet extends SpecNode {
   readonly comments: readonly Note[];
   readonly links: readonly Link[];
   readonly validations: readonly Validation[];
+  readonly tables: readonly Table[];
   readonly keyOrder: readonly string[];
   readonly opaque: readonly Opaque[];
 }
@@ -77,6 +78,21 @@ export interface Link extends SpecNode {
 export interface LinkTarget {
   readonly kind: 'url' | 'to';
   readonly text: string;
+}
+
+/**
+ * One `tables:` entry: a region declared to *be* an Excel table, whose top row
+ * names its columns (`docs/spec.md` §11). The four flags are Excel's Table
+ * Design toggles, `bandedRows` alone defaulting to on.
+ */
+export interface Table extends SpecNode {
+  readonly at: Templated<A1Range>;
+  readonly name: string | null;
+  readonly style: string | null;
+  readonly bandedRows: boolean;
+  readonly bandedColumns: boolean;
+  readonly firstColumn: boolean;
+  readonly lastColumn: boolean;
 }
 
 /** One merged region; Excel shows the top-left cell's value across it. */

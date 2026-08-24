@@ -79,9 +79,11 @@ link: a linked cell is drawn as one, `Cmd`+click follows it out to the page or
 in to the cell it names, and which of the two a target is, is asked rather than
 guessed. A `validations:` list offers its choices in the cell as a spreadsheet
 does, the other kinds say what they will accept on hover, and *Data validation…*
-writes a list over the selection. What a spec writes *on* its cells besides
-those — a table — is carried through untouched and drawn as nothing, and is the
-rest of the phase in progress.
+writes a list over the selection. A `tables:` region is drawn as Excel bands
+one, header row and all, and *Format as table* makes one over the selection.
+What sits *on* a sheet rather than on its cells — charts, images, sparklines and
+shapes — is carried through untouched and drawn as nothing, and is the phase in
+progress.
 
 ## Where it is going
 

@@ -21,6 +21,7 @@ import type {
   Ranged,
   Resized,
   Sorted,
+  Tabled,
   Typed,
   Validated,
   Worn,
@@ -39,6 +40,7 @@ import { merge } from './merges';
 import { note } from './notes';
 import { filter, freeze } from './panes';
 import { drawRun, type Projected, project, redraw, type Window } from './project';
+import { formatTable } from './regions';
 import { add, move, remove, rename, tab } from './sheets';
 import { resize } from './size';
 import { sort } from './sorts';
@@ -76,6 +78,7 @@ const WRITES = {
   wear: (spec: Spec, worn: Worn, port: Port, choice?: string) => wear(spec, worn, port, choice),
   freeze: (spec: Spec, frozen: Frozen, port: Port) => freeze(spec, frozen, port),
   filter: (spec: Spec, asked: Filtered, port: Port) => filter(spec, asked, port),
+  tabled: (spec: Spec, asked: Tabled, port: Port) => formatTable(spec, asked, port),
   note: (spec: Spec, asked: Noted, port: Port) => note(spec, asked, port),
   link: (spec: Spec, asked: Linked, port: Port) => link(spec, asked, port),
   validate: (spec: Spec, asked: Validated, port: Port) => validate(spec, asked, port),

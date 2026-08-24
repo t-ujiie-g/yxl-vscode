@@ -8,6 +8,7 @@ import type {
   Note,
   RowBand,
   Sheet,
+  Table,
   Validation,
 } from '@yxl-vscode/spec';
 import {
@@ -40,6 +41,7 @@ import type {
   CompiledNote,
   CompiledRule,
   CompiledSheet,
+  CompiledTable,
   CompiledTest,
   CompiledValidation,
 } from './grid';
@@ -84,6 +86,7 @@ export function compileSheet(ctx: Ctx, sheet: Sheet): Drafted {
       validations: sheet.validations
         .map((one) => validation(ctx, one))
         .filter((one) => one !== null),
+      tables: sheet.tables.map((one) => table(ctx, one)).filter((one) => one !== null),
       conditional: sheet.conditional
         .map((rule) => conditionalRule(ctx, rule))
         .filter((rule) => rule !== null),
@@ -376,6 +379,27 @@ function linksOf(ctx: Ctx, links: readonly Link[]): Map<string, CompiledLink> {
   }
 
   return drawn;
+}
+
+/** One `tables:` entry, its range read; the top row of it names the columns (`docs/spec.md` §11). */
+function table(ctx: Ctx, one: Table): CompiledTable | null {
+  const spelled = text(ctx, one.at, one);
+  const read = parseA1Range(spelled);
+  if (read === null) {
+    reject(ctx, CODE.badRange, `\`${spelled}\` is not a range`, one);
+    return null;
+  }
+
+  return {
+    rect: rectOf(read),
+    name: one.name === null ? null : text(ctx, one.name, one),
+    style: one.style === null ? null : text(ctx, one.style, one),
+    bandedRows: one.bandedRows,
+    bandedColumns: one.bandedColumns,
+    firstColumn: one.firstColumn,
+    lastColumn: one.lastColumn,
+    node: one.id,
+  };
 }
 
 /** The header row a sheet hangs its filter off, as the range it is written as (`docs/spec.md` §10). */

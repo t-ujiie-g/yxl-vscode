@@ -22,6 +22,7 @@ import type {
   DrawnMerge,
   DrawnNote,
   DrawnSheet,
+  DrawnTable,
   DrawnValidation,
 } from './protocol';
 import {
@@ -394,6 +395,8 @@ function line(
     if (merged.covered.has(cellKey(col, row)) || widthOf(sheet, col) === 0) continue;
 
     const here = held.get(cellKey(col, row));
+    const table = tableAt(sheet, row, col);
+    const heads = table !== null && row === table.top;
     const filtered = filters(sheet, row, col);
     const note = here?.note ?? null;
     const link = here?.link ?? null;
@@ -405,13 +408,15 @@ function line(
       anchored === undefined ? spillOf(sheet, held, row, col) : 0,
     );
     if (drawn.querySelector('.spill') !== null) drawn.classList.add('spilling');
-    if (filtered) drawn.append(dropdown());
+    if (table !== null) drawn.classList.add(...banding(table, row, col));
+    if (filtered || heads) drawn.append(dropdown());
     if (note !== null) drawn.append(noted());
     if (link !== null) drawn.classList.add('linked');
     if (checks !== null) drawn.append(validated(checks));
     if (shows(here)) drawn.classList.add('holds');
     tells(drawn, [
       filtered ? FILTERED : '',
+      heads && table !== null ? tableSaid(table) : '',
       note === null ? '' : noteSaid(note),
       link === null ? '' : linkSaid(link),
       checks?.says ?? '',
@@ -593,6 +598,35 @@ function filters(sheet: DrawnSheet, row: number, col: number): boolean {
   if (at === null) return false;
 
   return row === at.top && col >= at.left && col <= at.right;
+}
+
+/** The table this cell is inside, of the ones the sheet declares (`docs/spec.md` §11). */
+function tableAt(sheet: DrawnSheet, row: number, col: number): DrawnTable | null {
+  const over = sheet.tables.find(
+    (one) => row >= one.top && row <= one.bottom && col >= one.left && col <= one.right,
+  );
+
+  return over ?? null;
+}
+
+/** How a cell of a table is banded, with nothing of Excel's own palette (ADR-029). */
+function banding(table: DrawnTable, row: number, col: number): string[] {
+  if (row === table.top) return ['tabled', 'heads'];
+
+  const marks = ['tabled'];
+  const striped =
+    (table.bandedRows && (row - table.top) % 2 === 1) ||
+    (table.bandedColumns && (col - table.left) % 2 === 0);
+  if (striped) marks.push('banded');
+  if (table.firstColumn && col === table.left) marks.push('edging');
+  if (table.lastColumn && col === table.right) marks.push('edging');
+
+  return marks;
+}
+
+/** A table as its header reads on hover: what formulas call it, since nothing else says so. */
+function tableSaid(table: DrawnTable): string {
+  return table.name === null ? 'This row heads a table' : `This row heads the table ${table.name}`;
 }
 
 /** The corner Excel puts on a cell that carries a note. */

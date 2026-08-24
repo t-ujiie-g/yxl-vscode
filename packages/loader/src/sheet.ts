@@ -13,6 +13,7 @@ import {
   type RowBand,
   type Sheet,
   type Split,
+  type Table,
   type Validation,
 } from '@yxl-vscode/spec';
 import { readColumnBands, readRowBands } from './band';
@@ -34,6 +35,7 @@ import {
   rejectUnknownKey,
   scalarText,
 } from './read';
+import { readTables } from './table';
 import { ADDRESS, COLOR, RANGE, readAs, SHEET_NAME } from './template';
 import { readValidations } from './validation';
 
@@ -74,6 +76,7 @@ function readSheet(site: Site): Sheet | null {
   let comments: Note[] = [];
   let links: Link[] = [];
   let validations: Validation[] = [];
+  let tables: Table[] = [];
   const opaque: Opaque[] = [];
 
   for (const entry of entries) {
@@ -130,6 +133,9 @@ function readSheet(site: Site): Sheet | null {
       case 'validations':
         validations = readValidations(here, entry.value, at);
         break;
+      case 'tables':
+        tables = readTables(here, entry.value, at);
+        break;
       default:
         opaque.push({ ...identify(here, at, entry.span), key });
     }
@@ -154,6 +160,7 @@ function readSheet(site: Site): Sheet | null {
     comments,
     links,
     validations,
+    tables,
     keyOrder: entries.map(keyOf),
     opaque,
   };

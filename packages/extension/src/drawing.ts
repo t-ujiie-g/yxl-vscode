@@ -23,6 +23,7 @@ import type {
   DrawnMerge,
   DrawnParam,
   DrawnSheet,
+  DrawnTable,
   Editable,
   MarkedCell,
   Sized,
@@ -146,6 +147,7 @@ function drawSheet(
     gridlines: sheet.gridlines,
     split: sheet.split,
     filter: sheet.filter,
+    tables: sheet.tables.map((one) => ({ ...one.rect, ...tabled(one) })),
     widths: sheet.columns.map(sizedRun),
     heights: sheet.rows.map(sizedRun),
     cells: drawCells(sheet, { at, rows, columns, freeze }, evaluation, grid),
@@ -157,6 +159,18 @@ function drawSheet(
         right: merge.rect.right,
       }),
     ),
+  };
+}
+
+/** The four Table Design toggles and what the table is called, as the view is handed them. */
+function tabled(one: CompiledSheet['tables'][number]): Omit<DrawnTable, keyof DrawnMerge> {
+  return {
+    name: one.name,
+    style: one.style,
+    bandedRows: one.bandedRows,
+    bandedColumns: one.bandedColumns,
+    firstColumn: one.firstColumn,
+    lastColumn: one.lastColumn,
   };
 }
 

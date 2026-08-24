@@ -471,7 +471,7 @@ not a date.
 | A link on a cell, and following it | ✅ — drawn as a link, `Cmd`+click follows it, and the menu writes one to a page or to a cell; the two are never told apart by how the target reads |
 | A dropdown list of allowed values | ✅ — a `list:` offers its choices in the cell, the other kinds say what they ask on hover, and *Data validation…* writes a list over the selection |
 | Conditional formatting, applied in the drawing | ✅ — every kind of rule, over the evaluated values, display only (ADR-014) |
-| Format a region as a table | **Phase 13** |
+| Format a region as a table | ✅ — the banded region drawn with its header, and *Format as table* over the selection, which refuses a region Excel would repair rather than open |
 | See a chart, an image, a sparkline that the spec declares | **Phase 14** |
 | Insert a chart over a selection, place an image | **Phase 14** |
 | Edit rich text, run by run | **Phase 15** — it is drawn today |
@@ -1519,10 +1519,20 @@ of its colours and why a header row showed no filter.
       corner and say what they ask on hover, the `prompt` first. *Data
       validation…* over a selection writes a `list:`, the kind a reader makes by
       hand; a range that already has one is refused rather than given a second.
-- [ ] **Tables** (`tables:`) — the banded region drawn with its header, the
-      *Format as table* gesture over a selection, and structured references
-      left alone by `moved` and `shifted` as they already are
-- [ ] Each of these **in the inspector** with where it came from, the day it is
+- [x] **Tables** (`tables:`) — modelled rather than opaque: the region, the name
+      formulas call it, the style, and the four Table Design toggles. The region
+      is drawn as Excel bands one — the header row filled and carrying the
+      filter buttons a table brings with it, the stripes each toggle asks for
+      beneath, and a cell's own fill above either, since a table style sits
+      under direct formatting. *Format as table* over a selection writes the
+      entry with the next free `Table<n>`, the name Excel gives a new one. What
+      a region has to be to hold a table is refused first rather than left to
+      Excel's repair: a header row that names every column as text with no two
+      names alike, no overlap with another table or with the sheet's own
+      `filter:`, and a row under the header. Structured references (`SUM(Revenue[Revenue])`)
+      were already left alone by `moved` and `shifted`, and now have a test on
+      each saying so.
+- [x] Each of these **in the inspector** with where it came from, the day it is
       drawn — provenance is what makes the rest editable later (ADR-005)
 
 ### Phase 14 — What sits on the sheet
@@ -3040,6 +3050,35 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-25 — A region that is a table
+`tables:` was opaque. It is modelled now, drawn, and a region can be made a
+table from a cell's own menu and taken back apart.
+
+- **The whole entry is read**: `at:`, the `name:` formulas call it, the `style:`
+  and the four Table Design toggles, `banded_rows` alone defaulting to on.
+- **The region is drawn as Excel bands one**: the header row filled and carrying
+  the filter buttons a table brings with it, the stripes `banded_rows` and
+  `banded_columns` ask for under it, and an emphasis on the first or last column
+  where those are turned on. None of Excel's own palette (ADR-029) — a grey
+  wash, and a cell's own fill above it, since a table style sits under direct
+  formatting.
+- **A table's own rules are refused first**, rather than left to Excel to repair
+  the workbook over: a header row that names every column as text, no two of
+  those names alike ignoring case, a row under the header, and no overlap with
+  another table or with the sheet's own `filter:` — a table carries its own.
+- **The name is the one Excel would give**: the first `Table<n>` no table in the
+  workbook has, since the name is what formulas reach the table by and a spec
+  that leaves it out is harder to read than one that does not.
+- **Structured references were already safe.** `moved` and `shifted` copy a
+  `[...]` byte for byte and read a word before a `[` as a name, so
+  `SUM(Revenue[Revenue])` survives a row being drawn in; each now has a test
+  saying so, which is what the roadmap asked for.
+- The inspector answers for the table a cell is in, with where it is written.
+- Two loader tests used `tables:` as their example of an unmodeled key and now
+  use `charts:`, which still is one.
+- Comment shape after the pass: export 675/1506 (avg 2.2), private 491/491
+  (1.0), inline 105/162 (1.5), 0 over the limit.
 
 ### 2026-08-24 — What a cell will accept
 `validations:` was opaque. It is modelled now, drawn, and a `list:` can be

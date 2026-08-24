@@ -380,6 +380,11 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       said = null;
       host.postMessage({ kind: 'filter', sheet: named(), on, ...acting() });
     },
+    formatTable: (on) => {
+      refused = null;
+      said = null;
+      host.postMessage({ kind: 'tabled', sheet: named(), on, ...acting() });
+    },
     askAt: (asked) => {
       asking = asked;
       redraw();

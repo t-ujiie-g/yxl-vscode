@@ -37,6 +37,7 @@ describe('the menu a cell has of its own', () => {
       'Link to a page…',
       'Link to a cell…',
       'Data validation…',
+      'Format as table',
       'Create a filter',
     ]);
     expect(entries.map(said)).toEqual([
@@ -44,6 +45,7 @@ describe('the menu a cell has of its own', () => {
       'Ctrl+C',
       'Ctrl+V',
       'Delete',
+      null,
       null,
       null,
       null,
@@ -102,8 +104,38 @@ describe('the filter a sheet may hang off its header row', () => {
   it('offers to create one where the sheet has none, over the selection header', () => {
     const { on, entries } = at(1, 1);
 
-    entries[8]?.click();
+    entries[9]?.click();
     expect(on.filter).toHaveBeenCalledWith(true);
+  });
+});
+
+describe('the table a region may be made', () => {
+  it('offers to make one over the selection where the cell is in none', () => {
+    const { on, entries } = at(1, 1);
+
+    entries[8]?.click();
+    expect(on.formatTable).toHaveBeenCalledWith(true);
+  });
+
+  it('offers to take off the one the cell is in instead', () => {
+    const table = {
+      top: 1,
+      left: 1,
+      bottom: 2,
+      right: 2,
+      name: 'Table1',
+      style: null,
+      bandedRows: true,
+      bandedColumns: false,
+      firstColumn: false,
+      lastColumn: false,
+    };
+    const held = drawing({ sheets: [sheet({ cells: [cell(1, 1)], tables: [table] })] });
+    const { on, entries } = at(1, 1, { drawing: held });
+    const taken = entries.find((one) => one.firstChild?.textContent === 'Remove table');
+
+    taken?.click();
+    expect(on.formatTable).toHaveBeenCalledWith(false);
   });
 });
 

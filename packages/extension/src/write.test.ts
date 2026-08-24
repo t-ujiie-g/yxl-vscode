@@ -13,6 +13,7 @@ import { link } from './links';
 import { wear } from './look';
 import { note } from './notes';
 import { filter, freeze } from './panes';
+import { formatTable } from './regions';
 import { add, move, remove, rename, tab } from './sheets';
 import { resize } from './size';
 import { sort } from './sorts';
@@ -756,6 +757,24 @@ describe('a list validation, written over a selection', () => {
 
     await validate(spec, { ...over, choices: null }, port);
     expect(refusals[0]).toBe('nothing here has a validation to take off');
+  });
+});
+
+describe('a region made a table from a cell menu', () => {
+  it('writes the entry with the name Excel would give it, and takes it off again', async () => {
+    const cells = `${SALES}    cells:\n      A1: Region\n      B1: Revenue\n      A2: APAC\n`;
+    const { spec, port, files, told, refusals } = editor({ [ROOT]: cells });
+    const over = { sheet: 'Sales', top: 1, left: 1, bottom: 2, right: 2 };
+
+    await formatTable(spec, { ...over, on: true }, port);
+    expect(files[ROOT]).toBe(`${cells}    tables:\n      - at: A1:B2\n        name: Table1\n`);
+    expect(told).toEqual(['A1:B2 is a table now.']);
+
+    await formatTable(spec, { ...over, on: false }, port);
+    expect(files[ROOT]).toBe(cells);
+
+    await formatTable(spec, { ...over, on: false }, port);
+    expect(refusals[0]).toBe('nothing here is part of a table');
   });
 });
 

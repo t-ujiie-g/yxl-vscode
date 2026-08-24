@@ -1123,3 +1123,18 @@ body {
 .note {
   color: var(--vscode-descriptionForeground);
 }
+
+/* A table's region: the header filled, the stripes its toggles ask for, and a
+   cell's own fill above either (`docs/spec.md` §11, ADR-029). */
+.grid td.tabled.heads {
+  background: rgb(128 128 128 / 30%);
+  font-weight: 700;
+}
+
+.grid td.tabled.banded {
+  background: rgb(128 128 128 / 12%);
+}
+
+.grid td.tabled.edging {
+  font-weight: 700;
+}

@@ -52,6 +52,21 @@ export interface DrawnSheet {
   readonly gridlines: boolean;
   readonly split: { readonly x: number; readonly y: number } | null;
   readonly filter: DrawnMerge | null;
+  readonly tables: readonly DrawnTable[];
+}
+
+/**
+ * One table over the sheet: the region, the name formulas call it, and the four
+ * Table Design toggles that decide how it is banded (`docs/spec.md` §11). The
+ * top row is its header.
+ */
+export interface DrawnTable extends DrawnMerge {
+  readonly name: string | null;
+  readonly style: string | null;
+  readonly bandedRows: boolean;
+  readonly bandedColumns: boolean;
+  readonly firstColumn: boolean;
+  readonly lastColumn: boolean;
 }
 
 /** Rows of a `data:` block to be put in order, by the column the selection starts in. */
@@ -67,6 +82,11 @@ export interface Filled extends Ranged {
 /** A rectangle asked to be drawn as one cell, or taken back apart (`docs/spec.md` §2). */
 export interface Merged extends Ranged {
   readonly merged: boolean;
+}
+
+/** A region asked to be a table, or `on: false` to take off the ones it touches. */
+export interface Tabled extends Ranged {
+  readonly on: boolean;
 }
 
 /** A sheet's auto filter, over the selection's header row, or `on: false` to take it off. */
@@ -261,6 +281,7 @@ export type About =
   | { readonly kind: 'deleteSheet'; readonly sheet: string }
   | { readonly kind: 'moveSheet'; readonly sheet: string; readonly to: number }
   | ({ readonly kind: 'filter' } & Filtered)
+  | ({ readonly kind: 'tabled' } & Tabled)
   | ({ readonly kind: 'note' } & Noted)
   | ({ readonly kind: 'link' } & Linked)
   | ({ readonly kind: 'validate' } & Validated)
