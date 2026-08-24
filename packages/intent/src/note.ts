@@ -1,9 +1,8 @@
-import { sheetOf } from '@yxl-vscode/compile';
 import { entryOf, type Node, type Op, type Path, renderScalar } from '@yxl-vscode/cst';
 import { INCLUDE_KEY, KEY } from '@yxl-vscode/spec';
 import type { A1Addr, SheetName } from '@yxl-vscode/units';
 import { nothingChanges } from '@yxl-vscode/verify';
-import { type Intent, located, type Projection, type Reading, refused } from './direct';
+import { type Intent, type Projection, type Reading, refused, writtenSheet } from './direct';
 
 /** A note on a cell as a gesture asks for it: what it says, or `null` to take it off. */
 export interface Noting {
@@ -18,12 +17,8 @@ export interface Noting {
  * since only its `text` is edited here.
  */
 export function setNote(spec: Projection, where: Noting, read: Reading): Intent {
-  const sheet = sheetOf(spec.grid, where.sheet);
-  if (sheet === null) return refused(`there is no sheet named \`${where.sheet}\``);
-
-  const found = located(sheet.node, read);
+  const found = writtenSheet(spec, where.sheet, read);
   if (found.kind === 'refused') return found;
-  if (found.node.kind !== 'map') return refused(`\`${where.sheet}\` is not written as a sheet`);
 
   const comments = entryOf(found.node, KEY.comments)?.value ?? null;
   if (comments !== null && entryOf(comments, INCLUDE_KEY) !== undefined) {

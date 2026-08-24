@@ -1,4 +1,3 @@
-import { sheetOf } from '@yxl-vscode/compile';
 import { type Op, type Path, renderScalar, reordered } from '@yxl-vscode/cst';
 import { KEY, type Templated, type Visibility } from '@yxl-vscode/spec';
 import {
@@ -21,6 +20,7 @@ import {
   type Projection,
   type Reading,
   refused,
+  writtenSheet,
 } from './direct';
 
 /** A sheet a reader asked for, by the name it is to have. */
@@ -188,8 +188,10 @@ export interface Tabbed {
  * `very_hidden` is left to VBA.
  */
 export function setTab(spec: Projection, tabbed: Tabbed, read: Reading): Intent {
-  const sheet = sheetOf(spec.grid, tabbed.sheet);
-  if (sheet === null) return refused(`there is no sheet named \`${tabbed.sheet}\``);
+  const found = writtenSheet(spec, tabbed.sheet, read);
+  if (found.kind === 'refused') return found;
+
+  const sheet = found.sheet;
   if (sheet.visibility === 'very_hidden') {
     return refused(`\`${tabbed.sheet}\` is \`very_hidden\`, which only Excel's VBA undoes`);
   }
@@ -199,10 +201,6 @@ export function setTab(spec: Projection, tabbed: Tabbed, read: Reading): Intent 
   if (shown === 'hidden' && !spec.grid.sheets.some((one) => one !== sheet && shows(one))) {
     return refused('a workbook needs a sheet that shows, and this is the only one');
   }
-
-  const found = located(sheet.node, read);
-  if (found.kind === 'refused') return found;
-  if (found.node.kind !== 'map') return refused(`\`${tabbed.sheet}\` is not written as a sheet`);
 
   const ops: Op[] = [];
   if (shown !== undefined) {

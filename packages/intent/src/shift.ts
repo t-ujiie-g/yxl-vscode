@@ -108,6 +108,7 @@ export interface Block {
   readonly file: string | null;
 }
 
+/** Every `data:` block on a sheet, each as the rectangle its cells actually cover. */
 export function blocks(sheet: CompiledSheet): Block[] {
   const found = new Map<NodeId, { rect: Rect; file: string | null }>();
 

@@ -3051,6 +3051,44 @@ than widening it silently.
 
 ## 11. Living changelog
 
+### 2026-08-25 — A tidying pass over the tree
+No behaviour changed. The §8 lenses, walked in order, over the whole tree.
+
+- **Five orphaned doc comments reunited with what they describe.** A doc left
+  behind by a moved declaration had come to rest above an unrelated one, so that
+  declaration carried two docs and the first was about something else —
+  `drawn()`, `writing()`, `columnsOf()`, `expectText()` and a test helper each
+  got theirs back. `scripts/comment-shape.mjs` does not catch this; a check for
+  it is a line in `#N` if it happens again.
+- **`writtenSheet()` in `intent/direct.ts`**, beside `located` and `keyed`: the
+  five-line "find the sheet, read its node, insist it is a mapping" prologue was
+  written out in seven gestures. It hands back the compiled sheet too, so
+  `freeze` and `setTab` stopped reaching for `sheetOf` separately. Their guards
+  now run *after* the file is known to hold the sheet, which is the same order
+  every other gesture already used.
+- **`intent/anchored.ts`**: `validations:` and `tables:` are both a sequence of
+  entries anchored at an `at:` range, and `validation.ts` and `region.ts` had
+  `rectAt`, `itemOf`, `taken` and a `Where` interface between them verbatim.
+  One module now says what such a key holds, what goes into it, and what comes
+  out of it; the two gestures kept only what is theirs.
+- **`webview/wears.ts`**: `table.ts` had grown to 713 lines with a clean seam in
+  it — everything from the filter mark down was *what a cell wears and what it
+  says on hover*. That is its own module now (`table.ts` 713 → 599).
+- `KEY.cells` where `'cells'` had been written bare, in five places in `intent`.
+- Doc comments on thirteen exports whose names did not say it, `drawn()` and
+  `locate()` among them. The derived type aliases and the eleven `Kind<T>`
+  constants were left bare on purpose: a doc there restates the code (§8.6).
+- A test for an anchored entry whose `at:` is a `${param}` — it covers no
+  rectangle in the file, and nothing had pinned that.
+- **Left alone, with reasons.** `webview/index.ts` is one 654-line `wire()`
+  closure over 22 mutable variables; splitting it means a state object and a
+  rethread of every `Asks` callback, which is architecture rather than tidying
+  and wants its own change. `extension/preview.ts` is mostly the `WRITES`
+  dispatch table, and a table is one list. `@types/vscode` stays at 1.104 to
+  match `engines.vscode`.
+- Comment shape after the pass: export 711/1550 (avg 2.2), private 471/471
+  (1.0), inline 105/162 (1.5), 0 over the limit.
+
 ### 2026-08-25 — A region that is a table
 `tables:` was opaque. It is modelled now, drawn, and a region can be made a
 table from a cell's own menu and taken back apart.

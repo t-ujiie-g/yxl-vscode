@@ -1,5 +1,6 @@
 import { BORDER_EDGES } from '@yxl-vscode/spec';
 
+/** One rectangle of a toolbar icon, drawn in SVG units — not a `data_bar`, which the grid draws. */
 export interface Bar {
   readonly x: number;
   readonly y: number;

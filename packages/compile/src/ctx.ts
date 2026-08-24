@@ -59,6 +59,7 @@ function declarations(doc: SpecDoc): ReadonlyMap<string, readonly NodeId[]> {
   );
 }
 
+/** What compiling a document needs to hand: the parameters settled, the definitions, and where to report. */
 export function context(doc: SpecDoc, read: DataReader | null, set: Setting): Ctx {
   const { values, cycles, unknown } = resolveParams(doc.params, set);
   const ctx: Ctx = {

@@ -46,7 +46,6 @@ export function rectOf(range: A1Range): Rect {
   };
 }
 
-/** The columns a `columns:` band selects. */
 /** A rectangle as a range spells it, `A1:B2` — the way back from `rectOf`. */
 export function rangeOf(rect: Rect): A1Range {
   const from = addrAt({ col: rect.left, row: rect.top });
@@ -75,6 +74,7 @@ export function overlapping(one: Rect, than: Rect): boolean {
   );
 }
 
+/** The columns a `columns:` band selects. */
 export function columnsOf(span: ColumnSpan): Band {
   const [first, last] = endpoints(span);
   return { first: columnIndex(first), last: columnIndex(last ?? first) };

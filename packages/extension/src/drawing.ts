@@ -33,7 +33,6 @@ import { applied, barAt, iconAt, overRanges, spreads } from './conditional';
 import { type Nodes, nodeUnder } from './inspect';
 import { choicesOf, validating, validationSaid } from './validations';
 
-/** A compiled grid as the view is handed it: one window per sheet, the cells with anything to show (ADR-019). */
 /** Where a sheet is being looked at, 1-based, as the view last asked. */
 export type Window = { readonly row: number; readonly col: number };
 
@@ -52,6 +51,7 @@ const ROOM = { rows: 40, columns: 6 };
 /** The most of a freeze a preview draws: past half a window a pane is not a pane, and it is left scrolling. */
 const PANE = { rows: WINDOW.rows / 2, columns: WINDOW.columns / 2 };
 
+/** A compiled grid as the view is handed it: one window per sheet, the cells with anything to show (ADR-019). */
 export function drawn(
   file: string,
   projected: {

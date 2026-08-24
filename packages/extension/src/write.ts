@@ -49,6 +49,7 @@ export interface Offer {
   readonly choices: readonly Choice[];
 }
 
+/** One spec open in the editor: the files it was read from, and the projection they came to. */
 export interface Spec {
   readonly root: FilePath;
   readonly doc: SpecDoc;

@@ -5,7 +5,7 @@ import {
   type FacetOrigin,
 } from '@yxl-vscode/compile';
 import { holds, type Op, type Path, renderScalar, type Value } from '@yxl-vscode/cst';
-import { CELL_HOLDS } from '@yxl-vscode/spec';
+import { CELL_HOLDS, KEY } from '@yxl-vscode/spec';
 import {
   type A1Addr,
   type FilePath,
@@ -191,15 +191,18 @@ function entries(sheet: CompiledSheet, fresh: readonly Entry[], read: Reading): 
   if (found.kind === 'refused') return `these cells cannot be written: ${found.why}`;
   if (found.node.kind !== 'map') return 'these cells cannot be written: the sheet is not a mapping';
 
-  const has = holds(found.node, 'cells');
+  const has = holds(found.node, KEY.cells);
   if (!has) {
     const source = fresh.map((one) => entryText(one.at, one.holds)).join('\n');
-    return { file: found.file, ops: [{ op: 'addSource', path: found.path, key: 'cells', source }] };
+    return {
+      file: found.file,
+      ops: [{ op: 'addSource', path: found.path, key: KEY.cells, source }],
+    };
   }
 
   // Entries added at one place are spliced from the end of the file, so the
   // last one laid down is the first one read.
-  const path = [...found.path, 'cells'];
+  const path = [...found.path, KEY.cells];
   const ops = [...fresh].reverse().map((one) => entryOp(path, true, one.at, one.holds));
 
   return { file: found.file, ops };

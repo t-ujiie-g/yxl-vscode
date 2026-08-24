@@ -61,6 +61,13 @@ describe('a region made a table', () => {
     );
   });
 
+  it('is not stopped by an entry whose `at` a parameter fills in, which covers nothing here', () => {
+    const templated = `params:\n  where: A1:B2\n${SHEET}    tables:\n      - at: "\${where}"\n        name: Table1\n`;
+    expect(tabled(templated, OVER, true)).toBe(
+      `${templated}      - at: A1:B2\n        name: Table2\n`,
+    );
+  });
+
   it('says so where there is no table here to take off', () => {
     expect(tabled(SHEET, OVER, false)).toBe('refused: nothing here is part of a table');
   });

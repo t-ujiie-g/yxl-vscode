@@ -67,12 +67,12 @@ export function readEach<T>(
   return kept;
 }
 
-/** Text, or `null` with the reason reported. A number is not text. */
 /** Whether a node is the `null` that says an attribute is not set — an empty value included (`docs/spec.md` §6). */
 export function isCleared(node: Node): boolean {
   return node.kind === 'scalar' && node.value === null;
 }
 
+/** Text, or `null` with the reason reported. A number is not text. */
 export function expectText(ctx: Ctx, node: Node, what: string): string | null {
   const here = follow(ctx, node, []);
   if (here === null) return null;
@@ -82,6 +82,7 @@ export function expectText(ctx: Ctx, node: Node, what: string): string | null {
   return null;
 }
 
+/** `true` or `false`, or `null` with the reason reported; `yes` is text, as YAML 1.2 has it. */
 export function expectBool(ctx: Ctx, node: Node, what: string): boolean | null {
   const here = follow(ctx, node, []);
   if (here === null) return null;
@@ -91,6 +92,7 @@ export function expectBool(ctx: Ctx, node: Node, what: string): boolean | null {
   return null;
 }
 
+/** A number, or `null` with the reason reported. Text that looks like one is not one. */
 export function expectNumber(ctx: Ctx, node: Node, what: string): number | null {
   const here = follow(ctx, node, []);
   if (here === null) return null;

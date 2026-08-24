@@ -214,6 +214,7 @@ export interface DrawnBar {
   readonly barOnly: boolean;
 }
 
+/** A rectangle of the grid, in the row and column numbers the view draws. */
 export interface DrawnMerge {
   readonly top: number;
   readonly left: number;

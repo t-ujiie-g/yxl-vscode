@@ -18,6 +18,7 @@ export interface Patch {
   readonly ops: readonly Op[];
 }
 
+/** What a patch is applied against: the file it names, which its spans are offsets into. */
 export interface Options {
   readonly file: string;
 }
