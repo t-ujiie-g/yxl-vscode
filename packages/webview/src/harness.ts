@@ -38,6 +38,8 @@ export function asks(): Asks {
     link: vi.fn(),
     askAt: vi.fn(),
     follow: vi.fn(),
+    dragTo: vi.fn(),
+    dragBand: vi.fn(),
     openMenu: vi.fn(),
     takeBand: vi.fn(),
     takeAll: vi.fn(),

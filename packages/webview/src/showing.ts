@@ -177,6 +177,8 @@ export interface Asks {
   ) => void;
   readonly select: (row: number, col: number) => void;
   readonly reachTo: (row: number, col: number) => void;
+  readonly dragTo: (row: number, col: number) => void;
+  readonly dragBand: (axis: Axis, at: number) => void;
   readonly reveal: (source: Source) => void;
   readonly setParam: (name: string, value: string) => void;
   readonly showWindow: (row: number, col: number) => void;

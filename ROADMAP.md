@@ -3035,6 +3035,24 @@ than widening it silently.
 
 ## 11. Living changelog
 
+### 2026-08-24 — A press is not a drag
+*The link did take the reader to the wrong cell, and the reason was the mouse.*
+Following a link happens on `mousedown`, and the button is still down when the
+sheet it went to is drawn. The browser then sends the cell now under the pointer
+an `mouseenter` of its own, and the grid read that — `buttons & 1` — as a drag
+of the selection. So the selection landed on whatever cell sat at the screen
+position the reader had clicked from: click a link in column B, arrive in column
+B, on a sheet you have never seen.
+
+- **A held button is not a drag.** The view holds whether a press is being held
+  — taken on the way *down* through the page, so that following a link, which
+  runs on the cell's own listener, can say this press is not one. A cell or a
+  heading now reports `dragTo` / `dragBand`, the pointer gesture, and the view
+  decides whether the selection moves (ADR-047: a listener says what happened;
+  it does not say what is selected).
+- The same enter arrives after any redraw under a held button, so this was never
+  only about links.
+
 ### 2026-08-24 — The link a cell carries, and following it
 `links:` was opaque. It is modelled now, drawn as a link, followed on
 `Cmd`+click, and written from the cell's own menu.

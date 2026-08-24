@@ -171,6 +171,25 @@ describe('what the view sends', () => {
     expect(into.querySelector<HTMLInputElement>('.formula .address')?.value).toBe('A1');
   });
 
+  it('does not take the selection to where the pointer was left after a follow', () => {
+    // The button is still down when the sheet it went to is drawn, so the cell
+    // now under the pointer is sent an enter of its own — a drag the reader
+    // never started, which used to land the selection where they clicked from.
+    const { into, sent, told } = view();
+    const linked = cell({ col: 2, link: { kind: 'to', target: 'Notes!A1', tip: null } });
+    const notes = sheet({ name: 'Notes', cells: [cell({ value: 'Draft' })] });
+    told({ ...drawing, sheets: [sheet({ cells: [cell(), linked] }), notes] });
+
+    at(into, 1, 2)?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    at(into, 1, 2)?.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+    at(into, 1, 2)?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, metaKey: true }));
+    told({ kind: 'goTo', sheet: 'Notes', row: 1, col: 1 });
+    at(into, 1, 2)?.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true, buttons: 1 }));
+
+    expect(into.querySelector('td.selected')?.getAttribute('data-at')).toBe('1:1');
+    expect(sent.filter((one) => one.kind === 'inspect').at(-1)).toMatchObject({ row: 1, col: 1 });
+  });
+
   it('sends the colour picked to the cells the palette was opened over', () => {
     const { into, sent } = view();
 
