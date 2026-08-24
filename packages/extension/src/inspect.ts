@@ -3,6 +3,7 @@ import { type CompiledSheet, cellAt, type FacetOrigin, styleAt } from '@yxl-vsco
 import type { Comparison, ConditionalTest, Sheet, SpecDoc, SpecNode } from '@yxl-vscode/spec';
 import { type A1Addr, cellOf, type NodeId, rangeOf, within } from '@yxl-vscode/units';
 import type { Source } from '@yxl-vscode/webview/protocol';
+import { validating, validationSaid } from './validations';
 
 /** Where every facet of one cell came from, in a reader's words, with the place to go to. */
 export function inspect(nodes: Nodes, sheet: CompiledSheet, at: A1Addr, from: string): Source[] {
@@ -44,6 +45,15 @@ export function inspect(nodes: Nodes, sheet: CompiledSheet, at: A1Addr, from: st
     const goes = link.target.kind === 'url' ? link.target.text : `\`${link.target.text}\``;
     const says = link.tip === null ? goes : `${goes} — ${link.tip}`;
     found.push({ facet: 'link', says, ...sited(nodes.get(link.node)) });
+  }
+
+  const asked = validating(sheet, at);
+  if (asked !== null) {
+    found.push({
+      facet: 'validation',
+      says: validationSaid(asked),
+      ...sited(nodes.get(asked.node)),
+    });
   }
 
   found.push(...reaching(nodes, sheet, at));
@@ -205,6 +215,7 @@ function inSheet(sheet: Sheet, put: (node: SpecNode, what: string) => void): voi
   for (const merge of sheet.merges) put(merge, `the merge \`${spelled(merge.at)}\``);
   for (const note of sheet.comments) put(note, `the note on \`${spelled(note.at)}\``);
   for (const link of sheet.links) put(link, `the link on \`${spelled(link.at)}\``);
+  for (const one of sheet.validations) put(one, `the validation over \`${spelled(one.at)}\``);
 }
 
 /** A value the loader kept as a template reads back as the text the spec wrote. */

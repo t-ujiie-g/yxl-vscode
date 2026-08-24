@@ -38,6 +38,7 @@ export function asks(): Asks {
     link: vi.fn(),
     askAt: vi.fn(),
     follow: vi.fn(),
+    validate: vi.fn(),
     dragTo: vi.fn(),
     dragBand: vi.fn(),
     openMenu: vi.fn(),
@@ -72,6 +73,7 @@ export function cell(row: number, col: number, of: Partial<DrawnCell> = {}): Dra
     icon: null,
     note: null,
     link: null,
+    validation: null,
     ...of,
   };
 }

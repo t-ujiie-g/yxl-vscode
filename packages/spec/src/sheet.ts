@@ -4,6 +4,7 @@ import type { Cell } from './cell';
 import type { Conditional } from './conditional';
 import type { DataBlock } from './data';
 import type { Opaque, SpecNode, Templated } from './node';
+import type { Validation } from './validation';
 
 /** A sheet's splitter, in points from the top-left; `0` on an axis leaves it unsplit (`docs/spec.md` §2). */
 export interface Split {
@@ -35,6 +36,7 @@ export interface Sheet extends SpecNode {
   readonly filter: Templated<A1Range> | null;
   readonly comments: readonly Note[];
   readonly links: readonly Link[];
+  readonly validations: readonly Validation[];
   readonly keyOrder: readonly string[];
   readonly opaque: readonly Opaque[];
 }

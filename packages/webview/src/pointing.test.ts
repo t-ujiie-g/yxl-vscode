@@ -36,6 +36,7 @@ describe('the menu a cell has of its own', () => {
       'Insert note',
       'Link to a page…',
       'Link to a cell…',
+      'Data validation…',
       'Create a filter',
     ]);
     expect(entries.map(said)).toEqual([
@@ -43,6 +44,7 @@ describe('the menu a cell has of its own', () => {
       'Ctrl+C',
       'Ctrl+V',
       'Delete',
+      null,
       null,
       null,
       null,
@@ -100,7 +102,7 @@ describe('the filter a sheet may hang off its header row', () => {
   it('offers to create one where the sheet has none, over the selection header', () => {
     const { on, entries } = at(1, 1);
 
-    entries[7]?.click();
+    entries[8]?.click();
     expect(on.filter).toHaveBeenCalledWith(true);
   });
 });
@@ -122,6 +124,26 @@ describe('the note a cell may carry', () => {
     expect(entries.map((one) => one.firstChild?.textContent)).toContain('Edit note');
     entries[5]?.click();
     expect(on.note).toHaveBeenCalledWith(1, 1, null);
+  });
+});
+
+describe('the validation a range may take', () => {
+  it('asks for the choices where the cell is under none', () => {
+    const { on, entries } = at(2, 3);
+
+    entries[7]?.click();
+    expect(on.askAt).toHaveBeenCalledWith({ at: { row: 2, col: 3 }, what: 'list' });
+  });
+
+  it('offers to take off the one a cell is under', () => {
+    const under = cell(1, 1, { validation: { choices: ['Draft'], says: '' } });
+    const { on, entries } = at(1, 1, {
+      drawing: drawing({ sheets: [sheet({ cells: [under] })] }),
+    });
+
+    expect(entries.map((one) => one.firstChild?.textContent)).toContain('Remove validation');
+    entries[7]?.click();
+    expect(on.validate).toHaveBeenCalledWith(null);
   });
 });
 

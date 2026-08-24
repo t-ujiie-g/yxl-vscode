@@ -12,6 +12,7 @@ export type { DataFile, DataReader, Setting } from './ctx';
 export { type Editability, editabilityOf, editabilityOfLayer } from './editability';
 export { finds } from './find';
 export type {
+  CompiledAsk,
   CompiledBand,
   CompiledCell,
   CompiledFill,
@@ -23,6 +24,7 @@ export type {
   CompiledRun,
   CompiledSheet,
   CompiledTest,
+  CompiledValidation,
   DeclaredStyle,
 } from './grid';
 export { type FullAddr, reaches } from './impact';

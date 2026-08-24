@@ -8,6 +8,7 @@ import type {
   Note,
   RowBand,
   Sheet,
+  Validation,
 } from '@yxl-vscode/spec';
 import {
   type A1Addr,
@@ -18,6 +19,7 @@ import {
   filePath,
   parseA1Range,
   parseColumnSpan,
+  parseQualifiedRange,
   parseRowSpan,
   type Rect,
   rectOf,
@@ -29,6 +31,7 @@ import { address, colour, compileFacets, layer, type Spoke, spokenBy } from './c
 import { CODE } from './codes';
 import { type Ctx, filled, reject, text } from './ctx';
 import type {
+  CompiledAsk,
   CompiledBand,
   CompiledCell,
   CompiledFill,
@@ -38,6 +41,7 @@ import type {
   CompiledRule,
   CompiledSheet,
   CompiledTest,
+  CompiledValidation,
 } from './grid';
 import type { FacetOrigin } from './provenance';
 import { layersOf } from './style';
@@ -77,6 +81,9 @@ export function compileSheet(ctx: Ctx, sheet: Sheet): Drafted {
       filter: filterOf(ctx, sheet),
       notes: notesOf(ctx, sheet.comments),
       links: linksOf(ctx, sheet.links),
+      validations: sheet.validations
+        .map((one) => validation(ctx, one))
+        .filter((one) => one !== null),
       conditional: sheet.conditional
         .map((rule) => conditionalRule(ctx, rule))
         .filter((rule) => rule !== null),
@@ -313,6 +320,43 @@ function notesOf(ctx: Ctx, comments: readonly Note[]): Map<string, CompiledNote>
   }
 
   return notes;
+}
+
+/** One `validations:` entry, its range read and its `from:` split into the sheet it names. */
+function validation(ctx: Ctx, one: Validation): CompiledValidation | null {
+  const spelled = text(ctx, one.at, one);
+  const read = parseA1Range(spelled);
+  if (read === null) {
+    reject(ctx, CODE.badRange, `\`${spelled}\` is not a range`, one);
+    return null;
+  }
+
+  const asks = asking(ctx, one);
+  if (asks === null) return null;
+
+  return {
+    rect: rectOf(read),
+    asks,
+    allowBlank: one.allowBlank,
+    prompt: one.prompt,
+    error: one.error,
+    node: one.id,
+  };
+}
+
+/** What it asks, with a `from:` read as a range and the sheet it names, if it names one. */
+function asking(ctx: Ctx, one: Validation): CompiledAsk | null {
+  const test = one.test;
+  if (test.kind !== 'listFrom') return test;
+
+  const spelled = text(ctx, test.from, one);
+  const read = parseQualifiedRange(spelled);
+  if (read === null) {
+    reject(ctx, CODE.badRange, `\`${spelled}\` is not a range`, one);
+    return null;
+  }
+
+  return { kind: 'listFrom', sheet: read.sheet, rect: rectOf(read.at) };
 }
 
 /** Each link by the address it sits on; the later of two links on one cell is the one Excel keeps. */

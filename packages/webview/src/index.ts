@@ -393,6 +393,14 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       redraw();
       host.postMessage({ kind: 'link', sheet: named(), row, col, link: to });
     },
+    validate: (choices) => {
+      refused = null;
+      said = null;
+      asking = null;
+      redraw();
+      const rect = spanned() ?? { top: 1, left: 1, bottom: 1, right: 1 };
+      host.postMessage({ kind: 'validate', sheet: named(), ...rect, choices });
+    },
     follow: (row, col) => {
       refused = null;
       said = null;

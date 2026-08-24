@@ -210,3 +210,17 @@ describe('what the inspector says about a link', () => {
     expect(sources(LINKED, 'C1').filter((one) => one.facet === 'link')).toEqual([]);
   });
 });
+
+describe('what the inspector says about a validation', () => {
+  const ASKED = `${SHEET}    cells:\n      A1: Region\n    validations:\n      - at: A1:A9\n        list: [Draft, Sent]\n        prompt: { title: Status, body: Pick one. }\n`;
+
+  it('says what the range asks of the cell, prompt and all', () => {
+    expect(saying(ASKED, 'A1', 'validation')).toBe(
+      'Status: Pick one.\nOne of the values in the list.',
+    );
+  });
+
+  it('says nothing about a cell no range covers', () => {
+    expect(sources(ASKED, 'C1').filter((one) => one.facet === 'validation')).toEqual([]);
+  });
+});

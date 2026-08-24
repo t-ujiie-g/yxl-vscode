@@ -30,6 +30,7 @@ import type {
 } from '@yxl-vscode/webview/protocol';
 import { applied, barAt, iconAt, overRanges, spreads } from './conditional';
 import { type Nodes, nodeUnder } from './inspect';
+import { choicesOf, validating, validationSaid } from './validations';
 
 /** A compiled grid as the view is handed it: one window per sheet, the cells with anything to show (ADR-019). */
 /** Where a sheet is being looked at, 1-based, as the view last asked. */
@@ -69,7 +70,7 @@ export function drawn(
     kind: 'drawing',
     file,
     sheets: grid.sheets.map((sheet) =>
-      drawSheet(sheet, marked.get(sheet.name) ?? [], windows.get(sheet.name), evaluation),
+      drawSheet(sheet, marked.get(sheet.name) ?? [], windows.get(sheet.name), evaluation, grid),
     ),
     params: declared(doc, params),
     diagnostics: listed(diagnostics),
@@ -121,6 +122,7 @@ function drawSheet(
   problems: readonly MarkedCell[],
   window: Window | undefined,
   evaluation: Evaluation | null,
+  grid: CompiledGrid | null = null,
 ): DrawnSheet {
   const of = extent(sheet);
   const at = {
@@ -146,7 +148,7 @@ function drawSheet(
     filter: sheet.filter,
     widths: sheet.columns.map(sizedRun),
     heights: sheet.rows.map(sizedRun),
-    cells: drawCells(sheet, { at, rows, columns, freeze }, evaluation),
+    cells: drawCells(sheet, { at, rows, columns, freeze }, evaluation, grid),
     merges: sheet.merges.map(
       (merge): DrawnMerge => ({
         top: merge.rect.top,
@@ -205,6 +207,7 @@ function drawCells(
   sheet: CompiledSheet,
   drawing: Drawn,
   evaluation: Evaluation | null,
+  grid: CompiledGrid | null = null,
 ): DrawnCell[] {
   const drawn: DrawnCell[] = [];
   const held = (at: A1Addr): ScalarValue => {
@@ -221,6 +224,7 @@ function drawCells(
       const cell = cellAt(sheet, addr);
       const note = sheet.notes.get(addr) ?? null;
       const link = sheet.links.get(addr) ?? null;
+      const asked = validating(sheet, addr);
       const computed = evaluation?.values.get(qualified(sheet.name, addr)) ?? null;
 
       // The rules go over what the cell wears, since Excel's own conditional
@@ -239,7 +243,8 @@ function drawCells(
       const style = settled(resolve(layers));
       const holds =
         cell !== null && (cell.value !== null || cell.formula !== null || cell.rich !== null);
-      if (!holds && note === null && link === null && Object.keys(style).length === 0) continue;
+      const bare = !holds && note === null && link === null && asked === null;
+      if (bare && Object.keys(style).length === 0) continue;
 
       drawn.push({
         row,
@@ -260,6 +265,13 @@ function drawCells(
           link === null
             ? null
             : { kind: link.target.kind, target: link.target.text, tip: link.tip },
+        validation:
+          asked === null
+            ? null
+            : {
+                choices: grid === null ? null : choicesOf(grid, sheet.name, asked.asks),
+                says: validationSaid(asked),
+              },
       });
     }
   }

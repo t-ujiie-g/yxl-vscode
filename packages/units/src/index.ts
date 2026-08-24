@@ -52,4 +52,10 @@ export {
   valueName,
   whyNotASheetName,
 } from './name';
-export { parseQualifiedAddr, type QualifiedAddr, qualified } from './qualified';
+export {
+  parseQualifiedAddr,
+  parseQualifiedRange,
+  type QualifiedAddr,
+  type QualifiedRange,
+  qualified,
+} from './qualified';

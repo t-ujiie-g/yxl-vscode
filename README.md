@@ -77,8 +77,10 @@ off. A cell's note wears Excel's red corner, shows what it says on hover, and
 can be written, changed, or taken off from the cell's own menu, and so can a
 link: a linked cell is drawn as one, `Cmd`+click follows it out to the page or
 in to the cell it names, and which of the two a target is, is asked rather than
-guessed. What a spec writes *on* its cells besides those — a dropdown of allowed
-values, a table — is carried through untouched and drawn as nothing, and is the
+guessed. A `validations:` list offers its choices in the cell as a spreadsheet
+does, the other kinds say what they will accept on hover, and *Data validation…*
+writes a list over the selection. What a spec writes *on* its cells besides
+those — a table — is carried through untouched and drawn as nothing, and is the
 rest of the phase in progress.
 
 ## Where it is going

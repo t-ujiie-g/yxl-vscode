@@ -694,6 +694,44 @@ body {
   overflow: hidden;
 }
 
+/* A validated cell that offers no list: a quiet corner, where nothing else
+   marks a cell, so that what a spec asks of a cell is visible at all. */
+.grid td .asked {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  border: 4px solid transparent;
+  border-right-color: #8f8f8f;
+  border-bottom-color: #8f8f8f;
+}
+
+/* The choices a `list:` validation offers, under the cell being typed into.
+   Fixed to the page: the cell clips what is inside it. */
+.choices {
+  position: fixed;
+  z-index: 30;
+  display: flex;
+  max-height: 12rem;
+  flex-direction: column;
+  border: 1px solid var(--vscode-editorHoverWidget-border, #454545);
+  background: var(--vscode-editorHoverWidget-background, #252526);
+  overflow-y: auto;
+}
+
+.choices .offer {
+  border: 0;
+  background: none;
+  padding: 0.15rem 0.5rem;
+  color: var(--vscode-editorHoverWidget-foreground, #cccccc);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.choices .offer:hover {
+  background: var(--vscode-list-hoverBackground, #2a2d2e);
+}
+
 /* A filtered header's mark, at the right of the cell as Excel puts it. */
 .grid td .dropdown {
   position: absolute;

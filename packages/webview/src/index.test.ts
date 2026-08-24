@@ -21,6 +21,7 @@ function cell(of: Partial<DrawnCell> = {}): DrawnCell {
     icon: null,
     note: null,
     link: null,
+    validation: null,
     ...of,
   };
 }
