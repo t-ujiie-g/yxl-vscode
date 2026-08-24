@@ -8,7 +8,7 @@ import {
 } from '@yxl-vscode/compile';
 import { reading, setValidation } from '@yxl-vscode/intent';
 import type { Comparison, Said } from '@yxl-vscode/spec';
-import { type A1Addr, addrAt, cellOf, type SheetName, within } from '@yxl-vscode/units';
+import { type A1Addr, addrAt, cellOf, rangeOf, type SheetName, within } from '@yxl-vscode/units';
 import type { Validated } from '@yxl-vscode/webview/protocol';
 import { applied, type Port, type Spec, sheetNamed } from './write';
 
@@ -27,8 +27,9 @@ export async function validate(spec: Spec, asked: Validated, port: Port): Promis
   const done = await applied(spec, intent, port, { anyway: false, from: 'validate', about: null });
   if (!done) return;
 
+  const over = rangeOf(rect);
   const many = asked.choices?.length ?? 0;
-  port.said(many === 0 ? 'That range takes any value now.' : `That range takes one of ${many}.`);
+  port.said(many === 0 ? `${over} takes any value now.` : `${over} takes one of ${many}.`);
 }
 
 /** The validation a cell is under: the last one written to cover it, since Excel keeps one per cell. */

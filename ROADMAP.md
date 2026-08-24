@@ -3061,6 +3061,15 @@ written over a selection and taken off again.
 - **A cell takes one validation**, so a range that already has one is refused
   rather than given a second: which of the two Excel would ask is not ours to
   pick (ADR-001).
+- **A gesture acts on the cell the reader is on.** `spanned()` answers *the
+  rectangle of more than one cell*, and reading its `null` as "no rectangle"
+  had the filter and the validation write over `A1:A1` whenever the reader had
+  a single cell selected. Both take the selection now, a lone cell included, and
+  say the range they wrote in the line under the grid.
+- **A mark is drawn where it says something.** A validation covers two hundred
+  rows; its mark on every empty one of them is noise, so it shows on the cells
+  that hold something and on the one the reader is on — which is where a
+  dropdown is the way to fill it.
 - `parseQualifiedRange` joins `parseQualifiedAddr` in `units`: a `from:` may
   name a sheet or not, and *not* means the sheet it was written on.
 - What is already written is read from the **file**, not the projection, as the

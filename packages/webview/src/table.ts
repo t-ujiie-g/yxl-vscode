@@ -409,6 +409,7 @@ function line(
     if (note !== null) drawn.append(noted());
     if (link !== null) drawn.classList.add('linked');
     if (checks !== null) drawn.append(validated(checks));
+    if (shows(here)) drawn.classList.add('holds');
     tells(drawn, [
       filtered ? FILTERED : '',
       note === null ? '' : noteSaid(note),
@@ -638,10 +639,9 @@ function noteSaid(note: DrawnNote): string {
 
 /** A validated cell's mark: the dropdown a list offers, and a quiet corner for what only asks. */
 function validated(asked: DrawnValidation): HTMLElement {
-  if (asked.choices !== null) return dropdown();
-
-  const mark = document.createElement('span');
-  mark.className = 'asked';
+  const mark = asked.choices === null ? document.createElement('span') : dropdown();
+  mark.classList.add('asks');
+  if (asked.choices === null) mark.classList.add('asked');
 
   return mark;
 }

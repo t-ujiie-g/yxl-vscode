@@ -1165,6 +1165,28 @@ describe('a cell a validation covers', () => {
     expect(cell?.querySelector('.dropdown')).toBeNull();
   });
 
+  it('marks a cell that holds something, and leaves an empty one of the range quiet', () => {
+    // A range is two hundred rows: a mark on every empty one of them is noise.
+    const list = { choices: ['Draft'], says: '' };
+    const held = drawing({
+      sheets: [
+        sheet({
+          rows: 2,
+          columns: 1,
+          cells: [
+            cell(1, 1, { value: 'Draft', validation: list }),
+            cell(2, 1, { value: null, validation: list }),
+          ],
+        }),
+      ],
+    });
+    const into = shown({ drawing: held });
+
+    expect(at(into, 1, 1)?.classList.contains('holds')).toBe(true);
+    expect(at(into, 2, 1)?.classList.contains('holds')).toBe(false);
+    expect(at(into, 2, 1)?.querySelector('.asks')).not.toBeNull();
+  });
+
   it('says what it asks while the pointer is over it', () => {
     const whole = { choices: null, says: 'A whole number at least 1.' };
     const cell = at(asked({ validation: whole }), 1, 1);

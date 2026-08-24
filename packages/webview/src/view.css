@@ -705,6 +705,18 @@ body {
   border-bottom-color: #8f8f8f;
 }
 
+/* A validation's mark is drawn on every cell of its range, and a range is two
+   hundred rows: shown on the cells that hold something, and on the one the
+   reader is on, which is where the dropdown is the way to fill it. */
+.grid td .asks {
+  visibility: hidden;
+}
+
+.grid td.holds .asks,
+.grid td.selected .asks {
+  visibility: visible;
+}
+
 /* The choices a `list:` validation offers, under the cell being typed into.
    Fixed to the page: the cell clips what is inside it. */
 .choices {

@@ -749,7 +749,7 @@ describe('a list validation, written over a selection', () => {
     expect(files[ROOT]).toBe(
       `${cells}    validations:\n      - at: B2:B9\n        list: [Draft, Sent]\n`,
     );
-    expect(told).toEqual(['That range takes one of 2.']);
+    expect(told).toEqual(['B2:B9 takes one of 2.']);
 
     await validate(spec, { ...over, choices: null }, port);
     expect(files[ROOT]).toBe(cells);
