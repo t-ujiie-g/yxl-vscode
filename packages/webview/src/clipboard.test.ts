@@ -45,6 +45,7 @@ function sheet(cells: readonly DrawnCell[], of: Partial<DrawnSheet> = {}): Drawn
     gridlines: true,
     split: null,
     filter: null,
+    tables: [],
     ...of,
   };
 }

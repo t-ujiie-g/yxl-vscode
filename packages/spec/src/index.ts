@@ -35,6 +35,7 @@ export type {
   Note,
   Sheet,
   Split,
+  Table,
   Visibility,
 } from './sheet';
 export {

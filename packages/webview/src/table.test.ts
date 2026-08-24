@@ -3,7 +3,7 @@
 import { describe, expect, it } from 'vitest';
 import { draw, restate } from './draw';
 import { asks, at, cell, drawing, scrolled, sheet, showingOf, shown } from './harness';
-import type { DrawnCell, DrawnSheet } from './protocol';
+import type { DrawnCell, DrawnSheet, DrawnTable } from './protocol';
 import type { Asks, Showing } from './showing';
 import { pinned } from './table';
 import { widthOf } from './window';
@@ -172,6 +172,7 @@ describe('a sheet with frozen panes', () => {
     gridlines: true,
     split: null,
     filter: null,
+    tables: [],
   });
 
   it('draws the frozen rows above the window, wherever the window is', () => {
@@ -1037,6 +1038,77 @@ describe('a sheet with a filter on its header row', () => {
     expect(cell?.querySelector('.notice')?.textContent).toBe(
       'This column has a filter; the preview does not filter by it',
     );
+  });
+});
+
+describe('a sheet with a table over part of it', () => {
+  const over = (of: Partial<DrawnTable> = {}) =>
+    drawing({
+      sheets: [
+        sheet({
+          rows: 4,
+          columns: 3,
+          tables: [
+            {
+              top: 1,
+              left: 1,
+              bottom: 4,
+              right: 2,
+              name: 'Revenue',
+              style: null,
+              bandedRows: true,
+              bandedColumns: false,
+              firstColumn: false,
+              lastColumn: false,
+              ...of,
+            },
+          ],
+        }),
+      ],
+    });
+
+  it('heads the top row, and leaves the cells beside the table alone', () => {
+    const into = shown({ drawing: over() });
+
+    expect(at(into, 1, 1)?.className).toContain('heads');
+    expect(at(into, 2, 1)?.className).toContain('tabled');
+    expect(at(into, 2, 1)?.className).not.toContain('heads');
+    expect(at(into, 1, 3)?.className).not.toContain('tabled');
+  });
+
+  it('gives the header row the dropdown a table carries filter buttons as', () => {
+    const into = shown({ drawing: over() });
+
+    expect(at(into, 1, 1)?.querySelector('.dropdown')).not.toBeNull();
+    expect(at(into, 2, 1)?.querySelector('.dropdown')).toBeNull();
+  });
+
+  it('bands every other data row, starting under the header', () => {
+    const into = shown({ drawing: over() });
+    const banded = [2, 3, 4].map((row) => at(into, row, 1)?.className.includes('banded'));
+
+    expect(banded).toEqual([true, false, true]);
+  });
+
+  it('bands every other column instead where the spec asks for that', () => {
+    const into = shown({ drawing: over({ bandedRows: false, bandedColumns: true }) });
+
+    expect(at(into, 2, 1)?.className).toContain('banded');
+    expect(at(into, 2, 2)?.className).not.toContain('banded');
+  });
+
+  it('marks the first and the last column where the toggles ask for them', () => {
+    const into = shown({ drawing: over({ firstColumn: true, lastColumn: true }) });
+
+    expect(at(into, 2, 1)?.className).toContain('edging');
+    expect(at(into, 2, 2)?.className).toContain('edging');
+  });
+
+  it('says what the header row heads while the pointer is over it', () => {
+    const cell = at(shown({ drawing: over() }), 1, 1);
+
+    cell?.dispatchEvent(new MouseEvent('mouseenter'));
+    expect(cell?.querySelector('.notice')?.textContent).toBe('This row heads the table Revenue');
   });
 });
 

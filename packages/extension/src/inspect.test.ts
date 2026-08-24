@@ -211,6 +211,25 @@ describe('what the inspector says about a link', () => {
   });
 });
 
+describe('what the inspector says about a table', () => {
+  const TABLED = `${SHEET}    cells:\n      A1: Region\n    tables:\n      - at: A1:B4\n        name: Revenue\n        style: TableStyleMedium2\n`;
+
+  it('says what formulas call it, how far it goes, and the style it wears', () => {
+    expect(saying(TABLED, 'A1', 'table')).toBe(
+      'the table `Revenue` over A1:B4, styled TableStyleMedium2',
+    );
+  });
+
+  it('says a table with no name of its own as one all the same', () => {
+    const bare = `${SHEET}    tables:\n      - at: A1:B4\n`;
+    expect(saying(bare, 'A1', 'table')).toBe('a table over A1:B4');
+  });
+
+  it('says nothing about a cell outside every table', () => {
+    expect(sources(TABLED, 'C1').filter((one) => one.facet === 'table')).toEqual([]);
+  });
+});
+
 describe('what the inspector says about a validation', () => {
   const ASKED = `${SHEET}    cells:\n      A1: Region\n    validations:\n      - at: A1:A9\n        list: [Draft, Sent]\n        prompt: { title: Status, body: Pick one. }\n`;
 

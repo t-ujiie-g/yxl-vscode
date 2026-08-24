@@ -28,6 +28,7 @@ export {
   type Shape,
   type Standing,
 } from './paste';
+export { type Tabled, tableOver } from './region';
 export { type Renaming, renameSheet } from './renaming';
 export { type Candidate, candidates, type Resolving } from './resolve';
 export {

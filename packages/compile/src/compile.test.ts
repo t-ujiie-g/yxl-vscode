@@ -519,6 +519,26 @@ describe('the links a sheet carries', () => {
   });
 });
 
+describe('the tables a sheet declares', () => {
+  it('reads the region, the name and the toggles, with a parameter filled in', () => {
+    const spec = `params:\n  team: north\n${SALES}    tables:\n      - at: A1:B4\n        name: "\${team}_sales"\n        style: TableStyleMedium2\n        banded_columns: true\n`;
+    expect(sheet(spec).tables[0]).toMatchObject({
+      rect: { top: 1, left: 1, bottom: 4, right: 2 },
+      name: 'north_sales',
+      style: 'TableStyleMedium2',
+      bandedRows: true,
+      bandedColumns: true,
+      firstColumn: false,
+      lastColumn: false,
+    });
+  });
+
+  it('drops one whose `at` a parameter turns into no range at all', () => {
+    const spec = `params:\n  where: nowhere\n${SALES}    tables:\n      - at: "\${where}"\n`;
+    expect(sheet(spec).tables).toEqual([]);
+  });
+});
+
 describe('the validations a sheet carries', () => {
   it('reads the range each covers, and the sheet a list is sourced from', () => {
     const spec = `${SALES}    validations:\n      - at: B2:B9\n        list: [Draft, Sent]\n      - at: C2:C9\n        list: { from: "Statuses!A1:A3" }\n        allow_blank: false\n`;

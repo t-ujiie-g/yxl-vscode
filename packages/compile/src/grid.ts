@@ -57,6 +57,22 @@ export interface CompiledSheet {
   readonly notes: ReadonlyMap<string, CompiledNote>;
   readonly links: ReadonlyMap<string, CompiledLink>;
   readonly validations: readonly CompiledValidation[];
+  readonly tables: readonly CompiledTable[];
+}
+
+/**
+ * One `tables:` entry with its range read: a region that *is* a table, whose
+ * top row names its columns (`docs/spec.md` §11).
+ */
+export interface CompiledTable {
+  readonly rect: Rect;
+  readonly name: string | null;
+  readonly style: string | null;
+  readonly bandedRows: boolean;
+  readonly bandedColumns: boolean;
+  readonly firstColumn: boolean;
+  readonly lastColumn: boolean;
+  readonly node: NodeId;
 }
 
 /**

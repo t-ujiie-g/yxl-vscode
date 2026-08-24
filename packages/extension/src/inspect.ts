@@ -1,5 +1,11 @@
 import { dirname, relative } from 'node:path';
-import { type CompiledSheet, cellAt, type FacetOrigin, styleAt } from '@yxl-vscode/compile';
+import {
+  type CompiledSheet,
+  type CompiledTable,
+  cellAt,
+  type FacetOrigin,
+  styleAt,
+} from '@yxl-vscode/compile';
 import type { Comparison, ConditionalTest, Sheet, SpecDoc, SpecNode } from '@yxl-vscode/spec';
 import { type A1Addr, cellOf, type NodeId, rangeOf, within } from '@yxl-vscode/units';
 import type { Source } from '@yxl-vscode/webview/protocol';
@@ -56,8 +62,21 @@ export function inspect(nodes: Nodes, sheet: CompiledSheet, at: A1Addr, from: st
     });
   }
 
+  const table = sheet.tables.findLast((one) => within(cellOf(at), one.rect));
+  if (table !== undefined) {
+    found.push({ facet: 'table', says: tableSaid(table), ...sited(nodes.get(table.node)) });
+  }
+
   found.push(...reaching(nodes, sheet, at));
   return found;
+}
+
+/** What a table is, in a reader's words: what formulas call it, and how far it goes. */
+function tableSaid(table: CompiledTable): string {
+  const called = table.name === null ? 'a table' : `the table \`${table.name}\``;
+  const styled = table.style === null ? '' : `, styled ${table.style}`;
+
+  return `${called} over ${rangeOf(table.rect)}${styled}`;
 }
 
 /** Every `conditional:` rule whose range reaches this cell, said whether or not it is drawn. */
@@ -216,6 +235,7 @@ function inSheet(sheet: Sheet, put: (node: SpecNode, what: string) => void): voi
   for (const note of sheet.comments) put(note, `the note on \`${spelled(note.at)}\``);
   for (const link of sheet.links) put(link, `the link on \`${spelled(link.at)}\``);
   for (const one of sheet.validations) put(one, `the validation over \`${spelled(one.at)}\``);
+  for (const one of sheet.tables) put(one, `the table over \`${spelled(one.at)}\``);
 }
 
 /** A value the loader kept as a template reads back as the text the spec wrote. */

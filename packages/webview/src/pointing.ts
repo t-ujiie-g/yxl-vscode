@@ -118,6 +118,7 @@ function onCell(showing: Showing, asks: Asks, at: PointedCell): HTMLElement | nu
     ...noting(showing, asks, at, shut),
     ...linking(showing, asks, at, shut),
     ...validating(showing, asks, at, shut),
+    ...tabling(showing, asks, at, shut),
     ...(showing.drawing.sheets[showing.sheet]?.filter === null
       ? [
           entry(
@@ -205,6 +206,37 @@ function validating(
       'Remove validation',
       {},
       shut(() => asks.validate(null)),
+    ),
+  ];
+}
+
+/** What a table is worth offering over the selection: making one, or taking off the one the cell is in. */
+function tabling(
+  showing: Showing,
+  asks: Asks,
+  at: PointedCell,
+  shut: (take: () => void) => () => void,
+): HTMLElement[] {
+  const tables = showing.drawing.sheets[showing.sheet]?.tables ?? [];
+  const inside = tables.some(
+    (one) => at.row >= one.top && at.row <= one.bottom && at.col >= one.left && at.col <= one.right,
+  );
+
+  if (inside) {
+    return [
+      entry(
+        'Remove table',
+        {},
+        shut(() => asks.formatTable(false)),
+      ),
+    ];
+  }
+
+  return [
+    entry(
+      'Format as table',
+      {},
+      shut(() => asks.formatTable(true)),
     ),
   ];
 }

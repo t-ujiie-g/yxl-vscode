@@ -18,6 +18,7 @@ function sheet(of: Partial<DrawnSheet> = {}): DrawnSheet {
     gridlines: true,
     split: null,
     filter: null,
+    tables: [],
     problems: [],
     freeze: null,
     ...of,

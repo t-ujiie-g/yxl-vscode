@@ -195,6 +195,17 @@ describe('a formula once a row is taken away', () => {
   });
 });
 
+describe('a structured reference, which names a table rather than a cell', () => {
+  it('comes back byte for byte once a row is drawn in', () => {
+    expect(once('SUM(Revenue[Revenue])')).toBe('SUM(Revenue[Revenue])');
+    expect(once('SUM(Revenue[[#Headers],[A1]])')).toBe('SUM(Revenue[[#Headers],[A1]])');
+  });
+
+  it('comes back byte for byte once a row is taken away', () => {
+    expect(once('SUM(Revenue[Revenue])', { by: -1 })).toBe('SUM(Revenue[Revenue])');
+  });
+});
+
 describe('a formula once a sheet is renamed', () => {
   const to = (formula: string, from = 'Sales', name = 'Revenue') => {
     const done = renamed(formula, from as SheetName, name as SheetName);
