@@ -83,7 +83,6 @@ function at(into: HTMLElement, row: number, col: number): HTMLTableCellElement |
 
 const typed: Typed = { sheet: 'Sales', row: 1, col: 1, text: '99' };
 
-/** A shortcut held down on a cell, which is where the reader's keyboard is. */
 /** Two clicks on the tab a selector names, close enough together to be one gesture. */
 function twice(into: HTMLElement, selector: string): void {
   for (let one = 0; one < 2; one += 1) {
@@ -91,6 +90,7 @@ function twice(into: HTMLElement, selector: string): void {
   }
 }
 
+/** A shortcut held down on a cell, which is where the reader's keyboard is. */
 function press(into: HTMLElement, row: number, col: number, key: string): void {
   at(into, row, col)?.dispatchEvent(
     new KeyboardEvent('keydown', { key, metaKey: true, bubbles: true, cancelable: true }),

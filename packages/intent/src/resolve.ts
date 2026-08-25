@@ -11,7 +11,7 @@ import {
   sheetOf,
 } from '@yxl-vscode/compile';
 import { entryOf, holds, type Node, type Op, type Path, renderScalar } from '@yxl-vscode/cst';
-import { REF_KEY, type ScalarValue } from '@yxl-vscode/spec';
+import { KEY, REF_KEY, type ScalarValue } from '@yxl-vscode/spec';
 import {
   type A1Addr,
   addrAt,
@@ -277,9 +277,9 @@ function newCell(
   const found = located(sheet.node, read);
   if (found.kind === 'refused' || found.node.kind !== 'map') return null;
 
-  const written = holds(found.node, 'cells');
+  const written = holds(found.node, KEY.cells);
   const op = entryOp(
-    written ? [...found.path, 'cells'] : found.path,
+    written ? [...found.path, KEY.cells] : found.path,
     written,
     where.at,
     holding(typed),

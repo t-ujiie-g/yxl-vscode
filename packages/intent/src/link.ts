@@ -1,9 +1,8 @@
-import { sheetOf } from '@yxl-vscode/compile';
 import { entryOf, type Node, type Op, type Path, renderScalar } from '@yxl-vscode/cst';
 import { INCLUDE_KEY, KEY, type LinkTarget } from '@yxl-vscode/spec';
 import type { A1Addr, SheetName } from '@yxl-vscode/units';
 import { nothingChanges } from '@yxl-vscode/verify';
-import { type Intent, located, type Projection, type Reading, refused } from './direct';
+import { type Intent, type Projection, type Reading, refused, writtenSheet } from './direct';
 
 /** A link on a cell as a gesture asks for it: where it goes, or `null` to take it off. */
 export interface Linking {
@@ -18,12 +17,8 @@ export interface Linking {
  * written with, and its `tip`: which kind it is, is never inferred.
  */
 export function setLink(spec: Projection, where: Linking, read: Reading): Intent {
-  const sheet = sheetOf(spec.grid, where.sheet);
-  if (sheet === null) return refused(`there is no sheet named \`${where.sheet}\``);
-
-  const found = located(sheet.node, read);
+  const found = writtenSheet(spec, where.sheet, read);
   if (found.kind === 'refused') return found;
-  if (found.node.kind !== 'map') return refused(`\`${where.sheet}\` is not written as a sheet`);
 
   const links = entryOf(found.node, KEY.links)?.value ?? null;
   if (links !== null && entryOf(links, INCLUDE_KEY) !== undefined) {

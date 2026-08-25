@@ -20,7 +20,7 @@ import {
 } from '@yxl-vscode/cst';
 import { pathOf } from '@yxl-vscode/loader';
 import type { Patch } from '@yxl-vscode/patch';
-import type { ScalarValue, Sheet, SpecDoc } from '@yxl-vscode/spec';
+import { KEY, type ScalarValue, type Sheet, type SpecDoc } from '@yxl-vscode/spec';
 import {
   type A1Addr,
   type FilePath,
@@ -258,7 +258,7 @@ export function entryText(at: A1Addr, holds: Holds): string {
 
 /** The entry going in, with the `cells:` key itself where the sheet has none. */
 export function entryOp(path: Path, cells: boolean, at: A1Addr, holds: Holds): Op {
-  if (!cells) return { op: 'addSource', path, key: 'cells', source: entryText(at, holds) };
+  if (!cells) return { op: 'addSource', path, key: KEY.cells, source: entryText(at, holds) };
 
   return 'formula' in holds
     ? {
@@ -283,6 +283,34 @@ export function located(id: NodeId, read: Reading): Found {
     return refused(`nothing is at \`${where.path.join('.')}\` in \`${where.file}\``);
 
   return { kind: 'found', file: where.file, path: where.path, node, add: false };
+}
+
+/** The sheet's own mapping in the file, with the compiled sheet it projects to. */
+export type WrittenSheet =
+  | {
+      kind: 'found';
+      file: FilePath;
+      path: Path;
+      node: Node;
+      add: boolean;
+      sheet: CompiledSheet;
+    }
+  | { kind: 'refused'; why: string };
+
+/**
+ * Where a sheet is written, which is where every key a gesture puts under a
+ * sheet goes. A sheet not in the grid, not in the file, or not written as a
+ * mapping is refused here rather than at each gesture.
+ */
+export function writtenSheet(spec: Projection, name: SheetName, read: Reading): WrittenSheet {
+  const sheet = sheetOf(spec.grid, name);
+  if (sheet === null) return refused(`there is no sheet named \`${name}\``);
+
+  const found = located(sheet.node, read);
+  if (found.kind === 'refused') return found;
+  if (found.node.kind !== 'map') return refused(`\`${name}\` is not written as a sheet`);
+
+  return { ...found, sheet };
 }
 
 /**

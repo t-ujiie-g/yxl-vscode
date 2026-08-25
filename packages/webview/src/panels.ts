@@ -314,6 +314,7 @@ function naming(was: string, asks: Asks): HTMLElement {
   return box;
 }
 
+/** A line of prose under the grid — what the host said, or why something is not drawn. */
 export function note(text: string): HTMLElement {
   const said = document.createElement('p');
   said.className = 'note';
@@ -321,6 +322,7 @@ export function note(text: string): HTMLElement {
   return said;
 }
 
+/** Every diagnostic the projection reported, each a button that goes to where it is written. */
 export function problems(drawing: Drawing, asks: Asks): HTMLElement {
   const list = document.createElement('ul');
   list.className = 'problems';

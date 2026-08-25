@@ -54,6 +54,7 @@ export interface Chosen {
   readonly take: (value: string) => void;
 }
 
+/** A menu's button and, while it is open, the panel under it behind a scrim that closes it. */
 export function opens(
   of: Menu,
   showing: Showing,

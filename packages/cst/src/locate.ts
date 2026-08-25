@@ -18,6 +18,7 @@ export type Site =
       readonly index: number;
     };
 
+/** The node a path names, with the parent that holds it; `undefined` where the path leads nowhere. */
 export function locate(root: Node, path: Path): Site | undefined {
   let site: Site = { in: 'root', node: root };
 

@@ -39,6 +39,7 @@ export function readStyleUse(ctx: Ctx, node: Node, what: string): StyleUse | nul
   return style === null ? null : { kind: 'inline', style };
 }
 
+/** A style written out in place, with each of its facets read (`docs/spec.md` §6). */
 export function readStyle(ctx: Ctx, node: Node, what: string): Style | null {
   const opened = openEntries(ctx, node, [], what);
   if (opened === null) return null;
@@ -96,6 +97,7 @@ function clear(cleared: Set<StyleProperty>, key: string, group = ''): void {
   for (const one of propertiesUnder(group === '' ? key : `${group}.${key}`)) cleared.add(one);
 }
 
+/** A `font:` mapping; a facet the spec leaves out is `undefined` rather than a default. */
 export function readFont(
   ctx: Ctx,
   node: Node,

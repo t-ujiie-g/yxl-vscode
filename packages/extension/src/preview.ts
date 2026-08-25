@@ -395,7 +395,6 @@ export class Preview {
     });
   }
 
-  /** A write, with the spec and port it needs; a spec still loading and a failure are both said rather than dropped. */
   /** A link followed: the page opened outside VS Code, or the view sent to the cell it names. */
   private went(asked: { sheet: string; row: number; col: number }): void {
     const spec = this.spec();
@@ -423,6 +422,7 @@ export class Preview {
     port.said(`Went to ${qualified(went.sheet, addrAt({ col: went.col, row: went.row }))}.`);
   }
 
+  /** A write, with the spec and port it needs; a spec still loading and a failure are both said rather than dropped. */
   private writing(make: (spec: Spec, port: Port) => Promise<void>): void {
     const spec = this.spec();
     if (spec === null) {
