@@ -5,9 +5,11 @@ import { did, type History, nothing } from '@yxl-vscode/patch';
 import { type FilePath, filePath, parseColor } from '@yxl-vscode/units';
 import type { Choice, Frozen, Resized, Typed, Worn } from '@yxl-vscode/webview/protocol';
 import { describe, expect, it } from 'vitest';
+import { chart } from './charts';
 import { fill } from './fills';
 import { group } from './group';
 import { hide } from './hidden';
+import { image } from './images';
 import { line } from './lines';
 import { link } from './links';
 import { wear } from './look';
@@ -775,6 +777,54 @@ describe('a region made a table from a cell menu', () => {
 
     await formatTable(spec, { ...over, on: false }, port);
     expect(refusals[0]).toBe('nothing here is part of a table');
+  });
+});
+
+describe('a chart asked for over a selection', () => {
+  const FIGURES = `${SALES}    cells:\n      A1: Region\n      B1: Revenue\n      A2: APAC\n      B2: 24\n      A3: EMEA\n      B3: 17\n`;
+  const over = { sheet: 'Sales', top: 1, left: 1, bottom: 3, right: 2 };
+
+  it('asks which shape rather than picking one, and writes the one taken', async () => {
+    const { spec, port, files, refusals, answers, told } = editor({ [ROOT]: FIGURES });
+
+    await chart(spec, over, port);
+    expect(files[ROOT]).toBe(FIGURES);
+    expect(refusals[0]).toContain('a chart is a shape as well as a range');
+    expect(answers[0]?.map((one) => one.what)).toContain('A pie chart');
+
+    await chart(spec, over, port, 'chart:pie');
+    expect(files[ROOT]).toBe(
+      `${FIGURES}    charts:\n      - at: D1\n        type: pie\n        series:\n          - values: B2:B3\n            categories: A2:A3\n            name_from: B1\n`,
+    );
+    expect(told).toEqual(['A pie chart is over the cells you selected.']);
+  });
+
+  it('refuses a selection one column wide, which has nothing to plot', async () => {
+    const { spec, port, refusals } = editor({ [ROOT]: FIGURES });
+
+    await chart(spec, { ...over, right: 1 }, port);
+    expect(refusals[0]).toContain('one column');
+  });
+});
+
+describe('an image asked for at a cell', () => {
+  it('writes the entry with the path beside the spec, and says where it floats from', async () => {
+    const cells = `${SALES}    cells:\n      A1: Region\n`;
+    const { spec, port, files, told } = editor({ [ROOT]: cells });
+
+    await image(spec, { sheet: 'Sales', row: 1, col: 5, path: 'assets/logo.png' }, port);
+    expect(files[ROOT]).toBe(
+      `${cells}    images:\n      - at: E1\n        file: assets/logo.png\n`,
+    );
+    expect(told).toEqual(['`assets/logo.png` floats from E1.']);
+  });
+
+  it('refuses a file Excel would not decode', async () => {
+    const { spec, port, refusals, files } = editor({ [ROOT]: SALES });
+
+    await image(spec, { sheet: 'Sales', row: 1, col: 1, path: 'notes.txt' }, port);
+    expect(refusals[0]).toContain('not a picture format');
+    expect(files[ROOT]).toBe(SALES);
   });
 });
 

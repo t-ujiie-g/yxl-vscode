@@ -12,6 +12,14 @@ export {
 } from './direct';
 export { type Filling, setFilled } from './fill';
 export { type Filtering, setFilter } from './filter';
+export {
+  CHART_SHAPES,
+  type Charting,
+  chartOver,
+  chartsOver,
+  imageAt,
+  type Picturing,
+} from './float';
 export { type Frozen, setFreeze } from './freeze';
 export { type Grouping, setGroup } from './group';
 export { type Hiding, setHidden } from './hidden';

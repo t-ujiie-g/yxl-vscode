@@ -2,7 +2,7 @@ import type { DataReader } from '@yxl-vscode/compile';
 import type { IncludeReader } from '@yxl-vscode/loader';
 import { type FilePath, filePath } from '@yxl-vscode/units';
 import { describe, expect, it } from 'vitest';
-import { openFirst } from './files';
+import { besideSpec, openFirst } from './files';
 
 const AT = (path: string): FilePath => filePath(path) ?? ('' as FilePath);
 
@@ -36,5 +36,15 @@ describe('reading a spec the reader is in the middle of editing', () => {
   it('keeps the path the file resolved to, not the one the spec wrote', () => {
     const read = openFirst(disk({ 'sheets/sales.yaml': 'name: Sales\n' }), () => null);
     expect(read(AT('spec.yxl.yaml'), AT('sheets/sales.yaml'))?.file).toBe(AT('sheets/sales.yaml'));
+  });
+});
+
+describe('a picked file written beside the spec', () => {
+  it('is relative to the spec it goes in', () => {
+    expect(besideSpec('/specs/report.yxl.yaml', '/specs/assets/logo.png')).toBe('assets/logo.png');
+  });
+
+  it('says so where it sits above the spec, since a `data:` path may too', () => {
+    expect(besideSpec('/specs/here/report.yxl.yaml', '/specs/logo.png')).toBe('../logo.png');
   });
 });

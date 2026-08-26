@@ -148,11 +148,7 @@ export function sparklineAt(
   };
 }
 
-/**
- * What a sparkline plots, along its range: the evaluated value where there is
- * one, and what the cell holds otherwise. Display only, and never written back
- * (ADR-014).
- */
+/** What a sparkline plots: the evaluated value where there is one, else the cell's own (ADR-014). */
 function pointsOf(
   here: CompiledSheet,
   grid: CompiledGrid | null,

@@ -385,6 +385,16 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       said = null;
       host.postMessage({ kind: 'tabled', sheet: named(), on, ...acting() });
     },
+    chart: () => {
+      refused = null;
+      said = null;
+      host.postMessage({ kind: 'chart', sheet: named(), ...acting() });
+    },
+    image: (row, col) => {
+      refused = null;
+      said = null;
+      host.postMessage({ kind: 'image', sheet: named(), row, col });
+    },
     askAt: (asked) => {
       asking = asked;
       redraw();

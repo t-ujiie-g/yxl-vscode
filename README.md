@@ -86,7 +86,10 @@ the size it takes**: a chart as a sketch with its title, its legend and the
 ranges each series names — never Excel's rendering of it (`ROADMAP.md` ADR-029)
 — an image as the room its own file says it takes, a shape as the geometry it
 names in the colours it asks for, and a sparkline as the line, columns or
-win/loss inside its cell. Inserting and moving one is the phase in progress.
+win/loss inside its cell. A chart and an image can be **put** there too, from
+the cell's own menu: the selection is read as Excel reads a table, and which
+shape the chart takes is asked rather than picked. Moving and resizing one is
+the phase in progress.
 
 ## Where it is going
 

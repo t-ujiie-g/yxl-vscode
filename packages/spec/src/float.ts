@@ -47,9 +47,8 @@ export interface ChartAxis {
 
 /**
  * One series of a chart: the cells plotted, the labels down the category axis,
- * and what the legend calls it — written out or read from a cell, never both
- * (`docs/spec.md` §12). A range is kept as written, since it may name another
- * sheet.
+ * and what the legend calls it (`docs/spec.md` §12). A range is kept as
+ * written, since it may name another sheet.
  */
 export interface ChartSeries extends SpecNode {
   readonly values: Templated<string>;

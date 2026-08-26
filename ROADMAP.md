@@ -1558,8 +1558,23 @@ Charts, images, sparklines and shapes — all four are in the spec already
       or win/loss, with the axis at zero and the marks the group picks out.
       **`positioning:` is read and not yet drawn**: nothing in the preview moves
       the cells under a float, so the three anchors have nothing to tell apart.
-- [ ] Inserting one: a chart over the selected range, an image from a file
+- [x] Inserting one: a chart over the selected range, an image from a file
       beside the spec
+      **In**, both from the cell's own menu. A **chart** over the selection
+      reads it as Excel reads a table: the left column labels the points, every
+      column beside it is a series, and the top row names them where it is text
+      over values. Which *shape* it takes is not in the selection, so it is
+      asked rather than picked (ADR-001) — eight answers, one per shape, and a
+      stacked variant is the same entry with the word changed. It floats one
+      empty column past the cells it plots, since a chart over them hides them.
+      Refused over one column, which has nothing to plot against its labels.
+      An **image** is picked in the editor's own file dialog — a webview has
+      none, and resolving a path is the host's job (ADR-004) — and written
+      relative to the spec, with `/` whatever the platform, since that is how
+      yxl resolves one (`docs/spec.md` §9, §13). A format Excel does not decode
+      is refused by name rather than written for the compiler to reject.
+      Both claim **no cell at all**: a float sits above the grid and changes
+      nothing under it, so the checker's expectation is `nothingChanges`.
 - [ ] Moving and resizing what is there, as an edit to the construct's own
       anchor rather than to a picture
 - [ ] What is still unmodelled stays opaque and byte-identical while it waits
@@ -3072,6 +3087,26 @@ than widening it silently.
 
 ## 11. Living changelog
 
+### 2026-08-26 — Putting one there
+A chart and an image can be inserted from the cell's own menu. Both are
+`nothingChanges` writes: a float sits above the grid and moves no cell under it.
+
+- **A chart over the selection**, read as Excel reads a table: the left column
+  labels the points, every column beside it is a series, and the top row names
+  them where it is text over values. Which shape it takes is **asked, not
+  picked** (ADR-001) — eight answers, one per shape — since the shape is not in
+  the selection. It floats one empty column past the cells it plots.
+- **An image from the editor's own file dialog**, since a webview has none and
+  resolving a path is the host's (ADR-004). Written relative to the spec and
+  with `/` whatever the platform, which is how yxl resolves one. A format Excel
+  does not decode is refused by name rather than left to the compiler.
+- **`sequenceIn` in `intent/anchored.ts`**, beside `anchored`: a float is
+  anchored at one cell, so the entries under its key are not read against a
+  rectangle. `anchored` is now that plus the overlap it looks for.
+- Comment shape: export 779 blocks / 1701 lines / avg 2.2, private 521 / 521 /
+  avg 1.0, inline 108 / 165 / avg 1.5; 0 over the limit, including the four the
+  entry below left there.
+
 ### 2026-08-26 — What sits on the sheet, drawn
 Charts, images, sparklines and shapes were opaque and invisible — the largest
 hole in the preview. All four are modelled now, and each is drawn where it sits
@@ -3099,8 +3134,11 @@ and at the size it takes. A sketch, never Excel's rendering of one (ADR-029).
   `name_from` may name its sheet and usually does not, and `parseQualifiedAddr`
   is §23's, which requires one.
 - Q13 is answered: hand-written DOM and SVG, and no runtime dependency.
-- Comment shape: export 768 blocks / 1671 lines / avg 2.2, private 513 / 523 /
-  avg 1.0, inline 108 / 165 / avg 1.5; 4 over the limit, as before.
+- Comment shape: export 779 blocks / 1701 lines / avg 2.2, private 521 / 521 /
+  avg 1.0, inline 108 / 165 / avg 1.5; **0 over the limit**. The four this pass
+  first left over the limit are trimmed in the one below — `git stash` had left
+  the new files untracked and in place, so the baseline it was measured against
+  was not one.
 
 ### 2026-08-25 — A tidying pass over the tree
 No behaviour changed. The §8 lenses, walked in order, over the whole tree.

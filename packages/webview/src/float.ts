@@ -139,10 +139,7 @@ function legend(one: DrawnChart): HTMLElement {
   return drawn;
 }
 
-/**
- * The greys a sketch's series are told apart by. None of Excel's own palette:
- * the colours a chart is finally drawn in are the workbook's, not ours (ADR-029).
- */
+/** The greys a sketch's series are told apart by; none of Excel's own palette (ADR-029). */
 function tone(at: number): string {
   const greys = ['#7a7a7a', '#a8a8a8', '#5c5c5c', '#c4c4c4', '#8f8f8f'];
   return greys[at % greys.length] ?? '#7a7a7a';
