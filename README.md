@@ -88,8 +88,9 @@ ranges each series names — never Excel's rendering of it (`ROADMAP.md` ADR-029
 names in the colours it asks for, and a sparkline as the line, columns or
 win/loss inside its cell. A chart and an image can be **put** there too, from
 the cell's own menu: the selection is read as Excel reads a table, and which
-shape the chart takes is asked rather than picked. Moving and resizing one is
-the phase in progress.
+shape the chart takes is asked rather than picked. Dragging one moves it, and
+its corner grows it — which is an edit to the construct's own `at:` and `size:`,
+or to an image's `scale:`, never to a picture.
 
 ## Where it is going
 

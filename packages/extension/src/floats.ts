@@ -32,6 +32,7 @@ export function anchorsIn(sheet: CompiledSheet): A1Addr[] {
 /** Each chart as the sketch the view draws: where it sits, how big, and what it names (ADR-029). */
 export function chartsOf(sheet: CompiledSheet, grid: CompiledGrid | null): DrawnChart[] {
   return sheet.charts.map((one) => ({
+    node: one.node,
     at: anchored(one.at, { x: 0, y: 0 }),
     size: one.size ?? CHART_SIZE,
     type: one.type,
@@ -78,6 +79,7 @@ export function imagesOf(
           };
 
     return {
+      node: one.node,
       at: anchored(one.at, one.offset),
       size,
       file: one.path,
@@ -98,6 +100,7 @@ function whyUnmeasured(path: string): string {
 /** Each shape drawn as the geometry it names, in the colours it asks for (`docs/spec.md` §18). */
 export function shapesOf(sheet: CompiledSheet): DrawnShape[] {
   return sheet.shapes.map((one) => ({
+    node: one.node,
     at: anchored(one.at, { x: 0, y: 0 }),
     size: one.size,
     kind: one.kind,

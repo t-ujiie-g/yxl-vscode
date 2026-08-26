@@ -52,6 +52,11 @@ export function across(sheet: DrawnSheet, col: number): number {
   return sum;
 }
 
+/** The cell a point in the sheet's own pixels falls in, which is where a dragged float lands. */
+export function landing(sheet: DrawnSheet, at: Where): { row: number; col: number } {
+  return { row: rowAt(sheet, Math.max(0, at.top)), col: columnAt(sheet, Math.max(0, at.left)) };
+}
+
 /** The row and the column a scroll position has arrived at. */
 function rowAt(sheet: DrawnSheet, top: number): number {
   let sum = 0;

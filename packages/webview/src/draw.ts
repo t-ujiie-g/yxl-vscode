@@ -199,7 +199,7 @@ function scroller(sheet: DrawnSheet, showing: Showing, asks: Asks): HTMLElement 
   box.setAttribute('data-of', looking(showing));
   box.append(grid(sheet, showing, asks));
 
-  const over = floats(sheet);
+  const over = floats(sheet, asks);
   if (over !== null) box.append(over);
 
   const bars = splitter(sheet);

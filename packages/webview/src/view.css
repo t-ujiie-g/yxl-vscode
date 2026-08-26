@@ -1332,3 +1332,21 @@ body {
   left: 1px;
   pointer-events: none;
 }
+
+/* A float is dragged by its own box and resized by its corner: what moves is
+   the construct's anchor and extent, never a picture (ADR-029). */
+.float {
+  cursor: move;
+}
+
+.float .grip {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+  border: 1px solid #ffffff;
+  background: #7a7a7a;
+  width: 8px;
+  height: 8px;
+  cursor: nwse-resize;
+}

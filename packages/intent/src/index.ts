@@ -13,12 +13,16 @@ export {
 export { type Filling, setFilled } from './fill';
 export { type Filtering, setFilter } from './filter';
 export {
+  type Anchoring,
   CHART_SHAPES,
   type Charting,
   chartOver,
   chartsOver,
   imageAt,
+  moveFloat,
   type Picturing,
+  type Sizing,
+  sizeFloat,
 } from './float';
 export { type Frozen, setFreeze } from './freeze';
 export { type Grouping, setGroup } from './group';

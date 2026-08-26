@@ -1,6 +1,7 @@
 import { apply } from './cell';
 import { gutterOf } from './outline';
 import type {
+  DrawnAt,
   DrawnChart,
   DrawnChartAxis,
   DrawnImage,
@@ -9,8 +10,8 @@ import type {
   DrawnSheet,
   DrawnSparkline,
 } from './protocol';
-import { GUTTER, HEADING } from './showing';
-import { across, down } from './window';
+import { type Asks, GUTTER, HEADING } from './showing';
+import { across, down, landing } from './window';
 
 const SVG = 'http://www.w3.org/2000/svg';
 
@@ -18,11 +19,11 @@ const SVG = 'http://www.w3.org/2000/svg';
  * Everything that floats above a sheet, laid over the grid where it sits and at
  * the size it takes. A sketch of each, never Excel's rendering of one (ADR-029).
  */
-export function floats(sheet: DrawnSheet): HTMLElement | null {
+export function floats(sheet: DrawnSheet, asks: Asks): HTMLElement | null {
   const drawn = [
-    ...sheet.charts.map((one) => chart(sheet, one)),
-    ...sheet.images.map((one) => image(sheet, one)),
-    ...sheet.shapes.map((one) => shape(sheet, one)),
+    ...sheet.charts.map((one) => dragged(chart(sheet, one), sheet, one, asks)),
+    ...sheet.images.map((one) => dragged(image(sheet, one), sheet, one, asks)),
+    ...sheet.shapes.map((one) => dragged(shape(sheet, one), sheet, one, asks)),
   ];
   if (drawn.length === 0) return null;
 
@@ -30,6 +31,98 @@ export function floats(sheet: DrawnSheet): HTMLElement | null {
   layer.className = 'floats';
   layer.append(...drawn);
   return layer;
+}
+
+/** What a float carries for a drag to act on: where it hangs from, and the entry it was drawn from. */
+interface Draggable {
+  readonly node: string;
+  readonly at: DrawnAt;
+  readonly size: { readonly width: number; readonly height: number } | null;
+}
+
+/** A float made to move and to resize, each sending once on the way up: every step would be an edit. */
+function dragged(drawn: HTMLElement, sheet: DrawnSheet, one: Draggable, asks: Asks): HTMLElement {
+  drawn.addEventListener('mousedown', (down: MouseEvent) => {
+    if (down.button !== 0) return;
+    down.preventDefault();
+
+    const from = { left: pixels(drawn.style.left), top: pixels(drawn.style.top) };
+    const start = { x: down.clientX, y: down.clientY };
+    let put = from;
+
+    const moved = (at: MouseEvent): void => {
+      put = { left: from.left + at.clientX - start.x, top: from.top + at.clientY - start.y };
+      drawn.style.left = `${put.left}px`;
+      drawn.style.top = `${put.top}px`;
+    };
+
+    const up = (): void => {
+      document.removeEventListener('mousemove', moved);
+      document.removeEventListener('mouseup', up);
+      if (put.left === from.left && put.top === from.top) return;
+
+      // The corner lands where the drop is, so the offset the entry already
+      // carries comes off before the cell under it is looked up.
+      asks.moveFloat(
+        one.node,
+        landing(sheet, {
+          left: put.left - gutterOf(sheet, 'row') - GUTTER - one.at.x,
+          top: put.top - gutterOf(sheet, 'column') - HEADING - one.at.y,
+        }),
+      );
+    };
+
+    document.addEventListener('mousemove', moved);
+    document.addEventListener('mouseup', up);
+  });
+
+  if (one.size !== null) drawn.append(grip(drawn, one, asks));
+  return drawn;
+}
+
+/** The corner a float is resized by, which writes its extent rather than scaling a picture. */
+function grip(drawn: HTMLElement, one: Draggable, asks: Asks): HTMLElement {
+  const held = document.createElement('span');
+  held.className = 'grip';
+
+  held.addEventListener('mousedown', (down: MouseEvent) => {
+    down.preventDefault();
+    down.stopPropagation();
+
+    const from = one.size ?? { width: 0, height: 0 };
+    const start = { x: down.clientX, y: down.clientY };
+    let size = from;
+
+    const moved = (at: MouseEvent): void => {
+      size = {
+        width: Math.max(LEAST, from.width + at.clientX - start.x),
+        height: Math.max(LEAST, from.height + at.clientY - start.y),
+      };
+      drawn.style.width = `${size.width}px`;
+      drawn.style.height = `${size.height}px`;
+    };
+
+    const up = (): void => {
+      document.removeEventListener('mousemove', moved);
+      document.removeEventListener('mouseup', up);
+      if (size.width !== from.width || size.height !== from.height) {
+        asks.sizeFloat(one.node, size);
+      }
+    };
+
+    document.addEventListener('mousemove', moved);
+    document.addEventListener('mouseup', up);
+  });
+
+  return held;
+}
+
+/** The smallest a drag may leave a float, so the corner it was dragged by stays there. */
+const LEAST = 16;
+
+/** A length this view wrote itself, read back; `offsetLeft` is the browser's and is not laid out yet. */
+function pixels(said: string): number {
+  return Number.parseFloat(said) || 0;
 }
 
 /** One float's box, put where its anchor cell and its offset say, at the extent it takes. */

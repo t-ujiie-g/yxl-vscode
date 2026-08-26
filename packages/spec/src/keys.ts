@@ -29,6 +29,7 @@ export const KEY = {
   freeze: 'freeze',
   gridlines: 'gridlines',
   group: 'group',
+  height: 'height',
   hidden: 'hidden',
   images: 'images',
   file: 'file',
@@ -37,7 +38,10 @@ export const KEY = {
   name: 'name',
   nameFrom: 'name_from',
   overrides: 'overrides',
+  scale: 'scale',
   series: 'series',
+  shapes: 'shapes',
+  size: 'size',
   style: 'style',
   to: 'to',
   list: 'list',
@@ -50,6 +54,7 @@ export const KEY = {
   validations: 'validations',
   values: 'values',
   visibility: 'visibility',
+  width: 'width',
 } as const;
 
 /**
