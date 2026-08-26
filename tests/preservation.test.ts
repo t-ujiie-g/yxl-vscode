@@ -1,7 +1,10 @@
+import { compile } from '@yxl-vscode/compile';
 import { type Node, parse } from '@yxl-vscode/cst';
+import { chartOver, type Intent, imageAt, moveFloat, reading, sizeFloat } from '@yxl-vscode/intent';
 import { load } from '@yxl-vscode/loader';
-import { applyPatch } from '@yxl-vscode/patch';
+import { applyPatch, type Patch } from '@yxl-vscode/patch';
 import { MODELED_KEYS, type Opaque, type SpecDoc } from '@yxl-vscode/spec';
+import type { A1Addr, FilePath, SheetName } from '@yxl-vscode/units';
 import { describe, expect, it } from 'vitest';
 import { includeReader, type Sample, yxlExamples } from './corpus';
 
@@ -66,6 +69,54 @@ function entry(node: Node, key: string): Node | undefined {
  */
 const GRAMMAR = new Set(['$include', '$ref']);
 
+/**
+ * Every write this editor makes *under a sheet*, which is where the constructs
+ * it does not model sit: a key going in beside them must not disturb one.
+ */
+function underSheet(sample: Sample, doc: SpecDoc): { what: string; patch: Patch }[] {
+  const grid = compile(doc, { read: includeReader });
+  const sheet = grid.sheets[0];
+  if (sheet === undefined) return [];
+
+  const spec = { doc, grid };
+  const read = reading((file) => (file === sample.path ? sample.source : null));
+  const name = sheet.name as SheetName;
+  const rect = { top: 1, left: 1, bottom: 2, right: 2 };
+  const float = sheet.charts[0] ?? sheet.shapes[0] ?? sheet.images[0] ?? null;
+
+  const made: { what: string; intent: Intent }[] = [
+    {
+      what: 'a chart put in',
+      intent: chartOver(spec, { sheet: name, rect, type: 'column' }, read),
+    },
+    {
+      what: 'an image put in',
+      intent: imageAt(spec, { sheet: name, at: 'A1' as A1Addr, path: 'a.png' }, read),
+    },
+    ...(float === null
+      ? []
+      : [
+          {
+            what: 'a float moved',
+            intent: moveFloat({ node: float.node, at: 'Z9' as A1Addr }, read),
+          },
+          {
+            what: 'a float resized',
+            intent: sizeFloat(
+              { node: float.node, width: 300, height: 200, natural: { width: 10, height: 10 } },
+              read,
+            ),
+          },
+        ]),
+  ];
+
+  return made.flatMap(({ what, intent }) =>
+    intent.kind === 'edit' && intent.file === (sample.path as FilePath)
+      ? [{ what, patch: intent.patch }]
+      : [],
+  );
+}
+
 describe('the corpus of specs that use what this editor does not model', () => {
   it('holds constructs to preserve, or this suite proves nothing', () => {
     const opaque = specs.flatMap((sample) => carried(read(sample, sample.source), sample.path));
@@ -82,6 +133,35 @@ describe('the corpus of specs that use what this editor does not model', () => {
     );
 
     expect(both.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it('makes writes under a sheet to try them against, or the suite below proves nothing', () => {
+    const writes = specs.flatMap((sample) => underSheet(sample, read(sample, sample.source)));
+    expect([...new Set(writes.map((one) => one.what))].sort()).toEqual([
+      'a chart put in',
+      'a float moved',
+      'a float resized',
+      'an image put in',
+    ]);
+  });
+
+  it('names what is still carried, so modelling one of them is a deliberate change', () => {
+    const keys = specs.flatMap((sample) =>
+      carried(read(sample, sample.source), sample.path).map((one) => one.key),
+    );
+
+    // `docs/spec.md` §5, §13's sheet background, §14, §15, §16, §20 and §21.
+    expect([...new Set(keys)].sort()).toEqual([
+      'active',
+      'background',
+      'calc',
+      'controls',
+      'pivots',
+      'print',
+      'properties',
+      'protect',
+      'slicers',
+    ]);
   });
 });
 
@@ -132,5 +212,26 @@ describe.each(specs)('$name', (sample) => {
     const after = edited();
     const keys = (of: SpecDoc): string[] => carried(of, sample.path).map((one) => one.key);
     expect(keys(read(sample, after))).toEqual(keys(doc));
+  });
+
+  it('gives them back byte for byte after a float is put in, moved, or resized', () => {
+    const before = verbatim(sample.source, doc, sample.path);
+    if (before.length === 0) return;
+
+    for (const { what, patch } of underSheet(sample, doc)) {
+      const done = applyPatch(sample.source, patch, { file: sample.path });
+      expect({ what, diagnostics: done.diagnostics }).toEqual({ what, diagnostics: [] });
+      expect(done.text).not.toBe(sample.source);
+
+      const after = read(sample, done.text);
+      expect({ what, kept: verbatim(done.text, after, sample.path) }).toEqual({
+        what,
+        kept: before,
+      });
+      expect({ what, keys: carried(after, sample.path).map((one) => one.key) }).toEqual({
+        what,
+        keys: carried(doc, sample.path).map((one) => one.key),
+      });
+    }
   });
 });

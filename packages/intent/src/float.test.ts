@@ -109,6 +109,20 @@ describe('a chart over a rectangle', () => {
   });
 });
 
+describe('a float written beside what this editor does not model', () => {
+  const CARRIED = `${BARE}    pivots:\n      - at: E1\n        source: A1:B2\n    # the pivot above is not modeled yet\n`;
+
+  it('goes in without disturbing the construct it is written beside (ADR-011)', () => {
+    for (const drawn of [
+      charted(CARRIED, { top: 1, left: 1, bottom: 2, right: 2 }),
+      pictured(CARRIED, 'logo.png'),
+    ]) {
+      expect(drawn).toContain('    pivots:\n      - at: E1\n        source: A1:B2\n');
+      expect(drawn).toContain('# the pivot above is not modeled yet');
+    }
+  });
+});
+
 describe('an image at a cell', () => {
   it('is written under the sheet, with the path as the reader gave it', () => {
     expect(pictured(BARE, 'assets/logo.png')).toBe(
