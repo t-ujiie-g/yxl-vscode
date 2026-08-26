@@ -307,6 +307,20 @@ describe('entries of a collection', () => {
     });
   });
 
+  describe('insertSource', () => {
+    it('goes under a comment that trails the last item, which belongs to it', () => {
+      const carried = 'charts:\n  - at: E1\n    type: pie\n  # the pie above needs a legend\n';
+      const after = text(carried, {
+        op: 'insertSource',
+        path: ['charts'],
+        index: 1,
+        source: 'at: H1\ntype: bar',
+      });
+
+      expect(after).toBe(`${carried}  - at: H1\n    type: bar\n`);
+    });
+  });
+
   describe('add', () => {
     it('appends an entry, copying the layout of the ones there', () => {
       const source = 'cells:\n  A1: Revenue\n  B1: 2400000\n';
@@ -319,6 +333,47 @@ describe('entries of a collection', () => {
       });
 
       expect(after).toBe('cells:\n  A1: Revenue\n  B1: 2400000\n  C1: Share\n');
+    });
+
+    it('goes under the comments that trail the mapping, which belong to what is above them', () => {
+      const source = 'cells:\n  A1: Revenue\n  # Revenue is the one above\n';
+      const after = text(source, {
+        op: 'add',
+        path: ['cells'],
+        key: 'C1',
+        value: 'Share',
+        before: null,
+      });
+
+      expect(after).toBe('cells:\n  A1: Revenue\n  # Revenue is the one above\n  C1: Share\n');
+    });
+
+    it('stops at a comment written for what comes next, which a blank line marks off', () => {
+      const source = 'cells:\n  A1: Revenue\n\n  # about whatever follows\n';
+      const after = text(source, {
+        op: 'add',
+        path: ['cells'],
+        key: 'C1',
+        value: 'Share',
+        before: null,
+      });
+
+      expect(after).toBe('cells:\n  A1: Revenue\n  C1: Share\n\n  # about whatever follows\n');
+    });
+
+    it('stops at a comment written outside the mapping, which is indented less', () => {
+      const source = 'sheets:\n  - name: S\n    cells:\n      A1: 1\n  # about the sheets\n';
+      const after = text(source, {
+        op: 'add',
+        path: ['sheets', 0],
+        key: 'freeze',
+        value: 'B2',
+        before: null,
+      });
+
+      expect(after).toBe(
+        'sheets:\n  - name: S\n    cells:\n      A1: 1\n    freeze: B2\n  # about the sheets\n',
+      );
     });
 
     it('puts an entry above the one it names, which is how a removal is undone', () => {
@@ -381,6 +436,19 @@ describe('entries of a collection', () => {
       });
 
       expect(diagnostics[0]?.code).toBe(CODE.itemMarker);
+    });
+
+    it('goes under a comment that trails the mapping, so it stays with what it is about (ADR-011)', () => {
+      const carried =
+        'sheets:\n  - name: S\n    pivots:\n      - at: E1\n    # the pivot above is not modeled\n';
+      const after = text(carried, {
+        op: 'addSource',
+        path: ['sheets', 0],
+        key: 'charts',
+        source: '- at: C1',
+      });
+
+      expect(after).toBe(`${carried}    charts:\n      - at: C1\n`);
     });
 
     it("keeps a flow value on the key's own line, as a person writes one", () => {

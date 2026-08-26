@@ -1603,18 +1603,22 @@ Charts, images, sparklines and shapes — all four are in the spec already
       `calc`, `controls`, `pivots`, `print`, `properties`, `protect`, `slicers`
       — `docs/spec.md` §5, §13, §14, §15, §16, §20, §21), so modelling one is a
       change somebody makes on purpose rather than one that goes unnoticed.
-- [ ] **A comment at the end of a sheet is left behind by a key added after it.**
-      Found while proving the above. Adding a key to a sheet mapping lands it at
-      the end of the *last entry's* line, which is **before** a trailing comment
-      at the mapping's own indentation — so `# the pivot above is not modeled
-      yet` ends up under the chart that went in beneath the pivot. The bytes all
-      survive; what moves is what the comment is next to, and a comment that
-      says "above" is then about the wrong thing.
-      Not a float's doing: `addedBlock` in `cst` is where a key lands, and every
-      add-a-key gesture since `tables:` has done this. The fix is one insertion
-      point — before a run of comment lines that ends the mapping — and it is a
-      **`cst` change under the Tier 2 byte-identity gate**, so it is its own
-      piece of work rather than a rider on this phase.
+- [x] **A comment at the end of a sheet is left behind by a key added after it.**
+      Found while proving the above. Adding a key to a sheet mapping landed it
+      at the end of the *last entry's* line, which is **before** a trailing
+      comment at the mapping's own indentation — so `# the pivot above is not
+      modeled yet` ended up under the chart that went in beneath the pivot. The
+      bytes all survived; what moved was what the comment sat next to, and a
+      comment that says "above" is then about the wrong thing.
+      **Fixed in `cst`, where it belonged**: `belowComments` is `aboveComments`
+      read the other way, and the three places that append — a key with a block
+      under it, a key with a scalar, an item at the end of a sequence — go in
+      past the comments that belong to what they follow. Two rules decide what
+      belongs: a **blank line ends the run**, which is the rule `aboveComments`
+      already used (a comment set off by one is a heading for what comes next),
+      and a comment **indented less than the entry** is the outer level's, not
+      this mapping's. A sequence measures at the `-` rather than at the content
+      it opens, since that is where an item's own comments sit.
 
 ### Phase 15 — The rest of the schema, honestly
 What is left of `docs/spec.md` once the phases above are done: `print:` (§5),
@@ -3123,6 +3127,25 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-27 — A comment stays with what it is about
+Adding a key to a mapping put it *above* the comments that ended the mapping, so
+`# the pivot above is not modeled yet` came to sit under the chart written after
+the pivot. Every byte survived — what moved was what the comment was next to.
+
+- **`belowComments` in `cst/lines.ts`** is `aboveComments` read the other way,
+  and the three places that append use it: a key with a block under it, a key
+  with a scalar, and an item at the end of a sequence.
+- **Two rules decide what belongs to what is above.** A blank line ends the run,
+  which is the rule `aboveComments` already used — a comment set off by one is a
+  heading for what follows. And a comment indented less than the entry belongs
+  to the outer level, not to this mapping; a sequence measures at the `-` rather
+  than at the content it opens, since that is where an item's own comments sit.
+- Every gesture that adds a key gets this, not only the ones that write a float:
+  `tables:`, `links:`, `validations:`, `merges:`, `formulas:`, `cells:` and the
+  rest have all placed a key this way since Phase 11.
+- Comment shape: export 790 blocks / 1736 lines / avg 2.2, private 536 / 536 /
+  avg 1.0, inline 112 / 172 / avg 1.5; 0 over the limit.
 
 ### 2026-08-27 — What is still carried, proved against what is written beside it
 No behaviour changed. The last of Phase 14 is a claim, and it now has the test
