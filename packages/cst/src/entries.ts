@@ -1,7 +1,7 @@
 import { type Span, span } from '@yxl-vscode/diag';
 import { CODE } from './codes';
 import { cutOf, itemAt, withEntry, withoutEntry } from './flow';
-import { aboveComments, lineBreak, lineEnd, lineStart } from './lines';
+import { aboveComments, belowComments, indentWidth, lineBreak, lineEnd, lineStart } from './lines';
 import { entryOf, formatPath, holds, locate, nodeAt, type Site } from './locate';
 import type { Mapping, Node, Sequence } from './node';
 import type { Edit, Op, Path, Refuse } from './op';
@@ -69,8 +69,9 @@ function intoSequence(
 
   const prefix = source.slice(lineStart(source, neighbour.span.start), neighbour.span.start);
   const append = op.index >= target.items.length;
+  // An item's own comments sit at the `-`, not at the content it opens.
   const at = append
-    ? lineEnd(source, neighbour.span.end)
+    ? belowComments(source, lineEnd(source, neighbour.span.end), indentWidth(prefix))
     : aboveComments(source, lineStart(source, neighbour.span.start));
 
   return { at, prefix };
@@ -115,7 +116,7 @@ export function addedBlock(
     ? `${prefix}${renderScalar(op.key)}: ${op.source}${break_}`
     : `${prefix}${renderScalar(op.key)}:${break_}${item(op.source, `${prefix}${step}`)}${break_}`;
 
-  const at = lineEnd(source, last.span.end);
+  const at = belowComments(source, lineEnd(source, last.span.end), prefix.length);
   return { span: span(at, at), text: written };
 }
 
@@ -166,7 +167,9 @@ export function addition(
   const written = `${prefix}${renderScalar(op.key)}: ${renderScalar(op.value)}${lineBreak(source)}`;
 
   const at =
-    above === undefined ? lineEnd(source, beside.span.end) : lineStart(source, beside.span.start);
+    above === undefined
+      ? belowComments(source, lineEnd(source, beside.span.end), prefix.length)
+      : lineStart(source, beside.span.start);
   return { span: span(at, at), text: written };
 }
 

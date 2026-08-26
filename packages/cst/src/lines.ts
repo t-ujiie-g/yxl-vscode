@@ -28,3 +28,26 @@ export function aboveComments(source: string, start: number): number {
   }
   return at;
 }
+
+/**
+ * Past the comment lines directly below `at` indented at least as far as
+ * `least`, which belong to what they sit under. A blank line ends the block,
+ * as it does above one.
+ */
+export function belowComments(source: string, at: number, least: number): number {
+  let past = at;
+
+  while (past < source.length) {
+    const end = lineEnd(source, past);
+    const line = source.slice(past, end);
+    if (!line.trim().startsWith('#') || indentWidth(line) < least) break;
+    past = end;
+  }
+
+  return past;
+}
+
+/** How far in a line's first character sits, which is the column a comment on it belongs at. */
+export function indentWidth(line: string): number {
+  return line.length - line.trimStart().length;
+}

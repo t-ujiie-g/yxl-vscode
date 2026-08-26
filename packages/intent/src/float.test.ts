@@ -109,6 +109,19 @@ describe('a chart over a rectangle', () => {
   });
 });
 
+describe('a float written beside what this editor does not model', () => {
+  const CARRIED = `${BARE}    pivots:\n      - at: E1\n        source: A1:B2\n    # the pivot above is not modeled yet\n`;
+
+  it('goes in under it, and under what the spec wrote about it (ADR-011)', () => {
+    expect(charted(CARRIED, { top: 1, left: 1, bottom: 2, right: 2 })).toBe(
+      `${CARRIED}    charts:\n      - at: D1\n        type: column\n        series:\n          - values: B1:B2\n            categories: A1:A2\n`,
+    );
+    expect(pictured(CARRIED, 'logo.png')).toBe(
+      `${CARRIED}    images:\n      - at: E1\n        file: logo.png\n`,
+    );
+  });
+});
+
 describe('an image at a cell', () => {
   it('is written under the sheet, with the path as the reader gave it', () => {
     expect(pictured(BARE, 'assets/logo.png')).toBe(
