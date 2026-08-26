@@ -33,6 +33,9 @@ const sheet = (of: Partial<DrawnSheet> = {}): DrawnSheet => ({
   split: null,
   filter: null,
   tables: [],
+  charts: [],
+  images: [],
+  shapes: [],
   ...of,
 });
 

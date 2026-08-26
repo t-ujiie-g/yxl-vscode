@@ -7,6 +7,7 @@ import type { SpecDoc } from '@yxl-vscode/spec';
 import type { Drawing } from '@yxl-vscode/webview/protocol';
 import { drawn, listed, type Windows } from './drawing';
 import { type Nodes, nodesOf } from './inspect';
+import type { PictureReader } from './pictures';
 
 export type { Window, Windows } from './drawing';
 export { drawRun } from './drawing';
@@ -29,6 +30,7 @@ export function project(
   params: Setting = new Map(),
   windows: Windows = new Map(),
   engine?: Engine,
+  pictures: PictureReader | null = null,
 ): Projected {
   const parsed = parse(text, { file });
   const loaded = load(parsed, read);
@@ -57,13 +59,18 @@ export function project(
   const evaluation = engine === undefined ? null : evaluate(grid, engine);
   const projected = { diagnostics, doc: loaded.doc, grid, nodes, evaluation };
 
-  return { drawing: drawn(file, projected, params, windows), ...projected };
+  return { drawing: drawn(file, projected, params, windows, pictures), ...projected };
 }
 
 /** The same spec drawn at a different part of a sheet, without re-reading or recompiling. */
-export function redraw(projected: Projected, params: Setting, windows: Windows): Drawing {
+export function redraw(
+  projected: Projected,
+  params: Setting,
+  windows: Windows,
+  pictures: PictureReader | null = null,
+): Drawing {
   const { doc, grid } = projected;
   if (doc === null || grid === null) return projected.drawing;
 
-  return drawn(projected.drawing.file, { ...projected, doc, grid }, params, windows);
+  return drawn(projected.drawing.file, { ...projected, doc, grid }, params, windows, pictures);
 }

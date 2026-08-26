@@ -1,6 +1,7 @@
 import { BORDER_EDGES, type ScalarValue, type StyleValues } from '@yxl-vscode/spec';
 import { painted } from '@yxl-vscode/units';
 import { format as excel } from 'numfmt';
+import { sparkline } from './float';
 import { iconOf } from './icons';
 import type { DrawnBar, DrawnCell, DrawnMerge, DrawnRun } from './protocol';
 
@@ -22,6 +23,8 @@ export function drawCell(
 
   const icon = cell.icon === null ? null : iconOf(cell.icon);
   if (icon !== null) drawn.append(icon);
+
+  if (cell.sparkline !== null) drawn.append(sparkline(cell.sparkline));
 
   const hidden = cell.bar?.barOnly === true || cell.icon?.iconsOnly === true;
   const text = hidden ? '' : cell.rich === null ? shown(cell) : '';
@@ -380,7 +383,8 @@ function declarations(style: StyleValues): [string, string][] {
   return css;
 }
 
-function apply(drawn: HTMLElement, style: StyleValues): void {
+/** The look a run or a line of shape text wears, as CSS on the element drawing it. */
+export function apply(drawn: HTMLElement, style: StyleValues): void {
   for (const [name, value] of declarations(style)) {
     if (!name.startsWith('border-')) drawn.style.setProperty(name, value);
   }

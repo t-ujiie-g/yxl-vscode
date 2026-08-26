@@ -1,18 +1,34 @@
 import type { Diagnostic } from '@yxl-vscode/diag';
 import type {
   CellType,
+  ChartType,
   Comparison,
   ConditionalTest,
   ErrorStyle,
+  LegendPlace,
   LinkTarget,
+  PixelOffset,
+  Positioning,
   Said,
   ScalarValue,
+  Scale,
+  ShapeKind,
+  Size,
+  SparklineType,
   Split,
   StyleSays,
   StyleValues,
   Visibility,
 } from '@yxl-vscode/spec';
-import type { A1Addr, Color, NodeId, Rect, SheetName, StyleName } from '@yxl-vscode/units';
+import type {
+  A1Addr,
+  Color,
+  NodeId,
+  QualifiedCell,
+  Rect,
+  SheetName,
+  StyleName,
+} from '@yxl-vscode/units';
 import type { CellProvenance } from './provenance';
 import type { StyleLayer } from './style';
 
@@ -58,6 +74,101 @@ export interface CompiledSheet {
   readonly links: ReadonlyMap<string, CompiledLink>;
   readonly validations: readonly CompiledValidation[];
   readonly tables: readonly CompiledTable[];
+  readonly charts: readonly CompiledChart[];
+  readonly images: readonly CompiledImage[];
+  readonly shapes: readonly CompiledShape[];
+  readonly sparklines: readonly CompiledSparkline[];
+}
+
+/**
+ * One `charts:` entry, its anchor read. What it plots stays the words the spec
+ * wrote, since a sketch names its ranges rather than drawing them (ADR-029).
+ * An unwritten `size` is the one yxl's backend gives a chart.
+ */
+export interface CompiledChart {
+  readonly at: A1Addr;
+  readonly type: ChartType;
+  readonly title: string | null;
+  readonly legend: LegendPlace | null;
+  readonly size: Size | null;
+  readonly xAxis: CompiledChartAxis | null;
+  readonly yAxis: CompiledChartAxis | null;
+  readonly series: readonly CompiledSeries[];
+  readonly node: NodeId;
+}
+
+/** One axis of a chart, its title substituted; an unset end leaves Excel scaling it. */
+export interface CompiledChartAxis {
+  readonly title: string | null;
+  readonly min: number | null;
+  readonly max: number | null;
+}
+
+/** One series of a chart: the ranges as written, and what the legend calls it. */
+export interface CompiledSeries {
+  readonly values: string;
+  readonly categories: string | null;
+  readonly name: string | null;
+  readonly nameFrom: QualifiedCell | null;
+  readonly node: NodeId;
+}
+
+/**
+ * One `images:` entry, its anchor read. How big the file is, is the host's to
+ * say — the core does not open one (ADR-004).
+ */
+export interface CompiledImage {
+  readonly at: A1Addr;
+  readonly path: string;
+  readonly alt: string | null;
+  readonly scale: Scale;
+  readonly offset: PixelOffset;
+  readonly positioning: Positioning;
+  readonly node: NodeId;
+}
+
+/** One `shapes:` entry: the geometry, the extent, the colours, and the text it carries. */
+export interface CompiledShape {
+  readonly at: A1Addr;
+  readonly kind: ShapeKind;
+  readonly text: readonly CompiledShapeText[];
+  readonly size: Size;
+  readonly fill: Color | null;
+  readonly line: { readonly color: Color | null; readonly width: number | null } | null;
+  readonly alt: string | null;
+  readonly positioning: Positioning;
+  readonly node: NodeId;
+}
+
+/** One line of a shape's text, and the look that line alone wears. */
+export interface CompiledShapeText {
+  readonly text: string;
+  readonly look: StyleValues;
+}
+
+/**
+ * One sparkline of a `sparklines:` group, by the cell it sits in. `data` keeps
+ * the range rather than its cells: they may be on another sheet, which is the
+ * whole grid's to answer for (`docs/spec.md` §19).
+ */
+export interface CompiledSparkline {
+  readonly at: A1Addr;
+  readonly data: { readonly sheet: SheetName | null; readonly rect: Rect };
+  readonly type: SparklineType;
+  readonly markers: boolean;
+  readonly high: boolean;
+  readonly low: boolean;
+  readonly axis: boolean;
+  readonly min: number | null;
+  readonly max: number | null;
+  readonly weight: number | null;
+  readonly color: Color | null;
+  readonly colors: {
+    readonly markers: Color | null;
+    readonly high: Color | null;
+    readonly low: Color | null;
+  } | null;
+  readonly node: NodeId;
 }
 
 /**

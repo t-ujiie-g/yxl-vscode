@@ -16,6 +16,26 @@ export type {
 } from './conditional';
 export type { DataBlock, DataRow, DataSource } from './data';
 export type { Defs, FormulaDef, Override, Param, SpecDoc, StyleDef, ValueDef } from './doc';
+export {
+  CHART_TYPES,
+  type Chart,
+  type ChartAxis,
+  type ChartSeries,
+  type ChartType,
+  type Image,
+  LEGEND_PLACES,
+  type LegendPlace,
+  type PixelOffset,
+  POSITIONINGS,
+  type Positioning,
+  type Scale,
+  SHAPE_KINDS,
+  type Shape,
+  type ShapeKind,
+  type ShapeLine,
+  type ShapeText,
+  type Size,
+} from './float';
 export { CELL_HOLDS, CELL_WEARS, INCLUDE_KEY, KEY, MODELED_KEYS, REF_KEY } from './keys';
 export type { Opaque, SpecNode, Template, Templated } from './node';
 export {
@@ -38,6 +58,13 @@ export type {
   Table,
   Visibility,
 } from './sheet';
+export {
+  SPARKLINE_TYPES,
+  type Sparkline,
+  type SparklineColors,
+  type SparklineGroup,
+  type SparklineType,
+} from './sparkline';
 export {
   type Align,
   BORDER_EDGES,

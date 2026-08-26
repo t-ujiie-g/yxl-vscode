@@ -53,6 +53,98 @@ export interface DrawnSheet {
   readonly split: { readonly x: number; readonly y: number } | null;
   readonly filter: DrawnMerge | null;
   readonly tables: readonly DrawnTable[];
+  readonly charts: readonly DrawnChart[];
+  readonly images: readonly DrawnImage[];
+  readonly shapes: readonly DrawnShape[];
+}
+
+/** Where a float's top-left corner sits: the cell it hangs from, and the pixels in from that cell's corner. */
+export interface DrawnAt {
+  readonly row: number;
+  readonly col: number;
+  readonly x: number;
+  readonly y: number;
+}
+
+/** How big a float is drawn, in pixels. */
+export interface DrawnSize {
+  readonly width: number;
+  readonly height: number;
+}
+
+/**
+ * One chart as a sketch: where it sits, how big it is, and what it names — never
+ * what Excel will draw of it (ADR-029).
+ */
+export interface DrawnChart {
+  readonly at: DrawnAt;
+  readonly size: DrawnSize;
+  readonly type: string;
+  readonly title: string | null;
+  readonly legend: string;
+  readonly x: DrawnChartAxis | null;
+  readonly y: DrawnChartAxis | null;
+  readonly series: readonly DrawnSeries[];
+}
+
+/** One axis of a chart's sketch; an unset end is one Excel scales to the data. */
+export interface DrawnChartAxis {
+  readonly title: string | null;
+  readonly min: number | null;
+  readonly max: number | null;
+}
+
+/** One series of a chart's sketch: what the legend calls it, and the cells it plots. */
+export interface DrawnSeries {
+  readonly name: string | null;
+  readonly values: string;
+  readonly categories: string | null;
+}
+
+/**
+ * One image as a plate where it sits: `size` is its natural size times `scale`,
+ * and `null` where the host could not measure the file, which `why` says.
+ */
+export interface DrawnImage {
+  readonly at: DrawnAt;
+  readonly size: DrawnSize | null;
+  readonly file: string;
+  readonly alt: string | null;
+  readonly why: string | null;
+}
+
+/** One shape drawn as the geometry it names, in the colours it asks for (`docs/spec.md` §18). */
+export interface DrawnShape {
+  readonly at: DrawnAt;
+  readonly size: DrawnSize;
+  readonly kind: string;
+  readonly text: readonly DrawnRun[];
+  readonly fill: string | null;
+  readonly line: { readonly color: string; readonly width: number } | null;
+  readonly alt: string | null;
+}
+
+/**
+ * The sparkline a cell carries: the points it plots, from the values the sheet
+ * holds, and the marks it picks out (`docs/spec.md` §19). Display only, and
+ * from the evaluated values (ADR-014).
+ */
+export interface DrawnSparkline {
+  readonly type: 'line' | 'column' | 'win_loss';
+  readonly points: readonly (number | null)[];
+  readonly markers: boolean;
+  readonly high: boolean;
+  readonly low: boolean;
+  readonly axis: boolean;
+  readonly min: number | null;
+  readonly max: number | null;
+  readonly weight: number | null;
+  readonly color: string | null;
+  readonly colors: {
+    readonly markers: string | null;
+    readonly high: string | null;
+    readonly low: string | null;
+  } | null;
 }
 
 /**
@@ -172,6 +264,7 @@ export interface DrawnCell {
   readonly note: DrawnNote | null;
   readonly link: DrawnLink | null;
   readonly validation: DrawnValidation | null;
+  readonly sparkline: DrawnSparkline | null;
 }
 
 /**

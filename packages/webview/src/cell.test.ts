@@ -23,6 +23,7 @@ function cell(of: Partial<DrawnCell> = {}): DrawnCell {
     note: null,
     link: null,
     validation: null,
+    sparkline: null,
     ...of,
   };
 }

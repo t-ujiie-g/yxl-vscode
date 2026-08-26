@@ -1,17 +1,21 @@
 import type { Node, Path } from '@yxl-vscode/cst';
 import {
   type Cell,
+  type Chart,
   type ColumnBand,
   type Conditional,
   type DataBlock,
   type FormulaRange,
+  type Image,
   type Link,
   type Merge,
   MODELED_KEYS,
   type Note,
   type Opaque,
   type RowBand,
+  type Shape,
   type Sheet,
+  type SparklineGroup,
   type Split,
   type Table,
   type Validation,
@@ -22,6 +26,7 @@ import { CODE } from './codes';
 import { readConditional } from './conditional';
 import { type Ctx, identify, keyOf, reject, type Site } from './ctx';
 import { readDataBlocks } from './data';
+import { readCharts, readImages, readShapes } from './float';
 import { readLinks } from './link';
 import { readNotes } from './note';
 import {
@@ -35,6 +40,7 @@ import {
   rejectUnknownKey,
   scalarText,
 } from './read';
+import { readSparklines } from './sparkline';
 import { readTables } from './table';
 import { ADDRESS, COLOR, RANGE, readAs, SHEET_NAME } from './template';
 import { readValidations } from './validation';
@@ -77,6 +83,10 @@ function readSheet(site: Site): Sheet | null {
   let links: Link[] = [];
   let validations: Validation[] = [];
   let tables: Table[] = [];
+  let charts: Chart[] = [];
+  let images: Image[] = [];
+  let shapes: Shape[] = [];
+  let sparklines: SparklineGroup[] = [];
   const opaque: Opaque[] = [];
 
   for (const entry of entries) {
@@ -136,6 +146,18 @@ function readSheet(site: Site): Sheet | null {
       case 'tables':
         tables = readTables(here, entry.value, at);
         break;
+      case 'charts':
+        charts = readCharts(here, entry.value, at);
+        break;
+      case 'images':
+        images = readImages(here, entry.value, at);
+        break;
+      case 'shapes':
+        shapes = readShapes(here, entry.value, at);
+        break;
+      case 'sparklines':
+        sparklines = readSparklines(here, entry.value, at);
+        break;
       default:
         opaque.push({ ...identify(here, at, entry.span), key });
     }
@@ -161,6 +183,10 @@ function readSheet(site: Site): Sheet | null {
     links,
     validations,
     tables,
+    charts,
+    images,
+    shapes,
+    sparklines,
     keyOrder: entries.map(keyOf),
     opaque,
   };

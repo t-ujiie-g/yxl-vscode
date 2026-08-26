@@ -173,6 +173,9 @@ describe('a sheet with frozen panes', () => {
     split: null,
     filter: null,
     tables: [],
+    charts: [],
+    images: [],
+    shapes: [],
   });
 
   it('draws the frozen rows above the window, wherever the window is', () => {

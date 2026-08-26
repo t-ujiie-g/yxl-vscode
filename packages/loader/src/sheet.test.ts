@@ -38,15 +38,15 @@ describe('a sheet', () => {
   });
 
   it('carries a key it does not model, in place', () => {
-    const read = sheet('name: S\n    charts: []\n    pivots: []\n');
-    expect(read.opaque.map((o) => o.key)).toEqual(['charts', 'pivots']);
-    expect(read.keyOrder).toEqual(['name', 'charts', 'pivots']);
+    const read = sheet('name: S\n    slicers: []\n    pivots: []\n');
+    expect(read.opaque.map((o) => o.key)).toEqual(['slicers', 'pivots']);
+    expect(read.keyOrder).toEqual(['name', 'slicers', 'pivots']);
   });
 
   it('spans an unmodeled key over its whole entry', () => {
-    const source = 'sheets:\n  - name: S\n    charts: [{ at: A1 }]\n';
+    const source = 'sheets:\n  - name: S\n    slicers: [{ at: A1 }]\n';
     const opaque = load(parse(source, { file: 'f' })).doc?.sheets[0]?.opaque[0];
-    expect(source.slice(opaque?.span.start, opaque?.span.end)).toBe('charts: [{ at: A1 }]');
+    expect(source.slice(opaque?.span.start, opaque?.span.end)).toBe('slicers: [{ at: A1 }]');
   });
 
   it('reads where the sheet is split, an absent axis being unsplit', () => {

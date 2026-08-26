@@ -54,8 +54,10 @@ export {
 } from './name';
 export {
   parseQualifiedAddr,
+  parseQualifiedCell,
   parseQualifiedRange,
   type QualifiedAddr,
+  type QualifiedCell,
   type QualifiedRange,
   qualified,
 } from './qualified';
