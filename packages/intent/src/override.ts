@@ -2,6 +2,7 @@ import { type CompiledGrid, type CompiledSheet, cellAt, sheetOf } from '@yxl-vsc
 import { nodeAt, type Op, renderScalar, type Value } from '@yxl-vscode/cst';
 import { KEY, type Templated } from '@yxl-vscode/spec';
 import { type A1Addr, type QualifiedAddr, qualified, type SheetName } from '@yxl-vscode/units';
+import { itemOf } from './anchored';
 import { type Intent, type Projection, type Reading, refused } from './direct';
 
 /** What an override says about one cell, beside where it says it. */
@@ -100,7 +101,7 @@ export function overrides(
 /** The entries going in, under the key where the spec has one and with it where it has none. */
 function writing(written: readonly string[], held: boolean, at: number): Op[] {
   if (!held) {
-    const source = written.map((one) => `- ${indented(one)}`).join('\n');
+    const source = written.map(itemOf).join('\n');
     return [{ op: 'addSource', path: [], key: KEY.overrides, source }];
   }
 
@@ -136,11 +137,6 @@ function lines(where: { sheet: SheetName; at: A1Addr }, says: Says): string {
   }
 
   return written.join('\n');
-}
-
-/** The same lines as one item of a sequence, which is how the first one goes in. */
-function indented(written: string): string {
-  return written.split('\n').join('\n  ');
 }
 
 /** Where an override lands, as written; a `${param}` in it is not this cell's address until it is set. */

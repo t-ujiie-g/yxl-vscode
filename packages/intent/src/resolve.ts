@@ -49,7 +49,7 @@ export interface Candidate {
   readonly intent: Intent;
 }
 
-/** Every way of making an edit the direct path refused — `ROADMAP.md` §4.4, a row per origin. */
+/** Every way of making an edit the direct path refused — the resolution table, a row per origin. */
 export function candidates(
   spec: Resolving,
   where: { sheet: SheetName; at: A1Addr },
@@ -254,7 +254,7 @@ function ontoBlock(
         ops: [
           {
             op: 'insertSource',
-            path: [...found.path, 'values'],
+            path: [...found.path, KEY.values],
             index: rows,
             source: `[${[...fields, renderScalar(holds.value)].join(', ')}]`,
           },
@@ -405,7 +405,7 @@ function split(
 
   // Rewritten are the two keys as written: a `${...}` in either would be
   // written over with whatever it resolved to.
-  if (spelt(found.node, 'at') !== spanning(fill.rect)) return null;
+  if (spelt(found.node, KEY.at) !== spanning(fill.rect)) return null;
   if (spelt(found.node, 'formula') !== fill.formula) return null;
 
   const cell = cellOf(where.at);
@@ -427,7 +427,7 @@ function split(
 
   // Items added at one place are spliced from the end, so the last laid down reads first.
   const ops: Op[] = [
-    { op: 'set', path: [...found.path, 'at'], value: first.at },
+    { op: 'set', path: [...found.path, KEY.at], value: first.at },
     ...rest.reverse().map(
       (piece): Op => ({
         op: 'insertSource',

@@ -15,7 +15,7 @@ export interface Hiding {
   readonly hidden: boolean;
 }
 
-/** Every way of hiding those columns, or of showing them again — §4.4's band rows with `hidden:`. */
+/** Every way of hiding those columns, or of showing them again — the band rows with `hidden:`. */
 export function setHidden(spec: Projection, hiding: Hiding, read: Reading): readonly Candidate[] {
   const sheet = sheetOf(spec.grid, hiding.sheet);
   if (sheet === null || hiding.first < 1 || hiding.last < hiding.first) return [];

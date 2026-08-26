@@ -26,7 +26,7 @@ import { along, blocks, lineSaid, shifting } from './shift';
 
 /**
  * A row or a column inserted, or taken away: every construct the line reaches
- * moved where the line leaves it (§4.4). Nothing is written where anything
+ * moved where the line leaves it. Nothing is written where anything
  * stands in the way — the reasons are `shifting`'s, worked out first.
  */
 export function drawLine(spec: Projection, line: Line, read: Reading): Intent {
@@ -57,7 +57,7 @@ const MANY = 20;
 /**
  * The one answer a line has, with what it costs in front of it: applied without
  * asking where it moves little, and offered where the count is what a reader is
- * deciding about (§4.4).
+ * deciding about.
  */
 export function setLine(spec: Projection, line: Line, read: Reading): readonly Candidate[] {
   const sheet = sheetOf(spec.grid, line.sheet);
@@ -166,7 +166,9 @@ function writing(sheet: CompiledSheet, line: Line, read: Reading): Writing | Int
       continue;
     }
     if (does === 'shifts') {
-      put(found, (path) => [{ op: 'set', path: [...path, 'at'], value: corner(block.rect, line) }]);
+      put(found, (path) => [
+        { op: 'set', path: [...path, KEY.at], value: corner(block.rect, line) },
+      ]);
       continue;
     }
 
@@ -189,7 +191,7 @@ function writing(sheet: CompiledSheet, line: Line, read: Reading): Writing | Int
     const rect = grown(fill.rect, line, does);
     const now = shifted(fill.formula, sheet.name, line);
     put(found, (path) => [
-      { op: 'set', path: [...path, 'at'], value: rangeOf(rect) },
+      { op: 'set', path: [...path, KEY.at], value: rangeOf(rect) },
       ...(now.ok && now.formula !== fill.formula
         ? [{ op: 'set', path: [...path, 'formula'], value: now.formula } as const]
         : []),
@@ -221,7 +223,7 @@ function writing(sheet: CompiledSheet, line: Line, read: Reading): Writing | Int
         : [
             {
               op: 'set',
-              path: [...path, 'at'],
+              path: [...path, KEY.at],
               value: one ? run.first : spelled({ axis: line.axis, ...run }),
             },
           ],
@@ -252,7 +254,7 @@ function writing(sheet: CompiledSheet, line: Line, read: Reading): Writing | Int
 function flowing(found: Found, line: Line): string | null {
   if (line.axis !== 'column' || found.kind === 'refused' || line.by > -2) return null;
 
-  const values = nodeAt(found.node, ['values']);
+  const values = nodeAt(found.node, [KEY.values]);
   const first = values?.kind === 'seq' ? values.items[0] : undefined;
   if (first === undefined || first.kind === 'scalar' || !first.flow) return null;
 
@@ -302,7 +304,7 @@ function held(
 
 /** The gap a line opens inside an inline `data:` block, or the row it takes out of one. */
 function opened(rect: Rect, line: Line, path: Path): readonly Op[] {
-  const values: Path = [...path, 'values'];
+  const values: Path = [...path, KEY.values];
   const rows = rect.bottom - rect.top;
   const near = line.axis === 'column' ? rect.left : rect.top;
   const first = Math.max(line.at - near, 0);

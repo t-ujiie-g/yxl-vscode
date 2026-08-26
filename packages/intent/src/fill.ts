@@ -10,6 +10,7 @@ import {
   rangeOf,
   type SheetName,
 } from '@yxl-vscode/units';
+import { itemOf } from './anchored';
 import { type Held, located, type Projection, type Reading } from './direct';
 import { type Entry, landed, taking } from './landing';
 import type { Candidate } from './resolve';
@@ -163,7 +164,7 @@ function beside(
   const first = sheet.fills[0];
   const one = first === undefined ? null : located(first.node, read);
   if (one === null || one.kind === 'refused') {
-    const source = ranges.map((body) => `- ${body.split('\n').join('\n  ')}`).join('\n');
+    const source = ranges.map(itemOf).join('\n');
     return [{ op: 'addSource', path: [...path], key: KEY.formulas, source }];
   }
 

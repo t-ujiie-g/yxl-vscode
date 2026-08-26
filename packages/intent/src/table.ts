@@ -9,6 +9,7 @@ import {
   type Rect,
   type SheetName,
 } from '@yxl-vscode/units';
+import { itemOf } from './anchored';
 import { type Intent, located, type Projection, type Reading, refused } from './direct';
 
 /** A rectangle of `cells:` entries a reader asked to keep as a table instead. */
@@ -64,7 +65,7 @@ function beside(sheet: CompiledSheet, body: string, path: Path, read: Reading): 
 
   const one = blocks[0] === undefined ? null : located(blocks[0], read);
   if (one === null || one.kind === 'refused') {
-    return [{ op: 'addSource', path, key: KEY.data, source: `- ${body.split('\n').join('\n  ')}` }];
+    return [{ op: 'addSource', path, key: KEY.data, source: itemOf(body) }];
   }
 
   return [{ op: 'insertSource', path: one.path.slice(0, -1), index: blocks.length, source: body }];

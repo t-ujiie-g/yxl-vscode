@@ -5,7 +5,7 @@ import { type Asking, asked } from './asked';
 import type { Port, Spec } from './write';
 
 /**
- * A look asked for over a rectangle: the answers are §4.4's `setStyle` table,
+ * A look asked for over a rectangle: the answers are the `setStyle` table's,
  * and every write goes through the normalizer (ADR-008, ADR-037).
  */
 export function wear(spec: Spec, worn: Worn, port: Port, choice?: string): Promise<void> {

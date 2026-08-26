@@ -4,8 +4,8 @@ import { type Asking, asked, many } from './asked';
 import type { Port, Spec } from './write';
 
 /**
- * Columns or rows hidden from the preview, or shown again: §4.4's band rows
- * with `hidden:` where a size would be.
+ * Columns or rows hidden from the preview, or shown again: the resolution
+ * table's band rows with `hidden:` where a size would be.
  */
 export function hide(spec: Spec, hidden: Hidden, port: Port, choice?: string): Promise<void> {
   return asked(spec, hidden, port, choice, HIDE);

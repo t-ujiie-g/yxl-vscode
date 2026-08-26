@@ -1,31 +1,8 @@
 // @vitest-environment jsdom
 
 import { describe, expect, it } from 'vitest';
+import { cell } from './harness';
 import { ruler, widest } from './measure';
-import type { DrawnCell } from './protocol';
-
-function cell(of: Partial<DrawnCell> = {}): DrawnCell {
-  return {
-    row: 1,
-    col: 1,
-    value: null,
-    formula: null,
-    filledFrom: null,
-    format: null,
-    rich: null,
-    computed: null,
-    overridden: false,
-    editable: 'direct',
-    style: {},
-    bar: null,
-    icon: null,
-    note: null,
-    link: null,
-    validation: null,
-    sparkline: null,
-    ...of,
-  };
-}
 
 /** A ruler that counts characters, so a test asserts on what was measured rather than on a font. */
 const counting = (text: string, font: string) => text.length * (font.includes('bold') ? 2 : 1);
@@ -41,8 +18,8 @@ describe('the font a cell is measured in', () => {
     const fonts: string[] = [];
     widest(
       [
-        cell({ value: 'plain' }),
-        cell({
+        cell(1, 1, { value: 'plain' }),
+        cell(1, 1, {
           value: 'dressed',
           style: {
             'font.bold': true,
@@ -64,20 +41,22 @@ describe('the font a cell is measured in', () => {
 
 describe('how wide a column has to be', () => {
   it('is the widest of its cells, with what a cell keeps either side of its text', () => {
-    const cells = [cell({ value: 'APAC' }), cell({ value: 'EMEA and more' })];
+    const cells = [cell(1, 1, { value: 'APAC' }), cell(1, 1, { value: 'EMEA and more' })];
     expect(widest(cells, counting)).toBe(13 + 10);
   });
 
   it('measures each cell in its own font, so a bold word can be the widest', () => {
     const cells = [
-      cell({ value: 'a longer word' }),
-      cell({ value: 'bold', style: { 'font.bold': true } }),
+      cell(1, 1, { value: 'a longer word' }),
+      cell(1, 1, { value: 'bold', style: { 'font.bold': true } }),
     ];
     expect(widest(cells, counting)).toBe(Math.max(13, 4 * 2) + 10);
   });
 
   it('measures what the cell shows, which for a formula is the formula', () => {
-    expect(widest([cell({ formula: 'SUM(A1:A9)' })], counting)).toBe('=SUM(A1:A9)'.length + 10);
+    expect(widest([cell(1, 1, { formula: 'SUM(A1:A9)' })], counting)).toBe(
+      '=SUM(A1:A9)'.length + 10,
+    );
   });
 
   it('measures the whole of a cell written in runs', () => {
@@ -85,11 +64,11 @@ describe('how wide a column has to be', () => {
       { text: 'one ', style: {} },
       { text: 'two', style: {} },
     ];
-    expect(widest([cell({ rich })], counting)).toBe(7 + 10);
+    expect(widest([cell(1, 1, { rich })], counting)).toBe(7 + 10);
   });
 
   it('is nothing at all where none of them holds anything, which leaves the column alone', () => {
-    expect(widest([cell(), cell({ value: '' })], counting)).toBeNull();
+    expect(widest([cell(1, 1), cell(1, 1, { value: '' })], counting)).toBeNull();
     expect(widest([], counting)).toBeNull();
   });
 });

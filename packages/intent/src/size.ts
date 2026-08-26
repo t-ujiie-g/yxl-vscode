@@ -20,8 +20,8 @@ export interface Dragged {
 }
 
 /**
- * Every way of making those columns that wide — `ROADMAP.md` §4.4's `setSize`
- * table, over a span. A size is a band, never forty cells, so a band that
+ * Every way of making those columns that wide — the `setSize` table, over a
+ * span. A size is a band, never forty cells, so a band that
  * reaches past what was dragged is a question rather than an answer.
  */
 export function setSize(spec: Projection, dragged: Dragged, read: Reading): readonly Candidate[] {

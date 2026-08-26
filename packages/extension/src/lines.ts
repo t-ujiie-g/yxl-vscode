@@ -5,7 +5,7 @@ import type { Port, Spec } from './write';
 
 /**
  * Rows or columns put in, or taken away, all the way to the file: every
- * construct the line reaches moves with it (§4.4), and the count is in front of
+ * construct the line reaches moves with it, and the count is in front of
  * the reader where it is more than a handful.
  */
 export function line(spec: Spec, lined: Lined, port: Port, choice?: string): Promise<void> {

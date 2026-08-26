@@ -1,31 +1,11 @@
 import { describe, expect, it } from 'vitest';
+import { sheet as drawnSheet } from './harness';
 import type { DrawnSheet } from './protocol';
 import { across, down, heightOf, sizeOf, wanted, widthOf } from './window';
 
+/** A sheet far larger than its window, which is what a scroll is measured against. */
 function sheet(of: Partial<DrawnSheet> = {}): DrawnSheet {
-  return {
-    name: 'Sales',
-    rows: 200,
-    columns: 50,
-    at: { row: 1, col: 1 },
-    of: { rows: 1000, columns: 200 },
-    widths: [],
-    heights: [],
-    cells: [],
-    merges: [],
-    visibility: 'visible',
-    tabColor: null,
-    gridlines: true,
-    split: null,
-    filter: null,
-    tables: [],
-    charts: [],
-    images: [],
-    shapes: [],
-    problems: [],
-    freeze: null,
-    ...of,
-  };
+  return drawnSheet({ rows: 200, columns: 50, of: { rows: 1000, columns: 200 }, ...of });
 }
 
 describe('how big a sheet is on the page', () => {

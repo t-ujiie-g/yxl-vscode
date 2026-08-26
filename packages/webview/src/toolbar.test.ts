@@ -2,32 +2,10 @@
 
 import { type Color, parseColor } from '@yxl-vscode/units';
 import { describe, expect, it, vi } from 'vitest';
+import { cell, sheet as drawnSheet } from './harness';
 import type { Drawing, DrawnCell, DrawnSheet } from './protocol';
 import type { Asks, Showing } from './showing';
 import { toolbar } from './toolbar';
-
-function cell(of: Partial<DrawnCell>): DrawnCell {
-  return {
-    row: 1,
-    col: 1,
-    value: null,
-    formula: null,
-    filledFrom: null,
-    format: null,
-    rich: null,
-    computed: null,
-    overridden: false,
-    editable: 'direct',
-    bar: null,
-    icon: null,
-    note: null,
-    link: null,
-    validation: null,
-    sparkline: null,
-    style: {},
-    ...of,
-  };
-}
 
 function showing(of: {
   cells?: DrawnCell[];
@@ -35,28 +13,13 @@ function showing(of: {
   freeze?: DrawnSheet['freeze'];
   menu?: string;
 }): Showing {
-  const sheet: DrawnSheet = {
-    name: 'Sales',
+  const sheet = drawnSheet({
     rows: 10,
     columns: 10,
-    at: { row: 1, col: 1 },
     of: { rows: 10, columns: 10 },
-    widths: [],
-    heights: [],
     cells: of.cells ?? [],
-    merges: [],
-    visibility: 'visible',
-    tabColor: null,
-    gridlines: true,
-    split: null,
-    filter: null,
-    tables: [],
-    charts: [],
-    images: [],
-    shapes: [],
-    problems: [],
     freeze: of.freeze ?? null,
-  };
+  });
 
   const drawing: Drawing = {
     kind: 'drawing',
@@ -145,7 +108,7 @@ describe('the switches a reader reaches for first', () => {
 
   it('asks for the other of what the selected cell wears', () => {
     const wear = vi.fn();
-    const cells = [cell({ style: { 'font.bold': true } })];
+    const cells = [cell(1, 1, { style: { 'font.bold': true } })];
     const bar = toolbar(showing({ cells, selected: { row: 1, col: 1 } }), asks(wear));
 
     bar.querySelector<HTMLButtonElement>('button')?.click();
@@ -153,7 +116,7 @@ describe('the switches a reader reaches for first', () => {
   });
 
   it('shows what the cell already wears, so the switch reads as one', () => {
-    const cells = [cell({ style: { 'font.italic': true } })];
+    const cells = [cell(1, 1, { style: { 'font.italic': true } })];
     const bar = toolbar(showing({ cells, selected: { row: 1, col: 1 } }), asks());
 
     const on = [...bar.querySelectorAll('button.look')]
@@ -170,14 +133,14 @@ describe('the colours a reader picks', () => {
     toolbar(showing({ ...of, menu: key }), asks(on));
 
   it('is a palette under the button, which is where a spreadsheet keeps one', () => {
-    const bar = opened('fill', { cells: [cell({})], selected: { row: 1, col: 1 } });
+    const bar = opened('fill', { cells: [cell(1, 1, {})], selected: { row: 1, col: 1 } });
 
     expect(bar.querySelectorAll('.panel .swatch')).toHaveLength(20);
     expect(bar.querySelector('.panel .entry.clears')?.textContent).toBe('No fill');
   });
 
   it('says which of the standards the cell already wears', () => {
-    const cells = [cell({ style: { fill: NAVY } })];
+    const cells = [cell(1, 1, { style: { fill: NAVY } })];
     const navy = opened('fill', { cells, selected: { row: 1, col: 1 } });
     const black = opened('ink', { cells, selected: { row: 1, col: 1 } });
 
@@ -185,7 +148,7 @@ describe('the colours a reader picks', () => {
     expect(black.querySelector('.panel .swatch.here')).toBeNull();
 
     const red = opened('ink', {
-      cells: [cell({ style: { 'font.color': RED } })],
+      cells: [cell(1, 1, { style: { 'font.color': RED } })],
       selected: { row: 1, col: 1 },
     });
     expect(red.querySelector('.panel .swatch.here')?.getAttribute('title')).toBe('#FF0000');
@@ -193,7 +156,7 @@ describe('the colours a reader picks', () => {
 
   it('asks for the standard picked, in the spelling a spec writes', () => {
     const wear = vi.fn();
-    const bar = opened('fill', { cells: [cell({})], selected: { row: 1, col: 1 } }, wear);
+    const bar = opened('fill', { cells: [cell(1, 1, {})], selected: { row: 1, col: 1 } }, wear);
 
     bar.querySelector<HTMLButtonElement>('.panel .swatch[title="#FF9900"]')?.click();
     expect(wear).toHaveBeenCalledWith({ fill: 'FF9900' }, ONE);
@@ -201,7 +164,7 @@ describe('the colours a reader picks', () => {
 
   it('opens the picker on what the cell wears, for a colour the standards do not have', () => {
     const wear = vi.fn();
-    const cells = [cell({ style: { fill: NAVY } })];
+    const cells = [cell(1, 1, { style: { fill: NAVY } })];
     const bar = opened('fill', { cells, selected: { row: 1, col: 1 } }, wear);
 
     const pick = bar.querySelector<HTMLInputElement>('.panel .custom .pick');
@@ -215,7 +178,7 @@ describe('the colours a reader picks', () => {
 
   it('asks for it off, which is a look the schema says by leaving it out', () => {
     const wear = vi.fn();
-    const cells = [cell({ style: { 'font.color': RED } })];
+    const cells = [cell(1, 1, { style: { 'font.color': RED } })];
     const bar = opened('ink', { cells, selected: { row: 1, col: 1 } }, wear);
 
     bar.querySelector<HTMLButtonElement>('.panel .entry.clears')?.click();
@@ -223,7 +186,7 @@ describe('the colours a reader picks', () => {
   });
 
   it('cannot be taken off where the cell has none', () => {
-    const cells = [cell({ style: { fill: NAVY } })];
+    const cells = [cell(1, 1, { style: { fill: NAVY } })];
     const fill = opened('fill', { cells, selected: { row: 1, col: 1 } });
     const ink = opened('ink', { cells, selected: { row: 1, col: 1 } });
 
@@ -232,7 +195,7 @@ describe('the colours a reader picks', () => {
   });
 
   it('shows the colour on the button, so the bar says what is set without opening', () => {
-    const cells = [cell({ style: { fill: NAVY } })];
+    const cells = [cell(1, 1, { style: { fill: NAVY } })];
     const bar = toolbar(showing({ cells, selected: { row: 1, col: 1 } }), asks());
     const swatch = bar.querySelector<HTMLElement>('.look.fill .letter');
 
@@ -247,7 +210,7 @@ describe('where the text sits', () => {
     );
 
   it('is a group where only the one that holds is lit', () => {
-    const cells = [cell({ style: { 'align.horizontal': 'center' } })];
+    const cells = [cell(1, 1, { style: { 'align.horizontal': 'center' } })];
     const bar = toolbar(showing({ cells, selected: { row: 1, col: 1 } }), asks());
 
     expect(marks(bar).map((one) => one.classList.contains('on'))).toEqual([
@@ -262,7 +225,10 @@ describe('where the text sits', () => {
 
   it('asks for the one pressed, over both axes', () => {
     const wear = vi.fn();
-    const bar = toolbar(showing({ cells: [cell({})], selected: { row: 1, col: 1 } }), asks(wear));
+    const bar = toolbar(
+      showing({ cells: [cell(1, 1, {})], selected: { row: 1, col: 1 } }),
+      asks(wear),
+    );
 
     bar.querySelector<HTMLButtonElement>('button.right')?.click();
     expect(wear).toHaveBeenCalledWith({ 'align.horizontal': 'right' }, ONE);
@@ -273,7 +239,7 @@ describe('where the text sits', () => {
 
   it('takes it off where the one pressed is the one that holds (ADR-039)', () => {
     const wear = vi.fn();
-    const cells = [cell({ style: { 'align.horizontal': 'right' } })];
+    const cells = [cell(1, 1, { style: { 'align.horizontal': 'right' } })];
     const bar = toolbar(showing({ cells, selected: { row: 1, col: 1 } }), asks(wear));
 
     bar.querySelector<HTMLButtonElement>('button.right')?.click();
@@ -282,7 +248,10 @@ describe('where the text sits', () => {
 
   it('wraps as a switch, since that is what the schema makes of it', () => {
     const wear = vi.fn();
-    const bar = toolbar(showing({ cells: [cell({})], selected: { row: 1, col: 1 } }), asks(wear));
+    const bar = toolbar(
+      showing({ cells: [cell(1, 1, {})], selected: { row: 1, col: 1 } }),
+      asks(wear),
+    );
 
     bar.querySelector<HTMLButtonElement>('button.wrap')?.click();
     expect(wear).toHaveBeenCalledWith({ 'align.wrap': true }, ONE);
@@ -293,7 +262,7 @@ describe('a number under a format', () => {
   const box = (bar: HTMLElement) => bar.querySelector<HTMLSelectElement>('select.numbers');
 
   it('is on General where the cell has none', () => {
-    const bar = toolbar(showing({ cells: [cell({})], selected: { row: 1, col: 1 } }), asks());
+    const bar = toolbar(showing({ cells: [cell(1, 1, {})], selected: { row: 1, col: 1 } }), asks());
 
     expect(box(bar)?.value).toBe('');
     expect(said(box(bar)?.parentElement ?? null)).toBe('Number format');
@@ -301,7 +270,10 @@ describe('a number under a format', () => {
 
   it('asks for the code behind what the reader picked', () => {
     const wear = vi.fn();
-    const bar = toolbar(showing({ cells: [cell({})], selected: { row: 1, col: 1 } }), asks(wear));
+    const bar = toolbar(
+      showing({ cells: [cell(1, 1, {})], selected: { row: 1, col: 1 } }),
+      asks(wear),
+    );
 
     const select = box(bar);
     if (select === null) throw new Error('there is no format box');
@@ -313,7 +285,7 @@ describe('a number under a format', () => {
 
   it('asks for it off where the reader picks General', () => {
     const wear = vi.fn();
-    const cells = [cell({ style: { format: '0.0%' } })];
+    const cells = [cell(1, 1, { style: { format: '0.0%' } })];
     const bar = toolbar(showing({ cells, selected: { row: 1, col: 1 } }), asks(wear));
 
     const select = box(bar);
@@ -325,7 +297,7 @@ describe('a number under a format', () => {
   });
 
   it('says what each format would make of the number the cell holds', () => {
-    const cells = [cell({ value: 1234.5678 })];
+    const cells = [cell(1, 1, { value: 1234.5678 })];
     const bar = toolbar(showing({ cells, selected: { row: 1, col: 1 } }), asks());
 
     const options = [...(box(bar)?.options ?? [])].map((one) => [one.value, one.textContent]);
@@ -340,7 +312,7 @@ describe('a number under a format', () => {
   });
 
   it('says the code itself where the cell holds no number to make anything of', () => {
-    const cells = [cell({ value: 'APAC' })];
+    const cells = [cell(1, 1, { value: 'APAC' })];
     const bar = toolbar(showing({ cells, selected: { row: 1, col: 1 } }), asks());
 
     const options = [...(box(bar)?.options ?? [])].map((one) => one.textContent);
@@ -359,7 +331,7 @@ describe('a number under a format', () => {
   });
 
   it('makes it of what a formula was computed to, since that is the number shown', () => {
-    const cells = [cell({ value: null, computed: { kind: 'value', value: 0.085 } })];
+    const cells = [cell(1, 1, { value: null, computed: { kind: 'value', value: 0.085 } })];
     const bar = toolbar(showing({ cells, selected: { row: 1, col: 1 } }), asks());
 
     const options = [...(box(bar)?.options ?? [])].map((one) => one.textContent);
@@ -367,7 +339,7 @@ describe('a number under a format', () => {
   });
 
   it('shows a code it does not offer rather than losing it', () => {
-    const cells = [cell({ style: { format: '[h]:mm:ss' } })];
+    const cells = [cell(1, 1, { style: { format: '[h]:mm:ss' } })];
     const bar = toolbar(showing({ cells, selected: { row: 1, col: 1 } }), asks());
 
     expect(box(bar)?.value).toBe('[h]:mm:ss');
@@ -386,7 +358,7 @@ describe('a border a reader draws', () => {
     toolbar(showing({ ...of, menu: 'borders' }), on);
 
   it('is one button that opens the edges, as Sheets and Excel both keep it', () => {
-    const bar = toolbar(showing({ cells: [cell({})], selected: { row: 1, col: 1 } }), asks());
+    const bar = toolbar(showing({ cells: [cell(1, 1, {})], selected: { row: 1, col: 1 } }), asks());
 
     expect(bar.querySelectorAll('button.edge')).toHaveLength(0);
     expect(said(bar.querySelector('button.borders'))).toBe('Borders');
@@ -394,7 +366,7 @@ describe('a border a reader draws', () => {
 
   it('puts the line the toolbar is set to on the edges it names', () => {
     const wear = vi.fn();
-    const bar = opened({ cells: [cell({})], selected: { row: 1, col: 1 } }, asks(wear));
+    const bar = opened({ cells: [cell(1, 1, {})], selected: { row: 1, col: 1 } }, asks(wear));
 
     drawn(bar, 'bottom')?.click();
     expect(wear).toHaveBeenCalledWith({ 'border.bottom.style': 'thin' }, ONE);
@@ -414,7 +386,7 @@ describe('a border a reader draws', () => {
   it('draws with the line the reader chose, not the one it started on', () => {
     const wear = vi.fn();
     const at = {
-      ...showing({ cells: [cell({})], selected: { row: 1, col: 1 }, menu: 'borders' }),
+      ...showing({ cells: [cell(1, 1, {})], selected: { row: 1, col: 1 }, menu: 'borders' }),
       line: 'double',
     };
     const bar = toolbar(at as Showing, asks(wear));
@@ -425,7 +397,7 @@ describe('a border a reader draws', () => {
 
   it('asks for the line style the reader picked, which is the view own setting', () => {
     const drawWith = vi.fn();
-    const bar = opened({ cells: [cell({})], selected: { row: 1, col: 1 } }, {
+    const bar = opened({ cells: [cell(1, 1, {})], selected: { row: 1, col: 1 } }, {
       drawWith,
     } as unknown as Asks);
 
@@ -439,7 +411,7 @@ describe('a border a reader draws', () => {
 
   it('takes every edge off, since that is the unit the schema has (ADR-039)', () => {
     const wear = vi.fn();
-    const bar = opened({ cells: [cell({})], selected: { row: 1, col: 1 } }, asks(wear));
+    const bar = opened({ cells: [cell(1, 1, {})], selected: { row: 1, col: 1 } }, asks(wear));
 
     drawn(bar, 'none')?.click();
     expect(wear).toHaveBeenCalledWith(
@@ -458,7 +430,7 @@ describe('a border a reader draws', () => {
   });
 
   it('is never lit, since drawing a border is a thing done rather than worn', () => {
-    const cells = [cell({ style: { 'border.top.style': 'thin' } })];
+    const cells = [cell(1, 1, { style: { 'border.top.style': 'thin' } })];
     const bar = opened({ cells, selected: { row: 1, col: 1 } }, asks());
 
     const lit = [...bar.querySelectorAll('button.edge')].some((one) =>

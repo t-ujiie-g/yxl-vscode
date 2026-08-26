@@ -28,7 +28,7 @@ import {
 } from './showing';
 import { grid, headed, pinned } from './table';
 import { toolbar } from './toolbar';
-import { type Where, wanted } from './window';
+import { pixelsOf, type Where, wanted } from './window';
 
 /**
  * The whole view, rebuilt outright whenever the host sends a new drawing
@@ -213,11 +213,6 @@ function scroller(sheet: DrawnSheet, showing: Showing, asks: Asks): HTMLElement 
   return box;
 }
 
-/** A point as the page draws it: a spec says `split:` in points, CSS counts pixels. */
-function pixels(points: number): number {
-  return (points * 4) / 3;
-}
-
 /** Where a sheet is split, said under the grid: a bar in the sheet has nowhere to say it itself. */
 function splitSaid(split: { readonly x: number; readonly y: number }): string {
   const where = [
@@ -239,14 +234,14 @@ function splitter(sheet: DrawnSheet): HTMLElement | null {
   if (split.x > 0) {
     const bar = document.createElement('div');
     bar.className = 'split column';
-    bar.style.left = `${gutterOf(sheet, 'row') + GUTTER + pixels(split.x)}px`;
+    bar.style.left = `${gutterOf(sheet, 'row') + GUTTER + pixelsOf(split.x)}px`;
     bars.append(bar);
   }
 
   if (split.y > 0) {
     const bar = document.createElement('div');
     bar.className = 'split row';
-    bar.style.top = `${gutterOf(sheet, 'column') + HEADING + pixels(split.y)}px`;
+    bar.style.top = `${gutterOf(sheet, 'column') + HEADING + pixelsOf(split.y)}px`;
     bars.append(bar);
   }
 

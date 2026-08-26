@@ -10,7 +10,7 @@ import {
 } from '@yxl-vscode/compile';
 import { apply } from '@yxl-vscode/cst';
 import { normalize, written as spell } from '@yxl-vscode/normalize';
-import { ordered, propertiesOf, type StyleProperty, type StyleSays } from '@yxl-vscode/spec';
+import { KEY, ordered, propertiesOf, type StyleProperty, type StyleSays } from '@yxl-vscode/spec';
 import {
   type A1Addr,
   addressesOf,
@@ -43,8 +43,8 @@ export interface Over {
 }
 
 /**
- * Every way of making a rectangle look as the reader asked — `ROADMAP.md` §4.4's
- * `setStyle` table. Where one answer is the whole answer it says so, and the
+ * Every way of making a rectangle look as the reader asked — the `setStyle`
+ * table. Where one answer is the whole answer it says so, and the
  * caller may take it without asking (ADR-001).
  */
 export function setStyle(
@@ -139,7 +139,7 @@ function ofItsOwn(
   const how = normalize(want, spec.grid.styles);
   if (how === null) return null;
 
-  const written = bandOfItsOwn(sheet, span, [['style', spell(how)]], read);
+  const written = bandOfItsOwn(sheet, span, [[KEY.style, spell(how)]], read);
   return written === null ? null : { file: written.found.file, ops: [written.op], moves: [] };
 }
 
@@ -267,7 +267,7 @@ function origins(
   }));
 }
 
-/** The two answers §4.4 gives a rectangle whose cells take the look from different places. */
+/** The two answers a rectangle has whose cells take the look from different places. */
 function apart(
   spec: Projection,
   sheet: CompiledSheet,

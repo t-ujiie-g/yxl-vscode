@@ -6,7 +6,7 @@ import type { About } from '@yxl-vscode/webview/protocol';
 import { ANYWAY, applied, type Port, type Spec, sheetNamed, shown } from './write';
 
 /**
- * What a gesture the §4.4 tables answer needs to say for itself, and nothing
+ * What a gesture the resolution table answers needs to say for itself, and nothing
  * more. `about` writes its `kind` last: a message carries its own, and the one
  * it is refused under is the one the view must send back (ADR-048).
  */

@@ -9,7 +9,7 @@ interface Ran {
   readonly said: string;
 }
 
-/** Run `yxl`, or `null` where there is none to run; the compiler is required, not bundled (`ROADMAP.md` §8 Q6). */
+/** Run `yxl`, or `null` where there is none to run; the compiler is required, not bundled. */
 export async function run(binary: string, args: readonly string[]): Promise<Ran | null> {
   try {
     const { stdout, stderr } = await spawn(binary, [...args]);

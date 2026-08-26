@@ -21,7 +21,14 @@ import {
 import type { IncludeReader } from '@yxl-vscode/loader';
 import type { Step } from '@yxl-vscode/patch';
 import type { SpecDoc } from '@yxl-vscode/spec';
-import { addrAt, type FilePath, qualified, type SheetName, sheetName } from '@yxl-vscode/units';
+import {
+  addrAt,
+  type FilePath,
+  qualified,
+  type Rect,
+  type SheetName,
+  sheetName,
+} from '@yxl-vscode/units';
 import { type Change, checked, checkedText } from '@yxl-vscode/verify';
 import type { About, Choice, Ranged, Typed } from '@yxl-vscode/webview/protocol';
 
@@ -298,6 +305,11 @@ export async function writeOverride(
     about: about(typed),
   });
   if (done) port.said(`${sheet}!${at} is now written as an override.`);
+}
+
+/** The rectangle a gesture named, which is everything it carries but the sheet. */
+export function rectIn(ranged: Ranged): Rect {
+  return { top: ranged.top, left: ranged.left, bottom: ranged.bottom, right: ranged.right };
 }
 
 /** The sheet a gesture named, or `null` once the reader has been told it is not a name. */

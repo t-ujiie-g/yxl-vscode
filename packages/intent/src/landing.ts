@@ -121,7 +121,7 @@ function into(
     if ('formula' in holds)
       return `\`${at}\` is a field of a \`data:\` block, which holds no formula`;
 
-    const path = [...found.path, 'values', origin.row, origin.col];
+    const path = [...found.path, KEY.values, origin.row, origin.col];
     return { file: found.file, ops: [{ op: 'set', path, value: holds.value }] };
   }
 

@@ -5,6 +5,11 @@ import type { DrawnSheet, Sized } from './protocol';
 const PER_CHARACTER = 7;
 const PER_POINT = 4 / 3;
 
+/** A point as the page draws it: a spec says a splitter and a line weight in points, CSS counts pixels. */
+export function pixelsOf(points: number): number {
+  return points * PER_POINT;
+}
+
 /** The smallest a drag may leave a column or a row, so the grip it was dragged by stays there. */
 const LEAST = { column: 1, row: 6 };
 
