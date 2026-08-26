@@ -3100,11 +3100,15 @@ A chart and an image can be inserted from the cell's own menu. Both are
   resolving a path is the host's (ADR-004). Written relative to the spec and
   with `/` whatever the platform, which is how yxl resolves one. A format Excel
   does not decode is refused by name rather than left to the compiler.
+- **A plate too small for a name wears the mark alone.** A 48 × 48 logo drew a
+  file name clipped to `asset…`, which says less than nothing; the plate is
+  marked as a picture now, and named only where the name fits. The hover keeps
+  it either way.
 - **`sequenceIn` in `intent/anchored.ts`**, beside `anchored`: a float is
   anchored at one cell, so the entries under its key are not read against a
   rectangle. `anchored` is now that plus the overlap it looks for.
-- Comment shape: export 779 blocks / 1701 lines / avg 2.2, private 521 / 521 /
-  avg 1.0, inline 108 / 165 / avg 1.5; 0 over the limit, including the four the
+- Comment shape: export 779 blocks / 1701 lines / avg 2.2, private 523 / 523 /
+  avg 1.0, inline 109 / 167 / avg 1.5; 0 over the limit, including the four the
   entry below left there.
 
 ### 2026-08-26 — What sits on the sheet, drawn

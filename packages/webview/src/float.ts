@@ -260,18 +260,50 @@ function slice(from: number, to: number): string {
   return `M 50,30 L ${at(from)} A 26,26 0 ${to - from > 0.5 ? 1 : 0} 1 ${at(to)} Z`;
 }
 
-/** An image as the plate it takes up, named by its file; the picture itself is Excel's to draw (ADR-029). */
+/** An image as the plate it takes up, marked and named; the picture itself is Excel's to draw (ADR-029). */
 function image(sheet: DrawnSheet, one: DrawnImage): HTMLElement {
   const drawn = box(sheet, one.at, one.size, 'image');
   if (one.size === null) drawn.classList.add('unmeasured');
   drawn.title = [one.alt, one.file, one.why].filter((said) => said !== null).join('\n');
+  drawn.append(picture());
 
-  const said = document.createElement('span');
-  said.className = 'label';
-  said.textContent = one.alt ?? one.file;
-  drawn.append(said);
+  // A name in a plate too small to hold it clips to a word that says less than
+  // the mark does; the hover still has it.
+  if (one.size === null || (one.size.width >= NAMED.width && one.size.height >= NAMED.height)) {
+    const said = document.createElement('span');
+    said.className = 'label';
+    said.textContent = one.alt ?? one.file;
+    drawn.append(said);
+  }
 
   return drawn;
+}
+
+/** The smallest plate a file name fits in, past which the mark stands alone. */
+const NAMED = { width: 112, height: 44 };
+
+/** The mark a plate wears: a picture, in the same greys the rest of a sketch is drawn in. */
+function picture(): SVGSVGElement {
+  const svg = document.createElementNS(SVG, 'svg');
+  svg.setAttribute('class', 'mark');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('aria-hidden', 'true');
+
+  svg.append(
+    node('rect', {
+      x: 1.5,
+      y: 3.5,
+      width: 21,
+      height: 17,
+      rx: 2,
+      fill: 'none',
+      stroke: '#8f8f8f',
+      'stroke-width': 1.5,
+    }),
+    node('circle', { cx: 8, cy: 9, r: 2, fill: '#8f8f8f' }),
+    node('path', { d: 'M 3 19 L 10 12 L 15 17 L 18 14 L 21 17 L 21 19 Z', fill: '#8f8f8f' }),
+  );
+  return svg;
 }
 
 /** A shape as the geometry it names, filled and outlined as the spec asks (`docs/spec.md` §18). */
