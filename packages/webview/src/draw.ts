@@ -1,4 +1,5 @@
 import { findBar, formulaBar, told } from './boxes';
+import { floats } from './float';
 import { takingAll, wearing } from './keys';
 import { fit } from './menus';
 import { gutterOf } from './outline';
@@ -197,6 +198,9 @@ function scroller(sheet: DrawnSheet, showing: Showing, asks: Asks): HTMLElement 
   box.className = 'scroller';
   box.setAttribute('data-of', looking(showing));
   box.append(grid(sheet, showing, asks));
+
+  const over = floats(sheet);
+  if (over !== null) box.append(over);
 
   const bars = splitter(sheet);
   if (bars !== null) box.append(bars);

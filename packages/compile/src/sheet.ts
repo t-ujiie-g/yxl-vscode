@@ -31,6 +31,7 @@ import {
 import { address, colour, compileFacets, layer, type Spoke, spokenBy } from './cell';
 import { CODE } from './codes';
 import { type Ctx, filled, reject, text } from './ctx';
+import { chart, image, shape, sparklines } from './float';
 import type {
   CompiledAsk,
   CompiledBand,
@@ -87,6 +88,10 @@ export function compileSheet(ctx: Ctx, sheet: Sheet): Drafted {
         .map((one) => validation(ctx, one))
         .filter((one) => one !== null),
       tables: sheet.tables.map((one) => table(ctx, one)).filter((one) => one !== null),
+      charts: sheet.charts.map((one) => chart(ctx, one)).filter((one) => one !== null),
+      images: sheet.images.map((one) => image(ctx, one)).filter((one) => one !== null),
+      shapes: sheet.shapes.map((one) => shape(ctx, one)).filter((one) => one !== null),
+      sparklines: sheet.sparklines.flatMap((group) => sparklines(ctx, group)),
       conditional: sheet.conditional
         .map((rule) => conditionalRule(ctx, rule))
         .filter((rule) => rule !== null),

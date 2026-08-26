@@ -1539,8 +1539,25 @@ of its colours and why a header row showed no filter.
 Charts, images, sparklines and shapes — all four are in the spec already
 (`docs/spec.md` §12, §13, §18, §19). This editor carries them through untouched
 (ADR-011) and draws nothing of them, which is the largest hole in the preview.
-- [ ] Each of them **drawn** where it sits and at the size it takes, with enough
+- [x] Each of them **drawn** where it sits and at the size it takes, with enough
       of the thing to recognise — never Excel's rendering of it (**ADR-029**)
+      **In**, all four modelled rather than opaque and each drawn as what it is.
+      A **chart** is an outlined box with its title, a legend on the side it
+      asks for naming every series — by its `name`, or by the cell `name_from`
+      reads, or by the range it plots — the axis titles along their own edges,
+      and a mark of its own type: bars, a line, an area, dots, or slices. In
+      greys, never Excel's palette, and what it cannot fit it says on hover.
+      An **image** takes the room its own file says it takes: the host reads the
+      extent out of the header — PNG, GIF, BMP, JPEG, SVG — rather than
+      decoding one, and where the format says nothing the plate says so instead
+      of guessing an extent. A **shape** is the preset geometry it names, drawn
+      as an outline of it in the `fill:` and `line:` the spec asks for, with its
+      text over it a line at a time in the font each line wears. A **sparkline**
+      is drawn inside the cell it sits in, from the values the sheet holds —
+      evaluated where there are any, display only (ADR-014) — as a line, columns
+      or win/loss, with the axis at zero and the marks the group picks out.
+      **`positioning:` is read and not yet drawn**: nothing in the preview moves
+      the cells under a float, so the three anchors have nothing to tell apart.
 - [ ] Inserting one: a chart over the selected range, an image from a file
       beside the spec
 - [ ] Moving and resizing what is there, as an edit to the construct's own
@@ -2938,11 +2955,15 @@ this preview opens, and nothing on their machine runs because a spec asked.
   band had no way to say it is unfilled. Answering it took one round trip
   through `extract` to show it was a defect rather than a GUI wish. **ADR-039**
   is what this editor does with it; the cell is now one of the answers.
-- **Q13 — What draws a chart's sketch?** ADR-029 needs an outline, a title, a
-  legend box and a series list — which is hand-written SVG, not a chart library,
-  unless the sketch turns out to want axes. No runtime dependency without an ADR
-  (ADR-013); decide when Phase 12 starts, with a spike over `charts.yxl.yaml`
-  and `sparklines.yxl.yaml`, which are already in the corpus.
+- **Q13 — What draws a chart's sketch?** ✅ *Answered 2026-08-26.* **Hand-written
+  DOM and inline SVG, and no dependency.** The spike over `charts.yxl.yaml` and
+  `sparklines.yxl.yaml` came back saying the sketch wants a box, a title, a
+  legend, and one mark per chart family — which is a CSS grid and a dozen SVG
+  primitives. The axes it *does* want turned out to be their titles, not scales:
+  a scale drawn from the data would be the rendering ADR-029 refuses. A chart
+  library would have to be told not to draw the chart. Sparklines are the one
+  place a real plot is drawn, and it is a polyline over the values the sheet
+  already holds — the same values a `data_bar` is drawn from.
 - **Q14 — What does one question about a rectangle look like?** ✅ *Answered
   2026-08-19.* *The origins grouped, a count against each* came first: a
   rectangle that cannot be written says `2 are filled by a range, 1 reads a
@@ -3050,6 +3071,36 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-26 — What sits on the sheet, drawn
+Charts, images, sparklines and shapes were opaque and invisible — the largest
+hole in the preview. All four are modelled now, and each is drawn where it sits
+and at the size it takes. A sketch, never Excel's rendering of one (ADR-029).
+
+- **Read rather than carried**: `charts:` with its series, axes, legend and
+  size; `images:` with `scale`, `offset` and `positioning`; `shapes:` with all
+  twenty-three geometries, the fill, the outline and the text a line at a time;
+  `sparklines:` both ways a group is placed, with its bounds, weight and marks.
+  Every key `docs/spec.md` §12, §13, §18 and §19 gives them.
+- **A chart is an outline, a title, a legend and a mark of its type.** The
+  legend goes on the side the spec asks for and names each series — by its
+  `name`, by the cell `name_from` reads, or by the range it plots. In greys:
+  the colours a chart is finally drawn in are the workbook's, not ours. What
+  will not fit — the ranges, the axis bounds — is on hover.
+- **An image takes the room its own file says.** The host reads the extent out
+  of the header (PNG, GIF, BMP, JPEG, SVG) rather than decoding the picture,
+  which is ADR-029 applied to the one construct whose extent is not written
+  down. A format whose header this does not read says so instead of guessing.
+- **A sparkline is a real plot**, and the one place that is honest: it is drawn
+  from the values the sheet already holds — the same values a `data_bar` is —
+  evaluated where there are any, display only (ADR-014). Each is scaled to its
+  own points, which is how Excel scales one unless the group says otherwise.
+- **`parseQualifiedCell` in `units`**, beside `parseQualifiedRange`: a series'
+  `name_from` may name its sheet and usually does not, and `parseQualifiedAddr`
+  is §23's, which requires one.
+- Q13 is answered: hand-written DOM and SVG, and no runtime dependency.
+- Comment shape: export 768 blocks / 1671 lines / avg 2.2, private 513 / 523 /
+  avg 1.0, inline 108 / 165 / avg 1.5; 4 over the limit, as before.
 
 ### 2026-08-25 — A tidying pass over the tree
 No behaviour changed. The §8 lenses, walked in order, over the whole tree.

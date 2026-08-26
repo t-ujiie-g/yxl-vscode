@@ -30,7 +30,9 @@ import type {
   Uncomputed,
 } from '@yxl-vscode/webview/protocol';
 import { applied, barAt, iconAt, overRanges, spreads } from './conditional';
+import { anchorsIn, chartsOf, imagesOf, shapesOf, sparklineAt } from './floats';
 import { type Nodes, nodeUnder } from './inspect';
+import type { PictureReader } from './pictures';
 import { choicesOf, validating, validationSaid } from './validations';
 
 /** Where a sheet is being looked at, 1-based, as the view last asked. */
@@ -63,6 +65,7 @@ export function drawn(
   },
   params: Setting,
   windows: Windows,
+  pictures: PictureReader | null = null,
 ): Drawing {
   const { doc, grid, nodes, diagnostics, evaluation } = projected;
   const marked = marks(grid, nodes, diagnostics);
@@ -71,7 +74,10 @@ export function drawn(
     kind: 'drawing',
     file,
     sheets: grid.sheets.map((sheet) =>
-      drawSheet(sheet, marked.get(sheet.name) ?? [], windows.get(sheet.name), evaluation, grid),
+      drawSheet(sheet, marked.get(sheet.name) ?? [], windows.get(sheet.name), evaluation, grid, {
+        file,
+        pictures,
+      }),
     ),
     params: declared(doc, params),
     diagnostics: listed(diagnostics),
@@ -124,6 +130,7 @@ function drawSheet(
   window: Window | undefined,
   evaluation: Evaluation | null,
   grid: CompiledGrid | null = null,
+  beside: Beside = { file: '', pictures: null },
 ): DrawnSheet {
   const of = extent(sheet);
   const at = {
@@ -148,6 +155,9 @@ function drawSheet(
     split: sheet.split,
     filter: sheet.filter,
     tables: sheet.tables.map((one) => ({ ...one.rect, ...tabled(one) })),
+    charts: chartsOf(sheet, grid),
+    images: imagesOf(sheet, beside.file, beside.pictures),
+    shapes: shapesOf(sheet),
     widths: sheet.columns.map(sizedRun),
     heights: sheet.rows.map(sizedRun),
     cells: drawCells(sheet, { at, rows, columns, freeze }, evaluation, grid),
@@ -160,6 +170,12 @@ function drawSheet(
       }),
     ),
   };
+}
+
+/** What the host needs to measure a picture: the spec an `images:` path resolves against, and the way to read one. */
+interface Beside {
+  readonly file: string;
+  readonly pictures: PictureReader | null;
 }
 
 /** The four Table Design toggles and what the table is called, as the view is handed them. */
@@ -188,6 +204,12 @@ function extent(sheet: CompiledSheet): { rows: number; columns: number } {
   for (const merge of sheet.merges) {
     rows = Math.max(rows, merge.rect.bottom);
     columns = Math.max(columns, merge.rect.right);
+  }
+
+  for (const at of anchorsIn(sheet)) {
+    const { col, row } = cellOf(at);
+    rows = Math.max(rows, row);
+    columns = Math.max(columns, col);
   }
 
   for (const fill of sheet.fills) {
@@ -239,6 +261,7 @@ function drawCells(
       const note = sheet.notes.get(addr) ?? null;
       const link = sheet.links.get(addr) ?? null;
       const asked = validating(sheet, addr);
+      const sparkline = sparklineAt(sheet, grid, evaluation, addr);
       const computed = evaluation?.values.get(qualified(sheet.name, addr)) ?? null;
 
       // The rules go over what the cell wears, since Excel's own conditional
@@ -257,7 +280,7 @@ function drawCells(
       const style = settled(resolve(layers));
       const holds =
         cell !== null && (cell.value !== null || cell.formula !== null || cell.rich !== null);
-      const bare = !holds && note === null && link === null && asked === null;
+      const bare = !holds && note === null && link === null && asked === null && sparkline === null;
       if (bare && Object.keys(style).length === 0) continue;
 
       drawn.push({
@@ -279,6 +302,7 @@ function drawCells(
           link === null
             ? null
             : { kind: link.target.kind, target: link.target.text, tip: link.tip },
+        sparkline,
         validation:
           asked === null
             ? null

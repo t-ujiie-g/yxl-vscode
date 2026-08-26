@@ -22,6 +22,7 @@ function cell(of: Partial<DrawnCell> = {}): DrawnCell {
     note: null,
     link: null,
     validation: null,
+    sparkline: null,
     ...of,
   };
 }
@@ -45,6 +46,9 @@ function sheet(of: Partial<DrawnSheet> = {}): DrawnSheet {
     split: null,
     filter: null,
     tables: [],
+    charts: [],
+    images: [],
+    shapes: [],
     ...of,
   };
 }

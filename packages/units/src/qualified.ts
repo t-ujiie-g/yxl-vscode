@@ -27,6 +27,28 @@ export function parseQualifiedAddr(text: string): QualifiedAddr | null {
 }
 
 /**
+ * A cell that may name its sheet — `Figures!B1` or `B1`, where `null` is the
+ * sheet it was written on — as a chart series' `name_from:` is.
+ */
+export interface QualifiedCell {
+  readonly sheet: SheetName | null;
+  readonly at: A1Addr;
+}
+
+/** The same as `parseQualifiedAddr`, for the places where naming the sheet is optional. */
+export function parseQualifiedCell(text: string): QualifiedCell | null {
+  const split = text.startsWith("'") ? quoted(text) : plain(text);
+  if (split === null) {
+    const here = parseA1Addr(text);
+    return here === null ? null : { sheet: null, at: here };
+  }
+
+  const sheet = sheetName(split.name);
+  const at = parseA1Addr(split.rest);
+  return sheet === null || at === null ? null : { sheet, at };
+}
+
+/**
  * A range that may name its sheet — `Statuses!A1:A3` or `A1:A3`, where `null`
  * is the sheet it was written on — as a validation's `from:` is.
  */

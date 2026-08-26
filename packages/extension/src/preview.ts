@@ -39,6 +39,7 @@ import { wear } from './look';
 import { merge } from './merges';
 import { note } from './notes';
 import { filter, freeze } from './panes';
+import { measureBeside } from './pictures';
 import { drawRun, type Projected, project, redraw, type Window } from './project';
 import { formatTable } from './regions';
 import { add, move, remove, rename, tab } from './sheets';
@@ -251,6 +252,7 @@ export class Preview {
       this.params,
       this.windows,
       this.engine,
+      measureBeside,
     );
     const { drawing, diagnostics } = drawn;
     this.drawn = drawn;
@@ -376,7 +378,7 @@ export class Preview {
     const drawn = this.drawn;
     if (drawn === undefined) return;
 
-    const drawing = redraw(drawn, this.params, this.windows);
+    const drawing = redraw(drawn, this.params, this.windows, measureBeside);
     this.drawn = { ...drawn, drawing };
     void this.panel.webview.postMessage(drawing);
   }

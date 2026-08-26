@@ -75,6 +75,7 @@ export function cell(row: number, col: number, of: Partial<DrawnCell> = {}): Dra
     note: null,
     link: null,
     validation: null,
+    sparkline: null,
     ...of,
   };
 }
@@ -98,6 +99,9 @@ export function sheet(of: Partial<DrawnSheet> = {}): DrawnSheet {
     split: null,
     filter: null,
     tables: [],
+    charts: [],
+    images: [],
+    shapes: [],
     ...of,
   };
 }

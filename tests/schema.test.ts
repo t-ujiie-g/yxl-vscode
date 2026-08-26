@@ -28,6 +28,7 @@ describe('the upstream specs', () => {
     const docs = documents.map((sample) => read(sample).doc).filter((doc) => doc !== null);
     expect(seen(docs)).toEqual({
       cells: true,
+      charts: true,
       columns: true,
       data: true,
       defs: true,
@@ -36,8 +37,11 @@ describe('the upstream specs', () => {
       includes: true,
       merges: true,
       opaque: true,
+      images: true,
       params: true,
       rows: true,
+      shapes: true,
+      sparklines: true,
     });
   });
 });
@@ -83,6 +87,7 @@ function seen(docs: readonly SpecDoc[]): Record<string, boolean> {
   const sheets = docs.flatMap((doc) => doc.sheets);
   return {
     cells: sheets.some((sheet) => sheet.cells.length > 0),
+    charts: sheets.some((sheet) => sheet.charts.length > 0),
     columns: sheets.some((sheet) => sheet.columns.length > 0),
     data: sheets.some((sheet) => sheet.data.length > 0),
     defs: docs.some((doc) => doc.defs.styles.length + doc.defs.values.length > 0),
@@ -92,7 +97,10 @@ function seen(docs: readonly SpecDoc[]): Record<string, boolean> {
     includes: docs.some((doc) => filesIn(doc).some((file) => file !== doc.file)),
     merges: sheets.some((sheet) => sheet.merges.length > 0),
     opaque: sheets.some((sheet) => sheet.opaque.length > 0),
+    images: sheets.some((sheet) => sheet.images.length > 0),
     params: docs.some((doc) => doc.params.length > 0),
     rows: sheets.some((sheet) => sheet.rows.length > 0),
+    shapes: sheets.some((sheet) => sheet.shapes.length > 0),
+    sparklines: sheets.some((sheet) => sheet.sparklines.length > 0),
   };
 }

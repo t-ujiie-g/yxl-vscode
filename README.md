@@ -81,9 +81,12 @@ guessed. A `validations:` list offers its choices in the cell as a spreadsheet
 does, the other kinds say what they will accept on hover, and *Data validation…*
 writes a list over the selection. A `tables:` region is drawn as Excel bands
 one, header row and all, and *Format as table* makes one over the selection.
-What sits *on* a sheet rather than on its cells — charts, images, sparklines and
-shapes — is carried through untouched and drawn as nothing, and is the phase in
-progress.
+What sits *on* a sheet rather than on its cells is **drawn where it sits and at
+the size it takes**: a chart as a sketch with its title, its legend and the
+ranges each series names — never Excel's rendering of it (`ROADMAP.md` ADR-029)
+— an image as the room its own file says it takes, a shape as the geometry it
+names in the colours it asks for, and a sparkline as the line, columns or
+win/loss inside its cell. Inserting and moving one is the phase in progress.
 
 ## Where it is going
 
