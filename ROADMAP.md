@@ -3167,6 +3167,10 @@ lines net came out.
   logical seam, since the only split is a redesign of the view's state model.
   §8.3 says not to split for a line count, so it stays until there is a reason.
 - Layers clean, no deprecation warnings, ROADMAP checkboxes match the code.
+- **`@types/node` 26.2 → 26.3**, as its own commit. `@types/vscode` is 30 minors
+  behind and **stays** at `~1.104.0`: it has to describe the *oldest* VS Code
+  `engines.vscode` claims to support, not the newest, or code compiles against
+  an API the host it claims to run on has not got.
 - Comment shape: export 795 blocks / 1741 lines / avg 2.2, private 533 / 533 /
   avg 1.0, inline 112 / 172 / avg 1.5; 0 over the limit.
 
