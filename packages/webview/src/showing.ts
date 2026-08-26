@@ -205,6 +205,8 @@ export interface Asks {
   readonly freeze: (at: At | null) => void;
   readonly filter: (on: boolean) => void;
   readonly formatTable: (on: boolean) => void;
+  readonly chart: () => void;
+  readonly image: (row: number, col: number) => void;
   readonly note: (row: number, col: number, text: string | null) => void;
   readonly link: (row: number, col: number, to: Linked['link']) => void;
   readonly askAt: (asked: Asked | null) => void;

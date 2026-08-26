@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { dirname, relative, resolve } from 'node:path';
 import type { DataReader } from '@yxl-vscode/compile';
 import type { IncludeReader } from '@yxl-vscode/loader';
 import { type FilePath, filePath } from '@yxl-vscode/units';
@@ -33,4 +33,14 @@ export function openFirst(
     const held = opened(found.file);
     return held === null ? found : { file: found.file, source: held };
   };
+}
+
+/**
+ * A file picked in the editor, written as a spec would write it: relative to
+ * the spec it goes in, and with `/` whatever the platform, since a spec is read
+ * on every platform (`docs/spec.md` §9).
+ */
+export function besideSpec(spec: string, chosen: string): string {
+  const from = relative(dirname(spec), chosen).replace(/\\/g, '/');
+  return from === '' ? chosen.replace(/\\/g, '/') : from;
 }

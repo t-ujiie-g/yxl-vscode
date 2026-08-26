@@ -376,6 +376,7 @@ export type About =
   | { readonly kind: 'moveSheet'; readonly sheet: string; readonly to: number }
   | ({ readonly kind: 'filter' } & Filtered)
   | ({ readonly kind: 'tabled' } & Tabled)
+  | ({ readonly kind: 'chart' } & Ranged)
   | ({ readonly kind: 'note' } & Noted)
   | ({ readonly kind: 'link' } & Linked)
   | ({ readonly kind: 'validate' } & Validated)
@@ -527,6 +528,7 @@ export type FromView =
   | { readonly kind: 'follow'; readonly sheet: string; readonly row: number; readonly col: number }
   | ({ readonly kind: 'merge' } & Merged)
   | ({ readonly kind: 'table' } & Ranged)
+  | { readonly kind: 'image'; readonly sheet: string; readonly row: number; readonly col: number }
   | ({ readonly kind: 'sum' } & Ranged)
   | ({ readonly kind: 'override'; readonly reason: string } & Typed)
   | {

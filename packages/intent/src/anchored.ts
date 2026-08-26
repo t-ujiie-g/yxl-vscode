@@ -23,16 +23,25 @@ export interface Anchored {
 
 /** What a sheet writes under `key`, read against the rectangle a gesture is about. */
 export function anchored(found: { node: Node; path: Path }, key: string, rect: Rect): Anchored {
-  const written = entryOf(found.node, key)?.value ?? null;
-  const items = written?.kind === 'seq' ? written.items : [];
   const touched: Reached[] = [];
 
-  items.forEach((item, index) => {
+  itemsUnder(found, key).forEach((item, index) => {
     const at = rectAt(item);
     if (at !== null && overlapping(at, rect)) touched.push({ index, rect: at });
   });
 
-  return { key, sheet: found.path, under: [...found.path, key], many: items.length, touched };
+  return { ...sequenceIn(found, key), touched };
+}
+
+/** The same, for a key whose entries no rectangle is asked about: a float is anchored at one cell. */
+export function sequenceIn(found: { node: Node; path: Path }, key: string): Anchored {
+  const many = itemsUnder(found, key).length;
+  return { key, sheet: found.path, under: [...found.path, key], many, touched: [] };
+}
+
+function itemsUnder(found: { node: Node; path: Path }, key: string): readonly Node[] {
+  const written = entryOf(found.node, key)?.value ?? null;
+  return written?.kind === 'seq' ? written.items : [];
 }
 
 /** One entry going in after the ones already there, with the key itself where there are none. */

@@ -49,10 +49,7 @@ export function readSparklines(ctx: Ctx, node: Node, path: Path): SparklineGroup
   });
 }
 
-/**
- * A group is placed one way or the other: one `at`/`data` pair, or a `cells`
- * sequence of them (`docs/spec.md` §19).
- */
+/** A group is placed one way or the other: one `at`/`data` pair, or a `cells` sequence of them. */
 function placed(opened: Opened, what: string): Sparkline[] | null {
   const listed = findEntry(opened.entries, 'cells');
   const alone = findEntry(opened.entries, 'at');

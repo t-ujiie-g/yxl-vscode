@@ -134,6 +134,20 @@ function onCell(showing: Showing, asks: Asks, at: PointedCell): HTMLElement | nu
             shut(() => asks.filter(false)),
           ),
         ]),
+    ...(rect.right > rect.left
+      ? [
+          entry(
+            'Insert a chart…',
+            {},
+            shut(() => asks.chart()),
+          ),
+        ]
+      : []),
+    entry(
+      'Insert an image…',
+      {},
+      shut(() => asks.image(at.row, at.col)),
+    ),
   ];
 
   return pointedAt(showing, asks, entries);

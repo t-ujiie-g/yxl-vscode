@@ -18,7 +18,9 @@ const CELL_KEYS = [...CELL_HOLDS, ...CELL_WEARS];
  */
 export const KEY = {
   at: 'at',
+  categories: 'categories',
   cells: 'cells',
+  charts: 'charts',
   comments: 'comments',
   filter: 'filter',
   data: 'data',
@@ -28,10 +30,14 @@ export const KEY = {
   gridlines: 'gridlines',
   group: 'group',
   hidden: 'hidden',
+  images: 'images',
+  file: 'file',
   links: 'links',
   merges: 'merges',
   name: 'name',
+  nameFrom: 'name_from',
   overrides: 'overrides',
+  series: 'series',
   style: 'style',
   to: 'to',
   list: 'list',
@@ -40,7 +46,9 @@ export const KEY = {
   url: 'url',
   tabColor: 'tab_color',
   tables: 'tables',
+  type: 'type',
   validations: 'validations',
+  values: 'values',
   visibility: 'visibility',
 } as const;
 

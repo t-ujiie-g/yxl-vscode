@@ -27,11 +27,14 @@ import type {
   Worn,
 } from '@yxl-vscode/webview/protocol';
 import * as vscode from 'vscode';
+import { chart } from './charts';
 import { paste, pastedWith, pasteFrom, whose } from './clipboard';
 import { asOpen, put, reveal, textOf } from './documents';
+import { besideSpec } from './files';
 import { fill } from './fills';
 import { group } from './group';
 import { hide } from './hidden';
+import { image } from './images';
 import { inspect, type Nodes, nodeUnder } from './inspect';
 import { line } from './lines';
 import { following, link } from './links';
@@ -60,6 +63,9 @@ import {
   writeOverride,
 } from './write';
 
+/** The extensions the picker offers, which are the ones Excel decodes (`docs/spec.md` §13). */
+const PICTURES = ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'tif', 'tiff', 'ico', 'svg', 'emf', 'wmf'];
+
 /** Long enough that typing does not redraw on every keystroke, short enough to feel live. */
 const SETTLE = 150;
 
@@ -80,6 +86,7 @@ const WRITES = {
   freeze: (spec: Spec, frozen: Frozen, port: Port) => freeze(spec, frozen, port),
   filter: (spec: Spec, asked: Filtered, port: Port) => filter(spec, asked, port),
   tabled: (spec: Spec, asked: Tabled, port: Port) => formatTable(spec, asked, port),
+  chart: (spec: Spec, one: Ranged, port: Port, choice?: string) => chart(spec, one, port, choice),
   note: (spec: Spec, asked: Noted, port: Port) => note(spec, asked, port),
   link: (spec: Spec, asked: Linked, port: Port) => link(spec, asked, port),
   validate: (spec: Spec, asked: Validated, port: Port) => validate(spec, asked, port),
@@ -316,6 +323,11 @@ export class Preview {
       return;
     }
 
+    if (asked.kind === 'image') {
+      void this.picturing(asked);
+      return;
+    }
+
     if (asked.kind === 'follow') {
       this.went(asked);
       return;
@@ -425,6 +437,23 @@ export class Preview {
   }
 
   /** A write, with the spec and port it needs; a spec still loading and a failure are both said rather than dropped. */
+  /** A picture chosen in the editor: a webview has no file dialog, and a path is the host's to resolve. */
+  private async picturing(asked: { sheet: string; row: number; col: number }): Promise<void> {
+    const chosen = await vscode.window.showOpenDialog({
+      canSelectMany: false,
+      openLabel: 'Insert',
+      title: 'A picture to float over the sheet',
+      filters: { Pictures: [...PICTURES] },
+      defaultUri: vscode.Uri.file(this.document.uri.fsPath),
+    });
+
+    const picked = chosen?.[0];
+    if (picked === undefined) return;
+
+    const path = besideSpec(this.document.uri.fsPath, picked.fsPath);
+    this.writing((spec, port) => image(spec, { ...asked, path }, port));
+  }
+
   private writing(make: (spec: Spec, port: Port) => Promise<void>): void {
     const spec = this.spec();
     if (spec === null) {

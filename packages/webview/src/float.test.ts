@@ -143,9 +143,17 @@ describe('a chart sketch', () => {
 });
 
 describe('an image plate', () => {
-  it('is named by its alt text, falling back to the file', () => {
+  it('is marked as a picture, and named by its alt text or its file', () => {
+    expect(floats(sheet({ images: [image()] }))?.querySelector('.mark')).not.toBeNull();
     expect(floats(sheet({ images: [image({ alt: 'A logo' })] }))?.textContent).toBe('A logo');
     expect(floats(sheet({ images: [image()] }))?.textContent).toBe('logo.png');
+  });
+
+  it('wears the mark alone where the plate is too small to hold a name', () => {
+    const small = floats(sheet({ images: [image({ size: { width: 48, height: 48 } })] }));
+    expect(small?.querySelector('.mark')).not.toBeNull();
+    expect(small?.querySelector('.label')).toBeNull();
+    expect(small?.querySelector<HTMLElement>('.float')?.title).toContain('logo.png');
   });
 
   it('takes no room, and says why, where the file could not be measured', () => {

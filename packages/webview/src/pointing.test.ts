@@ -39,12 +39,14 @@ describe('the menu a cell has of its own', () => {
       'Data validation…',
       'Format as table',
       'Create a filter',
+      'Insert an image…',
     ]);
     expect(entries.map(said)).toEqual([
       'Ctrl+X',
       'Ctrl+C',
       'Ctrl+V',
       'Delete',
+      null,
       null,
       null,
       null,
@@ -106,6 +108,28 @@ describe('the filter a sheet may hang off its header row', () => {
 
     entries[9]?.click();
     expect(on.filter).toHaveBeenCalledWith(true);
+  });
+});
+
+describe('what a cell menu offers to float over the sheet', () => {
+  const named = (entries: readonly HTMLButtonElement[]): (string | null)[] =>
+    entries.map((one) => one.firstChild?.textContent ?? null);
+
+  it('offers a chart only over a rectangle wider than one column', () => {
+    expect(named(at(1, 1).entries)).not.toContain('Insert a chart…');
+
+    const wide = at(1, 1, { selected: { row: 2, col: 2 }, anchor: { row: 1, col: 1 } });
+    expect(named(wide.entries)).toContain('Insert a chart…');
+
+    wide.entries[wide.entries.length - 2]?.click();
+    expect(wide.on.chart).toHaveBeenCalled();
+  });
+
+  it('offers an image at the cell it was asked on, whatever is selected', () => {
+    const { on, entries } = at(3, 4);
+
+    entries[entries.length - 1]?.click();
+    expect(on.image).toHaveBeenCalledWith(3, 4);
   });
 });
 

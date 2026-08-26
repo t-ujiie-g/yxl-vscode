@@ -35,6 +35,8 @@ export function asks(): Asks {
     freeze: vi.fn(),
     filter: vi.fn(),
     formatTable: vi.fn(),
+    chart: vi.fn(),
+    image: vi.fn(),
     note: vi.fn(),
     link: vi.fn(),
     askAt: vi.fn(),

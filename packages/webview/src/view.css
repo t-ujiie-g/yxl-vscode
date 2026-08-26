@@ -1256,18 +1256,30 @@ body {
   transform-origin: left top;
 }
 
-/* An image's plate: the room it takes, named by its alt text or its file. The
-   picture itself is Excel's to draw. */
+/* An image's plate: the room it takes, marked as a picture and named where
+   there is room for the name. The picture itself is Excel's to draw. */
 .float.image {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 2px;
   border: 1px dashed #9a9a9a;
   background: #f4f4f4cc;
   padding: 4px;
   color: #5c5c5c;
   font-size: 8pt;
   text-align: center;
+  overflow: hidden;
+}
+
+/* The mark takes what the plate can spare, down to nothing on a very small one. */
+.float.image .mark {
+  flex: 0 1 auto;
+  min-height: 0;
+  width: 24px;
+  max-width: 100%;
+  height: 24px;
 }
 
 .float.image .label {
