@@ -58,6 +58,25 @@ export interface DrawnSheet {
   readonly shapes: readonly DrawnShape[];
 }
 
+/**
+ * A float dragged to another cell: `node` is the entry it was drawn from, and
+ * the anchor moves, never a picture (ADR-029).
+ */
+export interface MovedFloat {
+  readonly sheet: string;
+  readonly node: string;
+  readonly row: number;
+  readonly col: number;
+}
+
+/** A float dragged by its corner, to the extent in pixels it was left at. */
+export interface SizedFloat {
+  readonly sheet: string;
+  readonly node: string;
+  readonly width: number;
+  readonly height: number;
+}
+
 /** Where a float's top-left corner sits: the cell it hangs from, and the pixels in from that cell's corner. */
 export interface DrawnAt {
   readonly row: number;
@@ -77,6 +96,7 @@ export interface DrawnSize {
  * what Excel will draw of it (ADR-029).
  */
 export interface DrawnChart {
+  readonly node: string;
   readonly at: DrawnAt;
   readonly size: DrawnSize;
   readonly type: string;
@@ -106,6 +126,7 @@ export interface DrawnSeries {
  * and `null` where the host could not measure the file, which `why` says.
  */
 export interface DrawnImage {
+  readonly node: string;
   readonly at: DrawnAt;
   readonly size: DrawnSize | null;
   readonly file: string;
@@ -115,6 +136,7 @@ export interface DrawnImage {
 
 /** One shape drawn as the geometry it names, in the colours it asks for (`docs/spec.md` §18). */
 export interface DrawnShape {
+  readonly node: string;
   readonly at: DrawnAt;
   readonly size: DrawnSize;
   readonly kind: string;
@@ -529,6 +551,8 @@ export type FromView =
   | ({ readonly kind: 'merge' } & Merged)
   | ({ readonly kind: 'table' } & Ranged)
   | { readonly kind: 'image'; readonly sheet: string; readonly row: number; readonly col: number }
+  | ({ readonly kind: 'moveFloat' } & MovedFloat)
+  | ({ readonly kind: 'sizeFloat' } & SizedFloat)
   | ({ readonly kind: 'sum' } & Ranged)
   | ({ readonly kind: 'override'; readonly reason: string } & Typed)
   | {

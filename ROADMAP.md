@@ -1575,8 +1575,23 @@ Charts, images, sparklines and shapes — all four are in the spec already
       is refused by name rather than written for the compiler to reject.
       Both claim **no cell at all**: a float sits above the grid and changes
       nothing under it, so the checker's expectation is `nothingChanges`.
-- [ ] Moving and resizing what is there, as an edit to the construct's own
+- [x] Moving and resizing what is there, as an edit to the construct's own
       anchor rather than to a picture
+      **In**, by dragging the float itself and by the corner it grows from.
+      Both send **once on the way up**: every step of a drag would be an edit.
+      A move rewrites the entry's own `at:` and nothing else — the drop lands on
+      a *cell*, since that is what an anchor is, and the `offset:` an image
+      already carries comes off before the cell under the corner is looked up,
+      so the corner lands where it was dropped. A float anchored where a
+      parameter says is **refused rather than written over** (`docs/spec.md` §7).
+      A resize writes what the construct itself says: a chart's and a shape's
+      `size:` in whole pixels, and an **image's `scale:`**, which is a factor
+      over the file's own size — so the host measures the file first, an image
+      it cannot measure is refused with the reason, and a drag back to the
+      file's own size takes the key off rather than writing `scale: 1`.
+      The entry is named to the view by its **`NodeId`**, not by its place in
+      the sequence: a malformed entry earlier in the file would shift an index,
+      and an id survives an `$include` too.
 - [ ] What is still unmodelled stays opaque and byte-identical while it waits
 
 ### Phase 15 — The rest of the schema, honestly
@@ -3086,6 +3101,27 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-27 — Moving one, and sizing it
+A float can be dragged to another cell and grown by its corner. Both are edits
+to the construct's own anchor and extent, never to a picture (ADR-029), and both
+send once on the way up — every step of a drag would be an edit.
+
+- **A move rewrites `at:` and nothing else.** The drop lands on a *cell*, since
+  that is what an anchor is; the `offset:` an image already carries comes off
+  before the cell under the corner is looked up, so the corner lands where it
+  was dropped and the offset survives. One anchored where a parameter says is
+  refused rather than written over.
+- **A resize writes what the construct itself says**: a chart's and a shape's
+  `size:` in whole pixels, and an image's `scale:`, which is a factor over the
+  file's own size. The host measures the file first; one it cannot measure is
+  refused with the reason, and a drag back to the file's own size takes the key
+  off rather than writing `scale: 1`.
+- **The entry is named to the view by its `NodeId`**, not by its place in the
+  sequence: a malformed entry earlier in the file would shift an index, and an
+  id survives an `$include`.
+- Comment shape: export 788 blocks / 1730 lines / avg 2.2, private 536 / 536 /
+  avg 1.0, inline 111 / 171 / avg 1.5; 0 over the limit.
 
 ### 2026-08-26 — Putting one there
 A chart and an image can be inserted from the cell's own menu. Both are

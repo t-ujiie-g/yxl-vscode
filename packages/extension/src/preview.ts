@@ -14,12 +14,14 @@ import type {
   Lined,
   Linked,
   Merged,
+  MovedFloat,
   Noted,
   Pasted,
   PastedAt,
   PastedText,
   Ranged,
   Resized,
+  SizedFloat,
   Sorted,
   Tabled,
   Typed,
@@ -27,6 +29,7 @@ import type {
   Worn,
 } from '@yxl-vscode/webview/protocol';
 import * as vscode from 'vscode';
+import { moved, resized } from './anchors';
 import { chart } from './charts';
 import { paste, pastedWith, pasteFrom, whose } from './clipboard';
 import { asOpen, put, reveal, textOf } from './documents';
@@ -87,6 +90,8 @@ const WRITES = {
   filter: (spec: Spec, asked: Filtered, port: Port) => filter(spec, asked, port),
   tabled: (spec: Spec, asked: Tabled, port: Port) => formatTable(spec, asked, port),
   chart: (spec: Spec, one: Ranged, port: Port, choice?: string) => chart(spec, one, port, choice),
+  moveFloat: (spec: Spec, one: MovedFloat, port: Port) => moved(spec, one, port),
+  sizeFloat: (spec: Spec, one: SizedFloat, port: Port) => resized(spec, one, port, measureBeside),
   note: (spec: Spec, asked: Noted, port: Port) => note(spec, asked, port),
   link: (spec: Spec, asked: Linked, port: Port) => link(spec, asked, port),
   validate: (spec: Spec, asked: Validated, port: Port) => validate(spec, asked, port),

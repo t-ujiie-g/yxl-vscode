@@ -5,6 +5,7 @@ import { did, type History, nothing } from '@yxl-vscode/patch';
 import { type FilePath, filePath, parseColor } from '@yxl-vscode/units';
 import type { Choice, Frozen, Resized, Typed, Worn } from '@yxl-vscode/webview/protocol';
 import { describe, expect, it } from 'vitest';
+import { moved, resized } from './anchors';
 import { chart } from './charts';
 import { fill } from './fills';
 import { group } from './group';
@@ -825,6 +826,59 @@ describe('an image asked for at a cell', () => {
     await image(spec, { sheet: 'Sales', row: 1, col: 1, path: 'notes.txt' }, port);
     expect(refusals[0]).toContain('not a picture format');
     expect(files[ROOT]).toBe(SALES);
+  });
+});
+
+describe('a float dragged about the sheet', () => {
+  const CHART = `${SALES}    charts:\n      - at: E1\n        type: pie\n        series:\n          - values: B1:B2\n`;
+  const PICTURE = `${SALES}    images:\n      - at: E1\n        file: logo.png\n`;
+  const node = (key: string) => JSON.stringify([ROOT, 'sheets', 0, key, 0]);
+
+  it('moves by rewriting the anchor, and says where it floats from now', async () => {
+    const { spec, port, files, told } = editor({ [ROOT]: CHART });
+
+    await moved(spec, { sheet: 'Sales', node: node('charts'), row: 7, col: 8 }, port);
+    expect(files[ROOT]).toBe(CHART.replace('at: E1', 'at: H7'));
+    expect(told).toEqual(['It floats from H7 now.']);
+  });
+
+  it('resizes a chart to the extent it was left at', async () => {
+    const { spec, port, files, told } = editor({ [ROOT]: CHART });
+
+    await resized(
+      spec,
+      { sheet: 'Sales', node: node('charts'), width: 300, height: 200 },
+      port,
+      null,
+    );
+    expect(files[ROOT]).toContain('size: { width: 300, height: 200 }');
+    expect(told).toEqual(['It takes 300 by 200 now.']);
+  });
+
+  it('resizes an image as a factor over the file the host measured', async () => {
+    const { spec, port, files } = editor({ [ROOT]: PICTURE });
+    const measure = () => ({ width: 120, height: 60 });
+
+    await resized(
+      spec,
+      { sheet: 'Sales', node: node('images'), width: 60, height: 30 },
+      port,
+      measure,
+    );
+    expect(files[ROOT]).toContain('scale: 0.5');
+  });
+
+  it('refuses an image the host could not measure, and leaves the file alone', async () => {
+    const { spec, port, files, refusals } = editor({ [ROOT]: PICTURE });
+
+    await resized(
+      spec,
+      { sheet: 'Sales', node: node('images'), width: 60, height: 30 },
+      port,
+      null,
+    );
+    expect(refusals[0]).toContain('not known here');
+    expect(files[ROOT]).toBe(PICTURE);
   });
 });
 

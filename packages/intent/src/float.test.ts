@@ -1,11 +1,19 @@
 import { compile } from '@yxl-vscode/compile';
 import { parse } from '@yxl-vscode/cst';
 import { type IncludeReader, load } from '@yxl-vscode/loader';
-import { type A1Addr, type FilePath, filePath, type Rect, type SheetName } from '@yxl-vscode/units';
+import {
+  type A1Addr,
+  type FilePath,
+  filePath,
+  type NodeId,
+  nodeId,
+  type Rect,
+  type SheetName,
+} from '@yxl-vscode/units';
 import { type Ctx, checked } from '@yxl-vscode/verify';
 import { describe, expect, it } from 'vitest';
 import { reading } from './direct';
-import { chartOver, chartsOver, type Intent, imageAt } from './index';
+import { chartOver, chartsOver, type Intent, imageAt, moveFloat, sizeFloat } from './index';
 
 const ROOT = filePath('spec.yxl.yaml') ?? ('' as FilePath);
 
@@ -121,5 +129,85 @@ describe('an image at a cell', () => {
   it('refuses a format Excel does not decode, and a file with no extension at all', () => {
     expect(pictured(BARE, 'notes.txt')).toContain('not a picture format');
     expect(pictured(BARE, 'logo')).toContain('no extension');
+  });
+});
+
+/** The entry a float was written as, by where it sits in the file. */
+function entry(key: string, index: number): NodeId {
+  return nodeId(JSON.stringify([ROOT, 'sheets', 0, key, index]));
+}
+
+function moved(source: string, node: NodeId, at: string): string {
+  const { read } = files(source);
+  return through(source, moveFloat({ node, at: at as A1Addr }, read));
+}
+
+function resized(
+  source: string,
+  node: NodeId,
+  size: { width: number; height: number },
+  natural: { width: number; height: number } | null = null,
+): string {
+  const { read } = files(source);
+  return through(source, sizeFloat({ node, ...size, natural }, read));
+}
+
+const CHART = `${BARE}    charts:\n      - at: E1\n        type: pie\n        series:\n          - values: B1:B2\n`;
+const PICTURE = `${BARE}    images:\n      - at: E1\n        file: logo.png\n`;
+
+describe('a float moved', () => {
+  it('rewrites its own anchor and nothing else', () => {
+    expect(moved(CHART, entry('charts', 0), 'H7')).toBe(CHART.replace('at: E1', 'at: H7'));
+    expect(moved(PICTURE, entry('images', 0), 'B9')).toBe(PICTURE.replace('at: E1', 'at: B9'));
+  });
+
+  it('refuses one anchored where a parameter says, rather than writing over it', () => {
+    const held = CHART.replace('at: E1', 'at: "${corner}"');
+    const spec = `params:\n  corner: E1\n${held}`;
+    expect(moved(spec, entry('charts', 0), 'H7')).toContain('write over the parameter');
+  });
+
+  it('refuses an entry the file has not got', () => {
+    expect(moved(CHART, entry('charts', 4), 'H7')).toContain('refused:');
+  });
+});
+
+describe('a float resized', () => {
+  it("writes a chart's own extent, in whole pixels", () => {
+    const drawn = resized(CHART, entry('charts', 0), { width: 520.4, height: 300 });
+    expect(drawn).toContain('size: { width: 520, height: 300 }');
+  });
+
+  it('writes over the extent one already has, rather than beside it', () => {
+    const sized = CHART.replace('type: pie', 'type: pie\n        size: { width: 10, height: 10 }');
+    const drawn = resized(sized, entry('charts', 0), { width: 60, height: 40 });
+    expect(drawn).toContain('size: { width: 60, height: 40 }');
+    expect(drawn).not.toContain('width: 10');
+  });
+
+  it("writes a factor over an image, since its extent is its own file's", () => {
+    const natural = { width: 120, height: 60 };
+    expect(resized(PICTURE, entry('images', 0), { width: 60, height: 30 }, natural)).toContain(
+      'scale: 0.5',
+    );
+    expect(resized(PICTURE, entry('images', 0), { width: 240, height: 30 }, natural)).toContain(
+      'scale: { x: 2, y: 0.5 }',
+    );
+  });
+
+  it("takes the factor off again where the drag comes back to the file's own size", () => {
+    const half = `${BARE}    images:\n      - at: E1\n        file: logo.png\n        scale: 0.5\n`;
+    const natural = { width: 120, height: 60 };
+    expect(resized(half, entry('images', 0), { width: 120, height: 60 }, natural)).toBe(PICTURE);
+  });
+
+  it('refuses an image whose file could not be measured, and one already at its own size', () => {
+    expect(resized(PICTURE, entry('images', 0), { width: 60, height: 30 })).toContain(
+      'not known here',
+    );
+    const natural = { width: 120, height: 60 };
+    expect(resized(PICTURE, entry('images', 0), { width: 120, height: 60 }, natural)).toContain(
+      'already at its own size',
+    );
   });
 });

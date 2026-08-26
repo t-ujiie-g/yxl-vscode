@@ -37,6 +37,8 @@ export function asks(): Asks {
     formatTable: vi.fn(),
     chart: vi.fn(),
     image: vi.fn(),
+    moveFloat: vi.fn(),
+    sizeFloat: vi.fn(),
     note: vi.fn(),
     link: vi.fn(),
     askAt: vi.fn(),

@@ -395,6 +395,16 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       said = null;
       host.postMessage({ kind: 'image', sheet: named(), row, col });
     },
+    moveFloat: (node, to) => {
+      refused = null;
+      said = null;
+      host.postMessage({ kind: 'moveFloat', sheet: named(), node, ...to });
+    },
+    sizeFloat: (node, size) => {
+      refused = null;
+      said = null;
+      host.postMessage({ kind: 'sizeFloat', sheet: named(), node, ...size });
+    },
     askAt: (asked) => {
       asking = asked;
       redraw();

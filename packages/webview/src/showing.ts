@@ -207,6 +207,8 @@ export interface Asks {
   readonly formatTable: (on: boolean) => void;
   readonly chart: () => void;
   readonly image: (row: number, col: number) => void;
+  readonly moveFloat: (node: string, to: { row: number; col: number }) => void;
+  readonly sizeFloat: (node: string, size: { width: number; height: number }) => void;
   readonly note: (row: number, col: number, text: string | null) => void;
   readonly link: (row: number, col: number, to: Linked['link']) => void;
   readonly askAt: (asked: Asked | null) => void;
