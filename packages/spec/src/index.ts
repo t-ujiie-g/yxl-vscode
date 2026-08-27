@@ -46,6 +46,16 @@ export {
 export { CELL_HOLDS, CELL_WEARS, INCLUDE_KEY, KEY, MODELED_KEYS, REF_KEY } from './keys';
 export type { Opaque, SpecNode, Template, Templated } from './node';
 export {
+  ALLOWANCES,
+  type Allowance,
+  type Fit,
+  type Margins,
+  ORIENTATIONS,
+  type Orientation,
+  type Print,
+  type Protect,
+} from './print';
+export {
   ordered,
   propertiesOf,
   propertiesUnder,

@@ -309,3 +309,61 @@ describe('the switches over the grid', () => {
     expect(into.querySelector('.look.bold')?.classList.contains('on')).toBe(false);
   });
 });
+
+describe('where the paper falls', () => {
+  const roomy = { of: { rows: 40, columns: 20 } };
+
+  function paper(print: Partial<NonNullable<Parameters<typeof sheet>[0]>['print']>) {
+    const one = { area: null, breaks: [], says: 'said', ...print };
+    return shown({ drawing: drawing({ sheets: [sheet({ ...roomy, print: one })] }) });
+  }
+
+  it('outlines the print area over the cells it covers', () => {
+    const into = paper({ area: { top: 2, left: 2, bottom: 3, right: 3 } });
+    const box = into.querySelector<HTMLElement>('.paper .area');
+    expect(box?.style.left).toBe(`${44 + 59.01}px`);
+    expect(Math.round(Number.parseFloat(box?.style.width ?? '0'))).toBe(118);
+  });
+
+  it('draws a line above and left of each page break, and neither at the sheet edge', () => {
+    const into = paper({
+      breaks: [
+        { row: 21, col: 3 },
+        { row: 1, col: 1 },
+      ],
+    });
+    expect(into.querySelectorAll('.paper .break.column').length).toBe(1);
+    expect(into.querySelectorAll('.paper .break.row').length).toBe(1);
+  });
+
+  it('draws nothing where the setup says neither an area nor a break', () => {
+    expect(paper({}).querySelector('.paper')).toBeNull();
+  });
+
+  it('says the rest of it under the grid, where a line in the sheet cannot', () => {
+    const into = paper({ area: { top: 1, left: 1, bottom: 2, right: 2 } });
+    expect(into.querySelector('.under')?.textContent).toContain('said');
+  });
+});
+
+describe('a protected sheet', () => {
+  it('marks the cells a style unlocks, and says what the sheet allows', () => {
+    const cells = [
+      cell(1, 1, { value: 'locked' }),
+      cell(2, 1, { value: 'type here', style: { 'protection.locked': false } }),
+    ];
+    const protect = { says: 'This sheet is locked.' };
+    const into = shown({ drawing: drawing({ sheets: [sheet({ cells, protect })] }) });
+
+    expect(into.querySelectorAll('td.unlocked').length).toBe(1);
+    expect(into.querySelector('td.unlocked')?.textContent).toBe('type here');
+    expect(into.querySelector('.under')?.textContent).toContain('This sheet is locked.');
+  });
+
+  it('marks nothing where the sheet is not protected', () => {
+    const cells = [cell(1, 1, { style: { 'protection.locked': false } })];
+    const into = shown({ drawing: drawing({ sheets: [sheet({ cells })] }) });
+
+    expect(into.querySelectorAll('td.unlocked').length).toBe(0);
+  });
+});

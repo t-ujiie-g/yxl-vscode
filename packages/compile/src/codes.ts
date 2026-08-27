@@ -20,6 +20,7 @@ export const CODE = {
   noDataReader: 'compile.no-data-reader',
   unreadableData: 'compile.unreadable-data',
   badTable: 'compile.bad-table',
+  badSpelling: 'compile.bad-spelling',
 } as const;
 
 export type Code = (typeof CODE)[keyof typeof CODE];

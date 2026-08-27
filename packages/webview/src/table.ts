@@ -412,6 +412,7 @@ function line(
       here,
       anchored,
       anchored === undefined ? spillOf(sheet, held, row, col) : 0,
+      sheet.protect !== null,
     );
     if (drawn.querySelector('.spill') !== null) drawn.classList.add('spilling');
     if (table !== null) drawn.classList.add(...banding(table, row, col));

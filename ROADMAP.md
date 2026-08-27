@@ -1642,8 +1642,38 @@ coverage table below is generated from which.
       What is left is the one claim a machine cannot make: **editable against
       drawn**. That one is a sentence per key, in the code, where the gesture
       that would falsify it lives.
-- [ ] `print:` and `protect:` previewed: the print area outlined, the locked
+- [x] `print:` and `protect:` previewed: the print area outlined, the locked
       cells marked
+      **In**, both modelled rather than opaque. The **print area** is outlined
+      where it falls and each `breaks:` cell draws the two lines it starts a
+      page with — above it and left of it, and neither where that is the sheet's
+      own edge. Everything a line in the grid cannot say — the way round, the
+      margins in inches, the scaling, the `&`-coded running heads — is said
+      under the grid, ending in *it does not paginate*, because a preview that
+      drew pages would be drawing Excel's arithmetic rather than the spec's
+      words. `scale:` and `fit:` are refused together, and a break at `A1` is
+      refused, as `docs/spec.md` §5 says.
+      **The marking is the other way round from the wording above.** Excel locks
+      every cell, so a sheet under `protect:` has nothing worth marking except
+      the cells a style *unlocks* — the input boxes of a form, which is what §16
+      says the key is for. Those are outlined; the sentence under the grid says
+      the sheet is locked, whether a password stands behind it, and what is
+      still allowed. **The password itself never leaves the compiler**: what is
+      projected is that one is set. A spec is version-controlled and §16 says to
+      pass one with `--set`; a preview that echoed it would undo that advice.
+- [ ] **A parameter cannot fill a spelling this loader reads.** Found while
+      adding `print.orientation`, which the schema lets a `${...}` fill.
+      `expectSpelling` reads the *raw* text against a closed vocabulary, so a
+      placeholder is refused as an unknown spelling — while yxl builds the spec
+      happily. Confirmed against three of them: `sheet.visibility`,
+      `cells.type` and `images.positioning` each raise
+      `loader.unknown-spelling` on a spec that compiles upstream.
+      The schema marks **23 enums** as parameterisable; this editor reads about
+      a dozen of them through `expectSpelling`. `print.orientation` is read
+      through `readAs` and a `Kind` instead, which is template-aware, and is the
+      shape the rest want — but converting them turns a dozen `T | null` into
+      `Templated<T> | null` and each one has to be resolved in `compile`, so it
+      is its own piece of work rather than a rider on this one.
 - [ ] `rich:` runs editable in the formula bar, one run at a time
 - [ ] The rest stays opaque, and the inspector says so where a cell is under one
 
@@ -3139,6 +3169,31 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-28 — What prints, and what is locked
+`print:` and `protect:` were carried through blind. Both are modelled now, and
+drawn as far as a preview honestly can.
+
+- **The print area is outlined** where it falls, and each `breaks:` cell draws
+  the two lines it starts a page with — above it and left of it, and neither
+  where that is the sheet's own edge.
+- **The rest is said under the grid** — the way round, the margins in inches,
+  the scaling, the `&`-coded running heads — ending in *it does not paginate*. A
+  preview that drew pages would be drawing Excel's arithmetic rather than the
+  spec's words. `scale:` with `fit:`, and a break at `A1`, are refused as §5
+  says.
+- **The marking is the other way round from what this phase first wrote down.**
+  Excel locks every cell, so a protected sheet has nothing worth marking except
+  the cells a style *unlocks* — a form's input boxes, which §16 says is what the
+  key is for. Those are outlined.
+- **The password never leaves the compiler.** What is projected is that one is
+  set. A spec is version-controlled and §16 says to pass one with `--set`; a
+  preview that echoed it would undo that advice.
+- `open`, `required`, `optional` and `optionalText` moved from `loader/float.ts`
+  to `loader/read.ts`, where the rest of the readers live: a third construct
+  wanted them, which is one more than a private home survives.
+- Comment shape: export 818 blocks / 1804 lines / avg 2.2, private 543 / 543 /
+  avg 1.0, inline 114 / 176 / avg 1.5; 0 over the limit.
 
 ### 2026-08-27 — The schema, said honestly and in one place
 Every key `docs/spec.md` gives a document and a sheet is now in one of three

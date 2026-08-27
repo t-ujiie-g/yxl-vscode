@@ -18,17 +18,19 @@ import {
   type Size,
 } from '@yxl-vscode/spec';
 import { CODE } from './codes';
-import { type Ctx, identify, keyOf, reject, type Site } from './ctx';
+import { type Ctx, identify, reject, type Site } from './ctx';
 import {
   expectNumber,
   expectSpelling,
   expectText,
   findEntry,
   type Opened,
-  openEntries,
+  open,
   openSeq,
+  optional,
+  optionalText,
   readEach,
-  rejectUnknownKey,
+  required,
 } from './read';
 import { readFont } from './style';
 import { ADDRESS, COLOR, PATH, readAs } from './template';
@@ -289,17 +291,6 @@ function readLine(ctx: Ctx, node: Node, what: string): ShapeLine | null {
   };
 }
 
-/** A mapping opened with every key the construct does not have reported (ADR-011). */
-export function open(site: Site, what: string, known: ReadonlySet<string>): Opened | null {
-  const opened = openEntries(site.ctx, site.node, site.path, what);
-  if (opened === null) return null;
-
-  for (const entry of opened.entries) {
-    if (!known.has(keyOf(entry))) rejectUnknownKey(opened.ctx, entry, what, known);
-  }
-  return opened;
-}
-
 /** The `at` every float needs: the cell its top-left corner floats over. */
 function anchor(opened: Opened, what: string): Chart['at'] | null {
   return required(opened, 'at', what, (entry) =>
@@ -311,29 +302,4 @@ function positioned(opened: Opened, what: string): Positioning | null {
   return optional(opened, 'positioning', (entry) =>
     expectSpelling(opened.ctx, entry, `${what} \`positioning\``, POSITIONINGS),
   );
-}
-
-/** A key the construct cannot be read without, reported by name where it is missing. */
-export function required<T>(
-  opened: Opened,
-  key: string,
-  what: string,
-  read: (node: Node) => T | null,
-): T | null {
-  const found = findEntry(opened.entries, key);
-  if (found === undefined) {
-    reject(opened.ctx, CODE.missingKey, `${what} needs a \`${key}\``, opened.node.span);
-    return null;
-  }
-  return read(found.value);
-}
-
-/** A key the spec leaves out far more often than it writes. */
-export function optional<T>(opened: Opened, key: string, read: (node: Node) => T | null): T | null {
-  const found = findEntry(opened.entries, key);
-  return found === undefined ? null : read(found.value);
-}
-
-export function optionalText(opened: Opened, key: string, what: string): string | null {
-  return optional(opened, key, (entry) => expectText(opened.ctx, entry, `${what} \`${key}\``));
 }

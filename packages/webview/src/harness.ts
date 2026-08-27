@@ -102,6 +102,8 @@ export function sheet(of: Partial<DrawnSheet> = {}): DrawnSheet {
     gridlines: true,
     split: null,
     filter: null,
+    print: null,
+    protect: null,
     tables: [],
     charts: [],
     images: [],

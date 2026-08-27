@@ -176,3 +176,39 @@ export function scalarText(node: Node): string | null {
   if (typeof node.value === 'number') return String(node.value);
   return null;
 }
+
+/** A mapping opened with every key the construct does not have reported (ADR-011). */
+export function open(site: Site, what: string, known: ReadonlySet<string>): Opened | null {
+  const opened = openEntries(site.ctx, site.node, site.path, what);
+  if (opened === null) return null;
+
+  for (const entry of opened.entries) {
+    if (!known.has(keyOf(entry))) rejectUnknownKey(opened.ctx, entry, what, known);
+  }
+  return opened;
+}
+
+/** A key the construct cannot be read without, reported by name where it is missing. */
+export function required<T>(
+  opened: Opened,
+  key: string,
+  what: string,
+  read: (node: Node) => T | null,
+): T | null {
+  const found = findEntry(opened.entries, key);
+  if (found === undefined) {
+    reject(opened.ctx, CODE.missingKey, `${what} needs a \`${key}\``, opened.node.span);
+    return null;
+  }
+  return read(found.value);
+}
+
+/** A key the spec leaves out far more often than it writes. */
+export function optional<T>(opened: Opened, key: string, read: (node: Node) => T | null): T | null {
+  const found = findEntry(opened.entries, key);
+  return found === undefined ? null : read(found.value);
+}
+
+export function optionalText(opened: Opened, key: string, what: string): string | null {
+  return optional(opened, key, (entry) => expectText(opened.ctx, entry, `${what} \`${key}\``));
+}

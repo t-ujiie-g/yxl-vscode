@@ -23,6 +23,8 @@ export type {
   CompiledLink,
   CompiledMerge,
   CompiledNote,
+  CompiledPrint,
+  CompiledProtect,
   CompiledRule,
   CompiledRun,
   CompiledSeries,

@@ -12,6 +12,8 @@ import {
   MODELED_KEYS,
   type Note,
   type Opaque,
+  type Print,
+  type Protect,
   type RowBand,
   type Shape,
   type Sheet,
@@ -29,6 +31,7 @@ import { readDataBlocks } from './data';
 import { readCharts, readImages, readShapes } from './float';
 import { readLinks } from './link';
 import { readNotes } from './note';
+import { readPrint, readProtect } from './print';
 import {
   expectBool,
   expectNumber,
@@ -79,6 +82,8 @@ function readSheet(site: Site): Sheet | null {
   let split: Sheet['split'] = null;
   let conditional: Conditional[] = [];
   let filter: Sheet['filter'] = null;
+  let print: Print | null = null;
+  let protect: Protect | null = null;
   let comments: Note[] = [];
   let links: Link[] = [];
   let validations: Validation[] = [];
@@ -134,6 +139,12 @@ function readSheet(site: Site): Sheet | null {
       case 'filter':
         filter = readAs(here, entry.value, `${what} \`filter\``, RANGE);
         break;
+      case 'print':
+        print = readPrint(here, entry.value, `${what} \`print\``);
+        break;
+      case 'protect':
+        protect = readProtect(here, entry.value, `${what} \`protect\``);
+        break;
       case 'comments':
         comments = readNotes(here, entry.value, at);
         break;
@@ -179,6 +190,8 @@ function readSheet(site: Site): Sheet | null {
     split,
     conditional,
     filter,
+    print,
+    protect,
     comments,
     links,
     validations,

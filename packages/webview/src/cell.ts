@@ -10,12 +10,17 @@ export function drawCell(
   cell: DrawnCell | undefined,
   merge: DrawnMerge | undefined,
   spill = 0,
+  protectedSheet = false,
 ): HTMLTableCellElement {
   const drawn = document.createElement('td');
   if (merge !== undefined) {
     drawn.colSpan = merge.right - merge.left + 1;
     drawn.rowSpan = merge.bottom - merge.top + 1;
   }
+
+  // Excel locks every cell, so on a protected sheet the ones worth marking are
+  // the ones a style unlocks (`docs/spec.md` §16).
+  if (protectedSheet && cell?.style['protection.locked'] === false) drawn.classList.add('unlocked');
 
   if (cell === undefined) return drawn;
 

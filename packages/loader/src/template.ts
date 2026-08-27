@@ -1,6 +1,6 @@
 import type { Node } from '@yxl-vscode/cst';
 import type { Span } from '@yxl-vscode/diag';
-import type { Templated } from '@yxl-vscode/spec';
+import { ORIENTATIONS, type Orientation, type Templated } from '@yxl-vscode/spec';
 import {
   type A1Addr,
   type A1Range,
@@ -64,6 +64,13 @@ export const ROW: Kind<RowSpan> = {
   code: CODE.badRow,
   noun: 'a row or a range of rows',
   read: parseRowSpan,
+};
+
+/** Which way round the paper goes, which a parameter may fill in (`docs/spec.md` §5). */
+export const ORIENTATION: Kind<Orientation> = {
+  code: CODE.unknownSpelling,
+  noun: 'portrait or landscape',
+  read: (text) => ORIENTATIONS.find((known) => known === text) ?? null,
 };
 
 export const COLOR: Kind<Color> = {
