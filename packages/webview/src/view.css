@@ -287,6 +287,14 @@ body {
   z-index: 2;
 }
 
+/* The column gutter is a heading row like the letters under it, and has to stay
+   with them: left to scroll, it takes its strip with it and the cells passing
+   behind show through where it was. */
+.grid thead td.outline {
+  position: sticky;
+  z-index: 6;
+}
+
 /* The bracket over the run: a line along the gutter, turned down at the end it
    starts from, as Excel draws one. */
 .grid .outline.in {

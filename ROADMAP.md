@@ -3188,6 +3188,20 @@ both a column outline and a freeze.
   the headings and it was where the scrolling rows showed through. `pinned` now
   stacks the heading rows and the frozen rows in one pass, each told where the
   ones above it left off. Both tests for it fail on the old arithmetic.
+- **The column outline's gutter was not one of the things that stay.** Fixing
+  the arithmetic above uncovered the other half: `.grid th.outline` is sticky,
+  and the gutter row over the *columns* is made of `td`s, which were not. While
+  the two heading rows overlapped nobody could tell — the letters row covered
+  the gutter entirely. Stacked, the gutter took its own strip, scrolled away
+  with the table, and the rows passing behind showed through where it had been.
+- **`tests/staying.test.ts` is the one suite that loads `view.css`.** Both of
+  these were invisible to 2300 tests because what stays put is decided by
+  `position` and `z-index` and by nothing the DOM says. It renders a sheet with
+  a gutter *and* a freeze and asserts every cell that has to stay is stuck and
+  has a ground of its own; it fails on the stylesheet as it was. It lives in
+  `tests/` because only the shell may read a file (ADR-004), and `tests/` — the
+  tier above every layer, not a package — takes the DOM lib for it. No package's
+  tsconfig changed, so `document` in a core package is still a compile error.
 - **A blank cell in a formatted column claimed it could not be typed into.**
   `typeable(null)` answered `mediated` for every cell the projection drew
   without one behind it, and a band's `format:` is enough to have it drawn — so
