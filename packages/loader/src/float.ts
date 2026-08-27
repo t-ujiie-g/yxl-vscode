@@ -28,6 +28,7 @@ import {
   open,
   openSeq,
   optional,
+  optionalNumber,
   optionalText,
   readEach,
   required,
@@ -119,8 +120,8 @@ function readAxis(ctx: Ctx, node: Node, what: string): ChartAxis | null {
 
   return {
     title: optionalText(opened, 'title', what),
-    min: optional(opened, 'min', (entry) => expectNumber(opened.ctx, entry, `${what} \`min\``)),
-    max: optional(opened, 'max', (entry) => expectNumber(opened.ctx, entry, `${what} \`max\``)),
+    min: optionalNumber(opened, 'min', what),
+    max: optionalNumber(opened, 'max', what),
   };
 }
 
@@ -285,9 +286,7 @@ function readLine(ctx: Ctx, node: Node, what: string): ShapeLine | null {
 
   return {
     color,
-    width: optional(opened, 'width', (entry) =>
-      expectNumber(opened.ctx, entry, `${what} \`width\``),
-    ),
+    width: optionalNumber(opened, 'width', what),
   };
 }
 

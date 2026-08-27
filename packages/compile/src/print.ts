@@ -1,0 +1,41 @@
+import type { Orientation, Print } from '@yxl-vscode/spec';
+import { ORIENTATIONS } from '@yxl-vscode/spec';
+import { cellOf, parseA1Range, rectOf } from '@yxl-vscode/units';
+import { address } from './cell';
+import { CODE } from './codes';
+import { type Ctx, reject, text } from './ctx';
+import type { CompiledPrint } from './grid';
+
+/** One `print:` setup, its area and its breaks read (`docs/spec.md` §5). */
+export function printing(ctx: Ctx, one: Print): CompiledPrint {
+  const spelled = one.area === null ? null : text(ctx, one.area, one);
+  const read = spelled === null ? null : parseA1Range(spelled);
+  if (spelled !== null && read === null) {
+    reject(ctx, CODE.badRange, `\`${spelled}\` is not a range`, one);
+  }
+
+  return {
+    area: read === null ? null : rectOf(read),
+    orientation: one.orientation === null ? null : orientation(ctx, one),
+    margins: one.margins,
+    scale: one.scale,
+    fit: one.fit,
+    header: one.header === null ? null : text(ctx, one.header, one),
+    footer: one.footer === null ? null : text(ctx, one.footer, one),
+    breaks: one.breaks.flatMap((at) => {
+      const found = address(ctx, at, one);
+      return found === null ? [] : [cellOf(found)];
+    }),
+    node: one.id,
+  };
+}
+
+/** Which way round the paper goes, after a parameter has had its say (`docs/spec.md` §5). */
+function orientation(ctx: Ctx, one: Print): Orientation | null {
+  const spelled = text(ctx, one.orientation, one);
+  const found = ORIENTATIONS.find((known) => known === spelled);
+  if (found === undefined) {
+    reject(ctx, CODE.badSpelling, `\`${spelled}\` is not portrait or landscape`, one);
+  }
+  return found ?? null;
+}

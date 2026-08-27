@@ -31,7 +31,7 @@ import {
 import { address, colour, compileFacets, layer, type Spoke, spokenBy } from './cell';
 import { CODE } from './codes';
 import { type Ctx, filled, reject, text } from './ctx';
-import { chart, image, printing, protecting, shape, sparklines } from './float';
+import { chart, image, shape, sparklines } from './float';
 import type {
   CompiledAsk,
   CompiledBand,
@@ -46,6 +46,8 @@ import type {
   CompiledTest,
   CompiledValidation,
 } from './grid';
+import { printing } from './print';
+import { protecting } from './protect';
 import type { FacetOrigin } from './provenance';
 import { layersOf } from './style';
 import { readCsv, readJson } from './table';

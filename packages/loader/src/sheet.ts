@@ -31,14 +31,15 @@ import { readDataBlocks } from './data';
 import { readCharts, readImages, readShapes } from './float';
 import { readLinks } from './link';
 import { readNotes } from './note';
-import { readPrint, readProtect } from './print';
+import { readPrint } from './print';
+import { readProtect } from './protect';
 import {
   expectBool,
-  expectNumber,
   expectSpelling,
   expectText,
   findEntry,
   openEntries,
+  optionalNumber,
   readEach,
   rejectUnknownKey,
   scalarText,
@@ -210,10 +211,8 @@ function readSplit(ctx: Ctx, node: Node, what: string): Split | null {
   const opened = openEntries(ctx, node, [], what);
   if (opened === null) return null;
 
-  const read = (key: 'x' | 'y'): number | null => {
-    const found = findEntry(opened.entries, key);
-    return found === undefined ? 0 : expectNumber(ctx, found.value, `${what} \`${key}\``);
-  };
+  // An axis the spec leaves out is unsplit, which is `0` rather than nothing.
+  const read = (key: string): number => optionalNumber(opened, key, what) ?? 0;
 
   const x = read('x');
   const y = read('y');

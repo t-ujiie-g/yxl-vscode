@@ -14,13 +14,7 @@ export type {
   ConditionalTest,
   TextTest,
 } from './conditional';
-export {
-  type Covered,
-  DOCUMENT_KEYS,
-  SHEET_KEYS,
-  type Standing,
-  standingOf,
-} from './coverage';
+export { type Covered, DOCUMENT_KEYS, SHEET_KEYS, type Standing } from './coverage';
 export type { DataBlock, DataRow, DataSource } from './data';
 export type { Defs, FormulaDef, Override, Param, SpecDoc, StyleDef, ValueDef } from './doc';
 export {

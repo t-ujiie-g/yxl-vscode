@@ -1,24 +1,8 @@
 import type { Node } from '@yxl-vscode/cst';
-import {
-  ALLOWANCES,
-  type Allowance,
-  type Fit,
-  type Margins,
-  MODELED_KEYS,
-  type Print,
-  type Protect,
-} from '@yxl-vscode/spec';
+import { type Fit, type Margins, MODELED_KEYS, type Print } from '@yxl-vscode/spec';
 import { CODE } from './codes';
 import { type Ctx, identify, keyOf, reject } from './ctx';
-import {
-  expectBool,
-  expectNumber,
-  type Opened,
-  open,
-  optional,
-  optionalText,
-  readEach,
-} from './read';
+import { type Opened, open, optional, optionalNumber, optionalText, readEach } from './read';
 import { ADDRESS, ORIENTATION, RANGE, readAs } from './template';
 
 /** A sheet's `print:` setup (`docs/spec.md` §5). */
@@ -26,9 +10,7 @@ export function readPrint(ctx: Ctx, node: Node, what: string): Print | null {
   const opened = open({ ctx, node, path: [] }, what, MODELED_KEYS.print);
   if (opened === null) return null;
 
-  const scale = optional(opened, 'scale', (entry) =>
-    expectNumber(opened.ctx, entry, `${what} \`scale\``),
-  );
+  const scale = optionalNumber(opened, 'scale', what);
   const fit = optional(opened, 'fit', (entry) => readFit(opened.ctx, entry, `${what} \`fit\``));
   if (scale !== null && fit !== null) {
     const why = `${what} scales two ways at once: \`scale\` and \`fit\``;
@@ -72,8 +54,7 @@ function readMargins(ctx: Ctx, node: Node, what: string): Margins | null {
   const opened = open({ ctx, node, path: [] }, what, MODELED_KEYS.margins);
   if (opened === null) return null;
 
-  const read = (key: string): number | null =>
-    optional(opened, key, (entry) => expectNumber(opened.ctx, entry, `${what} \`${key}\``));
+  const read = (key: string): number | null => optionalNumber(opened, key, what);
 
   return {
     top: read('top'),
@@ -90,37 +71,8 @@ function readFit(ctx: Ctx, node: Node, what: string): Fit | null {
   const opened = open({ ctx, node, path: [] }, what, MODELED_KEYS.fit);
   if (opened === null) return null;
 
-  const read = (key: 'width' | 'height'): number | null =>
-    optional(opened, key, (entry) => expectNumber(opened.ctx, entry, `${what} \`${key}\``));
-
-  return { width: read('width'), height: read('height') };
-}
-
-/** A sheet's `protect:` (`docs/spec.md` §16). */
-export function readProtect(ctx: Ctx, node: Node, what: string): Protect | null {
-  const opened = open({ ctx, node, path: [] }, what, MODELED_KEYS.protect);
-  if (opened === null) return null;
-
   return {
-    ...identify(opened.ctx, opened.path, opened.node.span),
-    password: optionalText(opened, 'password', what),
-    allow:
-      optional(opened, 'allow', (entry) => readAllow(opened.ctx, entry, `${what} \`allow\``)) ?? {},
+    width: optionalNumber(opened, 'width', what),
+    height: optionalNumber(opened, 'height', what),
   };
-}
-
-/** An `allow:` mapping; a misspelt name is reported rather than kept as a permission that never applies. */
-function readAllow(ctx: Ctx, node: Node, what: string): Protect['allow'] | null {
-  const opened = open({ ctx, node, path: [] }, what, MODELED_KEYS.allow);
-  if (opened === null) return null;
-
-  const allow: { [K in Allowance]?: boolean } = {};
-  for (const name of ALLOWANCES) {
-    const said = optional(opened, name, (entry) =>
-      expectBool(opened.ctx, entry, `${what} \`${name}\``),
-    );
-    if (said !== null) allow[name] = said;
-  }
-
-  return allow;
 }
