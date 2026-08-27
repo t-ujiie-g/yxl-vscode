@@ -163,7 +163,7 @@ export const SHEET_KEYS: readonly Covered[] = [
   {
     key: 'protect',
     standing: 'preview',
-    says: 'the cells a style unlocks marked, and what the sheet still allows said',
+    says: 'what Excel will lock marked and said; nothing here is read-only because of it',
   },
 ];
 

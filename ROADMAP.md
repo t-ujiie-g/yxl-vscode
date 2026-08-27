@@ -1661,6 +1661,13 @@ coverage table below is generated from which.
       still allowed. **The password itself never leaves the compiler**: what is
       projected is that one is set. A spec is version-controlled and §16 says to
       pass one with `--set`; a preview that echoed it would undo that advice.
+      **The mark says what *Excel* will do, and says so.** Reviewing this, the
+      first cut drew the unlocked cells as a filled outline, which reads as a
+      selection — as though the preview had made them the editable ones. It is a
+      corner mark now, like the other things a cell wears, and the sentence
+      opens *When Excel opens this sheet…* and closes *Editing the spec here is
+      unaffected*. `protect:` is about the workbook; the person editing the spec
+      is the one who wrote the lock.
 - [ ] **A parameter cannot fill a spelling this loader reads.** Found while
       adding `print.orientation`, which the schema lets a `${...}` fill.
       `expectSpelling` reads the *raw* text against a closed vocabulary, so a
@@ -3169,6 +3176,25 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-28 — Two things the frozen band and a blank cell were saying wrongly
+Found by reading a scrolled `layout.yxl.yaml`, which is the only example with
+both a column outline and a freeze.
+
+- **A row was drawn above the frozen band.** `.grid thead th` pins every heading
+  row at `top: 0`, so a sheet with a column outline had its two heading rows
+  *overlapping* — while `pinned()` offset the frozen band by `thead`'s full
+  height, counting both. The band landed a row too low, and the strip between
+  the headings and it was where the scrolling rows showed through. `pinned` now
+  stacks the heading rows and the frozen rows in one pass, each told where the
+  ones above it left off. Both tests for it fail on the old arithmetic.
+- **A blank cell in a formatted column claimed it could not be typed into.**
+  `typeable(null)` answered `mediated` for every cell the projection drew
+  without one behind it, and a band's `format:` is enough to have it drawn — so
+  `layout.yxl.yaml` wore *cannot be typed into* down forty empty rows of two
+  columns. Typing there writes one `cells:` entry and always did; the write path
+  was asked and did it without a question. A blank cell is `direct` now, unless
+  a `formulas:` range covers it, where the answer really is asked.
 
 ### 2026-08-28 — What prints, and what is locked
 `print:` and `protect:` were carried through blind. Both are modelled now, and

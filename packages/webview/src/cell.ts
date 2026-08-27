@@ -20,7 +20,10 @@ export function drawCell(
 
   // Excel locks every cell, so on a protected sheet the ones worth marking are
   // the ones a style unlocks (`docs/spec.md` §16).
-  if (protectedSheet && cell?.style['protection.locked'] === false) drawn.classList.add('unlocked');
+  if (protectedSheet && cell?.style['protection.locked'] === false) {
+    drawn.classList.add('unlocked');
+    drawn.title = 'Excel will let a reader type into this one; the rest of the sheet is locked.';
+  }
 
   if (cell === undefined) return drawn;
 

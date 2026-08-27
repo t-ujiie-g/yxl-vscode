@@ -97,7 +97,7 @@ written from the code, so it cannot drift from it.
 | `controls` | carried | buttons, checkboxes and the rest of the form controls |
 | `slicers` | carried | the tiles that filter a table or a pivot |
 | `pivots` | carried | pivot tables |
-| `protect` | drawn | the cells a style unlocks marked, and what the sheet still allows said |
+| `protect` | drawn | what Excel will lock marked and said; nothing here is read-only because of it |
 <!-- coverage:end -->
 
 ## Getting it

@@ -59,14 +59,16 @@ function inches(margins: Margins): string {
 export function protected_(one: CompiledProtect | null): DrawnProtect | null {
   if (one === null) return null;
 
-  const locked = one.password ? 'locked behind a password' : 'locked';
+  const locked = one.password ? 'protect it behind a password' : 'protect it';
   const allows =
     one.allow.length === 0
-      ? "Only selecting is still allowed, which is Excel's own default."
-      : `Still allowed: ${one.allow.map(spelled).join(', ')}.`;
+      ? "only selecting — Excel's own default"
+      : one.allow.map(spelled).join(', ');
 
+  // About the workbook, not about this editor: a spec is edited by whoever
+  // wrote the lock, and nothing here is read-only because of it.
   return {
-    says: `This sheet is ${locked}. Excel locks every cell, so the ones marked here are the ones a style unlocks. ${allows}`,
+    says: `When Excel opens this sheet it will ${locked}. Excel locks every cell, so the ones marked here are the ones your readers will be able to type into — the cells a style unlocks. They will still be allowed: ${allows}. Editing the spec here is unaffected.`,
   };
 }
 

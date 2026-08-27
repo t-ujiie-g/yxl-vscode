@@ -321,3 +321,15 @@ describe('a drawn spec', () => {
     expect(sheet.merges).toEqual([{ top: 1, left: 1, bottom: 1, right: 3 }]);
   });
 });
+
+describe('whether a cell says it can be typed into', () => {
+  it('says a blank cell can be, even where a band gives it a format', () => {
+    const source = `${SALES}    columns:\n      - at: B-C\n        format: "#,##0"\n    cells:\n      A1: Region\n`;
+    expect(at(source, 2, 7)?.editable).toBe('direct');
+  });
+
+  it('says one a filled range covers cannot, since the answer there is asked', () => {
+    const source = `${SALES}    formulas:\n      - at: D2:D9\n        formula: "A2*2"\n`;
+    expect(at(source, 4, 5)?.editable).toBe('mediated');
+  });
+});

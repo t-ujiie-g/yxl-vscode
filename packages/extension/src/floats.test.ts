@@ -139,18 +139,26 @@ describe("a sheet's print setup handed to the view", () => {
 });
 
 describe("a sheet's protection handed to the view", () => {
-  it('says it is locked and what is still allowed, and never the password', () => {
+  it('says what Excel will do, what it will still allow, and never the password', () => {
     const source = `${FIGURES}    protect:\n      password: hunter2\n      allow: { sort: true, auto_filter: true }\n`;
     const protect = drawn(source).protect;
-    expect(protect?.says).toContain('locked behind a password');
-    expect(protect?.says).toContain('Still allowed: sort, auto filter.');
+    expect(protect?.says).toContain(
+      'When Excel opens this sheet it will protect it behind a password',
+    );
+    expect(protect?.says).toContain('still be allowed: sort, auto filter.');
     expect(JSON.stringify(protect)).not.toContain('hunter2');
   });
 
   it("says Excel's own default where the spec allows nothing by name", () => {
     const source = `${FIGURES}    protect: {}\n`;
     const says = drawn(source).protect?.says ?? '';
-    expect(says).toContain('This sheet is locked.');
-    expect(says).toContain('Only selecting is still allowed');
+    expect(says).toContain('it will protect it.');
+    expect(says).toContain("only selecting — Excel's own default");
+  });
+
+  it('says the lock is about the workbook rather than about editing the spec here', () => {
+    const says = drawn(`${FIGURES}    protect: {}\n`).protect?.says ?? '';
+    expect(says).toContain('your readers will be able to type into');
+    expect(says).toContain('Editing the spec here is unaffected.');
   });
 });

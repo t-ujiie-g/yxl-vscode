@@ -1381,8 +1381,15 @@ body {
   border-top-width: 1px;
 }
 
-/* On a protected sheet, the cells a style unlocks: Excel locks every other one,
-   so these are the ones a reader can still type into. */
-.grid td.unlocked {
-  box-shadow: inset 0 0 0 1px #5c7fb8aa;
+/* On a protected sheet, the cells a style unlocks. This says what *Excel* will
+   do with the workbook, not what this editor allows, so it is a quiet corner
+   like the other marks a cell wears — never a fill, which reads as a selection. */
+.grid td.unlocked::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  border-width: 0 0 5px 5px;
+  border-style: solid;
+  border-color: transparent transparent #5c7fb8 transparent;
 }

@@ -16,7 +16,7 @@ import {
 import type { Diagnostic } from '@yxl-vscode/diag';
 import { conditionKey, type Evaluation } from '@yxl-vscode/evaluate';
 import type { Axis, ScalarValue, SpecDoc } from '@yxl-vscode/spec';
-import { type A1Addr, addrAt, cellOf, type NodeId, qualified } from '@yxl-vscode/units';
+import { type A1Addr, addrAt, cellOf, type NodeId, qualified, within } from '@yxl-vscode/units';
 import type {
   Drawing,
   DrawnCell,
@@ -295,7 +295,7 @@ function drawCells(
         rich: cell?.rich?.map((run) => ({ text: run.text, style: run.look })) ?? null,
         computed,
         overridden: cell?.provenance.value.kind === 'override',
-        editable: typeable(cell),
+        editable: typeable(sheet, addr, cell),
         format: applies(layers, cell?.value ?? null, cell?.format ?? null),
         style,
         bar: barAt(sheet.conditional, deciding, over),
@@ -351,8 +351,12 @@ function lines(at: number, many: number, freeze: number): number[] {
 }
 
 /** Whether this cell can be typed into — `editabilityOf`'s answer, so the badge and the refusal agree. */
-function typeable(cell: CompiledCell | null): Editable {
-  if (cell === null) return 'mediated';
+function typeable(sheet: CompiledSheet, at: A1Addr, cell: CompiledCell | null): Editable {
+  // A blank cell is written by typing into it — one `cells:` entry — unless a
+  // range fills it, where the answer is the range's or the cell's and is asked.
+  if (cell === null) {
+    return sheet.fills.some((fill) => within(cellOf(at), fill.rect)) ? 'mediated' : 'direct';
+  }
 
   const said = editabilityOf(cell.provenance.value);
   return said === 'readonly' ? 'mediated' : said;
