@@ -1,7 +1,8 @@
 import type { CompiledBand, CompiledSheet } from '@yxl-vscode/compile';
 import { entryOf, holds, type Node, nodeAt, type Op } from '@yxl-vscode/cst';
-import { type Axis, BAND_KEYS } from '@yxl-vscode/spec';
+import { type Axis, BAND_KEYS, KEY } from '@yxl-vscode/spec';
 import { columnLabel } from '@yxl-vscode/units';
+import { itemOf } from './anchored';
 import { type Found, located, type Reading } from './direct';
 import type { Candidate } from './resolve';
 
@@ -37,7 +38,7 @@ export function bandOfItsOwn(
   const op: Op =
     held?.kind === 'seq'
       ? { op: 'insertSource', path: [...found.path, key], index: held.items.length, source: body }
-      : { op: 'addSource', path: found.path, key, source: `- ${body.replaceAll('\n', '\n  ')}` };
+      : { op: 'addSource', path: found.path, key, source: itemOf(body) };
 
   return { found, op };
 }
@@ -135,13 +136,13 @@ export function splitBand(
   // Rewritten is the `at` as written: a `${...}` there would be written over
   // with whatever it resolved to.
   const over = { axis: span.axis, first: band.first, last: band.last };
-  if (spelt(found.node, 'at') !== spelled(over)) return null;
+  if (spelt(found.node, KEY.at) !== spelled(over)) return null;
 
   const pieces: string[] = [];
   for (const run of around(band, span)) {
     const own = run.first === span.first && run.last === span.last;
     const said = respelled(source, found.node, [
-      ['at', spelled({ axis: span.axis, ...run })],
+      [KEY.at, spelled({ axis: span.axis, ...run })],
       ...(own ? changes : []),
     ]);
     if (said === null) return null;
@@ -189,7 +190,7 @@ export interface Says {
   readonly words: Words;
 }
 
-/** How one ask reads in each of the three answers §4.4 gives a band. */
+/** How one ask reads in each of the three answers a band has. */
 export interface Words {
   readonly own: (span: Span) => string;
   readonly band: (over: Span, many: number) => string;
@@ -197,7 +198,7 @@ export interface Words {
 }
 
 /**
- * Every way of making those columns say it — §4.4's band rows, over any key a
+ * Every way of making those columns say it — the resolution table's band rows, over any key a
  * band holds (ADR-042). Taking a key out is `clears`.
  */
 export function setBandKey(

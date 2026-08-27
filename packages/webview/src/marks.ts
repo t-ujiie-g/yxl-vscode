@@ -9,7 +9,15 @@ export interface Bar {
   readonly faint?: boolean;
 }
 
-const SVG = 'http://www.w3.org/2000/svg';
+/** The namespace an SVG element is made in; `createElement` makes an HTML one that draws nothing. */
+export const SVG = 'http://www.w3.org/2000/svg';
+
+/** One SVG element with its attributes set, since every one of them is a string. */
+export function node(name: string, attributes: Record<string, string | number>): SVGElement {
+  const drawn = document.createElementNS(SVG, name);
+  for (const [key, value] of Object.entries(attributes)) drawn.setAttribute(key, String(value));
+  return drawn;
+}
 
 /** A mark drawn as the bars it stands for — of text, or of the box a border is put round. */
 export function marked(bars: readonly Bar[]): SVGSVGElement {

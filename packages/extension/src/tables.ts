@@ -1,6 +1,6 @@
 import { asTable, reading } from '@yxl-vscode/intent';
 import type { Ranged } from '@yxl-vscode/webview/protocol';
-import { applied, type Port, type Spec, sheetNamed } from './write';
+import { applied, type Port, rectIn, type Spec, sheetNamed } from './write';
 
 /**
  * A rectangle of `cells:` entries kept as an anchored `data:` block instead
@@ -11,9 +11,9 @@ export async function table(spec: Spec, ranged: Ranged, port: Port): Promise<voi
   const sheet = sheetNamed(ranged.sheet, port);
   if (sheet === null) return;
 
-  const { top, left, bottom, right } = ranged;
-  const intent = asTable(spec, { sheet, rect: { top, left, bottom, right } }, reading(port.text));
+  const rect = rectIn(ranged);
+  const intent = asTable(spec, { sheet, rect }, reading(port.text));
 
   const done = await applied(spec, intent, port, { anyway: false, from: 'table', about: null });
-  if (done) port.said(`${bottom - top + 1} rows are one table now.`);
+  if (done) port.said(`${rect.bottom - rect.top + 1} rows are one table now.`);
 }

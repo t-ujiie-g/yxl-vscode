@@ -179,7 +179,7 @@ function valuePath(origin: FacetOrigin, sheet: CompiledSheet, at: A1Addr, read: 
 
     return {
       ...block,
-      path: [...block.path, 'values', origin.row, origin.col],
+      path: [...block.path, KEY.values, origin.row, origin.col],
     };
   }
 

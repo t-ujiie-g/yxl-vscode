@@ -10,7 +10,7 @@ import { reading, setValidation } from '@yxl-vscode/intent';
 import type { Comparison, Said } from '@yxl-vscode/spec';
 import { type A1Addr, addrAt, cellOf, rangeOf, type SheetName, within } from '@yxl-vscode/units';
 import type { Validated } from '@yxl-vscode/webview/protocol';
-import { applied, type Port, type Spec, sheetNamed } from './write';
+import { applied, type Port, rectIn, type Spec, sheetNamed } from './write';
 
 /**
  * A `list:` validation written over the selection, or the ones it touches taken
@@ -20,7 +20,7 @@ export async function validate(spec: Spec, asked: Validated, port: Port): Promis
   const sheet = sheetNamed(asked.sheet, port);
   if (sheet === null) return;
 
-  const rect = { top: asked.top, left: asked.left, bottom: asked.bottom, right: asked.right };
+  const rect = rectIn(asked);
   const where = { sheet, rect, choices: asked.choices };
   const intent = setValidation(spec, where, reading(port.text));
 

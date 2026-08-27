@@ -29,7 +29,7 @@ export interface Moving {
 /**
  * What a row or a column being drawn would do to a sheet: every construct it
  * reaches, and what stands in the way. `moves` is one entry per line of YAML
- * the edit would touch, which is the size a reader is deciding about (§4.4).
+ * the edit would touch, which is the size a reader is deciding about.
  */
 export interface Shift {
   readonly moves: readonly Moving[];

@@ -1,6 +1,6 @@
 import { type CompiledGrid, type CompiledSheet, cellAt, sheetOf } from '@yxl-vscode/compile';
 import { entryOf, type Op, renderScalar } from '@yxl-vscode/cst';
-import type { ScalarValue } from '@yxl-vscode/spec';
+import { KEY, type ScalarValue } from '@yxl-vscode/spec';
 import {
   type A1Addr,
   addrAt,
@@ -232,19 +232,19 @@ function block(
     ),
   ].join('\n');
 
-  const already = entryOf(found.node, 'data')?.value;
+  const already = entryOf(found.node, KEY.data)?.value;
   const op: Op =
     already !== undefined && already.kind === 'seq'
       ? {
           op: 'insertSource',
-          path: [...found.path, 'data'],
+          path: [...found.path, KEY.data],
           index: already.items.length,
           source: body,
         }
       : {
           op: 'addSource',
           path: found.path,
-          key: 'data',
+          key: KEY.data,
           source: `- ${body.replace(/\n/g, '\n  ')}`,
         };
 

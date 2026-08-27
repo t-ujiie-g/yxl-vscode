@@ -2,6 +2,7 @@
 
 import { within } from '@yxl-vscode/units';
 import { describe, expect, it } from 'vitest';
+import { sheet as drawnSheet } from './harness';
 import {
   between,
   copying,
@@ -15,29 +16,9 @@ import {
 } from './keys';
 import type { DrawnCell, DrawnSheet } from './protocol';
 
-const sheet = (of: Partial<DrawnSheet> = {}): DrawnSheet => ({
-  name: 'Sales',
-  rows: 20,
-  columns: 10,
-  at: { row: 1, col: 1 },
-  of: { rows: 20, columns: 10 },
-  widths: [],
-  heights: [],
-  cells: [],
-  merges: [],
-  problems: [],
-  freeze: null,
-  visibility: 'visible',
-  tabColor: null,
-  gridlines: true,
-  split: null,
-  filter: null,
-  tables: [],
-  charts: [],
-  images: [],
-  shapes: [],
-  ...of,
-});
+/** A sheet with room to move about in, since these tests are about where a key takes the reader. */
+const sheet = (of: Partial<DrawnSheet> = {}): DrawnSheet =>
+  drawnSheet({ rows: 20, columns: 10, of: { rows: 20, columns: 10 }, ...of });
 
 /** The cells a sheet holds, as the grid maps them: a block, then a gap, then one. */
 function held(...at: string[]): ReadonlyMap<string, DrawnCell> {

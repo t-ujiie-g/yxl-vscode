@@ -1,9 +1,9 @@
 import { BORDER_EDGES, type ScalarValue, type StyleValues } from '@yxl-vscode/spec';
 import { painted } from '@yxl-vscode/units';
 import { format as excel } from 'numfmt';
-import { sparkline } from './float';
 import { iconOf } from './icons';
 import type { DrawnBar, DrawnCell, DrawnMerge, DrawnRun } from './protocol';
+import { sparkline } from './sparkline';
 
 /** One cell as a `<td>`: what it says, and the look it was sent wearing. */
 export function drawCell(

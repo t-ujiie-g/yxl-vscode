@@ -1,56 +1,14 @@
 // @vitest-environment jsdom
 
 import { describe, expect, it } from 'vitest';
+import { cell, sheet as drawnSheet } from './harness';
 import { type Host, wire } from './index';
-import type { Drawing, DrawnCell, DrawnSheet, FromView, Refused, Typed } from './protocol';
+import type { Drawing, DrawnSheet, FromView, Refused, Typed } from './protocol';
 
-function cell(of: Partial<DrawnCell> = {}): DrawnCell {
-  return {
-    row: 1,
-    col: 1,
-    value: 'APAC',
-    formula: null,
-    filledFrom: null,
-    format: null,
-    rich: null,
-    computed: null,
-    overridden: false,
-    editable: 'direct',
-    style: {},
-    bar: null,
-    icon: null,
-    note: null,
-    link: null,
-    validation: null,
-    sparkline: null,
-    ...of,
-  };
-}
-
+/** The sheet these tests draw: one cell that holds something, and a column with a width. */
 function sheet(of: Partial<DrawnSheet> = {}): DrawnSheet {
-  return {
-    name: 'Sales',
-    rows: 2,
-    columns: 2,
-    at: { row: 1, col: 1 },
-    of: { rows: 2, columns: 2 },
-    widths: [{ first: 1, last: 1, size: 10, hidden: false, group: null }],
-    heights: [],
-    cells: [cell()],
-    merges: [],
-    problems: [],
-    freeze: null,
-    visibility: 'visible',
-    tabColor: null,
-    gridlines: true,
-    split: null,
-    filter: null,
-    tables: [],
-    charts: [],
-    images: [],
-    shapes: [],
-    ...of,
-  };
+  const widths = [{ first: 1, last: 1, size: 10, hidden: false, group: null }];
+  return drawnSheet({ widths, cells: [cell(1, 1, { value: 'APAC' })], ...of });
 }
 
 const drawing: Drawing = {
@@ -152,8 +110,8 @@ describe('what the view sends', () => {
 
   it('follows a link on the key and the click, and is taken where the host says', () => {
     const { into, sent, told } = view();
-    const linked = cell({ link: { kind: 'to', target: 'Notes!A1', tip: null } });
-    const notes = sheet({ name: 'Notes', cells: [cell({ value: 'here' })] });
+    const linked = cell(1, 1, { link: { kind: 'to', target: 'Notes!A1', tip: null } });
+    const notes = sheet({ name: 'Notes', cells: [cell(1, 1, { value: 'here' })] });
     told({ ...drawing, sheets: [sheet({ cells: [linked] }), notes] });
 
     // Selected first, as a reader does before holding the key down.
@@ -182,9 +140,9 @@ describe('what the view sends', () => {
     // now under the pointer is sent an enter of its own — a drag the reader
     // never started, which used to land the selection where they clicked from.
     const { into, sent, told } = view();
-    const linked = cell({ col: 2, link: { kind: 'to', target: 'Notes!A1', tip: null } });
-    const notes = sheet({ name: 'Notes', cells: [cell({ value: 'Draft' })] });
-    told({ ...drawing, sheets: [sheet({ cells: [cell(), linked] }), notes] });
+    const linked = cell(1, 1, { col: 2, link: { kind: 'to', target: 'Notes!A1', tip: null } });
+    const notes = sheet({ name: 'Notes', cells: [cell(1, 1, { value: 'Draft' })] });
+    told({ ...drawing, sheets: [sheet({ cells: [cell(1, 1), linked] }), notes] });
 
     at(into, 1, 2)?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
     at(into, 1, 2)?.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
@@ -610,7 +568,7 @@ describe('emptying what is selected', () => {
         rows: 4,
         columns: 4,
         of: { rows: 4, columns: 4 },
-        cells: [cell(), cell({ row: 2, col: 2 }), cell({ row: 3, col: 3 })],
+        cells: [cell(1, 1), cell(1, 1, { row: 2, col: 2 }), cell(1, 1, { row: 3, col: 3 })],
       }),
     ],
   };
@@ -1124,7 +1082,10 @@ describe('the bar over the grid', () => {
 
   it('takes it off again where the cell wears it already', () => {
     const { into, sent, told } = view();
-    told({ ...drawing, sheets: [sheet({ cells: [cell({ style: { 'font.bold': true } })] })] });
+    told({
+      ...drawing,
+      sheets: [sheet({ cells: [cell(1, 1, { style: { 'font.bold': true } })] })],
+    });
 
     at(into, 1, 1)?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
     press(into, 1, 1, 'b');

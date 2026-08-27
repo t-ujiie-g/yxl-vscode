@@ -19,7 +19,7 @@ const DYNAMIC = /\bimport\s*\(\s*['"]([^'"]+)['"]/g;
  */
 
 /**
- * Every violation of the layer rules in `ROADMAP.md` §4.2.
+ * Every violation of the order `layers.json` declares.
  *
  * Two passes see two different things. The declared dependencies are exact but
  * coarse; the sources catch what a manifest cannot say — a host reached from a
@@ -169,7 +169,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     process.stderr.write(`${where}: ${specifier ? `'${specifier}' — ` : ''}${reason}\n`);
   }
   if (violations.length > 0) {
-    process.stderr.write(`\n${violations.length} layer violation(s); see ROADMAP.md §4.2\n`);
+    process.stderr.write(`\n${violations.length} layer violation(s); see layers.json\n`);
     process.exit(1);
   }
   process.stdout.write(`layers ok (${layers.order.length} packages)\n`);

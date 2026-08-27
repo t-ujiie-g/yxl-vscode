@@ -3128,6 +3128,52 @@ than widening it silently.
 
 ## 11. Living changelog
 
+### 2026-08-27 — A tidying pass over the tree
+No behaviour changed. The §8 lenses, walked in order, over the whole tree; 341
+lines net came out.
+
+- **16 schema keys routed back through `KEY`.** The table exists so a key is
+  spelled once, and the writer layer was spelling `'at'`, `'values'`, `'data'`
+  and `'style'` by hand in seven files. The other 31 literals the scan turned up
+  are union discriminants that happen to share a word — `Shape = 'cells' |
+  'data'`, `Does.of`, `Whole` — and are left alone: the type checker owns those.
+- **Three constants given one home**: the SVG namespace and the
+  `createElementNS` helper, declared in both files that draw one, now live in
+  `marks.ts`; and `pixelsOf` in `window.ts`, since `draw.ts` and `float.ts` each
+  recomputed `(points * 4) / 3` beside a `PER_POINT` they could not see.
+- **`itemOf` in `intent/anchored.ts`**: "this body as the first item of a
+  sequence" was written five ways across `bands`, `fill`, `table`, `override`
+  and `anchored` itself.
+- **`rectIn` in `extension/write.ts`**, beside `sheetNamed`: a `Ranged` is a
+  `Rect` and a sheet, and eight gestures unpacked it a field at a time.
+- **The view's test fixtures stopped being copied.** Six test files each carried
+  their own `cell()` and `sheet()` — byte-identical to `harness.ts`'s but for a
+  default or two — which is why the last three phases each had to patch all six.
+  They use the harness now, with the default that differs kept as a two-line
+  wrapper that says why it differs.
+- **`webview/sparkline.ts` split out of `float.ts`** (625 lines → 495 + 124). One
+  seam, not a line count: the overlay floats *over* the grid and `draw.ts` uses
+  it; a sparkline is drawn *inside a cell* and `cell.ts` uses it.
+- **No roadmap or phase codes left in the sources.** §8.6 bans them, and there
+  were 24 — a `Phase 8`, and 23 pointers at `§4.4`/`§4.5`/`§8 Q6`/`§9 R5`, most
+  of them bare, so a reader who never opened `ROADMAP.md` could not tell which
+  document they named. Each names the thing now: "the resolution table", "the
+  `setSize` table", "`layers.json`". `docs/spec.md §n`, `ADR-nnn` and
+  `ECMA-376 §n` stay — those are stable and findable.
+- **Considered and left alone**: `naturalSize` is exported only for its own test,
+  which §8.2 calls a smell — but it is the pure half of ADR-004's I/O split, and
+  testing byte-header parsing through the filesystem would be worse. And
+  `webview/index.ts` (750 lines) is one closure over 22 `let`s: a smell with no
+  logical seam, since the only split is a redesign of the view's state model.
+  §8.3 says not to split for a line count, so it stays until there is a reason.
+- Layers clean, no deprecation warnings, ROADMAP checkboxes match the code.
+- **`@types/node` 26.2 → 26.3**, as its own commit. `@types/vscode` is 30 minors
+  behind and **stays** at `~1.104.0`: it has to describe the *oldest* VS Code
+  `engines.vscode` claims to support, not the newest, or code compiles against
+  an API the host it claims to run on has not got.
+- Comment shape: export 795 blocks / 1741 lines / avg 2.2, private 533 / 533 /
+  avg 1.0, inline 112 / 172 / avg 1.5; 0 over the limit.
+
 ### 2026-08-27 — A comment stays with what it is about
 Adding a key to a mapping put it *above* the comments that ended the mapping, so
 `# the pivot above is not modeled yet` came to sit under the chart written after

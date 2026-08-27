@@ -95,7 +95,7 @@ export function renameSheet(spec: Projection, where: Renaming, read: Reading): I
     const read1 = at === null ? null : parseQualifiedAddr(at);
     if (read1 === null || read1.sheet !== where.sheet) continue;
 
-    put(one.id, 'at', qualified(to, read1.at));
+    put(one.id, KEY.at, qualified(to, read1.at));
   }
 
   const files = [...ops.keys()];

@@ -6,8 +6,8 @@ import type { Value } from './write';
 export type Path = readonly (string | number)[];
 
 /**
- * An edit against the YAML tree; they come in pairs, listed in `ROADMAP.md`
- * §4.5. `write` and `restore` put back *text*, which is what makes an undo
+ * An edit against the YAML tree; they come in pairs. `write` and `restore`
+ * put back *text*, which is what makes an undo
  * byte-exact (ADR-026, ADR-027).
  */
 export type Op =

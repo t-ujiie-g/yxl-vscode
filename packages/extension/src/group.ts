@@ -4,8 +4,8 @@ import { type Asking, asked, many } from './asked';
 import type { Port, Spec } from './write';
 
 /**
- * Columns or rows put into an outline, or taken out of one: §4.4's band rows
- * with `group:` where a size would be.
+ * Columns or rows put into an outline, or taken out of one: the resolution
+ * table's band rows with `group:` where a size would be.
  */
 export function group(spec: Spec, grouped: Grouped, port: Port, choice?: string): Promise<void> {
   return asked(spec, grouped, port, choice, GROUP);

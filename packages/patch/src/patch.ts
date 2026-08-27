@@ -47,7 +47,7 @@ export function applyPatch(source: string, patch: Patch, options: Options): Chan
 
 /**
  * How many lines of the file a patch rewrites — what a reader is agreeing to
- * before a big edit lands, rather than after (`ROADMAP.md` §6 Phase 8).
+ * before a big edit lands, rather than after.
  */
 export function rewrites(source: string, edits: readonly Edit[]): number {
   return edits.reduce(

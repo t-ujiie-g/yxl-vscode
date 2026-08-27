@@ -41,7 +41,7 @@ export type Window = { readonly row: number; readonly col: number };
 /** The window each sheet is being looked at through, by the sheet's own name. */
 export type Windows = ReadonlyMap<string, Window>;
 
-/** How much of a sheet is drawn at once: the DOM is the cost that does not survive a hundred thousand cells (`ROADMAP.md` §9 R5). */
+/** How much of a sheet is drawn at once: the DOM does not survive a hundred thousand cells. */
 const WINDOW = { rows: 200, columns: 50 };
 
 /** How far past what a spec writes a filled range is drawn: enough to see it continues. */

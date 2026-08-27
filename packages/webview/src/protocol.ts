@@ -564,7 +564,7 @@ export type FromView =
 
 /**
  * Rows or columns put in above `at`, or taken away from there where `by` is
- * below zero — as many as `by` says (`docs/spec.md` §2, ROADMAP §4.4).
+ * below zero — as many as `by` says (`docs/spec.md` §2).
  */
 export interface Lined {
   readonly sheet: string;

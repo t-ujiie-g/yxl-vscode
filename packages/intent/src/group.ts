@@ -19,8 +19,8 @@ export interface Grouping {
 const DEEPEST = 7;
 
 /**
- * Every way of putting those columns in an outline, or taking them out — §4.4's
- * band rows with `group:`. Level `0` is the schema's own word for ungrouped,
+ * Every way of putting those columns in an outline, or taking them out — the
+ * resolution table's band rows with `group:`. Level `0` is the schema's own word for ungrouped,
  * which it keeps apart from the key being absent.
  */
 export function setGroup(

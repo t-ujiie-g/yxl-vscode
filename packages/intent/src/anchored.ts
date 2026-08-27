@@ -74,6 +74,6 @@ function rectAt(item: Node): Rect | null {
 }
 
 /** The same entry as the first item of a sequence: `- ` takes two columns, and what follows lines up under it. */
-function itemOf(entry: string): string {
+export function itemOf(entry: string): string {
   return `- ${entry.split('\n').join('\n  ')}`;
 }
