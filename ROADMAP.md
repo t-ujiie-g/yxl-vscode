@@ -3177,6 +3177,36 @@ than widening it silently.
 
 ## 11. Living changelog
 
+### 2026-08-28 — Named for what they hold
+No behaviour changed. The §8 lenses over what the last three phases added; 303
+lines net came out.
+
+- **`standingOf` deleted.** Exported from `spec/coverage.ts` and re-exported
+  from the index with **no caller anywhere and no test** — written for a Phase 15
+  item that has not arrived. It comes back when the inspector needs it, and will
+  then be written to fit what asks rather than to a guess.
+- **`optionalNumber` and `flag` in `loader/read.ts`**, beside `optionalText`.
+  "A number under this key of this mapping" was written five ways across
+  `float`, `print` twice, and `sheet`'s `readSplit`; `flag` existed twice, in
+  `table.ts` and `sparkline.ts`, with the second one unable to say what an
+  absent switch means.
+- **`print:` and `protect:` are not floats.** They had landed in
+  `compile/float.ts` because that was the file open at the time, with their
+  tests in `float.test.ts` and `floats.test.ts`, and `loader/print.ts` read
+  `protect:` as well. Each layer that has them now has a `print.ts` and a
+  `protect.ts`, and every file is named for what it holds — which is the loader's
+  own convention (`note`, `link`, `table`, `validation`) applied where it had
+  slipped.
+- **`protected_` is `locked`.** A trailing underscore dodging a reserved word is
+  a name nobody would choose twice.
+- Layers clean, no deprecation warnings, README's coverage table generated and
+  gated, no roadmap or phase codes in the sources.
+- Comment shape: export 818 blocks / 1801 lines / avg 2.2, private 541 / 541 /
+  avg 1.0, inline 118 / 183 / avg 1.6; 0 over the limit.
+- **Still standing from the last pass, unchanged**: `webview/index.ts` (750
+  lines, one closure over 22 `let`s, no logical seam), and `naturalSize`
+  exported only for its own test, which is the pure half of ADR-004's split.
+
 ### 2026-08-28 — Two things the frozen band and a blank cell were saying wrongly
 Found by reading a scrolled `layout.yxl.yaml`, which is the only example with
 both a column outline and a freeze.

@@ -212,3 +212,15 @@ export function optional<T>(opened: Opened, key: string, read: (node: Node) => T
 export function optionalText(opened: Opened, key: string, what: string): string | null {
   return optional(opened, key, (entry) => expectText(opened.ctx, entry, `${what} \`${key}\``));
 }
+
+export function optionalNumber(opened: Opened, key: string, what: string): number | null {
+  return optional(opened, key, (entry) => expectNumber(opened.ctx, entry, `${what} \`${key}\``));
+}
+
+/** A switch the spec leaves out far more often than it writes; `unwritten` is what its absence means. */
+export function flag(opened: Opened, key: string, what: string, unwritten = false): boolean {
+  const said = optional(opened, key, (entry) =>
+    expectBool(opened.ctx, entry, `${what} \`${key}\``),
+  );
+  return said ?? unwritten;
+}

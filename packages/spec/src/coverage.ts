@@ -1,5 +1,3 @@
-import { MODELED_KEYS } from './keys';
-
 /**
  * What this editor does with one key of the schema: a gesture writes it, it is
  * read and drawn but nothing writes it, or it is carried through untouched and
@@ -166,15 +164,3 @@ export const SHEET_KEYS: readonly Covered[] = [
     says: 'what Excel will lock marked and said; nothing here is read-only because of it',
   },
 ];
-
-/**
- * Whether the loader reads this key at all. `opaque` is not a claim but a
- * consequence: a key `MODELED_KEYS` does not list is carried through untouched.
- */
-export function standingOf(key: string, of: 'document' | 'sheet'): Standing | 'opaque' {
-  const modeled = of === 'document' ? MODELED_KEYS.document : MODELED_KEYS.sheet;
-  const found = (of === 'document' ? DOCUMENT_KEYS : SHEET_KEYS).find((one) => one.key === key);
-  if (!modeled.has(key)) return 'opaque';
-
-  return found?.standing ?? 'opaque';
-}

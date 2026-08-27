@@ -10,13 +10,13 @@ import { CODE } from './codes';
 import { type Ctx, identify, reject, type Site } from './ctx';
 
 import {
-  expectBool,
-  expectNumber,
   expectSpelling,
   findEntry,
+  flag,
   type Opened,
   open,
   optional,
+  optionalNumber,
   optionalText,
   readEach,
   required,
@@ -44,11 +44,9 @@ export function readSparklines(ctx: Ctx, node: Node, path: Path): SparklineGroup
       markers: flag(opened, 'markers', what),
       high: flag(opened, 'high', what),
       low: flag(opened, 'low', what),
-      min: optional(opened, 'min', (entry) => expectNumber(opened.ctx, entry, `${what} \`min\``)),
-      max: optional(opened, 'max', (entry) => expectNumber(opened.ctx, entry, `${what} \`max\``)),
-      weight: optional(opened, 'weight', (entry) =>
-        expectNumber(opened.ctx, entry, `${what} \`weight\``),
-      ),
+      min: optionalNumber(opened, 'min', what),
+      max: optionalNumber(opened, 'max', what),
+      weight: optionalNumber(opened, 'weight', what),
       color: optional(opened, 'color', (entry) =>
         readAs(opened.ctx, entry, `${what} \`color\``, COLOR),
       ),
@@ -113,11 +111,4 @@ function readColors(ctx: Ctx, node: Node, what: string): SparklineColors | null 
     optional(opened, key, (entry) => readAs(opened.ctx, entry, `${what} \`${key}\``, COLOR));
 
   return { markers: read('markers'), high: read('high'), low: read('low') };
-}
-
-/** One of the switches a group carries, which the spec leaves out far more often than it writes. */
-function flag(opened: Opened, key: string, what: string): boolean {
-  return (
-    optional(opened, key, (entry) => expectBool(opened.ctx, entry, `${what} \`${key}\``)) ?? false
-  );
 }

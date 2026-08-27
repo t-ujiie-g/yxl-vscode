@@ -32,8 +32,9 @@ import type {
 import { applied, barAt, iconAt, overRanges, spreads } from './conditional';
 import { anchorsIn, chartsOf, imagesOf, shapesOf, sparklineAt } from './floats';
 import { type Nodes, nodeUnder } from './inspect';
-import { printed, protected_ } from './paper';
 import type { PictureReader } from './pictures';
+import { printed } from './print';
+import { locked } from './protect';
 import { choicesOf, validating, validationSaid } from './validations';
 
 /** Where a sheet is being looked at, 1-based, as the view last asked. */
@@ -156,7 +157,7 @@ function drawSheet(
     split: sheet.split,
     filter: sheet.filter,
     print: printed(sheet.print),
-    protect: protected_(sheet.protect),
+    protect: locked(sheet.protect),
     tables: sheet.tables.map((one) => ({ ...one.rect, ...tabled(one) })),
     charts: chartsOf(sheet, grid),
     images: imagesOf(sheet, beside.file, beside.pictures),

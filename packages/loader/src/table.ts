@@ -2,15 +2,7 @@ import type { Node, Path } from '@yxl-vscode/cst';
 import { MODELED_KEYS, type Table } from '@yxl-vscode/spec';
 import { CODE } from './codes';
 import { type Ctx, identify, keyOf, reject, type Site } from './ctx';
-import {
-  expectBool,
-  expectText,
-  findEntry,
-  type Opened,
-  openEntries,
-  readEach,
-  rejectUnknownKey,
-} from './read';
+import { expectText, findEntry, flag, openEntries, readEach, rejectUnknownKey } from './read';
 import { RANGE, readAs } from './template';
 
 /** A sheet's `tables:` entries, in the order written (`docs/spec.md` §11). */
@@ -51,12 +43,4 @@ export function readTables(ctx: Ctx, node: Node, path: Path): Table[] {
       lastColumn: flag(opened, 'last_column', what, false),
     };
   });
-}
-
-/** One of Excel's Table Design toggles, which the spec leaves out far more often than it writes. */
-function flag(opened: Opened, key: string, what: string, unwritten: boolean): boolean {
-  const found = findEntry(opened.entries, key);
-  if (found === undefined) return unwritten;
-
-  return expectBool(opened.ctx, found.value, `${what} \`${key}\``) ?? unwritten;
 }
