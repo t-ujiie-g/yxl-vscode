@@ -154,6 +154,7 @@ pnpm build            # the extension actually bundles
 | Format and apply safe fixes | `pnpm format` |
 | Layer check alone | `node scripts/check-layers.mjs` |
 | Comment shape report (§8.6) | `node scripts/comment-shape.mjs` — every comment over the limit, longest first; `--totals` for the counts |
+| Rewrite the README's schema-coverage table (§8.5) | `COVERAGE=write pnpm test tests/coverage.test.ts` — the table is written from `spec/coverage.ts`, and the same test fails when the README is stale |
 | Build | `pnpm build` |
 | Get the conformance oracle | install the **pinned** `yxl` release, or point `YXL_BIN` at it (`ROADMAP.md` ADR-018) |
 | Run the extension | **F5** in VS Code — *Run the preview*, which builds first |
