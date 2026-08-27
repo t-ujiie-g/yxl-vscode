@@ -43,6 +43,63 @@ not into a workbook.
 | **…and asks where a look comes from somewhere else** | Where it comes from a shared declaration or a column band, the answers are listed with the count of what each would move — change the declaration every cell reading it follows, change the band, or write it on these cells. Over a selection whose cells take it from different places, the two answers are apply it to all of them alike or change each place it comes from. Nothing is picked for you, and nothing is asked where both answers would leave the file the same. |
 | **…and offers the exception** | Every refusal about a real cell carries `overrides:`, the exception yxl has for exactly this (`docs/spec.md` §23): say why, and the cell is written as one deliberate exception with your reason beside it, marked with a red corner ever after. Offered, never taken on its own. |
 
+## What of the schema it reads
+
+Every key `docs/spec.md` gives a document and a sheet, and what this editor does
+with each: **edited** by a gesture here, **drawn** but written by nobody, or
+**carried** through untouched and invisible (`ROADMAP.md` ADR-011). The table is
+written from the code, so it cannot drift from it.
+
+<!-- coverage:start -->
+### A document
+
+| Key | | |
+|---|---|---|
+| `sheets` | **edited** | the workbook itself: added, renamed, reordered, deleted |
+| `active` | carried | which sheet opens first |
+| `params` | drawn | turned in the preview, which redraws without touching the file |
+| `defs` | **edited** | a look lands here where the normalizer finds it a home |
+| `overrides` | **edited** | the exception a refusal offers |
+| `properties` | carried | title, author and the rest of the document properties |
+| `calc` | carried | when Excel recalculates |
+| `protect` | carried | the workbook lock |
+| `date1904` | drawn | honoured when a date is computed |
+| `default_font` | carried | the font every cell starts from |
+
+### A sheet
+
+| Key | | |
+|---|---|---|
+| `name` | **edited** | renamed from its tab; every formula that names it follows |
+| `cells` | **edited** | typed into, cleared, pasted over, styled |
+| `formulas` | **edited** | what a fill writes, and what a fill can be split out of |
+| `data` | **edited** | sorted, extended, and what a rectangle converts to |
+| `columns` | **edited** | width, hidden, group and a look over a whole column |
+| `rows` | **edited** | the same down the side |
+| `merges` | **edited** | merged and taken apart, losing no value either way |
+| `visibility` | **edited** | hidden and shown from the tab; `very_hidden` is drawn, not offered |
+| `freeze` | **edited** | set at the selected cell, and honoured while scrolling |
+| `split` | drawn | the splitter drawn where it sits; the panes do not come apart |
+| `gridlines` | **edited** | switched from the tab; the key goes away at Excel default |
+| `tab_color` | **edited** | picked from the tab |
+| `print` | carried | the print area, margins, and what repeats on every page |
+| `filter` | **edited** | put on the header row and taken off; per-column criteria are not in the schema |
+| `validations` | **edited** | a `list:` written over a selection; every kind read and said |
+| `links` | **edited** | written, followed and taken off; the kind is asked, never guessed |
+| `conditional` | drawn | every kind of rule applied in the grid, over the computed values |
+| `comments` | **edited** | written in a box over the cell, and shown on Excel's red corner |
+| `tables` | **edited** | made over a selection and taken apart; drawn as Excel bands one |
+| `charts` | **edited** | put in over a selection, moved, resized; sketched, never rendered |
+| `images` | **edited** | put in from a file, moved, scaled by a drag on the corner |
+| `shapes` | **edited** | moved and resized; drawn as the geometry each one names |
+| `background` | carried | the watermark behind the cells, which Excel never prints |
+| `sparklines` | drawn | drawn inside the cell, from the values the sheet holds |
+| `controls` | carried | buttons, checkboxes and the rest of the form controls |
+| `slicers` | carried | the tiles that filter a table or a pivot |
+| `pivots` | carried | pivot tables |
+| `protect` | carried | the sheet lock |
+<!-- coverage:end -->
+
 ## Getting it
 
 Not published yet. To run it from a checkout: `pnpm install`, then **F5** in VS

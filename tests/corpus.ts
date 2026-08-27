@@ -32,9 +32,14 @@ export function awkward(): Sample[] {
   return read(join(here, 'fixtures', 'awkward'));
 }
 
+/** The yxl checkout this repo expects next door, which holds the schema and the cookbook. */
+export function yxlRoot(): string {
+  return join(REPO_ROOT, '..', 'yxl');
+}
+
 /** Every spec in yxl's own cookbook, when a checkout is next door; `corpus.test.ts` fails on zero. */
 export function yxlExamples(): Sample[] {
-  const dir = join(REPO_ROOT, '..', 'yxl', 'examples');
+  const dir = join(yxlRoot(), 'examples');
   try {
     statSync(dir);
   } catch {

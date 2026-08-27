@@ -1627,9 +1627,21 @@ pivots (§14), document properties and calculation (§15), and `rich:` *editing*
 (§3 — it is drawn today). None of it is an ordinary day's gesture; each is
 either **previewed and read-only** or **opaque and said so** — and the v1.0
 coverage table below is generated from which.
-- [ ] Every sheet and document key in the spec is in one of three states in the
+- [x] Every sheet and document key in the spec is in one of three states in the
       code — editable, preview-only, opaque — and the README's table is
       generated from that, so it cannot lie
+      **In**, as `spec/coverage.ts`: ten document keys and twenty-eight sheet
+      keys, each with what this editor does with it and a sentence saying what
+      that comes to. Three checks keep it honest, and each was **made to fail
+      before it was trusted**: the list is exactly what upstream's own
+      `docs/yxl.schema.json` declares, in its order, so a key the schema grows
+      is a failing test rather than a silence; **`opaque` is a consequence, not
+      a claim** — a key `MODELED_KEYS` does not list *is* carried, and the table
+      is checked against that rather than believed; and the README's block is
+      compared against the rendered table, `COVERAGE=write` writing it.
+      What is left is the one claim a machine cannot make: **editable against
+      drawn**. That one is a sentence per key, in the code, where the gesture
+      that would falsify it lives.
 - [ ] `print:` and `protect:` previewed: the print area outlined, the locked
       cells marked
 - [ ] `rich:` runs editable in the formula bar, one run at a time
@@ -3127,6 +3139,28 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-27 — The schema, said honestly and in one place
+Every key `docs/spec.md` gives a document and a sheet is now in one of three
+states in the code — **edited** by a gesture here, **drawn** but written by
+nobody, or **carried** through untouched — and the README's table is written
+from that rather than beside it.
+
+- **`spec/coverage.ts`**: ten document keys, twenty-eight sheet keys, each with
+  its standing and a sentence saying what that comes to.
+- **Three checks, each made to fail before it was trusted.** The list is exactly
+  what upstream's `docs/yxl.schema.json` declares, in its order, so a key the
+  schema grows is a failing test rather than a silence. **`opaque` is a
+  consequence rather than a claim**: a key `MODELED_KEYS` does not list *is*
+  carried, and the table is checked against that. And the README's block is
+  compared against the rendered table.
+- **`COVERAGE=write pnpm test tests/coverage.test.ts`** writes the README block;
+  the same test fails when it is stale. In the commands table.
+- What no machine can check is **edited against drawn** — that one is a sentence
+  per key, kept in the code beside the gesture that would falsify it.
+- The first pass of this wrote the checks and *believed* them; two of the three
+  turned out to match nothing, because `pnpm format` had rewrapped the table the
+  probe was grepping for. They were rewritten until each one failed on demand.
 
 ### 2026-08-27 — A tidying pass over the tree
 No behaviour changed. The §8 lenses, walked in order, over the whole tree; 341
