@@ -31,7 +31,7 @@ import {
 import { address, colour, compileFacets, layer, type Spoke, spokenBy } from './cell';
 import { CODE } from './codes';
 import { type Ctx, filled, reject, text } from './ctx';
-import { chart, image, shape, sparklines } from './float';
+import { chart, image, printing, protecting, shape, sparklines } from './float';
 import type {
   CompiledAsk,
   CompiledBand,
@@ -82,6 +82,8 @@ export function compileSheet(ctx: Ctx, sheet: Sheet): Drafted {
       gridlines: sheet.gridlines ?? true,
       split: sheet.split,
       filter: filterOf(ctx, sheet),
+      print: sheet.print === null ? null : printing(ctx, sheet.print),
+      protect: sheet.protect === null ? null : protecting(sheet.protect),
       notes: notesOf(ctx, sheet.comments),
       links: linksOf(ctx, sheet.links),
       validations: sheet.validations

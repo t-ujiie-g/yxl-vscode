@@ -412,6 +412,7 @@ function line(
       here,
       anchored,
       anchored === undefined ? spillOf(sheet, held, row, col) : 0,
+      sheet.protect !== null,
     );
     if (drawn.querySelector('.spill') !== null) drawn.classList.add('spilling');
     if (table !== null) drawn.classList.add(...banding(table, row, col));
@@ -579,16 +580,15 @@ function spillOf(
 }
 
 /**
- * The frozen rows pinned by what they measure rather than what the spec
+ * Every row that stays put pinned by what it measures rather than what the spec
  * declares — a row is taller than its declaration where its text wraps — and
- * left as declared where there is no layout to measure.
+ * left alone where there is no layout to measure.
  */
 export function pinned(into: HTMLElement): void {
-  const head = into.querySelector('thead');
-  if (!(head instanceof HTMLElement) || head.offsetHeight === 0) return;
-
-  let top = head.offsetHeight;
-  for (const line of into.querySelectorAll('tr.frozen')) {
+  // The headings are two rows where a column outline has a gutter, and every
+  // row that stays has to be told where the ones above it left off.
+  let top = 0;
+  for (const line of into.querySelectorAll('thead tr, tbody tr.frozen')) {
     if (!(line instanceof HTMLElement) || line.offsetHeight === 0) return;
 
     for (const cell of line.children) {

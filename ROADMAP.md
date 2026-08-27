@@ -1642,8 +1642,45 @@ coverage table below is generated from which.
       What is left is the one claim a machine cannot make: **editable against
       drawn**. That one is a sentence per key, in the code, where the gesture
       that would falsify it lives.
-- [ ] `print:` and `protect:` previewed: the print area outlined, the locked
+- [x] `print:` and `protect:` previewed: the print area outlined, the locked
       cells marked
+      **In**, both modelled rather than opaque. The **print area** is outlined
+      where it falls and each `breaks:` cell draws the two lines it starts a
+      page with — above it and left of it, and neither where that is the sheet's
+      own edge. Everything a line in the grid cannot say — the way round, the
+      margins in inches, the scaling, the `&`-coded running heads — is said
+      under the grid, ending in *it does not paginate*, because a preview that
+      drew pages would be drawing Excel's arithmetic rather than the spec's
+      words. `scale:` and `fit:` are refused together, and a break at `A1` is
+      refused, as `docs/spec.md` §5 says.
+      **The marking is the other way round from the wording above.** Excel locks
+      every cell, so a sheet under `protect:` has nothing worth marking except
+      the cells a style *unlocks* — the input boxes of a form, which is what §16
+      says the key is for. Those are outlined; the sentence under the grid says
+      the sheet is locked, whether a password stands behind it, and what is
+      still allowed. **The password itself never leaves the compiler**: what is
+      projected is that one is set. A spec is version-controlled and §16 says to
+      pass one with `--set`; a preview that echoed it would undo that advice.
+      **The mark says what *Excel* will do, and says so.** Reviewing this, the
+      first cut drew the unlocked cells as a filled outline, which reads as a
+      selection — as though the preview had made them the editable ones. It is a
+      corner mark now, like the other things a cell wears, and the sentence
+      opens *When Excel opens this sheet…* and closes *Editing the spec here is
+      unaffected*. `protect:` is about the workbook; the person editing the spec
+      is the one who wrote the lock.
+- [ ] **A parameter cannot fill a spelling this loader reads.** Found while
+      adding `print.orientation`, which the schema lets a `${...}` fill.
+      `expectSpelling` reads the *raw* text against a closed vocabulary, so a
+      placeholder is refused as an unknown spelling — while yxl builds the spec
+      happily. Confirmed against three of them: `sheet.visibility`,
+      `cells.type` and `images.positioning` each raise
+      `loader.unknown-spelling` on a spec that compiles upstream.
+      The schema marks **23 enums** as parameterisable; this editor reads about
+      a dozen of them through `expectSpelling`. `print.orientation` is read
+      through `readAs` and a `Kind` instead, which is template-aware, and is the
+      shape the rest want — but converting them turns a dozen `T | null` into
+      `Templated<T> | null` and each one has to be resolved in `compile`, so it
+      is its own piece of work rather than a rider on this one.
 - [ ] `rich:` runs editable in the formula bar, one run at a time
 - [ ] The rest stays opaque, and the inspector says so where a cell is under one
 
@@ -3139,6 +3176,64 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-28 — Two things the frozen band and a blank cell were saying wrongly
+Found by reading a scrolled `layout.yxl.yaml`, which is the only example with
+both a column outline and a freeze.
+
+- **A row was drawn above the frozen band.** `.grid thead th` pins every heading
+  row at `top: 0`, so a sheet with a column outline had its two heading rows
+  *overlapping* — while `pinned()` offset the frozen band by `thead`'s full
+  height, counting both. The band landed a row too low, and the strip between
+  the headings and it was where the scrolling rows showed through. `pinned` now
+  stacks the heading rows and the frozen rows in one pass, each told where the
+  ones above it left off. Both tests for it fail on the old arithmetic.
+- **The column outline's gutter was not one of the things that stay.** Fixing
+  the arithmetic above uncovered the other half: `.grid th.outline` is sticky,
+  and the gutter row over the *columns* is made of `td`s, which were not. While
+  the two heading rows overlapped nobody could tell — the letters row covered
+  the gutter entirely. Stacked, the gutter took its own strip, scrolled away
+  with the table, and the rows passing behind showed through where it had been.
+- **`tests/staying.test.ts` is the one suite that loads `view.css`.** Both of
+  these were invisible to 2300 tests because what stays put is decided by
+  `position` and `z-index` and by nothing the DOM says. It renders a sheet with
+  a gutter *and* a freeze and asserts every cell that has to stay is stuck and
+  has a ground of its own; it fails on the stylesheet as it was. It lives in
+  `tests/` because only the shell may read a file (ADR-004), and `tests/` — the
+  tier above every layer, not a package — takes the DOM lib for it. No package's
+  tsconfig changed, so `document` in a core package is still a compile error.
+- **A blank cell in a formatted column claimed it could not be typed into.**
+  `typeable(null)` answered `mediated` for every cell the projection drew
+  without one behind it, and a band's `format:` is enough to have it drawn — so
+  `layout.yxl.yaml` wore *cannot be typed into* down forty empty rows of two
+  columns. Typing there writes one `cells:` entry and always did; the write path
+  was asked and did it without a question. A blank cell is `direct` now, unless
+  a `formulas:` range covers it, where the answer really is asked.
+
+### 2026-08-28 — What prints, and what is locked
+`print:` and `protect:` were carried through blind. Both are modelled now, and
+drawn as far as a preview honestly can.
+
+- **The print area is outlined** where it falls, and each `breaks:` cell draws
+  the two lines it starts a page with — above it and left of it, and neither
+  where that is the sheet's own edge.
+- **The rest is said under the grid** — the way round, the margins in inches,
+  the scaling, the `&`-coded running heads — ending in *it does not paginate*. A
+  preview that drew pages would be drawing Excel's arithmetic rather than the
+  spec's words. `scale:` with `fit:`, and a break at `A1`, are refused as §5
+  says.
+- **The marking is the other way round from what this phase first wrote down.**
+  Excel locks every cell, so a protected sheet has nothing worth marking except
+  the cells a style *unlocks* — a form's input boxes, which §16 says is what the
+  key is for. Those are outlined.
+- **The password never leaves the compiler.** What is projected is that one is
+  set. A spec is version-controlled and §16 says to pass one with `--set`; a
+  preview that echoed it would undo that advice.
+- `open`, `required`, `optional` and `optionalText` moved from `loader/float.ts`
+  to `loader/read.ts`, where the rest of the readers live: a third construct
+  wanted them, which is one more than a private home survives.
+- Comment shape: export 818 blocks / 1804 lines / avg 2.2, private 543 / 543 /
+  avg 1.0, inline 114 / 176 / avg 1.5; 0 over the limit.
 
 ### 2026-08-27 — The schema, said honestly and in one place
 Every key `docs/spec.md` gives a document and a sheet is now in one of three

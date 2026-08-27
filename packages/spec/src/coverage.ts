@@ -95,8 +95,8 @@ export const SHEET_KEYS: readonly Covered[] = [
   { key: 'tab_color', standing: 'editable', says: 'picked from the tab' },
   {
     key: 'print',
-    standing: 'opaque',
-    says: 'the print area, margins, and what repeats on every page',
+    standing: 'preview',
+    says: 'the area outlined and the page breaks drawn; the rest said under the grid',
   },
   {
     key: 'filter',
@@ -160,7 +160,11 @@ export const SHEET_KEYS: readonly Covered[] = [
   },
   { key: 'slicers', standing: 'opaque', says: 'the tiles that filter a table or a pivot' },
   { key: 'pivots', standing: 'opaque', says: 'pivot tables' },
-  { key: 'protect', standing: 'opaque', says: 'the sheet lock' },
+  {
+    key: 'protect',
+    standing: 'preview',
+    says: 'what Excel will lock marked and said; nothing here is read-only because of it',
+  },
 ];
 
 /**

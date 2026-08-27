@@ -5,6 +5,7 @@ import type { Conditional } from './conditional';
 import type { DataBlock } from './data';
 import type { Chart, Image, Shape } from './float';
 import type { Opaque, SpecNode, Templated } from './node';
+import type { Print, Protect } from './print';
 import type { SparklineGroup } from './sparkline';
 import type { Validation } from './validation';
 
@@ -36,6 +37,8 @@ export interface Sheet extends SpecNode {
   readonly split: Split | null;
   readonly conditional: readonly Conditional[];
   readonly filter: Templated<A1Range> | null;
+  readonly print: Print | null;
+  readonly protect: Protect | null;
   readonly comments: readonly Note[];
   readonly links: readonly Link[];
   readonly validations: readonly Validation[];

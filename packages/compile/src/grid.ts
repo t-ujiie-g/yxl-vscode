@@ -1,12 +1,16 @@
 import type { Diagnostic } from '@yxl-vscode/diag';
 import type {
+  Allowance,
   CellType,
   ChartType,
   Comparison,
   ConditionalTest,
   ErrorStyle,
+  Fit,
   LegendPlace,
   LinkTarget,
+  Margins,
+  Orientation,
   PixelOffset,
   Positioning,
   Said,
@@ -22,6 +26,7 @@ import type {
 } from '@yxl-vscode/spec';
 import type {
   A1Addr,
+  CellRef,
   Color,
   NodeId,
   QualifiedCell,
@@ -70,6 +75,8 @@ export interface CompiledSheet {
   readonly split: Split | null;
   readonly conditional: readonly CompiledRule[];
   readonly filter: Rect | null;
+  readonly print: CompiledPrint | null;
+  readonly protect: CompiledProtect | null;
   readonly notes: ReadonlyMap<string, CompiledNote>;
   readonly links: ReadonlyMap<string, CompiledLink>;
   readonly validations: readonly CompiledValidation[];
@@ -78,6 +85,34 @@ export interface CompiledSheet {
   readonly images: readonly CompiledImage[];
   readonly shapes: readonly CompiledShape[];
   readonly sparklines: readonly CompiledSparkline[];
+}
+
+/**
+ * One `print:` setup, its area and its breaks read. Everything else is the
+ * spec's own words: a preview outlines where the paper falls, it does not
+ * paginate (`docs/spec.md` §5).
+ */
+export interface CompiledPrint {
+  readonly area: Rect | null;
+  readonly orientation: Orientation | null;
+  readonly margins: Margins | null;
+  readonly scale: number | null;
+  readonly fit: Fit | null;
+  readonly header: string | null;
+  readonly footer: string | null;
+  readonly breaks: readonly CellRef[];
+  readonly node: NodeId;
+}
+
+/**
+ * One sheet's `protect:`. Whether a password is set, never the password: a
+ * preview says a sheet is locked, and a spec's own note says not to commit one
+ * (`docs/spec.md` §16).
+ */
+export interface CompiledProtect {
+  readonly password: boolean;
+  readonly allow: readonly Allowance[];
+  readonly node: NodeId;
 }
 
 /**

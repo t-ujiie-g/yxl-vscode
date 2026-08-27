@@ -8,8 +8,19 @@ import {
 } from '@yxl-vscode/spec';
 import { CODE } from './codes';
 import { type Ctx, identify, reject, type Site } from './ctx';
-import { open, optional, optionalText, required } from './float';
-import { expectBool, expectNumber, expectSpelling, findEntry, type Opened, readEach } from './read';
+
+import {
+  expectBool,
+  expectNumber,
+  expectSpelling,
+  findEntry,
+  type Opened,
+  open,
+  optional,
+  optionalText,
+  readEach,
+  required,
+} from './read';
 import { ADDRESS, COLOR, readAs } from './template';
 
 /** A sheet's `sparklines:` entries, one group each, in the order written (`docs/spec.md` §19). */

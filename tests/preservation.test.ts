@@ -120,7 +120,7 @@ function underSheet(sample: Sample, doc: SpecDoc): { what: string; patch: Patch 
 describe('the corpus of specs that use what this editor does not model', () => {
   it('holds constructs to preserve, or this suite proves nothing', () => {
     const opaque = specs.flatMap((sample) => carried(read(sample, sample.source), sample.path));
-    expect(opaque.length).toBeGreaterThanOrEqual(10);
+    expect(opaque.length).toBeGreaterThanOrEqual(8);
   });
 
   it('holds enough specs where an edit and a carried construct meet', () => {
@@ -150,16 +150,16 @@ describe('the corpus of specs that use what this editor does not model', () => {
       carried(read(sample, sample.source), sample.path).map((one) => one.key),
     );
 
-    // `docs/spec.md` §5, §13's sheet background, §14, §15, §16, §20 and §21.
+    // `docs/spec.md` §13's sheet background, §14, §15, §20 and §21. A workbook's
+    // own `protect:` would be here too, and no example writes one: upstream
+    // refuses it, so a spec that carries it does not build.
     expect([...new Set(keys)].sort()).toEqual([
       'active',
       'background',
       'calc',
       'controls',
       'pivots',
-      'print',
       'properties',
-      'protect',
       'slicers',
     ]);
   });

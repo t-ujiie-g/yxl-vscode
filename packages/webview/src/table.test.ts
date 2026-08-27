@@ -1286,3 +1286,53 @@ describe('a cell a validation covers', () => {
     expect(on.validate).toHaveBeenCalledWith(['Draft', 'Sent', 'Paid']);
   });
 });
+
+describe('what stays put while the rest scrolls', () => {
+  /** jsdom lays nothing out, so each row is told how tall it is. */
+  function measured(into: HTMLElement, heights: readonly number[]): void {
+    const rows = [...into.querySelectorAll('thead tr, tbody tr.frozen')];
+    for (const [at, row] of rows.entries()) {
+      Object.defineProperty(row, 'offsetHeight', { value: heights[at] ?? 0, configurable: true });
+    }
+  }
+
+  function topsOf(into: HTMLElement): string[] {
+    return [...into.querySelectorAll('thead tr, tbody tr.frozen')].map(
+      (row) => row.querySelector('th')?.getAttribute('style') ?? '',
+    );
+  }
+
+  it('stacks the headings and the frozen rows, so neither sits over the other', () => {
+    const frozen = sheet({ freeze: { row: 3, col: 1 }, cells: [cell(1, 1), cell(2, 1)] });
+    const into = shown({ drawing: drawing({ sheets: [frozen] }) });
+    const table = into.querySelector<HTMLElement>('.grid');
+    if (table === null) throw new Error('no grid');
+
+    measured(table, [24, 28, 20]);
+    pinned(table);
+    expect(topsOf(table).map((said) => /top: (\d+)px/.exec(said)?.[1] ?? null)).toEqual([
+      '0',
+      '24',
+      '52',
+    ]);
+  });
+
+  it('stacks a second heading row where a column outline gives one a gutter', () => {
+    const widths = [{ first: 4, last: 5, size: null, hidden: false, group: 1 }];
+    const outlined = sheet({ freeze: { row: 2, col: 1 }, widths, cells: [cell(1, 1)] });
+    const into = shown({ drawing: drawing({ sheets: [outlined] }) });
+    const table = into.querySelector<HTMLElement>('.grid');
+    if (table === null) throw new Error('no grid');
+
+    // The gutter, the column letters, and the one frozen row.
+    expect(table.querySelectorAll('thead tr').length).toBe(2);
+
+    measured(table, [18, 24, 20]);
+    pinned(table);
+    expect(topsOf(table).map((said) => /top: (\d+)px/.exec(said)?.[1] ?? null)).toEqual([
+      '0',
+      '18',
+      '42',
+    ]);
+  });
+});

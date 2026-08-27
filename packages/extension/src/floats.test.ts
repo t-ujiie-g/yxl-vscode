@@ -120,3 +120,45 @@ describe('a sheet with something floating over it', () => {
     expect(sheet.of.columns).toBeGreaterThanOrEqual(26);
   });
 });
+
+describe("a sheet's print setup handed to the view", () => {
+  it('carries the area and the breaks, and says the rest in a sentence', () => {
+    const source = `${FIGURES}    print:\n      area: A1:D50\n      orientation: landscape\n      scale: 80\n      breaks: [A21]\n      header: "&CQuarterly"\n`;
+    const print = drawn(source).print;
+    expect(print?.area).toEqual({ top: 1, left: 1, bottom: 50, right: 4 });
+    expect(print?.breaks).toEqual([{ row: 21, col: 1 }]);
+    expect(print?.says).toContain('A1:D50 prints, landscape, scaled to 80%');
+    expect(print?.says).toContain('header `&CQuarterly`');
+    expect(print?.says).toContain('does not paginate');
+  });
+
+  it('says the whole sheet prints where no area is named, and how it is fitted', () => {
+    const source = `${FIGURES}    print:\n      fit: { width: 1, height: 0 }\n`;
+    expect(drawn(source).print?.says).toContain('The whole sheet prints, fitted to 1 page across');
+  });
+});
+
+describe("a sheet's protection handed to the view", () => {
+  it('says what Excel will do, what it will still allow, and never the password', () => {
+    const source = `${FIGURES}    protect:\n      password: hunter2\n      allow: { sort: true, auto_filter: true }\n`;
+    const protect = drawn(source).protect;
+    expect(protect?.says).toContain(
+      'When Excel opens this sheet it will protect it behind a password',
+    );
+    expect(protect?.says).toContain('still be allowed: sort, auto filter.');
+    expect(JSON.stringify(protect)).not.toContain('hunter2');
+  });
+
+  it("says Excel's own default where the spec allows nothing by name", () => {
+    const source = `${FIGURES}    protect: {}\n`;
+    const says = drawn(source).protect?.says ?? '';
+    expect(says).toContain('it will protect it.');
+    expect(says).toContain("only selecting — Excel's own default");
+  });
+
+  it('says the lock is about the workbook rather than about editing the spec here', () => {
+    const says = drawn(`${FIGURES}    protect: {}\n`).protect?.says ?? '';
+    expect(says).toContain('your readers will be able to type into');
+    expect(says).toContain('Editing the spec here is unaffected.');
+  });
+});

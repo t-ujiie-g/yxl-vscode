@@ -1,3 +1,4 @@
+import { ALLOWANCES } from './print';
 import { BORDER_SIDES } from './style';
 
 /** The mapping key that names a `defs.values` or `defs.formulas` entry. */
@@ -83,6 +84,8 @@ export const MODELED_KEYS = {
     'comments',
     'links',
     'validations',
+    'print',
+    'protect',
     'tables',
     'charts',
     'images',
@@ -138,6 +141,11 @@ export const MODELED_KEYS = {
   ]),
   sparklineCell: keySet(['at', 'data']),
   sparklineColors: keySet(['markers', 'high', 'low']),
+  print: keySet(['area', 'orientation', 'margins', 'scale', 'fit', 'header', 'footer', 'breaks']),
+  margins: keySet(['top', 'bottom', 'left', 'right', 'header', 'footer']),
+  fit: keySet(['width', 'height']),
+  protect: keySet(['password', 'allow']),
+  allow: keySet(ALLOWANCES),
   said: keySet(['title', 'body']),
   refusal: keySet(['title', 'body', 'style']),
   note: keySet(['text', 'author']),

@@ -52,6 +52,8 @@ export interface DrawnSheet {
   readonly gridlines: boolean;
   readonly split: { readonly x: number; readonly y: number } | null;
   readonly filter: DrawnMerge | null;
+  readonly print: DrawnPrint | null;
+  readonly protect: DrawnProtect | null;
   readonly tables: readonly DrawnTable[];
   readonly charts: readonly DrawnChart[];
   readonly images: readonly DrawnImage[];
@@ -75,6 +77,25 @@ export interface SizedFloat {
   readonly node: string;
   readonly width: number;
   readonly height: number;
+}
+
+/**
+ * What a sheet's `print:` comes to: the area to outline, the cells a page starts
+ * at, and the rest of it said in a sentence. A preview outlines where the paper
+ * falls; it does not paginate (`docs/spec.md` §5).
+ */
+export interface DrawnPrint {
+  readonly area: DrawnMerge | null;
+  readonly breaks: readonly { readonly row: number; readonly col: number }[];
+  readonly says: string;
+}
+
+/**
+ * What a sheet's `protect:` comes to. Excel locks every cell by default, so the
+ * cells worth marking are the ones a style *unlocks* (`docs/spec.md` §16).
+ */
+export interface DrawnProtect {
+  readonly says: string;
 }
 
 /** Where a float's top-left corner sits: the cell it hangs from, and the pixels in from that cell's corner. */

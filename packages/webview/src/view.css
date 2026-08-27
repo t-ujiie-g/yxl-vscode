@@ -287,6 +287,14 @@ body {
   z-index: 2;
 }
 
+/* The column gutter is a heading row like the letters under it, and has to stay
+   with them: left to scroll, it takes its strip with it and the cells passing
+   behind show through where it was. */
+.grid thead td.outline {
+  position: sticky;
+  z-index: 6;
+}
+
 /* The bracket over the run: a line along the gutter, turned down at the end it
    starts from, as Excel draws one. */
 .grid .outline.in {
@@ -1349,4 +1357,47 @@ body {
   width: 8px;
   height: 8px;
   cursor: nwse-resize;
+}
+
+/* Where the paper falls: the print area a spec asks for, and a line at each
+   page break. The preview draws the edges; it does not paginate. */
+.paper .area {
+  position: absolute;
+  z-index: 2;
+  outline: 2px dashed #5c7fb8;
+  outline-offset: -1px;
+  pointer-events: none;
+}
+
+.paper .break {
+  position: absolute;
+  z-index: 2;
+  border-color: #5c7fb8;
+  border-style: dashed;
+  pointer-events: none;
+}
+
+.paper .break.column {
+  top: 0;
+  bottom: 0;
+  border-left-width: 1px;
+}
+
+.paper .break.row {
+  right: 0;
+  left: 0;
+  border-top-width: 1px;
+}
+
+/* On a protected sheet, the cells a style unlocks. This says what *Excel* will
+   do with the workbook, not what this editor allows, so it is a quiet corner
+   like the other marks a cell wears — never a fill, which reads as a selection. */
+.grid td.unlocked::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  border-width: 0 0 5px 5px;
+  border-style: solid;
+  border-color: transparent transparent #5c7fb8 transparent;
 }

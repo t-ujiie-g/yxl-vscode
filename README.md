@@ -82,7 +82,7 @@ written from the code, so it cannot drift from it.
 | `split` | drawn | the splitter drawn where it sits; the panes do not come apart |
 | `gridlines` | **edited** | switched from the tab; the key goes away at Excel default |
 | `tab_color` | **edited** | picked from the tab |
-| `print` | carried | the print area, margins, and what repeats on every page |
+| `print` | drawn | the area outlined and the page breaks drawn; the rest said under the grid |
 | `filter` | **edited** | put on the header row and taken off; per-column criteria are not in the schema |
 | `validations` | **edited** | a `list:` written over a selection; every kind read and said |
 | `links` | **edited** | written, followed and taken off; the kind is asked, never guessed |
@@ -97,7 +97,7 @@ written from the code, so it cannot drift from it.
 | `controls` | carried | buttons, checkboxes and the rest of the form controls |
 | `slicers` | carried | the tiles that filter a table or a pivot |
 | `pivots` | carried | pivot tables |
-| `protect` | carried | the sheet lock |
+| `protect` | drawn | what Excel will lock marked and said; nothing here is read-only because of it |
 <!-- coverage:end -->
 
 ## Getting it
