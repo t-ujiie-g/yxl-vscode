@@ -1,0 +1,56 @@
+# Every closed vocabulary this editor reads, filled by a parameter rather than
+# written out: the schema lets a `${...}` stand in each of these places.
+params:
+  shown: hidden
+  how: date
+  weight: thick
+  across: center
+  down: middle
+  plot: bar
+  where: top
+  geometry: cloud
+  anchored: fixed
+  spark: win_loss
+  refuse: warning
+  way: landscape
+sheets:
+  - name: Sales
+    visibility: "${shown}"
+    cells:
+      A1: { value: "2023-03-15", type: "${how}" }
+      A2: Region
+      A3: North
+      A4: South
+      B2: 1
+      B3: 2
+      B4: 3
+      C2: 4
+      D2: 5
+      E2: 6
+      F2:
+        value: 1
+        style:
+          border: { top: "${weight}" }
+          align: { horizontal: "${across}", vertical: "${down}" }
+    charts:
+      - at: H2
+        type: "${plot}"
+        legend: "${where}"
+        series:
+          - values: B2:B4
+            categories: A2:A4
+    shapes:
+      - at: I1
+        kind: "${geometry}"
+        positioning: "${anchored}"
+    sparklines:
+      - at: K2
+        data: B2:E2
+        type: "${spark}"
+    validations:
+      - at: B2:B9
+        list: [a, b]
+        error: { title: Not a choice, style: "${refuse}" }
+    print:
+      orientation: "${way}"
+  - name: Notes

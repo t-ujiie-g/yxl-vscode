@@ -28,6 +28,15 @@ describe('a compiled chart', () => {
     expect(sheet(source).charts[0]?.at).toBe('E2');
   });
 
+  it('takes the type and the legend from a parameter, and drops a chart whose type is neither', () => {
+    const set = `params:\n  how: bar\n  where: top\n${SHEET}    charts:\n      - at: E2\n        type: \${how}\n        legend: \${where}\n        series:\n          - values: B2:B4\n`;
+    expect(sheet(set).charts[0]).toMatchObject({ type: 'bar', legend: 'top' });
+
+    const bad = `params:\n  how: pyramid\n${SHEET}    charts:\n      - at: E2\n        type: \${how}\n        series:\n          - values: B2:B4\n`;
+    expect(codes(bad)).toContain(CODE.badSpelling);
+    expect(sheet(bad).charts).toEqual([]);
+  });
+
   it('refuses an anchor a parameter did not make a cell, and a `name_from` that is not one', () => {
     const bad = `params:\n  where: nowhere\n${SHEET}    charts:\n      - at: \${where}\n        type: pie\n        series:\n          - values: B2:B4\n`;
     expect(codes(bad)).toContain(CODE.badAddress);
@@ -50,12 +59,30 @@ describe('a compiled image', () => {
       positioning: 'move',
     });
   });
+
+  it('takes the positioning from a parameter, and moves with the cells where it is neither', () => {
+    const set = `params:\n  how: fixed\n${SHEET}    images:\n      - at: E1\n        file: a.png\n        positioning: \${how}\n`;
+    expect(sheet(set).images[0]?.positioning).toBe('fixed');
+
+    const bad = `params:\n  how: floating\n${SHEET}    images:\n      - at: E1\n        file: a.png\n        positioning: \${how}\n`;
+    expect(codes(bad)).toContain(CODE.badSpelling);
+    expect(sheet(bad).images[0]?.positioning).toBe('move');
+  });
 });
 
 describe('a compiled shape', () => {
   it('is 160 by 160 where it asks for no size', () => {
     const source = `${SHEET}    shapes:\n      - at: E2\n        kind: cloud\n`;
     expect(sheet(source).shapes[0]?.size).toEqual({ width: 160, height: 160 });
+  });
+
+  it('takes the geometry from a parameter, and is drawn at all only where it is one', () => {
+    const set = `params:\n  geometry: cloud\n${SHEET}    shapes:\n      - at: E2\n        kind: \${geometry}\n`;
+    expect(sheet(set).shapes[0]?.kind).toBe('cloud');
+
+    const bad = `params:\n  geometry: roundrect\n${SHEET}    shapes:\n      - at: E2\n        kind: \${geometry}\n`;
+    expect(codes(bad)).toContain(CODE.badSpelling);
+    expect(sheet(bad).shapes).toEqual([]);
   });
 
   it('reads its colours, and its text with the look each line wears', () => {
@@ -73,6 +100,15 @@ describe('a compiled sparkline group', () => {
     const drawn = sheet(source).sparklines;
     expect(drawn.map((one) => one.at)).toEqual(['G2', 'G3']);
     expect(drawn.every((one) => one.type === 'column' && one.color === '1F77B4')).toBe(true);
+  });
+
+  it('takes the kind from a parameter, and plots nothing where it is not one', () => {
+    const set = `params:\n  how: win_loss\n${SHEET}    sparklines:\n      - at: F2\n        data: B2:E2\n        type: \${how}\n`;
+    expect(sheet(set).sparklines[0]?.type).toBe('win_loss');
+
+    const bad = `params:\n  how: pie\n${SHEET}    sparklines:\n      - at: F2\n        data: B2:E2\n        type: \${how}\n`;
+    expect(codes(bad)).toContain(CODE.badSpelling);
+    expect(sheet(bad).sparklines).toEqual([]);
   });
 
   it('reads the range it plots, and the sheet it names where it names one', () => {

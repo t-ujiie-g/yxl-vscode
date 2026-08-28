@@ -82,4 +82,11 @@ describe('a sparkline group', () => {
       CODE.unknownKey,
     );
   });
+
+  it('keeps a kind a parameter fills in', () => {
+    expect(group('      - at: F2\n        data: B2:E2\n        type: "${how}"\n').type).toEqual({
+      kind: 'template',
+      text: '${how}',
+    });
+  });
 });

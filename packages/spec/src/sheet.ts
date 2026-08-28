@@ -16,7 +16,9 @@ export interface Split {
 }
 
 /** Whether Excel shows a sheet's tab; `very_hidden` is undone only from VBA (`docs/spec.md` §2). */
-export type Visibility = 'visible' | 'hidden' | 'very_hidden';
+export const VISIBILITIES = ['visible', 'hidden', 'very_hidden'] as const;
+
+export type Visibility = (typeof VISIBILITIES)[number];
 
 /**
  * One sheet. `keyOrder` is the sheet's keys as written, because where two
@@ -31,7 +33,7 @@ export interface Sheet extends SpecNode {
   readonly rows: readonly RowBand[];
   readonly merges: readonly Merge[];
   readonly freeze: Templated<A1Addr> | null;
-  readonly visibility: Visibility | null;
+  readonly visibility: Templated<Visibility> | null;
   readonly tabColor: Templated<Color> | null;
   readonly gridlines: boolean | null;
   readonly split: Split | null;

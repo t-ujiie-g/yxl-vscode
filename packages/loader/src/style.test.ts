@@ -119,6 +119,15 @@ describe('a border', () => {
     expect(codes('{ border: dotty }')).toEqual([CODE.unknownSpelling]);
   });
 
+  it('keeps a line style a parameter fills in', () => {
+    expect(style('{ border: "${weight}" }').border).toEqual([
+      { side: 'all', edge: { style: { kind: 'template', text: '${weight}' }, color: null } },
+    ]);
+    expect(style('{ border: { top: { style: "${weight}" } } }').border).toEqual([
+      { side: 'top', edge: { style: { kind: 'template', text: '${weight}' }, color: null } },
+    ]);
+  });
+
   it('refuses a side that is not one', () => {
     expect(codes('{ border: { middle: thin } }')).toEqual([CODE.unknownKey]);
   });
@@ -132,6 +141,15 @@ describe('an alignment', () => {
   it('reads the spellings both axes share', () => {
     const read = style('{ align: { horizontal: justify, vertical: justify } }');
     expect(read.align).toEqual({ horizontal: 'justify', vertical: 'justify', wrap: null });
+  });
+
+  it('keeps a spelling a parameter fills in, on either axis', () => {
+    const read = style('{ align: { horizontal: "${across}", vertical: "${down}" } }');
+    expect(read.align).toEqual({
+      horizontal: { kind: 'template', text: '${across}' },
+      vertical: { kind: 'template', text: '${down}' },
+      wrap: null,
+    });
   });
 });
 

@@ -1,15 +1,22 @@
-import type {
-  Chart,
-  ChartAxis,
-  Image,
-  Shape,
-  ShapeText,
-  Sparkline,
-  SparklineGroup,
-  Style,
+import {
+  CHART_TYPES,
+  type Chart,
+  type ChartAxis,
+  type Image,
+  LEGEND_PLACES,
+  POSITIONINGS,
+  type Positioning,
+  SHAPE_KINDS,
+  type Shape,
+  type ShapeText,
+  SPARKLINE_TYPES,
+  type Sparkline,
+  type SparklineGroup,
+  type SpecNode,
+  type Style,
 } from '@yxl-vscode/spec';
 import { parseQualifiedCell, parseQualifiedRange, rectOf } from '@yxl-vscode/units';
-import { address, colour } from './cell';
+import { address, colour, spelling } from './cell';
 import { CODE } from './codes';
 import { type Ctx, reject, text } from './ctx';
 import type {
@@ -26,13 +33,14 @@ import { flatten, settled } from './style';
 /** One `charts:` entry, its anchor read; what it plots stays the spec's own words (ADR-029). */
 export function chart(ctx: Ctx, one: Chart): CompiledChart | null {
   const at = address(ctx, one.at, one);
-  if (at === null) return null;
+  const type = spelling(ctx, one.type, CHART_TYPES, one);
+  if (at === null || type === null) return null;
 
   return {
     at,
-    type: one.type,
+    type,
     title: one.title === null ? null : text(ctx, one.title, one),
-    legend: one.legend,
+    legend: one.legend === null ? null : spelling(ctx, one.legend, LEGEND_PLACES, one),
     size: one.size,
     xAxis: axis(ctx, one, one.xAxis),
     yAxis: axis(ctx, one, one.yAxis),
@@ -77,7 +85,7 @@ export function image(ctx: Ctx, one: Image): CompiledImage | null {
     alt: one.alt === null ? null : text(ctx, one.alt, one),
     scale: one.scale ?? { x: 1, y: 1 },
     offset: one.offset ?? { x: 0, y: 0 },
-    positioning: one.positioning ?? 'move',
+    positioning: positioned(ctx, one.positioning, one),
     node: one.id,
   };
 }
@@ -88,20 +96,27 @@ const SHAPE_SIZE = { width: 160, height: 160 };
 /** One `shapes:` entry, its anchor, colours and text read (`docs/spec.md` §18). */
 export function shape(ctx: Ctx, one: Shape): CompiledShape | null {
   const at = address(ctx, one.at, one);
-  if (at === null) return null;
+  const kind = spelling(ctx, one.kind, SHAPE_KINDS, one);
+  if (at === null || kind === null) return null;
 
   return {
     at,
-    kind: one.kind,
+    kind,
     text: one.text.map((line): CompiledShapeText => wording(ctx, one, line)),
     size: one.size ?? SHAPE_SIZE,
     fill: one.fill === null ? null : colour(ctx, one.fill, one),
     line:
       one.line === null ? null : { color: colour(ctx, one.line.color, one), width: one.line.width },
     alt: one.alt === null ? null : text(ctx, one.alt, one),
-    positioning: one.positioning ?? 'move',
+    positioning: positioned(ctx, one.positioning, one),
     node: one.id,
   };
+}
+
+/** What a float does when the cells beneath it change; `move` where the spec is silent (`docs/spec.md` §13). */
+function positioned(ctx: Ctx, said: Image['positioning'], node: SpecNode): Positioning {
+  if (said === null) return 'move';
+  return spelling(ctx, said, POSITIONINGS, node) ?? 'move';
 }
 
 function wording(ctx: Ctx, one: Shape, line: ShapeText): CompiledShapeText {
@@ -125,9 +140,12 @@ function wording(ctx: Ctx, one: Shape, line: ShapeText): CompiledShapeText {
  * a shared extent (`docs/spec.md` §19).
  */
 export function sparklines(ctx: Ctx, group: SparklineGroup): CompiledSparkline[] {
+  const type = spelling(ctx, group.type, SPARKLINE_TYPES, group);
+  if (type === null) return [];
+
   const marks = group.colors;
   const shared = {
-    type: group.type,
+    type,
     markers: group.markers,
     high: group.high,
     low: group.low,

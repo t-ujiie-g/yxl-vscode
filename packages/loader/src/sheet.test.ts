@@ -77,6 +77,15 @@ describe('a sheet', () => {
     expect(sheet('name: S\n').freeze).toBeNull();
   });
 
+  it('reads whether the tab is shown, and keeps a spelling a parameter fills in', () => {
+    expect(sheet('name: S\n    visibility: hidden\n').visibility).toBe('hidden');
+    expect(sheet('name: S\n    visibility: "${shown}"\n').visibility).toEqual({
+      kind: 'template',
+      text: '${shown}',
+    });
+    expect(codes('name: S\n    visibility: shy\n')).toEqual([CODE.unknownSpelling]);
+  });
+
   it('refuses a freeze that is not a cell', () => {
     const { diagnostics } = load(parse('sheets:\n  - name: S\n    freeze: B2:C3\n', { file: 'f' }));
     expect(diagnostics.map((one) => one.code)).toEqual(['loader.bad-address']);

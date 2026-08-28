@@ -52,6 +52,14 @@ describe('a chart', () => {
     expect(one.xAxis).toBeNull();
   });
 
+  it('keeps a type and a legend a parameter fills in', () => {
+    const one = chart(
+      '      - at: E2\n        type: "${how}"\n        legend: "${where}"\n        series:\n          - values: B2:B4\n',
+    );
+    expect(one.type).toEqual({ kind: 'template', text: '${how}' });
+    expect(one.legend).toEqual({ kind: 'template', text: '${where}' });
+  });
+
   it('leaves the trimmings unsaid where the spec does', () => {
     const one = chart(PLOT);
     expect([one.title, one.legend, one.size, one.xAxis, one.yAxis]).toEqual([
@@ -123,6 +131,11 @@ describe('an image', () => {
       codes('images', '      - at: E1\n        file: a.png\n        positioning: floating\n'),
     ).toContain(CODE.unknownSpelling);
   });
+
+  it('keeps a positioning a parameter fills in', () => {
+    const one = image('      - at: E1\n        file: a.png\n        positioning: "${anchored}"\n');
+    expect(one.positioning).toEqual({ kind: 'template', text: '${anchored}' });
+  });
 });
 
 describe('a shape', () => {
@@ -161,6 +174,13 @@ describe('a shape', () => {
     expect(codes('shapes', '      - at: E2\n        kind: roundrect\n')).toContain(
       CODE.unknownSpelling,
     );
+  });
+
+  it('keeps a geometry a parameter fills in', () => {
+    expect(shape('      - at: E2\n        kind: "${geometry}"\n').kind).toEqual({
+      kind: 'template',
+      text: '${geometry}',
+    });
   });
 
   it('refuses a line with no colour, and a fill that is not a hex colour', () => {

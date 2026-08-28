@@ -1,4 +1,12 @@
-import type { CellFacets, ScalarValue, SpecNode, Style, Templated } from '@yxl-vscode/spec';
+import {
+  CELL_TYPES,
+  type CellFacets,
+  type CellType,
+  type ScalarValue,
+  type SpecNode,
+  type Style,
+  type Templated,
+} from '@yxl-vscode/spec';
 import { type A1Addr, type Color, parseA1Addr, parseColor } from '@yxl-vscode/units';
 import { CODE } from './codes';
 import { type Ctx, filled, reject, text } from './ctx';
@@ -19,6 +27,21 @@ export function address(ctx: Ctx, at: Templated<A1Addr>, node: SpecNode): A1Addr
   const read = parseA1Addr(spelled);
   if (read === null) reject(ctx, CODE.badAddress, `\`${spelled}\` is not a cell reference`, node);
   return read;
+}
+
+/** A spelling after its parameters are substituted, or `null` with the reason reported. */
+export function spelling<T extends string>(
+  ctx: Ctx,
+  said: Templated<T>,
+  vocabulary: readonly T[],
+  node: SpecNode,
+): T | null {
+  const spelled = text(ctx, said, node);
+  const found = vocabulary.find((known) => known === spelled);
+  if (found === undefined) {
+    reject(ctx, CODE.badSpelling, `\`${spelled}\` is not one of ${vocabulary.join(', ')}`, node);
+  }
+  return found ?? null;
 }
 
 /** A colour after its parameters are substituted, or `null` with the reason reported. */
@@ -43,12 +66,13 @@ export function compileFacets(
 ): CompiledCell {
   const { value, origin } = compileValue(ctx, node, own);
   const written = node.format === null ? null : text(ctx, node.format, node);
-  const typed = asTyped(ctx, node, value);
+  const type = node.type === null ? null : spelling(ctx, node.type, CELL_TYPES, node);
+  const typed = asTyped(ctx, node, type, value);
 
   return {
     at,
     value: typed.value,
-    type: node.type,
+    type,
     formula: compileFormula(ctx, node),
     format: written ?? typed.format,
     rich: compileRich(ctx, node),
@@ -61,11 +85,12 @@ export function compileFacets(
 function asTyped(
   ctx: Ctx,
   node: SpecNode & CellFacets,
+  type: CellType | null,
   value: ScalarValue,
 ): { value: ScalarValue; format: string | null } {
   if (typeof value !== 'string') return { value, format: null };
 
-  if (node.type === 'date') {
+  if (type === 'date') {
     const read = dateSerial(value, ctx.from1904);
     if (read === null) {
       reject(ctx, CODE.badDate, `\`${value}\` is not a date`, node);
@@ -74,7 +99,7 @@ function asTyped(
     return { value: read.serial, format: read.withTime ? DATETIME_FORMAT : DATE_FORMAT };
   }
 
-  if (node.type === 'duration') {
+  if (type === 'duration') {
     const read = durationSerial(value);
     if (read === null) {
       reject(ctx, CODE.badDuration, `\`${value}\` is not an elapsed time`, node);

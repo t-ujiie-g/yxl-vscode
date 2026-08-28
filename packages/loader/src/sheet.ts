@@ -21,6 +21,7 @@ import {
   type Split,
   type Table,
   type Validation,
+  VISIBILITIES,
 } from '@yxl-vscode/spec';
 import { readColumnBands, readRowBands } from './band';
 import { readCells, withoutLeadingEquals } from './cell';
@@ -35,7 +36,6 @@ import { readPrint } from './print';
 import { readProtect } from './protect';
 import {
   expectBool,
-  expectSpelling,
   expectText,
   findEntry,
   openEntries,
@@ -46,7 +46,7 @@ import {
 } from './read';
 import { readSparklines } from './sparkline';
 import { readTables } from './table';
-import { ADDRESS, COLOR, RANGE, readAs, SHEET_NAME } from './template';
+import { ADDRESS, COLOR, RANGE, readAs, SHEET_NAME, spelling } from './template';
 import { readValidations } from './validation';
 
 /** The workbook's `sheets:` sequence, in tab order. */
@@ -123,7 +123,7 @@ function readSheet(site: Site): Sheet | null {
         freeze = readAs(here, entry.value, `${what} \`freeze\``, ADDRESS);
         break;
       case 'visibility':
-        visibility = expectSpelling(here, entry.value, `${what} \`visibility\``, SHOWN);
+        visibility = readAs(here, entry.value, `${what} \`visibility\``, spelling(VISIBILITIES));
         break;
       case 'tab_color':
         tabColor = readAs(here, entry.value, `${what} \`tab_color\``, COLOR);
@@ -218,9 +218,6 @@ function readSplit(ctx: Ctx, node: Node, what: string): Split | null {
   const y = read('y');
   return x === null || y === null ? null : { x, y };
 }
-
-/** The spellings `visibility` takes (`docs/spec.md` §2). */
-const SHOWN = ['visible', 'hidden', 'very_hidden'] as const;
 
 function readMerges(ctx: Ctx, node: Node, path: Path, what: string): Merge[] {
   return readEach(ctx, node, path, `${what} \`merges\``, (site) => {

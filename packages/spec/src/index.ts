@@ -58,16 +58,17 @@ export {
   type StyleSays,
   type StyleValues,
 } from './property';
-export type {
-  FormulaRange,
-  Link,
-  LinkTarget,
-  Merge,
-  Note,
-  Sheet,
-  Split,
-  Table,
-  Visibility,
+export {
+  type FormulaRange,
+  type Link,
+  type LinkTarget,
+  type Merge,
+  type Note,
+  type Sheet,
+  type Split,
+  type Table,
+  VISIBILITIES,
+  type Visibility,
 } from './sheet';
 export {
   SPARKLINE_TYPES,
@@ -95,10 +96,11 @@ export {
   V_ALIGNS,
   type VAlign,
 } from './style';
-export type {
-  ErrorStyle,
-  Said,
-  Validation,
-  ValidationTest,
+export {
+  ERROR_STYLES,
+  type ErrorStyle,
+  type Said,
+  type Validation,
+  type ValidationTest,
 } from './validation';
 export type { ScalarValue } from './value';

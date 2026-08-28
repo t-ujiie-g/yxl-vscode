@@ -117,24 +117,6 @@ export function expectValue(ctx: Ctx, node: Node, what: string): ScalarValue | n
   return null;
 }
 
-/** One spelling out of a closed vocabulary, or `null` with the reason reported. */
-export function expectSpelling<T extends string>(
-  ctx: Ctx,
-  node: Node,
-  what: string,
-  vocabulary: readonly T[],
-): T | null {
-  const text = expectText(ctx, node, what);
-  if (text === null) return null;
-
-  const spelling = vocabulary.find((known) => known === text);
-  if (spelling !== undefined) return spelling;
-
-  const message = `${what} must be one of ${vocabulary.join(', ')}: \`${text}\``;
-  reject(ctx, CODE.unknownSpelling, message, node.span);
-  return null;
-}
-
 /** A mapping's entries as written, a repeated key reported and dropped as yxl drops it. */
 function entriesOf(ctx: Ctx, map: Mapping): Entry[] {
   const seen = new Set<string>();

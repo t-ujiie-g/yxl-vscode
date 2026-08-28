@@ -1,15 +1,18 @@
-import type {
-  ColumnBand,
-  Conditional,
-  DataBlock,
-  DataRow,
-  FormulaRange,
-  Link,
-  Note,
-  RowBand,
-  Sheet,
-  Table,
-  Validation,
+import {
+  type ColumnBand,
+  type Conditional,
+  type DataBlock,
+  type DataRow,
+  ERROR_STYLES,
+  type FormulaRange,
+  type Link,
+  type Note,
+  type RowBand,
+  type Sheet,
+  type Table,
+  type Validation,
+  VISIBILITIES,
+  type Visibility,
 } from '@yxl-vscode/spec';
 import {
   type A1Addr,
@@ -28,7 +31,7 @@ import {
   type SheetName,
   sheetName,
 } from '@yxl-vscode/units';
-import { address, colour, compileFacets, layer, type Spoke, spokenBy } from './cell';
+import { address, colour, compileFacets, layer, type Spoke, spelling, spokenBy } from './cell';
 import { CODE } from './codes';
 import { type Ctx, filled, reject, text } from './ctx';
 import { chart, image, shape, sparklines } from './float';
@@ -79,7 +82,7 @@ export function compileSheet(ctx: Ctx, sheet: Sheet): Drafted {
       rows: sheet.rows.map((band) => rowBand(ctx, band)).filter((band) => band !== null),
       merges: sheet.merges.map((one) => mergedRegion(ctx, one)).filter((one) => one !== null),
       freeze: sheet.freeze === null ? null : address(ctx, sheet.freeze, sheet),
-      visibility: sheet.visibility ?? 'visible',
+      visibility: shown(ctx, sheet),
       tabColor: sheet.tabColor === null ? null : colour(ctx, sheet.tabColor, sheet),
       gridlines: sheet.gridlines ?? true,
       split: sheet.split,
@@ -226,6 +229,12 @@ function named(ctx: Ctx, sheet: Sheet): SheetName {
   return sheetName(spelled) ?? (spelled as SheetName);
 }
 
+/** Whether Excel shows the tab; a sheet that says nothing is shown (`docs/spec.md` §2). */
+function shown(ctx: Ctx, sheet: Sheet): Visibility {
+  if (sheet.visibility === null) return 'visible';
+  return spelling(ctx, sheet.visibility, VISIBILITIES, sheet) ?? 'visible';
+}
+
 function columnBand(ctx: Ctx, band: ColumnBand): CompiledBand | null {
   const spelled = text(ctx, band.at, band);
   const read = parseColumnSpan(spelled);
@@ -351,9 +360,15 @@ function validation(ctx: Ctx, one: Validation): CompiledValidation | null {
     asks,
     allowBlank: one.allowBlank,
     prompt: one.prompt,
-    error: one.error,
+    error: refusal(ctx, one),
     node: one.id,
   };
+}
+
+/** How Excel refuses a value, after a parameter has had its say; `stop` where it cannot be read (`docs/spec.md` §10). */
+function refusal(ctx: Ctx, one: Validation): CompiledValidation['error'] {
+  if (one.error === null) return null;
+  return { ...one.error, style: spelling(ctx, one.error.style, ERROR_STYLES, one) ?? 'stop' };
 }
 
 /** What it asks, with a `from:` read as a range and the sheet it names, if it names one. */

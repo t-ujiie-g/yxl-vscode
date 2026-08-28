@@ -22,7 +22,9 @@ export interface Said {
 }
 
 /** How Excel refuses a value: `stop` refuses it, the other two let it through (`docs/spec.md` §10). */
-export type ErrorStyle = 'stop' | 'warning' | 'information';
+export const ERROR_STYLES = ['stop', 'warning', 'information'] as const;
+
+export type ErrorStyle = (typeof ERROR_STYLES)[number];
 
 /**
  * One `validations:` entry: the range it covers, what it asks, and what it says
@@ -33,5 +35,5 @@ export interface Validation extends SpecNode {
   readonly test: ValidationTest;
   readonly allowBlank: boolean;
   readonly prompt: Said | null;
-  readonly error: (Said & { readonly style: ErrorStyle }) | null;
+  readonly error: (Said & { readonly style: Templated<ErrorStyle> }) | null;
 }
