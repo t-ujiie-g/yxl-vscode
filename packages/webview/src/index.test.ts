@@ -23,9 +23,13 @@ const drawing: Drawing = {
 /** The view, wired to a page and a host that only remembers what it was sent. */
 function view() {
   const sent: FromView[] = [];
+  const kept: { file: string }[] = [];
   const host: Host = {
     postMessage: (message) => {
       sent.push(message);
+    },
+    setState: (state) => {
+      kept.push(state);
     },
   };
 
@@ -35,7 +39,7 @@ function view() {
   const told = wire(into, host);
   told(drawing);
 
-  return { into, sent, told };
+  return { into, sent, kept, told };
 }
 
 function at(into: HTMLElement, row: number, col: number): HTMLTableCellElement | undefined {
@@ -70,6 +74,18 @@ function reachFrom(
     new MouseEvent('mousedown', { bubbles: true, shiftKey: true }),
   );
 }
+
+describe('a view with nothing in it yet', () => {
+  it('says it is ready before anything else, since the host holds the drawing', () => {
+    const { sent } = view();
+    expect(sent[0]).toEqual({ kind: 'ready' });
+  });
+
+  it('keeps the spec it was drawn from, which is what revives its panel', () => {
+    const { kept } = view();
+    expect(kept).toEqual([{ file: 'spec.yxl.yaml' }]);
+  });
+});
 
 describe('what the view sends', () => {
   it('sends an edit as an edit, naming the sheet it is showing', () => {

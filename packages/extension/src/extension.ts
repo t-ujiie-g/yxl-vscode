@@ -26,7 +26,34 @@ export function activate(context: vscode.ExtensionContext): void {
     // Bound to the look shortcuts while the preview is active, so that VS Code
     // does not answer the keys the view has already taken (ADR-046).
     vscode.commands.registerCommand('yxl.keepKey', () => {}),
+    vscode.window.registerWebviewPanelSerializer('yxl.preview', {
+      deserializeWebviewPanel: (panel, state) => revive(panel, state, context.extensionUri),
+    }),
   );
+}
+
+/** A preview VS Code kept across a window reload, back on the spec the view saved. */
+async function revive(
+  panel: vscode.WebviewPanel,
+  state: unknown,
+  extension: vscode.Uri,
+): Promise<void> {
+  const file = (state as { file?: unknown } | null)?.file;
+  if (typeof file !== 'string') {
+    panel.dispose();
+    return;
+  }
+
+  try {
+    Preview.revive(
+      await vscode.workspace.openTextDocument(vscode.Uri.file(file)),
+      extension,
+      panel,
+    );
+  } catch {
+    // The spec has been moved or deleted since the window was last open.
+    panel.dispose();
+  }
 }
 
 /** The spec a command is about: the one being edited. */

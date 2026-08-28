@@ -29,11 +29,16 @@ import { headed } from './table';
 import { sizeOf } from './window';
 
 /** The bridge VS Code puts in a webview, and the only way out of one. */
-declare function acquireVsCodeApi(): { postMessage: (message: FromView) => void };
+declare function acquireVsCodeApi(): Host;
 
-/** Where the view sends what it wants, which is the editor and nothing else. */
+/**
+ * Where the view sends what it wants, which is the editor and nothing else.
+ * `setState` is VS Code's own: what it hands back to revive this panel after a
+ * window reload, and the only thing the view keeps across one.
+ */
 export interface Host {
   readonly postMessage: (message: FromView) => void;
+  readonly setState?: (state: { readonly file: string }) => void;
 }
 
 /**
@@ -553,6 +558,10 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
     },
   };
 
+  // A panel VS Code tore down while it was hidden loads this page again, into a
+  // host that has already sent its drawing to a webview that is gone.
+  host.postMessage({ kind: 'ready' });
+
   return (sent: ToView): void => {
     if (sent.kind === 'refused') {
       refused = sent;
@@ -579,6 +588,7 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
     }
 
     if (sent.kind === 'drawing') {
+      host.setState?.({ file: sent.file });
       const was = drawing?.sheets[sheet];
       if (drawing?.file !== sent.file) {
         sheet = 0;
