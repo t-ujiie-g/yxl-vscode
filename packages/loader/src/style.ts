@@ -20,13 +20,12 @@ import { type Ctx, keyOf, reject } from './ctx';
 import {
   expectBool,
   expectNumber,
-  expectSpelling,
   expectText,
   isCleared,
   openEntries,
   rejectUnknownKey,
 } from './read';
-import { COLOR, readAs, STYLE_NAME } from './template';
+import { COLOR, readAs, STYLE_NAME, spelling } from './template';
 
 /** A `style:` key: a bareword naming a definition, or a style written in place. */
 export function readStyleUse(ctx: Ctx, node: Node, what: string): StyleUse | null {
@@ -212,7 +211,7 @@ function readBorder(
 
 function readBorderEdge(ctx: Ctx, node: Node, what: string): BorderEdge | null {
   if (node.kind === 'scalar') {
-    const style = expectSpelling(ctx, node, what, BORDER_STYLES);
+    const style = readAs(ctx, node, what, spelling(BORDER_STYLES));
     return style === null ? null : { style, color: null };
   }
 
@@ -227,7 +226,7 @@ function readBorderEdge(ctx: Ctx, node: Node, what: string): BorderEdge | null {
     const at = `${what} \`${keyOf(entry)}\``;
     switch (keyOf(entry)) {
       case 'style':
-        style = expectSpelling(here, entry.value, at, BORDER_STYLES);
+        style = readAs(here, entry.value, at, spelling(BORDER_STYLES));
         break;
       case 'color':
         color = readAs(here, entry.value, at, COLOR);
@@ -263,10 +262,10 @@ function readAlign(ctx: Ctx, node: Node, what: string, cleared: Set<StylePropert
 
     switch (key) {
       case 'horizontal':
-        horizontal = expectSpelling(here, entry.value, at, H_ALIGNS);
+        horizontal = readAs(here, entry.value, at, spelling(H_ALIGNS));
         break;
       case 'vertical':
-        vertical = expectSpelling(here, entry.value, at, V_ALIGNS);
+        vertical = readAs(here, entry.value, at, spelling(V_ALIGNS));
         break;
       case 'wrap':
         wrap = expectBool(here, entry.value, at);

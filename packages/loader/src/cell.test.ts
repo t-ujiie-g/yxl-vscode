@@ -100,6 +100,13 @@ describe('a cell written as a mapping', () => {
     expect(codes('      C2: { value: 1, type: money }\n')).toEqual([CODE.unknownSpelling]);
   });
 
+  it('keeps a type a parameter fills in', () => {
+    expect(only('      C2: { value: 1, type: "${how}" }\n').type).toEqual({
+      kind: 'template',
+      text: '${how}',
+    });
+  });
+
   it('reads a cell that is a look and nothing else', () => {
     const cell = only('      B3: { style: shaded }\n');
     expect(cell.style).toEqual({ kind: 'ref', name: 'shaded' });

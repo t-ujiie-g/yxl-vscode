@@ -1,6 +1,6 @@
 import type { Node } from '@yxl-vscode/cst';
 import type { Span } from '@yxl-vscode/diag';
-import { ORIENTATIONS, type Orientation, type Templated } from '@yxl-vscode/spec';
+import type { Templated } from '@yxl-vscode/spec';
 import {
   type A1Addr,
   type A1Range,
@@ -36,6 +36,18 @@ export interface Kind<T> {
   readonly read: (text: string) => T | null;
 }
 
+/**
+ * A closed vocabulary as a `Kind`, so a `${...}` standing where a spelling goes
+ * is carried rather than refused (`docs/spec.md` §7).
+ */
+export function spelling<T extends string>(vocabulary: readonly T[]): Kind<T> {
+  return {
+    code: CODE.unknownSpelling,
+    noun: `one of ${vocabulary.join(', ')}`,
+    read: (text) => vocabulary.find((known) => known === text) ?? null,
+  };
+}
+
 export const ADDRESS: Kind<A1Addr> = {
   code: CODE.badAddress,
   noun: 'a cell reference',
@@ -64,13 +76,6 @@ export const ROW: Kind<RowSpan> = {
   code: CODE.badRow,
   noun: 'a row or a range of rows',
   read: parseRowSpan,
-};
-
-/** Which way round the paper goes, which a parameter may fill in (`docs/spec.md` §5). */
-export const ORIENTATION: Kind<Orientation> = {
-  code: CODE.unknownSpelling,
-  noun: 'portrait or landscape',
-  read: (text) => ORIENTATIONS.find((known) => known === text) ?? null,
 };
 
 export const COLOR: Kind<Color> = {

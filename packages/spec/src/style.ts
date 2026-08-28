@@ -78,14 +78,14 @@ export interface BorderSide {
 
 /** One edge: a line style, and the colour it is drawn in when the spec sets one. */
 export interface BorderEdge {
-  readonly style: BorderStyle;
+  readonly style: Templated<BorderStyle>;
   readonly color: Templated<Color> | null;
 }
 
 /** Where the content sits in the cell, and whether it wraps. */
 export interface Align {
-  readonly horizontal: HAlign | null;
-  readonly vertical: VAlign | null;
+  readonly horizontal: Templated<HAlign> | null;
+  readonly vertical: Templated<VAlign> | null;
   readonly wrap: boolean | null;
 }
 

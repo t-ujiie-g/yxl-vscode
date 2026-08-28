@@ -25,7 +25,7 @@ export interface Sparkline {
  */
 export interface SparklineGroup extends SpecNode {
   readonly cells: readonly Sparkline[];
-  readonly type: SparklineType;
+  readonly type: Templated<SparklineType>;
   readonly markers: boolean;
   readonly high: boolean;
   readonly low: boolean;

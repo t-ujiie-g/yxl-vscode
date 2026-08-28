@@ -63,6 +63,11 @@ describe('a validation', () => {
     expect(first(said).error).toEqual({ title: 'No', body: null, style: 'stop' });
   });
 
+  it('keeps a refusal a parameter fills in', () => {
+    const said = '      - at: B2:B9\n        list: [a]\n        error: { style: "${how}" }\n';
+    expect(first(said).error?.style).toEqual({ kind: 'template', text: '${how}' });
+  });
+
   it('needs a range, one thing to ask, and no key of its own invention', () => {
     expect(codes('      - list: [a]\n')).toEqual([CODE.missingKey]);
     expect(codes('      - at: B2:B9\n')).toEqual([CODE.missingKey]);

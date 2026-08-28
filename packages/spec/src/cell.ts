@@ -17,7 +17,7 @@ export interface CellFacets {
   readonly value: CellValue | null;
   readonly formula: FormulaBody | null;
   readonly rich: readonly RichRun[] | null;
-  readonly type: CellType | null;
+  readonly type: Templated<CellType> | null;
   readonly format: string | null;
   readonly clearsFormat: boolean;
   readonly style: StyleUse | null;

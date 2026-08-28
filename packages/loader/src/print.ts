@@ -1,9 +1,9 @@
 import type { Node } from '@yxl-vscode/cst';
-import { type Fit, type Margins, MODELED_KEYS, type Print } from '@yxl-vscode/spec';
+import { type Fit, type Margins, MODELED_KEYS, ORIENTATIONS, type Print } from '@yxl-vscode/spec';
 import { CODE } from './codes';
 import { type Ctx, identify, keyOf, reject } from './ctx';
 import { type Opened, open, optional, optionalNumber, optionalText, readEach } from './read';
-import { ADDRESS, ORIENTATION, RANGE, readAs } from './template';
+import { ADDRESS, RANGE, readAs, spelling } from './template';
 
 /** A sheet's `print:` setup (`docs/spec.md` §5). */
 export function readPrint(ctx: Ctx, node: Node, what: string): Print | null {
@@ -21,7 +21,7 @@ export function readPrint(ctx: Ctx, node: Node, what: string): Print | null {
     ...identify(opened.ctx, opened.path, opened.node.span),
     area: optional(opened, 'area', (entry) => readAs(opened.ctx, entry, `${what} \`area\``, RANGE)),
     orientation: optional(opened, 'orientation', (entry) =>
-      readAs(opened.ctx, entry, `${what} \`orientation\``, ORIENTATION),
+      readAs(opened.ctx, entry, `${what} \`orientation\``, spelling(ORIENTATIONS)),
     ),
     margins: optional(opened, 'margins', (entry) =>
       readMargins(opened.ctx, entry, `${what} \`margins\``),

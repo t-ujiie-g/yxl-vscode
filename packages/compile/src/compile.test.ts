@@ -16,6 +16,13 @@ describe('a compiled grid', () => {
     ).toEqual(['Sales', 'Notes']);
   });
 
+  it('shows a tab the spec says nothing about, and hides one a parameter hides', () => {
+    expect(sheet(SALES).visibility).toBe('visible');
+
+    const set = `params:\n  shown: hidden\n${SALES}    visibility: "\${shown}"\n`;
+    expect(sheet(set).visibility).toBe('hidden');
+  });
+
   it('places a written cell at its address, keeping the type YAML gave it', () => {
     const drawn = sheet(`${SALES}    cells:\n      A1: Region\n      B1: 2400000\n`);
     expect(drawn.cells.get('A1')?.value).toBe('Region');
@@ -356,6 +363,15 @@ describe('a typed cell', () => {
     expect(codes(spec)).toEqual([CODE.badDate]);
     expect(at(spec, 'A1')?.value).toBe('15/03/2023');
   });
+
+  it('takes its type from a parameter, and is untyped where that is not one', () => {
+    const set = `params:\n  how: date\n${SALES}    cells:\n      A1: { value: "2023-03-15", type: "\${how}" }\n`;
+    expect(at(set, 'A1')?.value).toBe(45000);
+
+    const bad = `params:\n  how: money\n${SALES}    cells:\n      A1: { value: "2023-03-15", type: "\${how}" }\n`;
+    expect(codes(bad)).toEqual([CODE.badSpelling]);
+    expect(at(bad, 'A1')).toMatchObject({ value: '2023-03-15', type: null });
+  });
 });
 
 describe('a cell written in runs', () => {
@@ -423,6 +439,11 @@ describe('what a parameter can leave unreadable', () => {
   it('a path', () => {
     const spec = `params:\n  file: ""\n${SALES}    data:\n      - at: A1\n        csv: "\${file}"\n`;
     expect(codes(spec)).toEqual([CODE.badPath]);
+  });
+
+  it('a spelling out of a closed vocabulary', () => {
+    const spec = `params:\n  shown: shy\n${SALES}    visibility: "\${shown}"\n`;
+    expect(codes(spec)).toEqual([CODE.badSpelling]);
   });
 
   it('and a `${` that never closes is reported where it stands', () => {
@@ -558,6 +579,15 @@ describe('the validations a sheet carries', () => {
   it('reads a `from` that names no sheet as this one', () => {
     const spec = `${SALES}    validations:\n      - at: B2:B9\n        list: { from: "A1:A3" }\n`;
     expect(sheet(spec).validations[0]?.asks).toMatchObject({ kind: 'listFrom', sheet: null });
+  });
+
+  it('takes how it refuses a value from a parameter, and stops where that is not one', () => {
+    const set = `params:\n  how: warning\n${SALES}    validations:\n      - at: B2:B9\n        list: [a]\n        error: { style: "\${how}" }\n`;
+    expect(sheet(set).validations[0]?.error?.style).toBe('warning');
+
+    const bad = `params:\n  how: shout\n${SALES}    validations:\n      - at: B2:B9\n        list: [a]\n        error: { style: "\${how}" }\n`;
+    expect(codes(bad)).toEqual([CODE.badSpelling]);
+    expect(sheet(bad).validations[0]?.error?.style).toBe('stop');
   });
 
   it('carries a comparison as the spec wrote it', () => {

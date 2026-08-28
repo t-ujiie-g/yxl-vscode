@@ -9,7 +9,6 @@ import {
   MODELED_KEYS,
   type PixelOffset,
   POSITIONINGS,
-  type Positioning,
   type Scale,
   SHAPE_KINDS,
   type Shape,
@@ -21,7 +20,6 @@ import { CODE } from './codes';
 import { type Ctx, identify, reject, type Site } from './ctx';
 import {
   expectNumber,
-  expectSpelling,
   expectText,
   findEntry,
   type Opened,
@@ -34,7 +32,7 @@ import {
   required,
 } from './read';
 import { readFont } from './style';
-import { ADDRESS, COLOR, PATH, readAs } from './template';
+import { ADDRESS, COLOR, PATH, readAs, spelling } from './template';
 
 /** A sheet's `charts:` entries, in the order written (`docs/spec.md` §12). */
 export function readCharts(ctx: Ctx, node: Node, path: Path): Chart[] {
@@ -46,7 +44,7 @@ export function readCharts(ctx: Ctx, node: Node, path: Path): Chart[] {
 
     const at = anchor(opened, what);
     const type = required(opened, 'type', what, (entry) =>
-      expectSpelling(opened.ctx, entry, `${what} \`type\``, CHART_TYPES),
+      readAs(opened.ctx, entry, `${what} \`type\``, spelling(CHART_TYPES)),
     );
     const series = readSeries(opened, what);
     if (at === null || type === null || series === null) return null;
@@ -57,7 +55,7 @@ export function readCharts(ctx: Ctx, node: Node, path: Path): Chart[] {
       type,
       title: optionalText(opened, 'title', what),
       legend: optional(opened, 'legend', (entry) =>
-        expectSpelling(opened.ctx, entry, `${what} \`legend\``, LEGEND_PLACES),
+        readAs(opened.ctx, entry, `${what} \`legend\``, spelling(LEGEND_PLACES)),
       ),
       size: optional(opened, 'size', (entry) => readSize(opened.ctx, entry, `${what} \`size\``)),
       xAxis: optional(opened, 'x_axis', (entry) =>
@@ -204,7 +202,7 @@ export function readShapes(ctx: Ctx, node: Node, path: Path): Shape[] {
 
     const at = anchor(opened, what);
     const kind = required(opened, 'kind', what, (entry) =>
-      expectSpelling(opened.ctx, entry, `${what} \`kind\``, SHAPE_KINDS),
+      readAs(opened.ctx, entry, `${what} \`kind\``, spelling(SHAPE_KINDS)),
     );
     if (at === null || kind === null) return null;
 
@@ -297,8 +295,8 @@ function anchor(opened: Opened, what: string): Chart['at'] | null {
   );
 }
 
-function positioned(opened: Opened, what: string): Positioning | null {
+function positioned(opened: Opened, what: string): Image['positioning'] {
   return optional(opened, 'positioning', (entry) =>
-    expectSpelling(opened.ctx, entry, `${what} \`positioning\``, POSITIONINGS),
+    readAs(opened.ctx, entry, `${what} \`positioning\``, spelling(POSITIONINGS)),
   );
 }

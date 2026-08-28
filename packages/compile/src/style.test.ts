@@ -113,6 +113,15 @@ describe('a border', () => {
       'border.top.color': 'FF0000',
     });
   });
+
+  it('takes its line style from a parameter, and draws no line where that is not one', () => {
+    const set = `params:\n  weight: thick\n${SHEET}    cells:\n      A1: { value: 1, style: { border: { top: "\${weight}" } } }\n`;
+    expect(looks(set, 'A1')['border.top.style']).toBe('thick');
+
+    const bad = `params:\n  weight: heavy\n${SHEET}    cells:\n      A1: { value: 1, style: { border: { top: "\${weight}" } } }\n`;
+    expect(codes(bad)).toEqual([CODE.badSpelling]);
+    expect(looks(bad, 'A1')['border.top.style']).toBeUndefined();
+  });
 });
 
 describe('an override', () => {
@@ -138,6 +147,15 @@ describe('a style that will not resolve', () => {
   it('is reported when a parameter fills a colour with something else', () => {
     const source = `params:\n  brand: not-a-colour\n${SHEET}    cells:\n      A1: { value: 1, style: { fill: "\${brand}" } }\n`;
     expect(codes(source)).toEqual([CODE.badColour]);
+  });
+
+  it('is reported when a parameter fills an alignment with something else', () => {
+    const set = `params:\n  across: center\n${SHEET}    cells:\n      A1: { value: 1, style: { align: { horizontal: "\${across}" } } }\n`;
+    expect(looks(set, 'A1')['align.horizontal']).toBe('center');
+
+    const bad = `params:\n  across: middle\n${SHEET}    cells:\n      A1: { value: 1, style: { align: { horizontal: "\${across}" } } }\n`;
+    expect(codes(bad)).toEqual([CODE.badSpelling]);
+    expect(looks(bad, 'A1')['align.horizontal']).toBeUndefined();
   });
 });
 

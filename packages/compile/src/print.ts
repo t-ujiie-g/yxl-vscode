@@ -1,7 +1,7 @@
-import type { Orientation, Print } from '@yxl-vscode/spec';
+import type { Print } from '@yxl-vscode/spec';
 import { ORIENTATIONS } from '@yxl-vscode/spec';
 import { cellOf, parseA1Range, rectOf } from '@yxl-vscode/units';
-import { address } from './cell';
+import { address, spelling } from './cell';
 import { CODE } from './codes';
 import { type Ctx, reject, text } from './ctx';
 import type { CompiledPrint } from './grid';
@@ -16,7 +16,8 @@ export function printing(ctx: Ctx, one: Print): CompiledPrint {
 
   return {
     area: read === null ? null : rectOf(read),
-    orientation: one.orientation === null ? null : orientation(ctx, one),
+    orientation:
+      one.orientation === null ? null : spelling(ctx, one.orientation, ORIENTATIONS, one),
     margins: one.margins,
     scale: one.scale,
     fit: one.fit,
@@ -28,14 +29,4 @@ export function printing(ctx: Ctx, one: Print): CompiledPrint {
     }),
     node: one.id,
   };
-}
-
-/** Which way round the paper goes, after a parameter has had its say (`docs/spec.md` §5). */
-function orientation(ctx: Ctx, one: Print): Orientation | null {
-  const spelled = text(ctx, one.orientation, one);
-  const found = ORIENTATIONS.find((known) => known === spelled);
-  if (found === undefined) {
-    reject(ctx, CODE.badSpelling, `\`${spelled}\` is not portrait or landscape`, one);
-  }
-  return found ?? null;
 }

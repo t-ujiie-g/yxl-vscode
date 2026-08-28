@@ -3,7 +3,6 @@ import {
   CELL_TYPES,
   type Cell,
   type CellFacets,
-  type CellType,
   type CellValue,
   type FormulaBody,
   MODELED_KEYS,
@@ -15,17 +14,17 @@ import {
 } from '@yxl-vscode/spec';
 import { CODE } from './codes';
 import { type Ctx, identify, keyOf, reject } from './ctx';
-import {
-  expectSpelling,
-  expectText,
-  expectValue,
-  isCleared,
-  openEntries,
-  openSeq,
-  rejectUnknownKey,
-} from './read';
+import { expectText, expectValue, isCleared, openEntries, openSeq, rejectUnknownKey } from './read';
 import { readFont, readStyleUse } from './style';
-import { ADDRESS, FORMULA_NAME, type Kind, readAs, readTextAs, VALUE_NAME } from './template';
+import {
+  ADDRESS,
+  FORMULA_NAME,
+  type Kind,
+  readAs,
+  readTextAs,
+  spelling,
+  VALUE_NAME,
+} from './template';
 
 /** A sheet's `cells:` mapping: one entry per addressed cell. */
 export function readCells(ctx: Ctx, node: Node, path: Path): Cell[] {
@@ -94,7 +93,7 @@ export function readFacets(ctx: Ctx, entries: readonly Entry[], what: string): C
   let value: CellValue | null = null;
   let formula: FormulaBody | null = null;
   let rich: readonly RichRun[] | null = null;
-  let type: CellType | null = null;
+  let type: CellFacets['type'] = null;
   let format: string | null = null;
   let clearsFormat = false;
   let style: StyleUse | null = null;
@@ -112,7 +111,7 @@ export function readFacets(ctx: Ctx, entries: readonly Entry[], what: string): C
         rich = readRich(ctx, entry.value, at);
         break;
       case 'type':
-        type = expectSpelling(ctx, entry.value, at, CELL_TYPES);
+        type = readAs(ctx, entry.value, at, spelling(CELL_TYPES));
         break;
       case 'format':
         if (isCleared(entry.value)) clearsFormat = true;

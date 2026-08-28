@@ -63,9 +63,9 @@ export interface ChartSeries extends SpecNode {
  */
 export interface Chart extends SpecNode {
   readonly at: Templated<A1Addr>;
-  readonly type: ChartType;
+  readonly type: Templated<ChartType>;
   readonly title: Templated<string> | null;
-  readonly legend: LegendPlace | null;
+  readonly legend: Templated<LegendPlace> | null;
   readonly size: Size | null;
   readonly xAxis: ChartAxis | null;
   readonly yAxis: ChartAxis | null;
@@ -94,7 +94,7 @@ export interface Image extends SpecNode {
   readonly alt: Templated<string> | null;
   readonly scale: Scale | null;
   readonly offset: PixelOffset | null;
-  readonly positioning: Positioning | null;
+  readonly positioning: Templated<Positioning> | null;
 }
 
 /**
@@ -148,11 +148,11 @@ export interface ShapeText {
  */
 export interface Shape extends SpecNode {
   readonly at: Templated<A1Addr>;
-  readonly kind: ShapeKind;
+  readonly kind: Templated<ShapeKind>;
   readonly text: readonly ShapeText[];
   readonly size: Size | null;
   readonly fill: Templated<Color> | null;
   readonly line: ShapeLine | null;
   readonly alt: Templated<string> | null;
-  readonly positioning: Positioning | null;
+  readonly positioning: Templated<Positioning> | null;
 }

@@ -10,7 +10,6 @@ import { CODE } from './codes';
 import { type Ctx, identify, reject, type Site } from './ctx';
 
 import {
-  expectSpelling,
   findEntry,
   flag,
   type Opened,
@@ -21,7 +20,7 @@ import {
   readEach,
   required,
 } from './read';
-import { ADDRESS, COLOR, readAs } from './template';
+import { ADDRESS, COLOR, readAs, spelling } from './template';
 
 /** A sheet's `sparklines:` entries, one group each, in the order written (`docs/spec.md` §19). */
 export function readSparklines(ctx: Ctx, node: Node, path: Path): SparklineGroup[] {
@@ -39,7 +38,7 @@ export function readSparklines(ctx: Ctx, node: Node, path: Path): SparklineGroup
       cells,
       type:
         optional(opened, 'type', (entry) =>
-          expectSpelling(opened.ctx, entry, `${what} \`type\``, SPARKLINE_TYPES),
+          readAs(opened.ctx, entry, `${what} \`type\``, spelling(SPARKLINE_TYPES)),
         ) ?? 'line',
       markers: flag(opened, 'markers', what),
       high: flag(opened, 'high', what),

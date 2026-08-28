@@ -1,6 +1,6 @@
 import type { Node, Path } from '@yxl-vscode/cst';
 import {
-  type ErrorStyle,
+  ERROR_STYLES,
   MODELED_KEYS,
   type Said,
   type Validation,
@@ -11,7 +11,6 @@ import { readComparison } from './conditional';
 import { type Ctx, identify, keyOf, reject, type Site } from './ctx';
 import {
   expectBool,
-  expectSpelling,
   expectText,
   expectValue,
   findEntry,
@@ -20,7 +19,7 @@ import {
   readEach,
   rejectUnknownKey,
 } from './read';
-import { RANGE, readAs } from './template';
+import { RANGE, readAs, spelling } from './template';
 
 /** A sheet's `validations:` entries, in the order written (`docs/spec.md` §10). */
 export function readValidations(ctx: Ctx, node: Node, path: Path): Validation[] {
@@ -125,9 +124,6 @@ function readBlank(opened: Opened, what: string): boolean {
   return expectBool(opened.ctx, found.value, `${what} \`allow_blank\``) ?? true;
 }
 
-/** The spellings `error.style` takes; `stop` refuses the value and is the default. */
-const STYLES: readonly ErrorStyle[] = ['stop', 'warning', 'information'];
-
 function readError(opened: Opened, what: string): Validation['error'] {
   const said = readSaid(opened, 'error', what);
   if (said === null) return null;
@@ -138,11 +134,11 @@ function readError(opened: Opened, what: string): Validation['error'] {
   const style =
     named === undefined
       ? null
-      : expectSpelling(
+      : readAs(
           inside?.ctx ?? opened.ctx,
           named.value,
           `${what} \`error\` \`style\``,
-          STYLES,
+          spelling(ERROR_STYLES),
         );
 
   return { ...said, style: style ?? 'stop' };

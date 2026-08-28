@@ -21,6 +21,7 @@ function fixtures(kind: string): { name: string; path: string }[] {
 }
 
 const documents = yxlExamples().filter((sample) => sample.name.endsWith('.yxl.yaml'));
+const accepted = fixtures('accepted');
 const refused = fixtures('refused');
 const deferred = fixtures('deferred');
 
@@ -33,6 +34,7 @@ describe('the oracle', () => {
 
   it('has specs to be asked about', () => {
     expect(documents.length).toBeGreaterThan(0);
+    expect(accepted.length).toBeGreaterThan(0);
     expect(refused.length).toBeGreaterThan(0);
     expect(deferred.length).toBeGreaterThan(0);
   });
@@ -41,6 +43,15 @@ describe('the oracle', () => {
 describe.each(documents)('$name', (sample) => {
   it('is a spec the compiler builds', () => {
     expect(check(sample.path).said).toContain('ok');
+  });
+});
+
+describe.each(accepted)('$name', (fixture) => {
+  it('is built by the compiler, and read whole here', () => {
+    // Never stricter than the compiler (ADR-018), over the corners upstream's
+    // own examples leave untried.
+    expect(check(fixture.path).said).toContain('ok');
+    expect(read(fixture.path)).toEqual({ ok: true, said: '' });
   });
 });
 

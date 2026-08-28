@@ -1,5 +1,7 @@
 import {
   BORDER_EDGES,
+  BORDER_STYLES,
+  H_ALIGNS,
   type SpecNode,
   STYLE_PROPERTIES,
   type Style,
@@ -8,8 +10,10 @@ import {
   type StyleUse,
   type StyleValues,
   type Templated,
+  V_ALIGNS,
 } from '@yxl-vscode/spec';
 import { type Color, type NodeId, parseColor, type StyleName } from '@yxl-vscode/units';
+import { spelling } from './cell';
 import { CODE } from './codes';
 import { type Ctx, reject, text } from './ctx';
 
@@ -138,6 +142,14 @@ export function flatten(ctx: Ctx, style: Style, node: SpecNode): StyleSays {
     if (value !== null && value !== undefined) values[key] = value;
   }
 
+  function oneOf<T extends string>(
+    of: Templated<T> | null,
+    vocabulary: readonly T[],
+  ): T | undefined {
+    if (of === null) return undefined;
+    return spelling(ctx, of, vocabulary, node) ?? undefined;
+  }
+
   function colour(of: Templated<Color> | null): Color | undefined {
     if (of === null) return undefined;
 
@@ -155,8 +167,8 @@ export function flatten(ctx: Ctx, style: Style, node: SpecNode): StyleSays {
   set('font.name', style.font?.name);
   set('font.color', colour(style.font?.color ?? null));
   set('fill', colour(style.fill));
-  set('align.horizontal', style.align?.horizontal);
-  set('align.vertical', style.align?.vertical);
+  set('align.horizontal', oneOf(style.align?.horizontal ?? null, H_ALIGNS));
+  set('align.vertical', oneOf(style.align?.vertical ?? null, V_ALIGNS));
   set('align.wrap', style.align?.wrap);
   set('protection.locked', style.protection?.locked);
   set('protection.hidden', style.protection?.hidden);
@@ -164,7 +176,7 @@ export function flatten(ctx: Ctx, style: Style, node: SpecNode): StyleSays {
 
   for (const side of style.border ?? []) {
     for (const edge of side.side === 'all' ? BORDER_EDGES : [side.side]) {
-      set(`border.${edge}.style`, side.edge.style);
+      set(`border.${edge}.style`, oneOf(side.edge.style, BORDER_STYLES));
       set(`border.${edge}.color`, colour(side.edge.color));
     }
   }

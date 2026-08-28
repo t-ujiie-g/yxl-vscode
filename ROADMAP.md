@@ -399,9 +399,10 @@ provably changes nothing visible is safe regardless of how it was produced.
   compiler, run as a **test-only oracle** (ADR-012, mechanism revised by
   ADR-018). Three assertions, on every commit: every spec in `examples/` builds,
   *and* reads and draws with no diagnostic at all; every spec **this editor refuses, the compiler refuses too**
-  — we are never the stricter of the two; and a listed corpus of specs the
-  compiler refuses and we deliberately carry, so the gap ADR-011 opens is
-  measured rather than claimed. This is the direct answer to "we now maintain a
+  — we are never the stricter of the two; a corpus of our own that the compiler
+  builds and this editor must read whole, for the corners upstream's examples
+  leave untried; and a listed corpus of specs the compiler refuses and we
+  deliberately carry, so the gap ADR-011 opens is measured rather than claimed. This is the direct answer to "we now maintain a
   second implementation of the schema"; without it that risk is unbounded, and
   with it, drift becomes a red build. What it does **not** yet compare is the two
   *models*, structurally — ADR-018 says why, and what it would take.
@@ -1668,19 +1669,25 @@ coverage table below is generated from which.
       opens *When Excel opens this sheet…* and closes *Editing the spec here is
       unaffected*. `protect:` is about the workbook; the person editing the spec
       is the one who wrote the lock.
-- [ ] **A parameter cannot fill a spelling this loader reads.** Found while
+- [x] **A parameter cannot fill a spelling this loader reads.** Found while
       adding `print.orientation`, which the schema lets a `${...}` fill.
-      `expectSpelling` reads the *raw* text against a closed vocabulary, so a
-      placeholder is refused as an unknown spelling — while yxl builds the spec
+      `expectSpelling` read the *raw* text against a closed vocabulary, so a
+      placeholder was refused as an unknown spelling — while yxl built the spec
       happily. Confirmed against three of them: `sheet.visibility`,
-      `cells.type` and `images.positioning` each raise
+      `cells.type` and `images.positioning` each raised
       `loader.unknown-spelling` on a spec that compiles upstream.
-      The schema marks **23 enums** as parameterisable; this editor reads about
-      a dozen of them through `expectSpelling`. `print.orientation` is read
-      through `readAs` and a `Kind` instead, which is template-aware, and is the
-      shape the rest want — but converting them turns a dozen `T | null` into
-      `Templated<T> | null` and each one has to be resolved in `compile`, so it
-      is its own piece of work rather than a rider on this one.
+      **Fixed the way `print.orientation` already was**: `spelling(vocabulary)`
+      makes a closed vocabulary into a `Kind`, so every one of them is read
+      through the template-aware `readAs`, and `expectSpelling` is gone. Twelve
+      fields became `Templated<T> | null` — a cell's `type`, a sheet's
+      `visibility`, a border edge's `style`, both alignments, a chart's `type`
+      and `legend`, a shape's `kind`, a float's `positioning`, a sparkline's
+      `type`, and how a validation refuses a value — and each is resolved in
+      `compile` by one `spelling(ctx, said, vocabulary, node)` that reports
+      `compile.bad-spelling` where the parameter fills something else. What
+      happens then is the same answer the key gives when it is absent: the
+      default where it has one, and the construct dropped where the spelling is
+      what makes it (a chart's type, a shape's geometry, a sparkline's kind).
 - [ ] `rich:` runs editable in the formula bar, one run at a time
 - [ ] The rest stays opaque, and the inspector says so where a cell is under one
 
@@ -3176,6 +3183,36 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-28 — A parameter may fill a spelling
+`docs/spec.md` §7 lets a `${...}` stand anywhere a scalar goes, and the schema
+marks every one of its enums parameterisable. This editor read a dozen of them
+against a closed vocabulary *before* substitution, so a spec yxl builds happily
+was refused here with `loader.unknown-spelling` — confirmed on `sheet.visibility`,
+`cells.type` and `images.positioning`, and true of nine more.
+
+- **One shape for all of them.** `print.orientation` was already read through
+  `readAs` and a `Kind`, which carries a placeholder as a `Template`;
+  `spelling(vocabulary)` now makes any closed vocabulary into that same `Kind`,
+  and `expectSpelling` is deleted rather than left as a second way in.
+- **Twelve fields are `Templated<T>`** — a cell's `type`, a sheet's
+  `visibility`, a border edge's `style`, `align.horizontal` and
+  `align.vertical`, a chart's `type` and `legend`, a shape's `kind`, a float's
+  `positioning`, a sparkline's `type`, a validation's `error.style`, and the
+  orientation that started it.
+- **Resolved once, in `compile`.** `spelling(ctx, said, vocabulary, node)`
+  substitutes and then reads, reporting `compile.bad-spelling` where a
+  parameter fills something the vocabulary does not have. A key with a default
+  falls back to it (`visible`, `move`, `stop`); one that *is* the construct
+  drops it, as an unreadable anchor already does — a chart, a shape and a
+  sparkline group each disappear with the diagnostic that says why.
+- **`tests/fixtures/accepted/`**, a third fixture class beside `refused` and
+  `deferred`: a spec the compiler builds and this editor must read whole. The
+  first one fills all twelve vocabularies from parameters; `yxl build --check`
+  says `ok` and the loader says nothing. Every new test was run against the old
+  reader first — 21 of them fail there.
+- Comment shape: export 818 blocks / 1804 lines / avg 2.2, private 541 / 541 /
+  avg 1.0, inline 118 / 183 / avg 1.6; 0 over the limit.
 
 ### 2026-08-28 — Named for what they hold
 No behaviour changed. The §8 lenses over what the last three phases added; 303
