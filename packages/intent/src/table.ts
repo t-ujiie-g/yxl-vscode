@@ -10,7 +10,14 @@ import {
   type SheetName,
 } from '@yxl-vscode/units';
 import { putEntries, sequenceIn } from './anchored';
-import { type Intent, located, type Projection, type Reading, refused } from './direct';
+import {
+  type Intent,
+  keptElsewhere,
+  located,
+  type Projection,
+  type Reading,
+  refused,
+} from './direct';
 
 /** A rectangle of `cells:` entries a reader asked to keep as a table instead. */
 export interface Tabling {
@@ -39,6 +46,13 @@ export function asTable(spec: Projection, where: Tabling, read: Reading): Intent
 
   const sheetAt = located(sheet.node, read);
   if (sheetAt.kind === 'refused') return sheetAt;
+
+  // The cells come out and the block goes in, so both keys have to be this
+  // file's: the rows are read from where the cells are written.
+  const away =
+    keptElsewhere(sheetAt.node, KEY.cells, where.sheet) ??
+    keptElsewhere(sheetAt.node, KEY.data, where.sheet);
+  if (away !== null) return refused(away);
 
   // The key goes where the table takes every entry under it; a mapping with no
   // entries left is not a mapping at all.

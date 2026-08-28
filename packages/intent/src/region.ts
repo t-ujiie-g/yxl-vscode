@@ -4,7 +4,14 @@ import { KEY } from '@yxl-vscode/spec';
 import { addrAt, overlapping, type Rect, rangeOf, type SheetName } from '@yxl-vscode/units';
 import { nothingChanges } from '@yxl-vscode/verify';
 import { type Anchored, anchored, putEntries, takeEntries } from './anchored';
-import { type Intent, type Projection, type Reading, refused, writtenSheet } from './direct';
+import {
+  type Intent,
+  keptElsewhere,
+  type Projection,
+  type Reading,
+  refused,
+  writtenSheet,
+} from './direct';
 
 /** A region a gesture asked to be a table, or `on: false` to take off the ones it touches. */
 export interface Tabled {
@@ -20,6 +27,9 @@ export interface Tabled {
 export function tableOver(spec: Projection, where: Tabled, read: Reading): Intent {
   const found = writtenSheet(spec, where.sheet, read);
   if (found.kind === 'refused') return found;
+
+  const away = keptElsewhere(found.node, KEY.tables, where.sheet);
+  if (away !== null) return refused(away);
 
   const holds = anchored(found, KEY.tables, where.rect);
   const ops = where.on

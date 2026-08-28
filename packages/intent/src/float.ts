@@ -15,6 +15,7 @@ import { putEntries, sequenceIn } from './anchored';
 import {
   type Found,
   type Intent,
+  keptElsewhere,
   located,
   type Projection,
   type Reading,
@@ -94,6 +95,9 @@ export function chartOver(spec: Projection, where: Charting, read: Reading): Int
     ]),
   ].join('\n');
 
+  const away = keptElsewhere(found.node, KEY.charts, where.sheet);
+  if (away !== null) return refused(away);
+
   const ops = putEntries(sequenceIn(found, KEY.charts), [body]);
   return { kind: 'edit', file: found.file, patch: { ops }, expects: nothingChanges };
 }
@@ -155,6 +159,9 @@ export function imageAt(spec: Projection, where: Picturing, read: Reading): Inte
 
   const why = unusable(where.path);
   if (why !== null) return refused(why);
+
+  const away = keptElsewhere(found.node, KEY.images, where.sheet);
+  if (away !== null) return refused(away);
 
   const body = `${KEY.at}: ${where.at}\n${KEY.file}: ${quoted(where.path)}`;
   const ops = putEntries(sequenceIn(found, KEY.images), [body]);

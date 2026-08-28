@@ -21,6 +21,7 @@ import {
   type Found,
   type Held,
   type Holds,
+  keptElsewhere,
   literalPath,
   located,
   type Reading,
@@ -190,6 +191,9 @@ function entries(sheet: CompiledSheet, fresh: readonly Entry[], read: Reading): 
   const found = located(sheet.node, read);
   if (found.kind === 'refused') return `these cells cannot be written: ${found.why}`;
   if (found.node.kind !== 'map') return 'these cells cannot be written: the sheet is not a mapping';
+
+  const away = keptElsewhere(found.node, KEY.cells, sheet.name);
+  if (away !== null) return away;
 
   const has = holds(found.node, KEY.cells);
   if (!has) {

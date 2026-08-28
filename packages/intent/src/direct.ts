@@ -8,6 +8,7 @@ import {
   sheetOf,
 } from '@yxl-vscode/compile';
 import {
+  entryOf,
   holds,
   type Node,
   nodeAt,
@@ -20,7 +21,14 @@ import {
 } from '@yxl-vscode/cst';
 import { pathOf } from '@yxl-vscode/loader';
 import type { Patch } from '@yxl-vscode/patch';
-import { KEY, type ScalarValue, type Sheet, type SpecDoc } from '@yxl-vscode/spec';
+import {
+  BAND_KEYS,
+  INCLUDE_KEY,
+  KEY,
+  type ScalarValue,
+  type Sheet,
+  type SpecDoc,
+} from '@yxl-vscode/spec';
 import {
   type A1Addr,
   type FilePath,
@@ -105,7 +113,7 @@ export function setValue(
   if (sheet === null) return refused(`there is no sheet named \`${where.sheet}\``);
 
   const cell = cellAt(sheet, where.at);
-  if (cell === null) return refused(`nothing writes \`${where.at}\` yet`);
+  if (cell === null) return refused(nothingWrites(sheet, where.at, read));
 
   const found = valuePath(cell.provenance.value, sheet, where.at, read);
   if (found.kind === 'refused') return found;
@@ -289,6 +297,42 @@ export function located(id: NodeId, read: Reading): Found {
 
   return { kind: 'found', file: where.file, path: where.path, node, add: false };
 }
+
+/** Why an address holds nothing to write: the sheet keeps its cells elsewhere, or nothing writes it yet. */
+function nothingWrites(sheet: CompiledSheet, at: A1Addr, read: Reading): string {
+  const found = located(sheet.node, read);
+  const away = found.kind === 'found' ? keptElsewhere(found.node, KEY.cells, sheet.name) : null;
+
+  return away ?? `nothing writes \`${at}\` yet`;
+}
+
+/**
+ * Why a key of this sheet cannot be written here, or `null` where it can: an
+ * `$include` stands for the whole node it replaces, so what belongs under the
+ * key is another file's to edit (`docs/spec.md` §8).
+ */
+export function keptElsewhere(node: Node, key: string, sheet: SheetName): string | null {
+  const written = entryOf(node, key)?.value ?? null;
+  if (written === null || !holds(written, INCLUDE_KEY)) return null;
+
+  return `\`${sheet}\` keeps its ${HELD[key] ?? `\`${key}\``} in another file`;
+}
+
+/** What a sheet keeps under each key, in the reader's word for it rather than the schema's. */
+const HELD: Record<string, string> = {
+  [KEY.cells]: 'cells',
+  [KEY.comments]: 'notes',
+  [KEY.links]: 'links',
+  [KEY.validations]: 'validations',
+  [KEY.tables]: 'tables',
+  [KEY.charts]: 'charts',
+  [KEY.images]: 'images',
+  [KEY.data]: 'data blocks',
+  [KEY.formulas]: 'formula ranges',
+  [KEY.merges]: 'merges',
+  [BAND_KEYS.column.at]: 'column bands',
+  [BAND_KEYS.row.at]: 'row bands',
+};
 
 /** The sheet's own mapping in the file, with the compiled sheet it projects to. */
 export type WrittenSheet =

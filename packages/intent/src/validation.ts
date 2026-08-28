@@ -3,7 +3,14 @@ import { KEY, type ScalarValue } from '@yxl-vscode/spec';
 import { type Rect, rangeOf, type SheetName } from '@yxl-vscode/units';
 import { nothingChanges } from '@yxl-vscode/verify';
 import { type Anchored, anchored, putEntries, takeEntries } from './anchored';
-import { type Intent, type Projection, type Reading, refused, writtenSheet } from './direct';
+import {
+  type Intent,
+  keptElsewhere,
+  type Projection,
+  type Reading,
+  refused,
+  writtenSheet,
+} from './direct';
 
 /** A validation as a gesture asks for it: the choices a range takes, or `null` to take one off. */
 export interface Validating {
@@ -20,6 +27,9 @@ export interface Validating {
 export function setValidation(spec: Projection, where: Validating, read: Reading): Intent {
   const found = writtenSheet(spec, where.sheet, read);
   if (found.kind === 'refused') return found;
+
+  const away = keptElsewhere(found.node, KEY.validations, where.sheet);
+  if (away !== null) return refused(away);
 
   const holds = anchored(found, KEY.validations, where.rect);
   const choices = where.choices;
