@@ -3241,6 +3241,51 @@ than widening it silently.
 
 ## 11. Living changelog
 
+### 2026-08-29 — The fixtures the tests were copying
+No behaviour changed. The §8 lenses over the whole tree, at the end of Phase 15;
+581 lines net came out, and the two most-copied blocks in the repo are gone.
+
+- **`intent` has a `harness.ts`**, as `compile` and `webview` already did.
+  Twenty-four of its twenty-seven test files carried the same seven-line
+  `files()` — load, compile, and the two readings a write takes — and nineteen
+  of them the same eight lines of *apply it through the checker*, in two
+  spellings: return `refused: …`, or throw. Those are `tried` and `wrote` now,
+  and each test file starts at what it is actually about — the same move the
+  view's fixtures got two changes ago, in the package that had the most copies.
+- **`putEntries` in `anchored.ts`, and two hand-rolled copies of it gone.**
+  `fill.ts` and `table.ts` each had a private `beside()` that put entries under a
+  sheet's `formulas:` / `data:` key — the job `sequenceIn` + `putEntry` already
+  did for `charts`, `images`, `validations` and `tables`. Both copies indexed
+  the insert by *how many the projection drew* rather than how many the file
+  writes, and both pathed their ops into whichever file the first entry lives
+  in while naming the sheet's file on the patch. The shared one counts what the
+  CST holds under the key, in the file the patch names. `putEntry` folded into
+  `putEntries`, since one is the case of several.
+- **`send` in `webview/index.ts`.** `refused = null; said = null;` was written
+  thirty-two times — once per gesture — and is now the first thing the one
+  function that posts a message does. 769 → 711 lines; the `asks` methods are
+  mostly one line each again.
+- **Three error paths nothing reached**: an elapsed time that is not one
+  (`compile.bad-duration`), a parameter set from outside that the spec never
+  declared (`compile.no-such-param`), and a block scalar with no body to take an
+  indent from (`cst.empty-block-scalar`). All three now have a test; the first
+  two needed `given()` in `compile/harness.ts`, which sets parameters the way the
+  preview's panel does.
+- **Checked and left alone**, with the reason: `cst.empty-mapping` and
+  `cst.empty-sequence` are unreachable — the parser writes an empty collection
+  only in flow style, and every path to them is guarded by the flow check first;
+  the branches stay because the types need them. `webview/index.ts` is still one
+  closure over twenty-two `let`s with no logical seam. `intent`'s `beside(file)`
+  and the inspector's `nearTo` name the same file two ways (`specs/sales.csv`
+  against `sales.csv`), which is what ADR-004 costs: a core package cannot use
+  `node:path`, and reimplementing `relative()` for that is not worth it.
+- A write under a sheet key the spec `$include`s is **refused by the patch
+  algebra** (`\`validations\` is already there`) rather than duplicating the key —
+  checked, since the consolidation above moved which file the ops name. Only
+  `setNote` says *why* in so many words; the others say the shorter thing.
+- Comment shape: export 835 blocks / 1846 lines / avg 2.2, private 551 / 551 /
+  avg 1.0, inline 119 / 184 / avg 1.5; 0 over the limit.
+
 ### 2026-08-29 — What a sheet carries, said where the reader is
 Phase 15's last line, and the phase closes with it. Four sheet keys are carried
 through untouched and drawn as nothing — `pivots`, `controls`, `slicers`,

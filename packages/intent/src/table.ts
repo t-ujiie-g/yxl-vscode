@@ -1,5 +1,5 @@
 import { type CompiledSheet, cellAt, sheetOf } from '@yxl-vscode/compile';
-import { type Node, nodeAt, type Op, type Path } from '@yxl-vscode/cst';
+import { type Node, nodeAt, type Op } from '@yxl-vscode/cst';
 import { KEY } from '@yxl-vscode/spec';
 import {
   type A1Addr,
@@ -9,7 +9,7 @@ import {
   type Rect,
   type SheetName,
 } from '@yxl-vscode/units';
-import { itemOf } from './anchored';
+import { putEntries, sequenceIn } from './anchored';
 import { type Intent, located, type Projection, type Reading, refused } from './direct';
 
 /** A rectangle of `cells:` entries a reader asked to keep as a table instead. */
@@ -46,7 +46,7 @@ export function asTable(spec: Projection, where: Tabling, read: Reading): Intent
     ...(emptied(sheetAt.node, held.entries.length)
       ? [{ op: 'remove' as const, path: [...sheetAt.path, KEY.cells] }]
       : held.entries.map((path) => ({ op: 'remove' as const, path }))),
-    ...beside(sheet, body, sheetAt.path, read),
+    ...putEntries(sequenceIn(sheetAt, KEY.data), [body]),
   ];
 
   return {
@@ -55,20 +55,6 @@ export function asTable(spec: Projection, where: Tabling, read: Reading): Intent
     patch: { ops: written },
     expects: { cells: new Set(held.moves.map((at) => qualified(where.sheet, at))), beyond: 'ask' },
   };
-}
-
-/** The block written under the `data:` key the sheet has, or under one written for it. */
-function beside(sheet: CompiledSheet, body: string, path: Path, read: Reading): Op[] {
-  const blocks = [...new Set([...sheet.cells.values()].map((cell) => cell.provenance.value))]
-    .filter((from) => from.kind === 'inline' || from.kind === 'external')
-    .map((from) => from.node);
-
-  const one = blocks[0] === undefined ? null : located(blocks[0], read);
-  if (one === null || one.kind === 'refused') {
-    return [{ op: 'addSource', path, key: KEY.data, source: itemOf(body) }];
-  }
-
-  return [{ op: 'insertSource', path: one.path.slice(0, -1), index: blocks.length, source: body }];
 }
 
 /** Whether taking that many entries out of the sheet's `cells:` leaves none there. */

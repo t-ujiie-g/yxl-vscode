@@ -1,5 +1,4 @@
 import { type CompiledSheet, cellAt, sheetOf } from '@yxl-vscode/compile';
-import type { Op } from '@yxl-vscode/cst';
 import { type Axis, KEY } from '@yxl-vscode/spec';
 import {
   type A1Addr,
@@ -10,7 +9,7 @@ import {
   rangeOf,
   type SheetName,
 } from '@yxl-vscode/units';
-import { itemOf } from './anchored';
+import { putEntries, sequenceIn } from './anchored';
 import { type Held, located, type Projection, type Reading } from './direct';
 import { type Entry, landed, taking } from './landing';
 import type { Candidate } from './resolve';
@@ -145,35 +144,13 @@ function asRange(sheet: CompiledSheet, where: Filling, read: Reading): Candidate
     intent: {
       kind: 'edit',
       file: found.file,
-      patch: { ops: beside(sheet, ranges, found.path, read) },
+      patch: { ops: putEntries(sequenceIn(found, KEY.formulas), ranges) },
       expects: {
         cells: new Set(moves.map((one) => qualified(one.sheet, one.at))),
         beyond: 'ask',
       },
     },
   };
-}
-
-/** The ranges written under the `formulas:` key the sheet has, or under one written for it. */
-function beside(
-  sheet: CompiledSheet,
-  ranges: readonly string[],
-  path: readonly (string | number)[],
-  read: Reading,
-): Op[] {
-  const first = sheet.fills[0];
-  const one = first === undefined ? null : located(first.node, read);
-  if (one === null || one.kind === 'refused') {
-    const source = ranges.map(itemOf).join('\n');
-    return [{ op: 'addSource', path: [...path], key: KEY.formulas, source }];
-  }
-
-  return ranges.map((body, index) => ({
-    op: 'insertSource',
-    path: [...one.path.slice(0, -1)],
-    index: sheet.fills.length + index,
-    source: body,
-  }));
 }
 
 /** Whether anything in the rectangle but its first cell is already written, which a range may not cross. */

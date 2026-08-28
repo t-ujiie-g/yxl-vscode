@@ -2,7 +2,7 @@ import { type Op, renderScalar } from '@yxl-vscode/cst';
 import { KEY, type ScalarValue } from '@yxl-vscode/spec';
 import { type Rect, rangeOf, type SheetName } from '@yxl-vscode/units';
 import { nothingChanges } from '@yxl-vscode/verify';
-import { type Anchored, anchored, putEntry, takeEntries } from './anchored';
+import { type Anchored, anchored, putEntries, takeEntries } from './anchored';
 import { type Intent, type Projection, type Reading, refused, writtenSheet } from './direct';
 
 /** A validation as a gesture asks for it: the choices a range takes, or `null` to take one off. */
@@ -48,7 +48,7 @@ function putting(
   }
 
   const body = `${KEY.at}: ${rangeOf(rect)}\n${KEY.list}: ${offering(choices)}`;
-  return { ops: [putEntry(holds, body)] };
+  return { ops: putEntries(holds, [body]) };
 }
 
 /** The choices as Excel keeps them: one flow sequence, which is how the spec's examples write it. */

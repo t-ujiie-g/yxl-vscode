@@ -3,7 +3,7 @@ import type { Op } from '@yxl-vscode/cst';
 import { KEY } from '@yxl-vscode/spec';
 import { addrAt, overlapping, type Rect, rangeOf, type SheetName } from '@yxl-vscode/units';
 import { nothingChanges } from '@yxl-vscode/verify';
-import { type Anchored, anchored, putEntry, takeEntries } from './anchored';
+import { type Anchored, anchored, putEntries, takeEntries } from './anchored';
 import { type Intent, type Projection, type Reading, refused, writtenSheet } from './direct';
 
 /** A region a gesture asked to be a table, or `on: false` to take off the ones it touches. */
@@ -41,7 +41,7 @@ function putting(
   if (why !== null) return { why };
 
   const body = `${KEY.at}: ${rangeOf(rect)}\n${KEY.name}: ${freeName(spec)}`;
-  return { ops: [putEntry(holds, body)] };
+  return { ops: putEntries(holds, [body]) };
 }
 
 /** Why this region cannot hold a table — Excel's own rules, refused before Excel repairs them. */

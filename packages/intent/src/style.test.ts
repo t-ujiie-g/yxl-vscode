@@ -1,32 +1,12 @@
-import { cellAt, compile, resolve } from '@yxl-vscode/compile';
-import { parse } from '@yxl-vscode/cst';
-import { type IncludeReader, load } from '@yxl-vscode/loader';
+import { cellAt, resolve } from '@yxl-vscode/compile';
 import { STYLE_PROPERTIES, type StyleSays, type StyleValues } from '@yxl-vscode/spec';
-import {
-  type A1Addr,
-  type FilePath,
-  filePath,
-  parseColor,
-  type Rect,
-  type SheetName,
-} from '@yxl-vscode/units';
-import { type Ctx, checked } from '@yxl-vscode/verify';
+import { type A1Addr, parseColor, type Rect, type SheetName } from '@yxl-vscode/units';
 import { describe, expect, it } from 'vitest';
-import { reading } from './direct';
+import { files, wrote } from './harness';
 import type { Candidate } from './resolve';
 import { setStyle } from './style';
 
-const ROOT = filePath('spec.yxl.yaml') ?? ('' as FilePath);
 const SALES = 'sheets:\n  - name: Sales\n';
-
-function files(source: string) {
-  const includes: IncludeReader = (_from, path) => (path === ROOT ? { file: ROOT, source } : null);
-
-  const { doc } = load(parse(source, { file: ROOT }), includes);
-  if (doc === null) throw new Error('did not load');
-
-  return { doc, grid: compile(doc, { read: includes }), read: reading(() => source), includes };
-}
 
 const at = (top: number, left: number, bottom = top, right = left): Rect => ({
   top,
@@ -49,16 +29,7 @@ function offered(
 /** The chosen answer, taken all the way through the checker. */
 function taken(source: string, candidate: Candidate): string {
   const { intent } = candidate;
-  if (intent.kind !== 'edit') throw new Error('a file was not written');
-
-  const { includes } = files(source);
-  const ctx: Ctx = { root: ROOT, file: intent.file, read: includes };
-  const done = checked(source, intent.patch, intent.expects, ctx);
-  if (done.ok === false) {
-    throw new Error(`the checker refused it: ${done.diagnostics[0]?.message ?? 'a surprise'}`);
-  }
-
-  return done.text;
+  return wrote(source, intent);
 }
 
 const BOLD: StyleValues = { 'font.bold': true };

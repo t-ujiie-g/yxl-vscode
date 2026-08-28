@@ -1,31 +1,13 @@
-import { compile } from '@yxl-vscode/compile';
-import { parse } from '@yxl-vscode/cst';
-import { type IncludeReader, load } from '@yxl-vscode/loader';
 import { applyPatch } from '@yxl-vscode/patch';
-import { type A1Addr, type FilePath, filePath, type Rect, type SheetName } from '@yxl-vscode/units';
+import type { A1Addr, Rect, SheetName } from '@yxl-vscode/units';
 import { type Ctx, checked } from '@yxl-vscode/verify';
 import { describe, expect, it } from 'vitest';
-import { type Intent, reading } from './direct';
+import type { Intent } from './direct';
+import { files, ROOT } from './harness';
 import { couldBlock, pasteRange, pasteText, type Shape, type Standing } from './paste';
 import { tabular } from './tabular';
 
-const ROOT = filePath('spec.yxl.yaml') ?? ('' as FilePath);
 const SALES = 'sheets:\n  - name: Sales\n';
-
-function files(sources: Record<string, string>) {
-  const includes: IncludeReader = (_from, path) =>
-    sources[path] === undefined ? null : { file: filePath(path) ?? ROOT, source: sources[path] };
-
-  const { doc } = load(parse(sources[ROOT] ?? '', { file: ROOT }), includes);
-  if (doc === null) throw new Error('did not load');
-
-  return {
-    doc,
-    grid: compile(doc, { read: includes }),
-    read: reading((file) => sources[file] ?? null),
-    includes,
-  };
-}
 
 const rect = (top: number, left: number, bottom: number, right: number): Rect => ({
   top,

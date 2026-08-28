@@ -1,34 +1,13 @@
-import { compile } from '@yxl-vscode/compile';
-import { parse } from '@yxl-vscode/cst';
-import { type IncludeReader, load } from '@yxl-vscode/loader';
-import { type FilePath, filePath, type Rect, type SheetName } from '@yxl-vscode/units';
-import { type Ctx, checked } from '@yxl-vscode/verify';
+import type { Rect, SheetName } from '@yxl-vscode/units';
 import { describe, expect, it } from 'vitest';
-import { reading } from './direct';
 import { setFilter } from './filter';
-
-const ROOT = filePath('spec.yxl.yaml') ?? ('' as FilePath);
-
-function files(source: string) {
-  const includes: IncludeReader = (_from, path) => (path === ROOT ? { file: ROOT, source } : null);
-  const { doc } = load(parse(source, { file: ROOT }), includes);
-  if (doc === null) throw new Error('did not load');
-
-  return { doc, grid: compile(doc, { read: includes }), read: reading(() => source), includes };
-}
+import { files, tried } from './harness';
 
 /** The filter set, through the checker — the file, or why not. */
 function filtered(source: string, rect: Rect | null): string {
   const { doc, grid, read } = files(source);
   const intent = setFilter({ doc, grid }, { sheet: 'S' as SheetName, rect }, read);
-  if (intent.kind === 'refused') return `refused: ${intent.why}`;
-  if (intent.kind !== 'edit') throw new Error('a file was not written');
-
-  const { includes } = files(source);
-  const ctx: Ctx = { root: ROOT, file: intent.file, read: includes };
-  const done = checked(source, intent.patch, intent.expects, ctx);
-
-  return done.ok === false ? `refused: ${done.diagnostics[0]?.message ?? 'a surprise'}` : done.text;
+  return tried(source, intent);
 }
 
 const SHEET = 'sheets:\n  - name: S\n    cells:\n      A1: Region\n';

@@ -35,6 +35,7 @@ export function heightOf(sheet: DrawnSheet, row: number): number {
   return (run?.size ?? DEFAULT.height) * PER_POINT;
 }
 
+/** A column's width in pixels; hidden is nothing, and unset is Excel's default. */
 export function widthOf(sheet: DrawnSheet, col: number): number {
   const run = sized(sheet.widths, col);
   if (run?.hidden === true) return 0;

@@ -1,22 +1,9 @@
-import { compile } from '@yxl-vscode/compile';
-import { parse } from '@yxl-vscode/cst';
-import { type IncludeReader, load } from '@yxl-vscode/loader';
-import { type FilePath, filePath, type Rect, type SheetName } from '@yxl-vscode/units';
-import { type Ctx, checked } from '@yxl-vscode/verify';
+import type { Rect, SheetName } from '@yxl-vscode/units';
 import { describe, expect, it } from 'vitest';
-import { reading } from './direct';
+import { files, tried } from './harness';
 import { setSorted } from './sort';
 
-const ROOT = filePath('spec.yxl.yaml') ?? ('' as FilePath);
 const SALES = 'sheets:\n  - name: Sales\n';
-
-function files(source: string) {
-  const includes: IncludeReader = (_from, path) => (path === ROOT ? { file: ROOT, source } : null);
-  const { doc } = load(parse(source, { file: ROOT }), includes);
-  if (doc === null) throw new Error('did not load');
-
-  return { doc, grid: compile(doc, { read: includes }), read: reading(() => source), includes };
-}
 
 const at = (top: number, left: number, bottom: number, right = left): Rect => ({
   top,
@@ -29,14 +16,7 @@ const at = (top: number, left: number, bottom: number, right = left): Rect => ({
 function sorted(source: string, rect: Rect, down = false): string {
   const { doc, grid, read } = files(source);
   const intent = setSorted({ doc, grid }, { sheet: 'Sales' as SheetName, rect, down }, read);
-  if (intent.kind === 'refused') return `refused: ${intent.why}`;
-  if (intent.kind !== 'edit') throw new Error('a file was not written');
-
-  const { includes } = files(source);
-  const ctx: Ctx = { root: ROOT, file: intent.file, read: includes };
-  const done = checked(source, intent.patch, intent.expects, ctx);
-
-  return done.ok === false ? `refused: ${done.diagnostics[0]?.message ?? 'a surprise'}` : done.text;
+  return tried(source, intent);
 }
 
 const TABLE = `${SALES}    data:\n      - at: A1\n        values:\n          - [EMEA, 3]\n          - [APAC, 1]\n          - [LATAM, 2]\n`;

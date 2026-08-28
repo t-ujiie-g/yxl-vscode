@@ -1,13 +1,8 @@
-import { compile } from '@yxl-vscode/compile';
-import { parse } from '@yxl-vscode/cst';
-import { type IncludeReader, load } from '@yxl-vscode/loader';
-import { type A1Addr, type FilePath, filePath, type SheetName } from '@yxl-vscode/units';
+import type { A1Addr, SheetName } from '@yxl-vscode/units';
 import { type Ctx, checked } from '@yxl-vscode/verify';
 import { describe, expect, it } from 'vitest';
-import { reading, type Text } from './direct';
+import { files, ROOT } from './harness';
 import { type Candidate, candidates } from './resolve';
-
-const ROOT = filePath('spec.yxl.yaml') ?? ('' as FilePath);
 
 const SPEC = `sheets:
   - name: Sales
@@ -31,17 +26,6 @@ const DOWN = `sheets:
       - at: C1:C3
         formula: "B1*0.05"
 `;
-
-function files(sources: Record<string, string>) {
-  const text: Text = (file) => sources[file] ?? null;
-  const includes: IncludeReader = (_from, path) =>
-    sources[path] === undefined ? null : { file: filePath(path) ?? ROOT, source: sources[path] };
-
-  const { doc } = load(parse(sources[ROOT] ?? '', { file: ROOT }), includes);
-  if (doc === null) throw new Error('did not load');
-
-  return { doc, grid: compile(doc, { read: includes }), read: reading(text), includes };
-}
 
 function offered(
   source: string,

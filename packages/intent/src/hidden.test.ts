@@ -1,26 +1,12 @@
-import { compile } from '@yxl-vscode/compile';
-import { parse } from '@yxl-vscode/cst';
-import { type IncludeReader, load } from '@yxl-vscode/loader';
 import type { Axis } from '@yxl-vscode/spec';
-import { type FilePath, filePath, type SheetName } from '@yxl-vscode/units';
-import { type Ctx, checked } from '@yxl-vscode/verify';
+import type { SheetName } from '@yxl-vscode/units';
 import { describe, expect, it } from 'vitest';
-import { reading } from './direct';
+import { files, wrote } from './harness';
 import { setHidden } from './hidden';
 import type { Candidate } from './resolve';
 
-const ROOT = filePath('spec.yxl.yaml') ?? ('' as FilePath);
 const SALES = 'sheets:\n  - name: Sales\n';
 const CELLS = '    cells:\n      A1: 1\n';
-
-function files(source: string) {
-  const includes: IncludeReader = (_from, path) => (path === ROOT ? { file: ROOT, source } : null);
-
-  const { doc } = load(parse(source, { file: ROOT }), includes);
-  if (doc === null) throw new Error('did not load');
-
-  return { doc, grid: compile(doc, { read: includes }), read: reading(() => source), includes };
-}
 
 /** The answers hiding — or showing — that run has. */
 function offered(
@@ -39,16 +25,7 @@ function offered(
 /** The chosen answer, taken all the way through the checker. */
 function taken(source: string, candidate: Candidate): string {
   const { intent } = candidate;
-  if (intent.kind !== 'edit') throw new Error('a file was not written');
-
-  const { includes } = files(source);
-  const ctx: Ctx = { root: ROOT, file: intent.file, read: includes };
-  const done = checked(source, intent.patch, intent.expects, ctx);
-  if (done.ok === false) {
-    throw new Error(`the checker refused it: ${done.diagnostics[0]?.message ?? 'a surprise'}`);
-  }
-
-  return done.text;
+  return wrote(source, intent);
 }
 
 describe('columns nothing hides yet', () => {

@@ -1,30 +1,10 @@
-import { compile } from '@yxl-vscode/compile';
-import { parse } from '@yxl-vscode/cst';
-import { type IncludeReader, load } from '@yxl-vscode/loader';
-import {
-  type A1Addr,
-  type FilePath,
-  filePath,
-  parseA1Addr,
-  type SheetName,
-} from '@yxl-vscode/units';
-import { type Ctx, checked } from '@yxl-vscode/verify';
+import { type A1Addr, parseA1Addr, type SheetName } from '@yxl-vscode/units';
 import { describe, expect, it } from 'vitest';
-import { reading } from './direct';
 import { setFreeze } from './freeze';
+import { files, wrote } from './harness';
 
-const ROOT = filePath('spec.yxl.yaml') ?? ('' as FilePath);
 const SALES = 'sheets:\n  - name: Sales\n';
 const CELLS = '    cells:\n      A1: 1\n';
-
-function files(source: string) {
-  const includes: IncludeReader = (_from, path) => (path === ROOT ? { file: ROOT, source } : null);
-
-  const { doc } = load(parse(source, { file: ROOT }), includes);
-  if (doc === null) throw new Error('did not load');
-
-  return { doc, grid: compile(doc, { read: includes }), read: reading(() => source), includes };
-}
 
 /** What freezing at that cell — or unfreezing, at `null` — comes to. */
 function asked(source: string, at: string | null, sheet = 'Sales') {
@@ -37,17 +17,7 @@ function asked(source: string, at: string | null, sheet = 'Sales') {
 /** The same, taken all the way through the checker, which is what lands in the file. */
 function written(source: string, at: string | null): string {
   const intent = asked(source, at);
-  if (intent.kind !== 'edit')
-    throw new Error(`refused: ${intent.kind === 'refused' ? intent.why : ''}`);
-
-  const { includes } = files(source);
-  const ctx: Ctx = { root: ROOT, file: intent.file, read: includes };
-  const done = checked(source, intent.patch, intent.expects, ctx);
-  if (done.ok === false) {
-    throw new Error(`the checker refused it: ${done.diagnostics[0]?.message ?? 'a surprise'}`);
-  }
-
-  return done.text;
+  return wrote(source, intent);
 }
 
 describe('a sheet that freezes nothing yet', () => {

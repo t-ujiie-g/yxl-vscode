@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { CODE } from './codes';
 import { addressesIn, REACH, sheetOf } from './compile';
 import type { DataReader } from './ctx';
-import { cell as at, codes, grid, sheet } from './harness';
+import { cell as at, codes, given, grid, sheet } from './harness';
 import { reaches } from './impact';
 import { resolve } from './style';
 
@@ -170,6 +170,14 @@ describe('a parameter', () => {
   it('reports a default that comes back round', () => {
     const spec = `params:\n  a: "\${b}"\n  b: "\${a}"\n${SALES}`;
     expect(codes(spec)).toContain(CODE.paramCycle);
+  });
+
+  it('reports a value set from outside for a parameter the spec never declared', () => {
+    const spec = `params:\n  region: APAC\n${SALES}`;
+    const set = given(spec, { region: 'EMEA', quarter: 'Q4' });
+
+    expect(set.diagnostics.map((one) => one.code)).toEqual([CODE.noSuchParam]);
+    expect(set.diagnostics[0]?.message).toContain('`quarter`');
   });
 });
 
@@ -362,6 +370,12 @@ describe('a typed cell', () => {
     const spec = `${SALES}    cells:\n      A1: { value: "15/03/2023", type: date }\n`;
     expect(codes(spec)).toEqual([CODE.badDate]);
     expect(at(spec, 'A1')?.value).toBe('15/03/2023');
+  });
+
+  it('says the same of an elapsed time that is not one', () => {
+    const spec = `${SALES}    cells:\n      A1: { value: "half a day", type: duration }\n`;
+    expect(codes(spec)).toEqual([CODE.badDuration]);
+    expect(at(spec, 'A1')?.value).toBe('half a day');
   });
 
   it('takes its type from a parameter, and is untyped where that is not one', () => {
