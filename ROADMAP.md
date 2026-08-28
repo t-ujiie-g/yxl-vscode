@@ -421,6 +421,10 @@ rule that is not mechanically checked is a suggestion.
 Phases land in order. Each is releasable or explicitly marked otherwise. The
 **first release is Phase 4** — read-only, and worth shipping alone.
 
+**Phases 17–20 are the release programme**, opened on 2026-08-29 from a reader's
+own list after working in the preview (§11). They come before Phase 16, which
+stays last for the reason it was moved there.
+
 ### The everyday gestures, and where they land
 
 The list a reader would use to answer *can I work in this?*, which is also the
@@ -477,6 +481,10 @@ not a date.
 | Insert a chart over a selection, place an image | **Phase 14** |
 | Edit rich text, run by run | ✅ — the run picked in the formula bar, its font left as it stands; the whole cell is not typed into, since a cell cannot be `rich` and hold a value too |
 | Edit a cell whose value comes from a CSV, a parameter, a definition | ✅ Phase 7 |
+| Start a spec from nothing | **Phase 18** — a template this editor writes; `yxl` has no `init` and does not need one |
+| Build the workbook and open it | ✅ from the command palette; **Phase 18** puts it where it can be clicked |
+| Read the editor in Japanese | **Phase 19** |
+| Replace what a find turned up | **Phase 18** — proposed; every replacement is an ordinary cell write |
 | A second selection with `Cmd`+click | **not planned** — every write here is about one rectangle, and §4.4's answers are counted over one |
 | Zoom, a format painter, freeze by dragging the pane edge | **not planned yet** — none of them is in the schema, and none is load-bearing |
 
@@ -1721,12 +1729,118 @@ coverage table below is generated from which.
       here: a cell is not under them, and the README's table is where the whole
       schema is said.
 
+### Phase 17 — What a reader hit first
+Opened 2026-08-29 from a reader's own list, with screenshots, after working in
+the preview on yxl's examples. Five things: four are defects with a cause named
+below, and one is the answer panel becoming a thing you have to answer.
+
+- [ ] **A preview that comes back when its tab does.** Two previews open in the
+      same column; the one that loses the tab comes back **blank**. The panel is
+      created with neither `retainContextWhenHidden` nor an
+      `onDidChangeViewState` listener, so VS Code tears the webview down when it
+      is hidden and reloads the page when it returns — into a view that has
+      never been sent a drawing, and a host that only sends one when the text
+      changes. The fix is the handshake rather than the flag: the view says it
+      is ready, the host answers with what it holds, and a panel coming back
+      asks again. A `WebviewPanelSerializer` is the same question for a window
+      reload and belongs with it.
+- [ ] **The answers to a refused edit, as something you have to answer.** They
+      are a panel under the grid today, and the grid behind it still takes
+      keystrokes — so a reader cannot tell whether their edit happened. A
+      `<dialog>` opened with `showModal()` keeps the keyboard until an answer is
+      taken or `Esc` cancels. What must survive the move: the count and the
+      sample cells each answer carries (§8 Q14), the *apply it anyway* offer,
+      and the override box with its reason.
+- [ ] **A command a reader can find.** *Open Preview to the Side* names neither
+      yxl nor a grid, and it is a text button in the editor's title bar. A name
+      that says what it opens, an icon beside it, and the same command in the
+      preview's own title bar for the trip back to the text.
+- [ ] **`Cmd`+arrow reaching the sheet's edge, not the window's.** `edge()` in
+      `webview/keys.ts` walks the cells of the **drawn window** (ADR-019), so a
+      column longer than the window stops where the drawing stops. The host has
+      every cell: this is ADR-043's shape again — the view asks, the host
+      answers with the address, the view goes there.
+- [ ] **A column width Excel agrees with** *(lower priority — the reader said
+      so)*. Two errors, one arithmetic and one font. `PER_CHARACTER = 7` turns
+      pixels into Excel's unit but drops the 5px of padding Excel's own formula
+      adds, while the measurement puts our `AROUND = 10` in — so a fitted column
+      is about two thirds of a character wide before any question of font. The
+      arithmetic half is exact and worth fixing; the font half is §8 Q19.
+
+### Phase 18 — From nothing to a workbook
+The two ends of a reader's day. Neither is in the editor today, and both are
+small — which is why they are one phase and not two.
+
+- [ ] **A new spec from nothing.** *yxl: New spec* writes a minimal valid file —
+      one sheet, a heading row, a number, a formula, a comment saying where the
+      format is documented — opens it, and opens the preview beside it. No
+      upstream command is needed: `yxl 0.3.5` has `build` and `extract` and no
+      `init`, and a template is the editor's business rather than the
+      compiler's. Asking for one would put the same file in two places.
+- [ ] **Build where it can be clicked.** `yxl.build` already builds to a sibling
+      `.xlsx`, offers *Open it*, warns about a version mismatch in both
+      directions, and answers a missing compiler with the install link. It is
+      only in the command palette. A button in the preview's title bar and in
+      the editor's, for it and for *Check*.
+- [ ] **The spec's own schema in the *text* half** *(proposed, not asked for)*.
+      Upstream generates `docs/yxl.schema.json` (§8 Q7); a `yamlValidation`
+      contribution points the YAML extension at it, and a reader gets completion
+      and inline errors in the half of the editor this project does not draw.
+      Ten lines of manifest for the largest single win on the text side.
+- [ ] **Replace what a find turned up** *(proposed)*. `Cmd`+`F` finds; a
+      spreadsheet replaces. Every replacement is an ordinary cell write, so this
+      is the gesture that exists, over a list — including the refusals, which is
+      the interesting half.
+
+### Phase 19 — 日本語 and English
+Asked for on 2026-08-29 by a reader working in Japanese. The work is not
+translation but **where the words are**: today they are English prose built at
+the place the thing goes wrong, which is the one place a second language cannot
+reach.
+
+- [ ] **The decision first (§8 Q18)**, as an ADR: a diagnostic and a refusal
+      carry a **code and its parts** and are rendered at the edge, or the two
+      languages sit together where the sentence is written. The first is right
+      and costs a pass over every message site; the second is cheap and freezes
+      the wording of a project whose messages are half its product.
+- [ ] `package.nls.json` for the manifest — the commands, the settings, the
+      panel's title — which is VS Code's own mechanism and needs no decision.
+- [ ] The view's chrome: the toolbar's tooltips, the menus, the headings under
+      the grid, the formula bar, the inspector's facet names, the sentences a
+      preview says about `print:` and `protect:`.
+- [ ] Every refusal and every diagnostic, which is the long tail and the reason
+      the decision comes first.
+- [ ] The language follows VS Code's own (`vscode.env.language`); no setting of
+      our own until somebody asks for one.
+- [ ] **What stays English, and is said so**: the schema's key names, the
+      `docs/spec.md` references, and the compiler's own output, which is yxl's
+      to translate rather than ours to paraphrase.
+
+### Phase 20 — Shipped
+The manifest is `private: true` at version `0.0.0`, so nothing can publish it by
+accident. This is §8 Q6's open half, and the v1.0 gate's last line.
+
+- [ ] A publisher, a version, and `private` off
+- [ ] An icon, keywords, `repository`, `bugs`, and the licence in the
+      **package's own** manifest
+- [ ] The extension's own `README.md`: the marketplace shows the package's, not
+      the repo's. What it is, what it needs (`yxl` on `PATH`, the pinned
+      version), and §2's list of what it is **not** — the honest description the
+      v1.0 gate asks for
+- [ ] `CHANGELOG.md`, and the rule that ties a release to the pinned yxl (§8 Q6)
+- [ ] `.vscodeignore`, and a `.vsix` that installs on a machine that has never
+      seen this repository
+- [ ] It collects nothing, and the README says so
+- [ ] Tiers 1–4 green in CI, Tier 5 performed on a real workbook (§5)
+- [ ] **A `customEditors` contribution at `priority: option`** *(proposed)*, so
+      *Open With…* offers the grid on a `*.yxl.yaml` without a command
+
 ### Phase 16 — Deterministic refactors *(lowest priority)*
-Kept, and moved last, on 2026-08-23: this is spec hygiene rather than a
-spreadsheet gesture, which is not what the project is for (§1) — but it is
-model-free, it is what principle 6 looks like when it acts rather than waits,
-and Phase 11's `data:` conversion is its first row already shipped. Everything
-here is detectable by analysis.
+Kept last on 2026-08-23, and left there when the release programme opened above
+it on 2026-08-29: this is spec hygiene rather than a spreadsheet gesture, which
+is not what the project is for (§1) — but it is model-free, it is what principle
+6 looks like when it acts rather than waits, and Phase 11's `data:` conversion is
+its first row already shipped. Everything here is detectable by analysis.
 - [ ] Identical resolved styles at N sites → extract to `defs.styles`
 - [x] Homogeneous `cells:` rectangles → `data:` with inline `values:`
       *(Phase 11, 2026-08-23, as a gesture on the rectangle)*
@@ -3053,6 +3167,10 @@ promised by Phase 15's line, which is about the text.
   its input. A missing compiler is a message with the install link, which is the
   whole of what bundling would have bought. If that proves wrong, an optional
   download is a smaller change than a bundle would have been to undo.
+
+  *The packaging half is Phase 20*, opened 2026-08-29: what is left of it is a
+  publisher, an icon, the package's own README, and a `.vsix` that installs on a
+  machine that has never seen this repository.
 - **Q7 — The JSON Schema.** ✅ **Answered: it exists**, upstream, at
   `docs/yxl.schema.json` — *generated* from `docs/spec.md` by
   `tools/spec-schema/generate.py`, which is the part that keeps it honest: the
@@ -3156,6 +3274,27 @@ promised by Phase 15's line, which is about the text.
   that let the host measure was going to be wrong for half the specs this is
   for. Measuring only what is drawn was the other rejected answer: a width that
   depends on where the reader had scrolled to is the wrong kind of surprise.
+- **Q18 — How deep does the second language go?** *(Phase 19, opened
+  2026-08-29.)* The chrome is easy and the manifest is VS Code's own problem.
+  The question is the **refusals and the diagnostics**, of which there are some
+  three hundred, each written as prose at the place the thing goes wrong. Either
+  they become a **code and its parts**, rendered where the reader is — which is
+  the right shape, is what the `code` field was always for, and is a pass over
+  every message site — or the sentence carries both languages where it is
+  written, which is cheap and freezes the wording of a project whose messages
+  are half of what it is. The first item of Phase 19 is to answer this in an
+  ADR, before any of it is translated.
+- **Q19 — What is a column width, exactly, in Excel's arithmetic?** *(Phase 17,
+  opened 2026-08-29 by a reader who fitted a column here and opened the workbook
+  there.)* Excel's unit is the width of `0` in the workbook's default font, and
+  its own pixel formula adds five to the product — neither of which this editor
+  does: it divides by a flat seven, having added ten of its own padding first.
+  That half is arithmetic and has an answer. The other half is that the reader's
+  machine may not **have** Calibri — macOS usually does not — so the canvas
+  measures a substitute, and no arithmetic fixes that. What is left to decide is
+  whether to carry a metrics table for the handful of fonts a default is ever
+  set to, or to say plainly that a fitted width is this editor's best guess at
+  Excel's.
 ## 9. Risks
 
 - **R1 — Schema drift between the two implementations.** The structural
@@ -3240,6 +3379,42 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-29 — The release programme, from a reader's own list
+Phase 15 closed this morning, and the next thing is not more schema: it is a
+reader working in the preview and writing down what stopped them. §6 gains four
+phases from that list, and they come **before** Phase 16, which stays last.
+
+- **Phase 17 — What a reader hit first.** Four defects with a cause named
+  against each — a second preview that comes back blank (no
+  `retainContextWhenHidden`, no `onDidChangeViewState`, and a host that only
+  sends a drawing when the text changes), `Cmd`+arrow stopping at the drawn
+  window rather than the sheet's edge (`edge()` walks the window's cells,
+  ADR-019), a command called *Open Preview to the Side* that names neither yxl
+  nor a grid, and a fitted column width Excel disagrees with — plus the answers
+  to a refused edit becoming a modal you have to answer rather than a panel the
+  grid keeps taking keystrokes behind.
+- **Phase 18 — From nothing to a workbook.** A new spec from a template, and
+  `yxl build` where it can be clicked. Checked before writing it down: `yxl
+  0.3.5` has `build` and `extract` and **no `init`**, so no upstream issue is
+  needed — a starter file is the editor's business, and asking for one would put
+  the same file in two places. Two proposals ride with them: pointing the YAML
+  extension at upstream's own `docs/yxl.schema.json`, which is ten lines of
+  manifest for completion and inline errors in the *text* half, and replace.
+- **Phase 19 — 日本語 and English.** The work is not translation but where the
+  words are: today they are English prose built at the place the thing goes
+  wrong. The first item is the decision (§8 Q18), because three hundred
+  refusals rendered from a code and its parts is a different project from three
+  hundred sentences carrying two languages each.
+- **Phase 20 — Shipped.** §8 Q6's open half, made a checklist: a publisher, an
+  icon, the package's own README — the marketplace shows that one, not the
+  repo's — a `CHANGELOG`, a `.vscodeignore`, and a `.vsix` that installs on a
+  machine that has never seen this repository.
+- Two open questions with it: **Q18** (how deep the second language goes) and
+  **Q19** (what a column width is, exactly, in Excel's arithmetic — where the
+  reader's machine not having Calibri is the half no arithmetic fixes).
+- Nothing was implemented in this change; it is the plan, written down before
+  the work rather than after it.
 
 ### 2026-08-29 — What a sheet keeps in another file, said once
 `docs/spec.md` §8's own example is `cells: { $include: … }`, and only two
