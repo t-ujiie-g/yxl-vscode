@@ -358,6 +358,7 @@ function typeable(sheet: CompiledSheet, at: A1Addr, cell: CompiledCell | null): 
   if (cell === null) {
     return sheet.fills.some((fill) => within(cellOf(at), fill.rect)) ? 'mediated' : 'direct';
   }
+  if (cell.rich !== null) return 'rich';
 
   const said = editabilityOf(cell.provenance.value);
   return said === 'readonly' ? 'mediated' : said;

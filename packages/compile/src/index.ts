@@ -38,6 +38,7 @@ export type {
   DeclaredStyle,
 } from './grid';
 export { type FullAddr, reaches } from './impact';
+export { namesParam } from './params';
 export type { CellProvenance, FacetOrigin } from './provenance';
 export { resolve, type StyleKey, type StyleLayer, type StyleSource, settled } from './style';
 export { asCsvField, fieldAt } from './table';

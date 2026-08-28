@@ -475,7 +475,7 @@ not a date.
 | Format a region as a table | ✅ — the banded region drawn with its header, and *Format as table* over the selection, which refuses a region Excel would repair rather than open |
 | See a chart, an image, a sparkline that the spec declares | **Phase 14** |
 | Insert a chart over a selection, place an image | **Phase 14** |
-| Edit rich text, run by run | **Phase 15** — it is drawn today |
+| Edit rich text, run by run | ✅ — the run picked in the formula bar, its font left as it stands; the whole cell is not typed into, since a cell cannot be `rich` and hold a value too |
 | Edit a cell whose value comes from a CSV, a parameter, a definition | ✅ Phase 7 |
 | A second selection with `Cmd`+click | **not planned** — every write here is about one rectangle, and §4.4's answers are counted over one |
 | Zoom, a format painter, freeze by dragging the pane edge | **not planned yet** — none of them is in the schema, and none is load-bearing |
@@ -1688,7 +1688,20 @@ coverage table below is generated from which.
       happens then is the same answer the key gives when it is absent: the
       default where it has one, and the construct dropped where the spelling is
       what makes it (a chart's type, a shape's geometry, a sparkline's kind).
-- [ ] `rich:` runs editable in the formula bar, one run at a time
+- [x] `rich:` runs editable in the formula bar, one run at a time
+      **In**: the bar over the grid grows a picker where the cell holds runs —
+      `1. Figures are`, `2. unaudited` — and the box beside it holds *that run's*
+      text, sent back as `editRun`. `setRun` writes it where the run is written:
+      the item itself for a bare string, its `text:` for a run that wears a
+      font, which is left alone. Three things are refused rather than guessed
+      at: a run that reads a `${...}`, since typing over it would take the
+      parameter away; a run with nothing to say, which would leave a sequence
+      upstream refuses; and a run the cell has not got.
+      **Typing over the whole cell is refused now**, where it used to write a
+      `value:` beside the `rich:` — a spec `yxl build` rejects (`docs/spec.md`
+      §3) and this loader rejected too, so the write path was making a file its
+      own reader would not take. The refusal names the bar; the cell says the
+      same on hover and in the inspector.
 - [ ] The rest stays opaque, and the inspector says so where a cell is under one
 
 ### Phase 16 — Deterministic refactors *(lowest priority)*
@@ -2910,6 +2923,33 @@ sheet of this workbook, or a refusal.
 want — is not followed here. That is the trade taken: the reader is told what
 this preview opens, and nothing on their machine runs because a spec asked.
 
+### ADR-050 — A cell of runs is retyped a run at a time, and not as a whole
+**Accepted** 2026-08-29.
+
+*A cell cannot be `rich` and hold a value too.* `docs/spec.md` §3 gives a cell
+one thing to hold, and both loaders refuse a `rich:` beside a `value:`. So the
+question a rich cell asks of the grid is not *where does the value go* but
+*which of the runs did the reader mean* — and the grid, whose gesture is one box
+over one cell, has no way to say.
+
+*The alternative was to let typing replace the runs.* One box, the whole cell,
+the `rich:` key dropped and a `value:` written in its place: the gesture would
+be the ordinary one, and the reader would lose the fonts a colleague wrote —
+silently, on a keystroke, in a spec they may only be visiting. That is a
+guess about what somebody meant, which is the one thing this editor does not do
+(ADR-001).
+
+*So the bar picks the run.* The runs are named in a picker and the box holds one
+of them; the grid refuses a whole-cell edit and says where the runs are edited
+instead. `Editable` gained a fourth answer, `rich`, so the hover, the inspector
+and the refusal say the same thing before anyone types.
+
+*What it costs.* Making a rich cell into a plain one is not a gesture — the
+reader edits the YAML, or writes an override. Adding a run, removing one, and
+changing a run's font are not gestures either. They are all structure rather
+than text, and each would want its own answer to *which run, and where*; none is
+promised by Phase 15's line, which is about the text.
+
 ## 8. Open questions
 
 - **Q1 — `cells:` A1 keys and row insertion.** ✅ *Answered 2026-08-23.*
@@ -3183,6 +3223,34 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-29 — Rich text is edited, a run at a time
+`rich:` was drawn on 2026-08-15 and read-only since. The bar over the grid now
+edits it — the last of Phase 15 that is a gesture rather than a preview.
+
+- **The bar picks a run** (ADR-050). Where the selected cell holds runs, a
+  `select` names them by their first few words and the box beside it holds that
+  run's text; `Enter` sends `editRun`, `Esc` puts the run back. A run's font is
+  not touched: it is the run's own and nothing else in the workbook can reach
+  it, which is the same reason the runs arrive resolved, not as a style layer.
+- **A defect the feature uncovered.** Typing into a rich cell wrote a `value:`
+  beside the `rich:`, which upstream's loader refuses (`cell '…' cannot combine
+  'rich' and 'value'`) and ours refuses too — the write path was producing a
+  file its own reader would reject on the next keystroke. It is refused at
+  `valuePath` now, with the sentence that says where the runs *are* edited, and
+  the cell wears the reason before anyone types: `Editable` has a fourth answer,
+  `rich`, so the hover, the inspector and the refusal all say the one thing.
+- **The checker could not see a run.** `verify`'s `diff` compared `value`,
+  `formula`, `format` and the settled style, so *every* change to rich text was
+  invisible to ADR-009: a patch could have retyped a run three sheets away and
+  nothing would have been surprised by it. It compares the runs now — text and
+  the look each wears — as part of what a cell holds, so the run edit is checked
+  like any other write rather than waved through.
+- **`rich: []` is refused**, as upstream's `rich text needs at least one run`
+  does. Found by asking what the picker should do with no runs; the answer was
+  that the spec does not have that shape.
+- 2326 → 2339 tests. Comment shape: export 823 blocks / 1820 lines / avg 2.2,
+  private 548 / 548 / avg 1.0, inline 119 / 184 / avg 1.5; 0 over the limit.
 
 ### 2026-08-28 — A parameter may fill a spelling
 `docs/spec.md` §7 lets a `${...}` stand anywhere a scalar goes, and the schema

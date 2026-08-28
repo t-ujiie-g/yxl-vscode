@@ -2,6 +2,7 @@ import {
   addressesIn,
   type CompiledCell,
   type CompiledGrid,
+  type CompiledRun,
   type CompiledSheet,
   cellAt,
   REACH,
@@ -56,7 +57,9 @@ function inSheet(before: CompiledSheet, after: CompiledSheet): Change[] {
     const now = held(cellAt(after, at));
     const sheet = after.name;
 
-    if (was.value !== now.value) changes.push({ kind: 'cell', sheet, at, what: 'value' });
+    if (was.value !== now.value || !sameRuns(was.rich, now.rich)) {
+      changes.push({ kind: 'cell', sheet, at, what: 'value' });
+    }
     if (was.formula !== now.formula) changes.push({ kind: 'cell', sheet, at, what: 'formula' });
     if (was.format !== now.format) changes.push({ kind: 'cell', sheet, at, what: 'format' });
 
@@ -74,7 +77,22 @@ function held(cell: CompiledCell | null) {
     value: cell?.value ?? null,
     formula: cell?.formula ?? null,
     format: cell?.format ?? null,
+    rich: cell?.rich ?? null,
   };
+}
+
+/** Whether two cells hold the same runs, which is part of what they hold rather than of how they look. */
+function sameRuns(
+  before: readonly CompiledRun[] | null,
+  after: readonly CompiledRun[] | null,
+): boolean {
+  if (before === null || after === null) return before === after;
+  if (before.length !== after.length) return false;
+
+  return before.every((run, index) => {
+    const now = after[index];
+    return now !== undefined && run.text === now.text && alike(run.look, now.look);
+  });
 }
 
 /** Every address either compilation holds a cell at, each named once. */

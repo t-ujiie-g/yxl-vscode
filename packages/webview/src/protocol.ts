@@ -229,6 +229,15 @@ export interface Filtered extends Ranged {
   readonly on: boolean;
 }
 
+/** One run of a `rich:` cell retyped: which run of the cell, and what it should say (`docs/spec.md` §3). */
+export interface EditedRun {
+  readonly sheet: string;
+  readonly row: number;
+  readonly col: number;
+  readonly index: number;
+  readonly text: string;
+}
+
 /** A cell's note, as it is written or `text: null` to take it off (`docs/spec.md` §10). */
 export interface Noted {
   readonly sheet: string;
@@ -263,8 +272,11 @@ export interface MarkedCell {
   readonly message: string;
 }
 
-/** Whether a cell can be typed into: one node says it, several could, or a file beside the spec does. */
-export type Editable = 'direct' | 'mediated' | 'external';
+/**
+ * Whether a cell can be typed into: one node says it, several could, a file
+ * beside the spec does, or it holds runs, which are edited one at a time.
+ */
+export type Editable = 'direct' | 'mediated' | 'external' | 'rich';
 
 /** One run of a `rich:` cell: a piece of its text, and the look that piece wears. */
 export interface DrawnRun {
@@ -574,6 +586,7 @@ export type FromView =
   | { readonly kind: 'image'; readonly sheet: string; readonly row: number; readonly col: number }
   | ({ readonly kind: 'moveFloat' } & MovedFloat)
   | ({ readonly kind: 'sizeFloat' } & SizedFloat)
+  | ({ readonly kind: 'editRun' } & EditedRun)
   | ({ readonly kind: 'sum' } & Ranged)
   | ({ readonly kind: 'override'; readonly reason: string } & Typed)
   | {

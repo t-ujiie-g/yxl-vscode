@@ -87,6 +87,9 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
   /** Where the last edit was typed, so a refusal can put the reader back at it. */
   let typedAt: { row: number; col: number } | null = null;
 
+  /** The run of a rich cell the bar is on, and the cell it was picked on: another cell starts at its first. */
+  let run: { row: number; col: number; at: number } | null = null;
+
   /** Everything the view is showing, read at the moment it is asked for. */
   const showing = (of: Drawing): Showing => ({
     drawing: of,
@@ -104,6 +107,7 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
     copied,
     looking,
     editable: editable(),
+    run: runAt(),
     naming,
     asking,
   });
@@ -217,6 +221,10 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
     return between(selected, anchor);
   };
 
+  /** Which run the bar is on, which is the first of them wherever the reader has since moved. */
+  const runAt = (): number =>
+    run !== null && run.row === selected?.row && run.col === selected.col ? run.at : 0;
+
   /** Whether the cell the reader has selected is one they can type into. */
   const editable = (): Editable | null => {
     if (selected === null) return null;
@@ -320,6 +328,15 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       said = null;
       typedAt = { row, col };
       host.postMessage({ kind: 'edit', sheet: named(), row, col, text });
+    },
+    editRun: (row, col, index, text) => {
+      refused = null;
+      said = null;
+      typedAt = { row, col };
+      host.postMessage({ kind: 'editRun', sheet: named(), row, col, index, text });
+    },
+    showRun: (index) => {
+      if (selected !== null) run = { ...selected, at: index };
     },
     empty: (row, col) => {
       refused = null;

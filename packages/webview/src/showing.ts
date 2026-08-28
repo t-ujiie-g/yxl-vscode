@@ -42,6 +42,9 @@ export interface Showing {
   /** Whether the selected cell can be typed into, where one is selected. */
   readonly editable: Editable | null;
 
+  /** Which run of the selected cell's rich text the bar is on, where it holds runs. */
+  readonly run: number;
+
   /** The sheet whose tab is being renamed, by its place in the tab bar. */
   readonly naming: number | null;
 
@@ -183,6 +186,8 @@ export interface Asks {
   readonly setParam: (name: string, value: string) => void;
   readonly showWindow: (row: number, col: number) => void;
   readonly edit: (row: number, col: number, text: string) => void;
+  readonly editRun: (row: number, col: number, index: number, text: string) => void;
+  readonly showRun: (index: number) => void;
   readonly empty: (row: number, col: number) => void;
   readonly undo: (redo: boolean) => void;
   readonly copy: (row: number, col: number, cut: boolean) => void;

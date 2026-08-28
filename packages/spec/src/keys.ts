@@ -39,6 +39,7 @@ export const KEY = {
   name: 'name',
   nameFrom: 'name_from',
   overrides: 'overrides',
+  rich: 'rich',
   scale: 'scale',
   series: 'series',
   shapes: 'shapes',

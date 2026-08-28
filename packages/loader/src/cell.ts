@@ -211,6 +211,10 @@ function readRich(ctx: Ctx, node: Node, what: string): readonly RichRun[] | null
   const opened = openSeq(ctx, node, [], what);
   if (opened === null) return null;
 
+  if (opened.node.items.length === 0) {
+    reject(ctx, CODE.missingKey, `${what} needs at least one run`, node.span);
+  }
+
   const runs: RichRun[] = [];
   for (const [index, item] of opened.node.items.entries()) {
     const run = readRichRun(opened.ctx, item, `${what} run ${index + 1}`);

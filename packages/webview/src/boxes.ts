@@ -1,6 +1,7 @@
 import { addrAt } from '@yxl-vscode/units';
 import { breaking, written } from './cell';
 import { looking as lookingFor } from './keys';
+import type { DrawnRun } from './protocol';
 import { type Asks, cellOf, GUTTER, type Looking, type Showing } from './showing';
 
 /**
@@ -37,9 +38,9 @@ export function corner(asks: Asks, left = 0): HTMLElement {
 }
 
 /**
- * The bar above the grid: where the reader is, and what that cell *holds* —
- * the formula rather than what it comes to (ADR-014), typed into here as it is
- * typed into the cell.
+ * The bar above the grid: where the reader is, and what that cell *holds* — the
+ * formula rather than what it comes to (ADR-014), typed into here as into the
+ * cell, or one run at a time where the cell holds runs (`docs/spec.md` §3).
  */
 export function formulaBar(showing: Showing, asks: Asks): HTMLElement {
   const bar = document.createElement('div');
@@ -65,12 +66,16 @@ export function formulaBar(showing: Showing, asks: Asks): HTMLElement {
   // cell holding two lines would be written back as one.
   const holds = document.createElement('textarea');
   const cell = cellOf(showing);
+  const runs = cell?.rich ?? null;
+  let run = runs === null ? 0 : Math.min(showing.run, runs.length - 1);
+  const said = (): string => (runs === null ? written(cell) : (runs[run]?.text ?? ''));
+
   holds.className = 'holds';
-  holds.value = written(cell);
+  holds.value = said();
   holds.rows = rowsOf(holds.value);
   holds.disabled = showing.selected === null;
-  holds.title = 'What this cell holds';
-  holds.setAttribute('aria-label', 'What this cell holds');
+  holds.title = runs === null ? 'What this cell holds' : 'What this run of the cell says';
+  holds.setAttribute('aria-label', holds.title);
   holds.addEventListener('input', () => {
     holds.rows = rowsOf(holds.value);
   });
@@ -81,17 +86,59 @@ export function formulaBar(showing: Showing, asks: Asks): HTMLElement {
     if (breaking(event)) return;
     if (event.key === 'Enter' && where !== null) {
       event.preventDefault();
-      asks.edit(where.row, where.col, holds.value);
+      if (runs === null) asks.edit(where.row, where.col, holds.value);
+      else asks.editRun(where.row, where.col, run, holds.value);
       holds.blur();
     }
     if (event.key === 'Escape') {
-      holds.value = written(cell);
+      holds.value = said();
       holds.blur();
     }
   });
 
-  bar.append(at, mark, holds);
+  bar.append(at, mark);
+  if (runs !== null) {
+    bar.append(
+      picker(runs, run, (index) => {
+        run = index;
+        holds.value = said();
+        holds.rows = rowsOf(holds.value);
+        asks.showRun(index);
+      }),
+    );
+  }
+  bar.append(holds);
+
   return bar;
+}
+
+/** Which run of a rich cell the bar is on; a run is the unit the spec writes and the unit edited. */
+function picker(runs: readonly DrawnRun[], at: number, take: (index: number) => void): HTMLElement {
+  const box = document.createElement('select');
+  box.className = 'runs';
+  box.title = 'Which run of this cell to edit';
+  box.setAttribute('aria-label', 'Which run of this cell to edit');
+
+  for (const [index, run] of runs.entries()) {
+    const option = document.createElement('option');
+    option.value = String(index);
+    option.textContent = `${index + 1}. ${shortened(run.text)}`;
+    option.selected = index === at;
+    box.append(option);
+  }
+
+  box.addEventListener('keydown', (event) => event.stopPropagation());
+  box.addEventListener('change', () => take(Number(box.value)));
+
+  return box;
+}
+
+/** How much of a run the picker names it by, since a run may be a paragraph. */
+const NAMED = 24;
+
+function shortened(text: string): string {
+  const said = text.replace(/\s+/g, ' ').trim();
+  return said.length > NAMED ? `${said.slice(0, NAMED)}…` : said;
 }
 
 /** How many lines the bar shows before it scrolls instead, so one long value cannot take the panel. */

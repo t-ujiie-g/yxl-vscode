@@ -18,6 +18,11 @@ export function asIs(value: ScalarValue): Filled {
   return { value, params: [], missing: [], unclosed: false };
 }
 
+/** Whether a string names a parameter at all, which is what an edit must not write over (`docs/spec.md` §7). */
+export function namesParam(text: string): boolean {
+  return fill(text, () => undefined).missing.length > 0;
+}
+
 /**
  * Substitute the parameters a string names (`docs/spec.md` §7): exactly one
  * placeholder keeps the parameter's type, `$$` is a literal `$`, and a lone `$`

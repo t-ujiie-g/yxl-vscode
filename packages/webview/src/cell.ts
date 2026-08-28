@@ -294,9 +294,10 @@ export function written(cell: DrawnCell | undefined): string {
 
 /** What stands between this cell and being typed into. */
 function standing(editable: Exclude<DrawnCell['editable'], 'direct'>): string {
-  return editable === 'external'
-    ? 'its value comes from a file beside the spec'
-    : 'more than one thing could change to make that edit';
+  if (editable === 'rich') return 'it holds rich text, edited a run at a time in the bar';
+  if (editable === 'external') return 'its value comes from a file beside the spec';
+
+  return 'more than one thing could change to make that edit';
 }
 
 /** One run of a rich cell, wearing its own font over the cell's style. */

@@ -173,6 +173,10 @@ describe('rich text', () => {
   it('cannot be given a type, which has nothing to apply itself to', () => {
     expect(codes('      A3: { rich: ["a"], type: text }\n')).toEqual([CODE.conflictingKeys]);
   });
+
+  it('needs a run to be rich text at all, as yxl does', () => {
+    expect(codes('      A3: { rich: [] }\n')).toEqual([CODE.missingKey]);
+  });
 });
 
 describe('a type that has nothing to apply itself to', () => {
