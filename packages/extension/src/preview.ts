@@ -39,7 +39,7 @@ import { fill } from './fills';
 import { group } from './group';
 import { hide } from './hidden';
 import { image } from './images';
-import { inspect, type Nodes, nodeUnder } from './inspect';
+import { carriedBy, inspect, type Nodes, nodeUnder } from './inspect';
 import { line } from './lines';
 import { following, link } from './links';
 import { wear } from './look';
@@ -414,6 +414,7 @@ export class Preview {
       row,
       col,
       sources: inspect(this.nodes, sheet, addrAt({ col, row }), this.document.uri.fsPath),
+      carried: carriedBy(sheet),
     });
   }
 

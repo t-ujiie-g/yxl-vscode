@@ -6,7 +6,14 @@ import {
   type FacetOrigin,
   styleAt,
 } from '@yxl-vscode/compile';
-import type { Comparison, ConditionalTest, Sheet, SpecDoc, SpecNode } from '@yxl-vscode/spec';
+import {
+  type Comparison,
+  type ConditionalTest,
+  coverageOf,
+  type Sheet,
+  type SpecDoc,
+  type SpecNode,
+} from '@yxl-vscode/spec';
 import { type A1Addr, cellOf, type NodeId, rangeOf, within } from '@yxl-vscode/units';
 import type { Source } from '@yxl-vscode/webview/protocol';
 import { validating, validationSaid } from './validations';
@@ -69,6 +76,21 @@ export function inspect(nodes: Nodes, sheet: CompiledSheet, at: A1Addr, from: st
 
   found.push(...reaching(nodes, sheet, at));
   return found;
+}
+
+/**
+ * What this sheet carries and does not draw (ADR-011): one line per key the
+ * loader left opaque, each a place to go to. Where the construct sits is not
+ * read, so this says the sheet has one rather than that it covers this cell.
+ */
+export function carriedBy(sheet: CompiledSheet): Source[] {
+  return sheet.carried.map((one) => ({
+    facet: one.key,
+    says: coverageOf(one.key, 'sheet')?.says ?? 'a key this editor does not read',
+    file: one.file,
+    start: one.span.start,
+    end: one.span.end,
+  }));
 }
 
 /** What a table is, in a reader's words: what formulas call it, and how far it goes. */

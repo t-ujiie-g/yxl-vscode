@@ -21,6 +21,9 @@ export interface Showing {
   /** The corner the selection was started from, where it reaches further than one cell. */
   readonly anchor: At | null;
   readonly sources: readonly Source[] | null;
+
+  /** What the sheet carries and this editor does not draw, where the host has said (ADR-011). */
+  readonly carried: readonly Source[] | null;
   readonly reached: Reached | null;
   readonly refused: Refused | null;
   readonly said: string | null;

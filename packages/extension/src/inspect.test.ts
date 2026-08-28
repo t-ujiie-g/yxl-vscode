@@ -5,7 +5,7 @@ import type { SpecDoc } from '@yxl-vscode/spec';
 import { type A1Addr, filePath } from '@yxl-vscode/units';
 import type { Source } from '@yxl-vscode/webview/protocol';
 import { describe, expect, it } from 'vitest';
-import { inspect, nodesOf, nodeUnder } from './inspect';
+import { carriedBy, inspect, nodesOf, nodeUnder } from './inspect';
 
 const FILE = 'spec.yxl.yaml';
 
@@ -241,5 +241,30 @@ describe('what the inspector says about a validation', () => {
 
   it('says nothing about a cell no range covers', () => {
     expect(sources(ASKED, 'C1').filter((one) => one.facet === 'validation')).toEqual([]);
+  });
+});
+
+describe('what the inspector says about a construct this editor carries', () => {
+  const CARRIED = `${SHEET}    cells:\n      A1: Region\n    pivots:\n      - at: A3:F30\n        source: Orders!A1:D7\n`;
+
+  it('names the key and what it is, with the lines to go to', () => {
+    const { sheet } = read(CARRIED);
+    const [said] = carriedBy(sheet);
+
+    expect(said?.facet).toBe('pivots');
+    expect(said?.says).toBe('pivot tables');
+    expect(CARRIED.slice(said?.start ?? 0, said?.end ?? 0)).toContain('at: A3:F30');
+  });
+
+  it('says as much of a key the schema has not got, since that is all it knows', () => {
+    const { sheet } = read(`${SHEET}    pivotts: []\n`);
+    expect(carriedBy(sheet)).toMatchObject([
+      { facet: 'pivotts', says: 'a key this editor does not read' },
+    ]);
+  });
+
+  it('is about the sheet, so it says nothing where the sheet carries nothing', () => {
+    const { sheet } = read(`${SHEET}    cells:\n      A1: Region\n`);
+    expect(carriedBy(sheet)).toEqual([]);
   });
 });

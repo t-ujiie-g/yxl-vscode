@@ -10,6 +10,7 @@ import type {
   LegendPlace,
   LinkTarget,
   Margins,
+  Opaque,
   Orientation,
   PixelOffset,
   Positioning,
@@ -85,6 +86,7 @@ export interface CompiledSheet {
   readonly images: readonly CompiledImage[];
   readonly shapes: readonly CompiledShape[];
   readonly sparklines: readonly CompiledSparkline[];
+  readonly carried: readonly Opaque[];
 }
 
 /**

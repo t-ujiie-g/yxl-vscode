@@ -1143,6 +1143,12 @@ body {
   color: var(--vscode-descriptionForeground);
 }
 
+/* What the sheet holds and this editor does not draw, set off from the cell's
+   own lines above it: the same list, about the sheet rather than the cell. */
+.inspector .note {
+  margin: 0.5rem 0 0.2rem;
+}
+
 /* A table's region: the header filled, the stripes its toggles ask for, and a
    cell's own fill above either (`docs/spec.md` §11, ADR-029). */
 .grid td.tabled.heads {

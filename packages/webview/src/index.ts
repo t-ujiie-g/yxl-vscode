@@ -10,8 +10,8 @@ import type {
   DrawnSheet,
   Editable,
   FromView,
+  Inspected,
   Refused,
-  Source,
   ToView,
   Whole,
 } from './protocol';
@@ -50,7 +50,8 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
   let line: Showing['line'] = 'thin';
   /** Which of the toolbar's menus the reader has open, which no redraw closes. */
   let menu: Showing['menu'] = null;
-  let sources: readonly Source[] | null = null;
+  /** What the host last said about the selected cell, and about the sheet it is on. */
+  let inspected: Inspected | null = null;
   let reached: Reached | null = null;
   let refused: Refused | null = null;
   let said: string | null = null;
@@ -100,7 +101,8 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
     menu,
     pointed,
     comes,
-    sources,
+    sources: inspected?.sources ?? null,
+    carried: inspected?.carried ?? null,
     reached,
     refused,
     said,
@@ -157,7 +159,7 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
 
     selected = at;
     anchor = at;
-    sources = null;
+    inspected = null;
     host.postMessage({ kind: 'inspect', sheet: named(), row: at.row, col: at.col });
 
     const of = drawing?.sheets[sheet];
@@ -250,7 +252,7 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       sheet = index;
       selected = null;
       anchor = null;
-      sources = null;
+      inspected = null;
       reached = null;
       redraw();
     },
@@ -294,7 +296,7 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       selected = { row, col };
       anchor = { row, col };
       taken = null;
-      sources = null;
+      inspected = null;
       comes = null;
       host.postMessage({ kind: 'inspect', sheet: named(), row, col });
       restated();
@@ -309,7 +311,7 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       anchor ??= selected;
       selected = { row, col };
       taken = null;
-      sources = null;
+      inspected = null;
       host.postMessage({ kind: 'inspect', sheet: named(), row, col });
       summing();
       restated();
@@ -462,7 +464,7 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       anchor = { row: of.of.rows, col: of.of.columns };
       selected = { row: 1, col: 1 };
       taken = 'columns';
-      sources = null;
+      inspected = null;
       host.postMessage({ kind: 'inspect', sheet: named(), row: 1, col: 1 });
       summing();
       restated();
@@ -480,7 +482,7 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       if (!extend || taken !== along || anchor === null) anchor = far;
       selected = near;
       taken = along;
-      sources = null;
+      inspected = null;
       host.postMessage({ kind: 'inspect', sheet: named(), row: near.row, col: near.col });
       summing();
       restated();
@@ -653,7 +655,7 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       }
       adding = null;
       drawing = sent;
-      sources = null;
+      inspected = null;
       reached = null;
       refused = null;
       redraw();
@@ -709,7 +711,7 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       sheet = went;
       selected = null;
       anchor = null;
-      sources = null;
+      inspected = null;
       reached = null;
       redraw();
       goToCell({ row: sent.row, col: sent.col });
@@ -725,7 +727,7 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
 
     // Only while it is still the selected cell: a redraw may have come between.
     if (sent.sheet === named() && sent.row === selected?.row && sent.col === selected.col) {
-      sources = sent.sources;
+      inspected = sent;
       restated();
     }
   };

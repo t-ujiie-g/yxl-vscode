@@ -2,8 +2,8 @@
 
 import { type Color, parseColor } from '@yxl-vscode/units';
 import { describe, expect, it, vi } from 'vitest';
-import { cell, sheet as drawnSheet } from './harness';
-import type { Drawing, DrawnCell, DrawnSheet } from './protocol';
+import { cell, drawing, sheet as drawnSheet, showingOf } from './harness';
+import type { DrawnCell, DrawnSheet } from './protocol';
 import type { Asks, Showing } from './showing';
 import { toolbar } from './toolbar';
 
@@ -21,35 +21,12 @@ function showing(of: {
     freeze: of.freeze ?? null,
   });
 
-  const drawing: Drawing = {
-    kind: 'drawing',
-    file: 'spec.yxl.yaml',
-    sheets: [sheet],
-    params: [],
-    diagnostics: [],
-    uncomputed: null,
-  };
-
-  return {
-    drawing,
-    sheet: 0,
+  return showingOf({
+    drawing: drawing({ sheets: [sheet] }),
     selected: of.selected ?? null,
-    anchor: null,
-    sources: null,
-    reached: null,
-    refused: null,
-    said: null,
-    copied: null,
-    looking: null,
     editable: 'direct',
-    run: 0,
-    line: 'thin',
     menu: of.menu ?? null,
-    pointed: null,
-    naming: null,
-    asking: null,
-    comes: null,
-  };
+  });
 }
 
 const asks = (wear = vi.fn()): Asks => ({ wear, openMenu: vi.fn() }) as unknown as Asks;
