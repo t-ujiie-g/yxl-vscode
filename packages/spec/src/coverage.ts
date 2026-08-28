@@ -168,3 +168,9 @@ export const SHEET_KEYS: readonly Covered[] = [
     says: 'what Excel will lock marked and said; nothing here is read-only because of it',
   },
 ];
+
+/** What this editor does with one key, or `null` for a key the schema has not got. */
+export function coverageOf(key: string, of: 'document' | 'sheet'): Covered | null {
+  const keys = of === 'document' ? DOCUMENT_KEYS : SHEET_KEYS;
+  return keys.find((one) => one.key === key) ?? null;
+}

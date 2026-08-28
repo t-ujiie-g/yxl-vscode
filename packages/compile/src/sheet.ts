@@ -102,6 +102,7 @@ export function compileSheet(ctx: Ctx, sheet: Sheet): Drafted {
       conditional: sheet.conditional
         .map((rule) => conditionalRule(ctx, rule))
         .filter((rule) => rule !== null),
+      carried: sheet.opaque,
     },
     cells,
   };

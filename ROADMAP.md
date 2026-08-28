@@ -1702,7 +1702,24 @@ coverage table below is generated from which.
       §3) and this loader rejected too, so the write path was making a file its
       own reader would not take. The refusal names the bar; the cell says the
       same on hover and in the inspector.
-- [ ] The rest stays opaque, and the inspector says so where a cell is under one
+- [x] The rest stays opaque, and the inspector says so where a cell is under one
+      **In**: a sheet's carried keys ride through `compile` as `carried` and the
+      inspector lists them under *This sheet also holds, undrawn:* — one line
+      per key, saying what it is in the coverage table's own words, each a
+      button that goes to the lines. On yxl's own corpus that is `pivots` on
+      `pivots.yxl.yaml`, `controls` on `interactive`, `background` on `layout`
+      and `slicers` on `modular`: every opaque sheet key there is, said.
+      **It is about the sheet, not the cell, and says so.** Where the construct
+      sits is not read — reading a pivot's `at:` would make the key modelled and
+      move its row of the coverage table out of *carried*, which is the next
+      phase's decision to make, not this one's. So the cell's own answer is
+      untouched: a blank cell under a pivot still says *Nothing writes this
+      cell*, and the carried list sits below it under its own heading.
+      **A key the schema has not got** — a spec's own typo — lands in the same
+      list, saying `a key this editor does not read`. The document's carried
+      keys (`active`, `properties`, `calc`, `protect`, `default_font`) are not
+      here: a cell is not under them, and the README's table is where the whole
+      schema is said.
 
 ### Phase 16 — Deterministic refactors *(lowest priority)*
 Kept, and moved last, on 2026-08-23: this is spec hygiene rather than a
@@ -3223,6 +3240,30 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-29 — What a sheet carries, said where the reader is
+Phase 15's last line, and the phase closes with it. Four sheet keys are carried
+through untouched and drawn as nothing — `pivots`, `controls`, `slicers`,
+`background` — and until now the only place that was said was the README.
+
+- **The inspector says it.** A sheet's opaque keys ride through `compile` as
+  `carried`, and the panel lists them under *This sheet also holds, undrawn:*,
+  each line a button that goes to the lines in the spec. What each one is comes
+  from `coverageOf` in the coverage table, so the panel and the README cannot
+  drift apart — the lookup that pass deleted for want of a caller comes back
+  with one.
+- **It is about the sheet, and does not pretend otherwise.** Where a pivot sits
+  is not read, so nothing here claims to know which cells it covers; the cell's
+  own answer is untouched, and a blank cell under a pivot still says *Nothing
+  writes this cell* above the carried list. Reading a pivot's `at:` would make
+  the key modelled and move its row out of *carried* — a decision for whoever
+  previews pivots, not one to take by accident here.
+- **Four test fixtures stopped being copies.** `draw`, `table` and `toolbar`
+  each carried their own seventeen-field `Showing` literal, and each broke on
+  the two fields these last two changes added. They use `showingOf` now, which
+  is what it was for; 60 lines of fixture went with them.
+- 2339 → 2345 tests. Comment shape: export 825 blocks / 1830 lines / avg 2.2,
+  private 551 / 551 / avg 1.0, inline 119 / 184 / avg 1.5; 0 over the limit.
 
 ### 2026-08-29 — Rich text is edited, a run at a time
 `rich:` was drawn on 2026-08-15 and read-only since. The bar over the grid now

@@ -1,6 +1,12 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { type Covered, DOCUMENT_KEYS, MODELED_KEYS, SHEET_KEYS } from '@yxl-vscode/spec';
+import {
+  type Covered,
+  coverageOf,
+  DOCUMENT_KEYS,
+  MODELED_KEYS,
+  SHEET_KEYS,
+} from '@yxl-vscode/spec';
 import { describe, expect, it } from 'vitest';
 import { REPO_ROOT, yxlRoot } from './corpus';
 
@@ -66,6 +72,19 @@ describe('what this editor does with each key of the schema', () => {
 
     expect(carried(DOCUMENT_KEYS, MODELED_KEYS.document)).toEqual([]);
     expect(carried(SHEET_KEYS, MODELED_KEYS.sheet)).toEqual([]);
+  });
+
+  it('answers for one key, which is what the inspector asks of it', () => {
+    expect(coverageOf('pivots', 'sheet')).toEqual({
+      key: 'pivots',
+      standing: 'opaque',
+      says: 'pivot tables',
+    });
+
+    // A sheet's key and a document's are different lists, and a key that is in
+    // neither is a key the schema has not got — a spec's own typo, say.
+    expect(coverageOf('pivots', 'document')).toBeNull();
+    expect(coverageOf('pivotts', 'sheet')).toBeNull();
   });
 
   it('says the same in the README, which is written from it', () => {

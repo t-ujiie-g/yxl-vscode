@@ -133,6 +133,7 @@ export function showingOf(of: Partial<Showing> = {}): Showing {
     selected: null,
     anchor: null,
     sources: null,
+    carried: null,
     reached: null,
     refused: null,
     said: null,

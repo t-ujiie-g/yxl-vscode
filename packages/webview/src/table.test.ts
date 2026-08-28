@@ -101,26 +101,7 @@ describe('a sheet larger than the window drawn of it', () => {
   it('stays where the reader left it when a new window is drawn', () => {
     const into = document.createElement('div');
     const on = asks();
-    const showing = (of: DrawnSheet): Showing => ({
-      drawing: drawing({ sheets: [of] }),
-      sheet: 0,
-      selected: null,
-      anchor: null,
-      sources: null,
-      reached: null,
-      refused: null,
-      said: null,
-      copied: null,
-      looking: null,
-      editable: null,
-      run: 0,
-      line: 'thin',
-      menu: null,
-      pointed: null,
-      naming: null,
-      asking: null,
-      comes: null,
-    });
+    const showing = (of: DrawnSheet): Showing => showingOf({ drawing: drawing({ sheets: [of] }) });
 
     draw(into, showing(tall), on);
     scrolled(into, 1400);
@@ -133,26 +114,7 @@ describe('a sheet larger than the window drawn of it', () => {
     const into = document.createElement('div');
     const on = asks();
     const two = drawing({ sheets: [tall, sheet({ name: 'Notes' })] });
-    const showing = (index: number): Showing => ({
-      drawing: two,
-      sheet: index,
-      selected: null,
-      anchor: null,
-      sources: null,
-      reached: null,
-      refused: null,
-      said: null,
-      copied: null,
-      looking: null,
-      editable: null,
-      run: 0,
-      line: 'thin',
-      menu: null,
-      pointed: null,
-      naming: null,
-      asking: null,
-      comes: null,
-    });
+    const showing = (index: number): Showing => showingOf({ drawing: two, sheet: index });
 
     draw(into, showing(0), on);
     scrolled(into, 1400);

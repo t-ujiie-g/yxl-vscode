@@ -2,43 +2,19 @@
 
 import { describe, expect, it } from 'vitest';
 import { draw, restate } from './draw';
-import { asks, at, cell, drawing, sheet, shown } from './harness';
+import { asks, at, cell, drawing, sheet, showingOf, shown } from './harness';
 import type { Showing } from './showing';
 
 describe('what changes without redrawing the grid', () => {
-  function showing(of: Partial<Showing> = {}): Showing {
-    return {
-      drawing: drawing(),
-      sheet: 0,
-      selected: null,
-      anchor: null,
-      sources: null,
-      reached: null,
-      refused: null,
-      said: null,
-      copied: null,
-      looking: null,
-      editable: null,
-      run: 0,
-      line: 'thin',
-      menu: null,
-      pointed: null,
-      naming: null,
-      asking: null,
-      comes: null,
-      ...of,
-    };
-  }
-
   it('keeps the very cells it drew, so a click can be followed by another', () => {
     // A grid rebuilt on selection is a grid whose cells cannot be
     // double-clicked: the second click lands on an element that was not there
     // for the first.
     const into = document.createElement('div');
-    draw(into, showing(), asks());
+    draw(into, showingOf(), asks());
 
     const cell = at(into, 1, 1);
-    restate(into, showing({ selected: { row: 1, col: 1 } }), asks());
+    restate(into, showingOf({ selected: { row: 1, col: 1 } }), asks());
 
     expect(at(into, 1, 1)).toBe(cell);
     expect(cell?.classList.contains('selected')).toBe(true);
@@ -46,8 +22,8 @@ describe('what changes without redrawing the grid', () => {
 
   it('moves the selection off the cell that had it', () => {
     const into = document.createElement('div');
-    draw(into, showing({ selected: { row: 1, col: 1 } }), asks());
-    restate(into, showing({ selected: { row: 2, col: 1 } }), asks());
+    draw(into, showingOf({ selected: { row: 1, col: 1 } }), asks());
+    restate(into, showingOf({ selected: { row: 2, col: 1 } }), asks());
 
     expect(at(into, 1, 1)?.classList.contains('selected')).toBe(false);
     expect(at(into, 2, 1)?.classList.contains('selected')).toBe(true);
@@ -56,27 +32,27 @@ describe('what changes without redrawing the grid', () => {
   it('lights up what the cursor reaches, and puts it out again', () => {
     const into = document.createElement('div');
     const reached = { says: 'the style `header`', cells: new Set(['1:1']) };
-    draw(into, showing(), asks());
+    draw(into, showingOf(), asks());
 
-    restate(into, showing({ reached }), asks());
+    restate(into, showingOf({ reached }), asks());
     expect(at(into, 1, 1)?.classList.contains('reached')).toBe(true);
 
-    restate(into, showing({ reached: { says: 'x', cells: new Set() } }), asks());
+    restate(into, showingOf({ reached: { says: 'x', cells: new Set() } }), asks());
     expect(at(into, 1, 1)?.classList.contains('reached')).toBe(false);
   });
 
   it('shows the answer about a cell under the grid', () => {
     const into = document.createElement('div');
     const sources = [{ facet: 'value', says: 'written at `A1`', file: 'f', start: 1, end: 2 }];
-    draw(into, showing(), asks());
-    restate(into, showing({ selected: { row: 1, col: 1 }, sources }), asks());
+    draw(into, showingOf(), asks());
+    restate(into, showingOf({ selected: { row: 1, col: 1 }, sources }), asks());
 
     expect(into.querySelector('.inspector dt')?.textContent).toBe('value');
   });
 
   it('draws the whole thing when there is no grid to keep', () => {
     const into = document.createElement('div');
-    restate(into, showing(), asks());
+    restate(into, showingOf(), asks());
 
     expect(into.querySelector('.grid')).not.toBeNull();
   });
@@ -95,6 +71,28 @@ describe('what the view says about a spec', () => {
       'font.bold',
     ]);
     expect(into.querySelector('.inspector h2')?.textContent).toBe('A1');
+  });
+
+  it("lists what the sheet carries and does not draw, apart from the cell's own answer", () => {
+    const carried = [{ facet: 'pivots', says: 'pivot tables', file: 'f', start: 4, end: 5 }];
+    const into = shown({ selected: { row: 1, col: 1 }, sources: [], carried });
+
+    // The cell's own answer is unchanged by the sheet holding a pivot: what
+    // the pivot covers is not read, so it says nothing about this cell.
+    expect([...into.querySelectorAll('.inspector .note')].map((one) => one.textContent)).toEqual([
+      'Nothing writes this cell.',
+      'This sheet also holds, undrawn:',
+    ]);
+    expect([...into.querySelectorAll('.inspector dt')].map((one) => one.textContent)).toEqual([
+      'pivots',
+    ]);
+  });
+
+  it('says nothing of the sort where the sheet carries nothing', () => {
+    const into = shown({ selected: { row: 1, col: 1 }, sources: [], carried: [] });
+    expect([...into.querySelectorAll('.inspector .note')].map((one) => one.textContent)).toEqual([
+      'Nothing writes this cell.',
+    ]);
   });
 
   it('marks a cell a diagnostic is about, and says what', () => {
@@ -261,26 +259,11 @@ describe('what the view says about a spec', () => {
 });
 
 describe('the switches over the grid', () => {
-  const state = (selected: Showing['selected']): Showing => ({
-    drawing: drawing({ sheets: [sheet({ cells: [cell(1, 1, { value: 'APAC' })] })] }),
-    sheet: 0,
-    selected,
-    anchor: null,
-    sources: null,
-    reached: null,
-    refused: null,
-    said: null,
-    copied: null,
-    looking: null,
-    editable: null,
-    run: 0,
-    line: 'thin',
-    menu: null,
-    pointed: null,
-    naming: null,
-    asking: null,
-    comes: null,
-  });
+  const state = (selected: Showing['selected']): Showing =>
+    showingOf({
+      drawing: drawing({ sheets: [sheet({ cells: [cell(1, 1, { value: 'APAC' })] })] }),
+      selected,
+    });
 
   it('follow the selection, which arrives after the grid was drawn', () => {
     const into = document.createElement('div');

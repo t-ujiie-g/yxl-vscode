@@ -1,6 +1,6 @@
 import { columnLabel, nextSheetName, painted, type SheetName } from '@yxl-vscode/units';
 import { says } from './menus';
-import type { Choice, Drawing, Editable, Refused, Summed, Uncomputed } from './protocol';
+import type { Choice, Drawing, Editable, Refused, Source, Summed, Uncomputed } from './protocol';
 import type { Asks, Reached, Showing } from './showing';
 
 /** The parameters as boxes to turn (`docs/spec.md` §7); emptying one gives the default back. */
@@ -169,13 +169,22 @@ export function inspector(showing: Showing, asks: Asks): HTMLElement {
   const editable = showing.editable;
   if (editable !== null && editable !== 'direct') panel.append(locked(editable));
 
-  if (showing.sources?.length === 0) {
-    panel.append(note('Nothing writes this cell.'));
-    return panel;
+  if (showing.sources?.length === 0) panel.append(note('Nothing writes this cell.'));
+  else if (showing.sources !== null) panel.append(sourceList(showing.sources, asks));
+
+  const carried = showing.carried ?? [];
+  if (carried.length > 0) {
+    panel.append(note('This sheet also holds, undrawn:'), sourceList(carried, asks));
   }
 
+  return panel;
+}
+
+/** A list of sources, each line a place in the spec to go to. */
+function sourceList(sources: readonly Source[], asks: Asks): HTMLElement {
   const list = document.createElement('dl');
-  for (const source of showing.sources ?? []) {
+
+  for (const source of sources) {
     const facet = document.createElement('dt');
     facet.textContent = source.facet;
 
@@ -195,8 +204,7 @@ export function inspector(showing: Showing, asks: Asks): HTMLElement {
     list.append(facet, says);
   }
 
-  panel.append(list);
-  return panel;
+  return list;
 }
 
 /** The sheets, as the tabs both spreadsheets keep by the grid, and the `+` that makes another. */

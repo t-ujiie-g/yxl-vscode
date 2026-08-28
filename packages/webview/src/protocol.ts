@@ -379,13 +379,18 @@ export interface Source {
   readonly end: number;
 }
 
-/** The answer to one `inspect`, for the cell that asked. */
+/**
+ * The answer to one `inspect`, for the cell that asked. `carried` is what the
+ * *sheet* holds and this editor does not draw (ADR-011) — about the sheet the
+ * cell is on, not about the cell.
+ */
 export interface Inspected {
   readonly kind: 'inspected';
   readonly sheet: string;
   readonly row: number;
   readonly col: number;
   readonly sources: readonly Source[];
+  readonly carried: readonly Source[];
 }
 
 /** The cells the node under the text cursor reaches, named with their sheet. */
