@@ -3241,6 +3241,34 @@ than widening it silently.
 
 ## 11. Living changelog
 
+### 2026-08-29 — What a sheet keeps in another file, said once
+`docs/spec.md` §8's own example is `cells: { $include: … }`, and only two
+gestures — a note and a link — said what that means for a write. The rest
+refused in whatever words the layer underneath happened to use.
+
+- **Nothing was ever damaged**, which is why this waited: a new cell beside an
+  `$include` was refused by the checker with the loader's own sentence (*an
+  `$include` replaces its whole node, so it takes no other key*), and a
+  validation by the patch algebra's (*`validations` is already there*). Both are
+  true and neither says what the reader did or what to do about it.
+- **`keptElsewhere` in `direct.ts`** answers it once — *`Sales` keeps its cells
+  in another file* — with the noun each key is read in (`comments` is *notes*,
+  `data` is *data blocks*) in one table beside it. `setNote` and `setLink` keep
+  the wording they already had, since it is where the sentence comes from.
+- **Twelve write paths ask it**: typing into a cell nothing writes yet, pasting,
+  keeping a rectangle as a `data:` block, and the gestures that write
+  `validations`, `tables`, `charts`, `images`, `merges`, `comments` and `links`.
+  Where the gesture is one of several *answers* rather than a refusal — a band
+  of its own, a `formulas:` range — the answer is **not offered**, since an
+  answer offered is one this editor can make (ADR-001).
+- **A cell the included file writes is still edited there**, which is what the
+  node ids already carried: only the keys a gesture would *add to* are refused.
+- `included.test.ts` holds the rule in one place rather than a case per gesture;
+  five of its seven checks fail on the old code, and the two that do not are the
+  ones that pin what did not change.
+- 2348 → 2355 tests. Comment shape: export 836 blocks / 1851 lines / avg 2.2,
+  private 553 / 553 / avg 1.0, inline 121 / 188 / avg 1.6; 0 over the limit.
+
 ### 2026-08-29 — The fixtures the tests were copying
 No behaviour changed. The §8 lenses over the whole tree, at the end of Phase 15;
 581 lines net came out, and the two most-copied blocks in the repo are gone.

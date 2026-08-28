@@ -10,7 +10,14 @@ import {
   rangeOf,
   type SheetName,
 } from '@yxl-vscode/units';
-import { type Intent, located, type Projection, type Reading, refused } from './direct';
+import {
+  type Intent,
+  keptElsewhere,
+  located,
+  type Projection,
+  type Reading,
+  refused,
+} from './direct';
 
 /** A rectangle a reader asked to draw as one cell, or to take back apart (`docs/spec.md` §2). */
 export interface Merging {
@@ -43,6 +50,9 @@ export function setMerged(spec: Projection, where: Merging, read: Reading): Inte
 
   const found = located(sheet.node, read);
   if (found.kind === 'refused') return found;
+
+  const away = keptElsewhere(found.node, KEY.merges, where.sheet);
+  if (away !== null) return refused(away);
 
   const held = sheet.merges[0];
   const one = held === undefined ? null : located(held.node, read);

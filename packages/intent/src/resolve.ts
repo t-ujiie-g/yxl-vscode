@@ -29,6 +29,7 @@ import {
   type Found,
   holding,
   type Intent,
+  keptElsewhere,
   located,
   type Reading,
   type Text,
@@ -276,6 +277,7 @@ function newCell(
 
   const found = located(sheet.node, read);
   if (found.kind === 'refused' || found.node.kind !== 'map') return null;
+  if (keptElsewhere(found.node, KEY.cells, where.sheet) !== null) return null;
 
   const written = holds(found.node, KEY.cells);
   const op = entryOp(

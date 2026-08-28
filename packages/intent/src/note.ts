@@ -1,8 +1,15 @@
 import { entryOf, type Node, type Op, type Path, renderScalar } from '@yxl-vscode/cst';
-import { INCLUDE_KEY, KEY } from '@yxl-vscode/spec';
+import { KEY } from '@yxl-vscode/spec';
 import type { A1Addr, SheetName } from '@yxl-vscode/units';
 import { nothingChanges } from '@yxl-vscode/verify';
-import { type Intent, type Projection, type Reading, refused, writtenSheet } from './direct';
+import {
+  type Intent,
+  keptElsewhere,
+  type Projection,
+  type Reading,
+  refused,
+  writtenSheet,
+} from './direct';
 
 /** A note on a cell as a gesture asks for it: what it says, or `null` to take it off. */
 export interface Noting {
@@ -20,10 +27,10 @@ export function setNote(spec: Projection, where: Noting, read: Reading): Intent 
   const found = writtenSheet(spec, where.sheet, read);
   if (found.kind === 'refused') return found;
 
+  const away = keptElsewhere(found.node, KEY.comments, where.sheet);
+  if (away !== null) return refused(away);
+
   const comments = entryOf(found.node, KEY.comments)?.value ?? null;
-  if (comments !== null && entryOf(comments, INCLUDE_KEY) !== undefined) {
-    return refused(`\`${where.sheet}\` keeps its notes in another file`);
-  }
 
   const already = comments === null ? null : (entryOf(comments, where.at)?.value ?? null);
   const under: Path = [...found.path, KEY.comments];

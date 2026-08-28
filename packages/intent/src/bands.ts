@@ -3,7 +3,7 @@ import { entryOf, holds, type Node, nodeAt, type Op } from '@yxl-vscode/cst';
 import { type Axis, BAND_KEYS, KEY } from '@yxl-vscode/spec';
 import { columnLabel } from '@yxl-vscode/units';
 import { itemOf } from './anchored';
-import { type Found, located, type Reading } from './direct';
+import { type Found, keptElsewhere, located, type Reading } from './direct';
 import type { Candidate } from './resolve';
 
 /** A run of columns or rows a gesture names, as a band's `at` covers one. */
@@ -30,6 +30,8 @@ export function bandOfItsOwn(
   if (found.kind === 'refused' || found.node.kind !== 'map') return null;
 
   const key = BAND_KEYS[span.axis].at;
+  if (keptElsewhere(found.node, key, sheet.name) !== null) return null;
+
   const body = [`at: ${spelled(span)}`, ...keys.map(([one, value]) => `${one}: ${value}`)].join(
     '\n',
   );

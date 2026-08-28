@@ -10,7 +10,7 @@ import {
   type SheetName,
 } from '@yxl-vscode/units';
 import { putEntries, sequenceIn } from './anchored';
-import { type Held, located, type Projection, type Reading } from './direct';
+import { type Held, keptElsewhere, located, type Projection, type Reading } from './direct';
 import { type Entry, landed, taking } from './landing';
 import type { Candidate } from './resolve';
 
@@ -135,6 +135,10 @@ function asRange(sheet: CompiledSheet, where: Filling, read: Reading): Candidate
 
   const found = located(sheet.node, read);
   if (found.kind === 'refused' || ranges.length === 0) return null;
+
+  // Not an answer at all where the ranges are another file's: an answer offered
+  // is one this editor can make.
+  if (keptElsewhere(found.node, KEY.formulas, where.sheet) !== null) return null;
 
   return {
     id: 'range',
