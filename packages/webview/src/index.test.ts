@@ -484,6 +484,40 @@ describe('what the view sends', () => {
     ]);
   });
 
+  it('takes the question down as soon as an answer is taken, or is left', () => {
+    const { into, told } = view();
+    const asked: Refused = {
+      kind: 'refused',
+      why: 'filled by a range',
+      about: { kind: 'edit', ...typed },
+      canOverride: true,
+      choices: [{ id: 'rangeFormula', what: 'Change the range', moves: 2, sample: ['C2'] }],
+    };
+
+    told(asked);
+    into.querySelector<HTMLElement>('.refused .choice')?.click();
+    expect(into.querySelector('.over')).toBeNull();
+
+    told(asked);
+    into.querySelector<HTMLElement>('.refused .cancel')?.click();
+    expect(into.querySelector('.over')).toBeNull();
+  });
+
+  it('takes it down when the spec moves under it, since the answers were about the old one', () => {
+    const { into, told } = view();
+    told({
+      kind: 'refused',
+      why: 'filled by a range',
+      about: { kind: 'edit', ...typed },
+      canOverride: true,
+      choices: [],
+    });
+    expect(into.querySelector('.over')).not.toBeNull();
+
+    told(drawing);
+    expect(into.querySelector('.over')).toBeNull();
+  });
+
   it('sends the reason typed beside the offer', () => {
     const { into, sent, told } = view();
     told({

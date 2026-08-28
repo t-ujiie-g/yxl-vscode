@@ -92,6 +92,25 @@ export function draw(into: HTMLElement, showing: Showing, asks: Asks): void {
   } else if (held) {
     focusCell(into, showing);
   }
+
+  asking(into, showing, asks);
+}
+
+/** The question a refusal asks, over the panel; the one already open stays, so a redraw takes no keyboard back. */
+function asking(into: HTMLElement, showing: Showing, asks: Asks): void {
+  const open = into.querySelector('.over');
+  const refused = showing.refused;
+
+  if (refused === null) {
+    open?.remove();
+    return;
+  }
+  if (open?.getAttribute('data-why') === refused.why) return;
+
+  open?.remove();
+  const over = refusal(refused, asks);
+  into.append(over);
+  over.querySelector<HTMLElement>('button')?.focus();
 }
 
 /** The keys the page answers rather than a cell, and never where a box of text has them. */
@@ -164,6 +183,7 @@ export function restate(into: HTMLElement, showing: Showing, asks: Asks): void {
 
   say(under, showing, asks);
   told(into, showing, asks);
+  asking(into, showing, asks);
   fit(into);
 }
 
@@ -175,7 +195,6 @@ function say(under: Element, showing: Showing, asks: Asks): void {
   const comes = showing.comes === null ? null : comesTo(showing.comes);
   if (comes !== null) under.append(comes);
   if (showing.said !== null) under.append(note(showing.said));
-  if (showing.refused !== null) under.append(refusal(showing.refused, asks));
   if (drawing.uncomputed !== null) under.append(note(uncomputed(drawing.uncomputed)));
 
   const sheet = drawing.sheets[showing.sheet];

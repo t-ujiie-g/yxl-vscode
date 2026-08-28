@@ -226,6 +226,7 @@ export interface Asks {
   readonly goOn: (by: number) => void;
   readonly goTo: (address: string) => void;
   readonly stopLooking: () => void;
+  readonly stopAsking: () => void;
   readonly answer: (asked: About, choice: string) => void;
   readonly overrideWith: (typed: Typed, reason: string) => void;
 }

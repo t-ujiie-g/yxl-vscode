@@ -95,6 +95,65 @@ describe('what the view says about a spec', () => {
     ]);
   });
 
+  it('asks a refusal as a question over the panel, with the keyboard in it', () => {
+    const typed = { sheet: 'Sales', row: 5, col: 2, text: '=B1*2' };
+    const refused = {
+      kind: 'refused',
+      why: 'B5 is filled by a range',
+      about: { kind: 'edit', ...typed },
+      canOverride: true,
+      choices: [{ id: 'rangeFormula', what: "Change the range's formula", moves: 2, sample: [] }],
+    } as const;
+    const into = shown({ refused });
+
+    const over = into.querySelector('.over');
+    expect(over?.querySelector('.refused')?.getAttribute('aria-modal')).toBe('true');
+    expect(document.activeElement).toBe(into.querySelector('.refused .choice'));
+  });
+
+  it('takes the question back on `Esc`, and on the way out it offers', () => {
+    const refused = {
+      kind: 'refused',
+      why: 'B5 is filled by a range',
+      about: null,
+      canOverride: false,
+      choices: [],
+    } as const;
+    const on = asks();
+    const into = shown({ refused }, on);
+
+    into
+      .querySelector('.over')
+      ?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    expect(on.stopAsking).toHaveBeenCalled();
+
+    into.querySelector<HTMLElement>('.refused .cancel')?.click();
+    expect(on.stopAsking).toHaveBeenCalledTimes(2);
+  });
+
+  it('leaves a question that is already being answered alone', () => {
+    // A redraw must not take the keyboard back, or the reason being typed.
+    const refused = {
+      kind: 'refused',
+      why: 'B5 is filled by a range',
+      about: { kind: 'edit', sheet: 'Sales', row: 5, col: 2, text: '=B1*2' },
+      canOverride: true,
+      choices: [],
+    } as const;
+    const on = asks();
+    const into = shown({ refused }, on);
+
+    const why = into.querySelector<HTMLInputElement>('.refused .reason');
+    if (why === null) throw new Error('nothing to type a reason into');
+    why.value = 'this row is counted by hand';
+
+    restate(into, showingOf({ refused }), on);
+    expect(into.querySelector<HTMLInputElement>('.refused .reason')?.value).toBe(
+      'this row is counted by hand',
+    );
+    expect(into.querySelectorAll('.over')).toHaveLength(1);
+  });
+
   it('marks a cell a diagnostic is about, and says what', () => {
     const problems = [{ row: 1, col: 1, message: 'no value is declared as `nosuch`' }];
     const drawn = at(shown({ drawing: drawing({ sheets: [sheet({ problems })] }) }), 1, 1);

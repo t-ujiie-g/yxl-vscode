@@ -1066,12 +1066,49 @@ body {
   color: var(--vscode-descriptionForeground);
 }
 
+/* A refused edit is a question, and it takes the panel until it is answered:
+   one the grid can be typed past is one a reader cannot tell they were asked. */
+.over {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgb(0 0 0 / 45%);
+}
+
 .refused {
-  margin: 0 0 0.4rem;
-  padding: 0.3rem 0.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.4rem;
+  max-width: 34rem;
+  max-height: 100%;
+  overflow: auto;
+  padding: 0.7rem 0.9rem;
   border-left: 3px solid var(--vscode-editorWarning-foreground);
-  background: var(--vscode-inputValidation-warningBackground, transparent);
+  background: var(--vscode-editorWidget-background, var(--vscode-panel-background));
   color: var(--vscode-foreground);
+  box-shadow: 0 4px 18px rgb(0 0 0 / 45%);
+}
+
+.refused .why {
+  margin: 0;
+}
+
+/* The exception and its reason are one line, since the reason is about it. */
+.refused .anyway {
+  display: flex;
+  gap: 0.3rem;
+  margin: 0;
+  width: 100%;
+}
+
+.refused .cancel {
+  margin-top: 0.2rem;
+  color: var(--vscode-descriptionForeground);
 }
 
 .reason {
