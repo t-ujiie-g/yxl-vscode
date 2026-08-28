@@ -1,27 +1,11 @@
-import { compile } from '@yxl-vscode/compile';
 import { nodeAt, parse } from '@yxl-vscode/cst';
-import { type IncludeReader, load } from '@yxl-vscode/loader';
-import { type A1Addr, type FilePath, filePath, type SheetName } from '@yxl-vscode/units';
+import type { A1Addr, SheetName } from '@yxl-vscode/units';
 import { type Ctx, checked } from '@yxl-vscode/verify';
 import { describe, expect, it } from 'vitest';
-import { excepting, type Intent, keyed, reading, setFormula, setValue, type Text } from './direct';
-
-const ROOT = filePath('spec.yxl.yaml') ?? ('' as FilePath);
+import { excepting, type Intent, keyed, reading, setFormula, setValue } from './direct';
+import { files, ROOT } from './harness';
 
 /** A spec of one or more files, read the way the extension reads one. */
-function files(sources: Record<string, string>) {
-  const text: Text = (file) => sources[file] ?? null;
-  const includes: IncludeReader = (_from, path) => {
-    const file = filePath(path);
-    return file === null || sources[path] === undefined ? null : { file, source: sources[path] };
-  };
-
-  const source = sources[ROOT] ?? '';
-  const { doc } = load(parse(source, { file: ROOT }), includes);
-  if (doc === null) throw new Error('did not load');
-
-  return { doc, grid: compile(doc, { read: includes }), read: reading(text), includes, source };
-}
 
 function edited(sources: Record<string, string>, intent: Intent): string {
   if (intent.kind === 'refused') throw new Error(`refused: ${intent.why}`);

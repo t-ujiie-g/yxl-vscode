@@ -1,63 +1,28 @@
-import { compile } from '@yxl-vscode/compile';
-import { parse } from '@yxl-vscode/cst';
-import { type IncludeReader, load } from '@yxl-vscode/loader';
 import type { Visibility } from '@yxl-vscode/spec';
-import { type FilePath, filePath, type SheetName } from '@yxl-vscode/units';
-import { type Ctx, checked } from '@yxl-vscode/verify';
+import type { SheetName } from '@yxl-vscode/units';
 import { describe, expect, it } from 'vitest';
-import { reading } from './direct';
+import { files, tried } from './harness';
 import { addSheet, deleteSheet, moveSheet, setTab } from './sheets';
-
-const ROOT = filePath('spec.yxl.yaml') ?? ('' as FilePath);
-
-function files(source: string) {
-  const includes: IncludeReader = (_from, path) => (path === ROOT ? { file: ROOT, source } : null);
-  const { doc } = load(parse(source, { file: ROOT }), includes);
-  if (doc === null) throw new Error('did not load');
-
-  return { doc, grid: compile(doc, { read: includes }), read: reading(() => source), includes };
-}
 
 /** The sheet added, through the checker — the file, or why not. */
 function added(source: string, name: string): string {
   const { doc, grid, read } = files(source);
   const intent = addSheet({ doc, grid }, { name }, read);
-  if (intent.kind === 'refused') return `refused: ${intent.why}`;
-  if (intent.kind !== 'edit') throw new Error('a file was not written');
-
-  const { includes } = files(source);
-  const ctx: Ctx = { root: ROOT, file: intent.file, read: includes };
-  const done = checked(source, intent.patch, intent.expects, ctx);
-
-  return done.ok === false ? `refused: ${done.diagnostics[0]?.message ?? 'a surprise'}` : done.text;
+  return tried(source, intent);
 }
 
 /** The sheet taken out, through the checker — the file, or why not. */
 function deleted(source: string, sheet: string): string {
   const { doc, grid, read } = files(source);
   const intent = deleteSheet({ doc, grid }, { sheet: sheet as SheetName }, read);
-  if (intent.kind === 'refused') return `refused: ${intent.why}`;
-  if (intent.kind !== 'edit') throw new Error('a file was not written');
-
-  const { includes } = files(source);
-  const ctx: Ctx = { root: ROOT, file: intent.file, read: includes };
-  const done = checked(source, intent.patch, intent.expects, ctx);
-
-  return done.ok === false ? `refused: ${done.diagnostics[0]?.message ?? 'a surprise'}` : done.text;
+  return tried(source, intent);
 }
 
 /** The sheet moved, through the checker — the file, or why not. */
 function moved(source: string, sheet: string, to: number): string {
   const { doc, grid, read } = files(source);
   const intent = moveSheet({ doc, grid }, { sheet: sheet as SheetName, to }, read);
-  if (intent.kind === 'refused') return `refused: ${intent.why}`;
-  if (intent.kind !== 'edit') throw new Error('a file was not written');
-
-  const { includes } = files(source);
-  const ctx: Ctx = { root: ROOT, file: intent.file, read: includes };
-  const done = checked(source, intent.patch, intent.expects, ctx);
-
-  return done.ok === false ? `refused: ${done.diagnostics[0]?.message ?? 'a surprise'}` : done.text;
+  return tried(source, intent);
 }
 
 /** The tab set, through the checker — the file, or why not. */
@@ -72,14 +37,7 @@ function tabbed(
     { sheet: sheet as SheetName, ...of, color: of.color as never },
     read,
   );
-  if (intent.kind === 'refused') return `refused: ${intent.why}`;
-  if (intent.kind !== 'edit') throw new Error('a file was not written');
-
-  const { includes } = files(source);
-  const ctx: Ctx = { root: ROOT, file: intent.file, read: includes };
-  const done = checked(source, intent.patch, intent.expects, ctx);
-
-  return done.ok === false ? `refused: ${done.diagnostics[0]?.message ?? 'a surprise'}` : done.text;
+  return tried(source, intent);
 }
 
 const ONE = 'sheets:\n  - name: Sales\n    cells:\n      A1: 1\n';

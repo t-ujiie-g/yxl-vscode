@@ -1,3 +1,4 @@
+/** The start of the line an offset is on, which is where its indent begins. */
 export function lineStart(source: string, offset: number): number {
   return source.lastIndexOf('\n', offset - 1) + 1;
 }

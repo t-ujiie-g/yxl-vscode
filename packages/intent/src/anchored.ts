@@ -44,11 +44,23 @@ function itemsUnder(found: { node: Node; path: Path }, key: string): readonly No
   return written?.kind === 'seq' ? written.items : [];
 }
 
-/** One entry going in after the ones already there, with the key itself where there are none. */
-export function putEntry(where: Anchored, body: string): Op {
-  return where.many === 0
-    ? { op: 'addSource', path: where.sheet, key: where.key, source: itemOf(body) }
-    : { op: 'insertSource', path: where.under, index: where.many, source: body };
+/**
+ * Entries going in after the ones already there, in the order given, with the
+ * key itself where the sheet has none.
+ */
+export function putEntries(where: Anchored, bodies: readonly string[]): Op[] {
+  if (bodies.length === 0) return [];
+  if (where.many === 0) {
+    const source = bodies.map(itemOf).join('\n');
+    return [{ op: 'addSource', path: where.sheet, key: where.key, source }];
+  }
+
+  return bodies.map((body, index) => ({
+    op: 'insertSource',
+    path: where.under,
+    index: where.many + index,
+    source: body,
+  }));
 }
 
 /** The entries a rectangle reaches, taken out; the key goes with the last of them. */

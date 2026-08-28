@@ -1,22 +1,9 @@
-import { compile } from '@yxl-vscode/compile';
-import { parse } from '@yxl-vscode/cst';
-import { type IncludeReader, load } from '@yxl-vscode/loader';
-import { type FilePath, filePath, type Line, type SheetName } from '@yxl-vscode/units';
-import { type Ctx, checked } from '@yxl-vscode/verify';
+import type { Line, SheetName } from '@yxl-vscode/units';
 import { describe, expect, it } from 'vitest';
-import { reading } from './direct';
+import { files, tried } from './harness';
 import { drawLine } from './line';
 
-const ROOT = filePath('spec.yxl.yaml') ?? ('' as FilePath);
 const SALES = 'sheets:\n  - name: Sales\n';
-
-function files(source: string) {
-  const includes: IncludeReader = (_from, path) => (path === ROOT ? { file: ROOT, source } : null);
-  const { doc } = load(parse(source, { file: ROOT }), includes);
-  if (doc === null) throw new Error('did not load');
-
-  return { doc, grid: compile(doc, { read: includes }), read: reading(() => source), includes };
-}
 
 const row = (at: number, by = 1): Line => ({ sheet: 'Sales' as SheetName, axis: 'row', at, by });
 const column = (at: number, by = 1): Line => ({
@@ -30,14 +17,7 @@ const column = (at: number, by = 1): Line => ({
 function drawn(source: string, line: Line): string {
   const { doc, grid, read } = files(source);
   const intent = drawLine({ doc, grid }, line, read);
-  if (intent.kind === 'refused') return `refused: ${intent.why}`;
-  if (intent.kind !== 'edit') throw new Error('a file was not written');
-
-  const { includes } = files(source);
-  const ctx: Ctx = { root: ROOT, file: intent.file, read: includes };
-  const done = checked(source, intent.patch, intent.expects, ctx);
-
-  return done.ok === false ? `refused: ${done.diagnostics[0]?.message ?? 'a surprise'}` : done.text;
+  return tried(source, intent);
 }
 
 describe('a row inserted', () => {

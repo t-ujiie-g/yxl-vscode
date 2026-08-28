@@ -169,6 +169,13 @@ describe('apply', () => {
       const { diagnostics } = edit(SOURCE, { op: 'clear', path: ['notes', 'body'] });
       expect(diagnostics[0]?.code).toBe(CODE.blockScalarNotSupported);
     });
+
+    it('refuses one with no body, which has no indent to write the value at', () => {
+      const { diagnostics, text } = edit('body: |\n', { op: 'set', path: ['body'], value: 'one' });
+
+      expect(diagnostics[0]?.code).toBe(CODE.emptyBlockScalar);
+      expect(text).toBe('body: |\n');
+    });
   });
 
   describe('clear', () => {

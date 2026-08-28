@@ -14,6 +14,7 @@ export interface Diagnostic {
   readonly span: Span;
 }
 
+/** One error against a node, which is the only severity a projection reports today. */
 export function error(
   code: string,
   message: string,

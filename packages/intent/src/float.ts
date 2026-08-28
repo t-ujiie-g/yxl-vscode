@@ -11,7 +11,7 @@ import {
   type SheetName,
 } from '@yxl-vscode/units';
 import { nothingChanges } from '@yxl-vscode/verify';
-import { putEntry, sequenceIn } from './anchored';
+import { putEntries, sequenceIn } from './anchored';
 import {
   type Found,
   type Intent,
@@ -94,7 +94,7 @@ export function chartOver(spec: Projection, where: Charting, read: Reading): Int
     ]),
   ].join('\n');
 
-  const ops = [putEntry(sequenceIn(found, KEY.charts), body)];
+  const ops = putEntries(sequenceIn(found, KEY.charts), [body]);
   return { kind: 'edit', file: found.file, patch: { ops }, expects: nothingChanges };
 }
 
@@ -157,7 +157,7 @@ export function imageAt(spec: Projection, where: Picturing, read: Reading): Inte
   if (why !== null) return refused(why);
 
   const body = `${KEY.at}: ${where.at}\n${KEY.file}: ${quoted(where.path)}`;
-  const ops = [putEntry(sequenceIn(found, KEY.images), body)];
+  const ops = putEntries(sequenceIn(found, KEY.images), [body]);
   return { kind: 'edit', file: found.file, patch: { ops }, expects: nothingChanges };
 }
 

@@ -136,6 +136,13 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
     if (drawing !== null) restate(into, showing(drawing), asks);
   };
 
+  /** A gesture on its way to the host, which takes down what the host said about the last one. */
+  const send = (message: FromView): void => {
+    refused = null;
+    said = null;
+    host.postMessage(message);
+  };
+
   /** Whether what the reader pointed at is already selected, which is what leaves a menu's run alone. */
   const already = (at: Pointed): boolean => {
     if (drawing === null) return false;
@@ -257,40 +264,30 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       redraw();
     },
     addSheet: (name) => {
-      refused = null;
-      said = null;
       adding = name;
-      host.postMessage({ kind: 'addSheet', name });
+      send({ kind: 'addSheet', name });
     },
     setTab: (sheet, of) => {
-      refused = null;
-      said = null;
       naming = null;
-      host.postMessage({ kind: 'setTab', sheet, ...of });
+      send({ kind: 'setTab', sheet, ...of });
     },
     moveSheet: (sheet, to) => {
-      refused = null;
-      said = null;
       naming = null;
-      host.postMessage({ kind: 'moveSheet', sheet, to });
+      send({ kind: 'moveSheet', sheet, to });
     },
     deleteSheet: (sheet) => {
-      refused = null;
-      said = null;
       naming = null;
-      host.postMessage({ kind: 'deleteSheet', sheet });
+      send({ kind: 'deleteSheet', sheet });
     },
     nameSheet: (index) => {
       naming = index;
       redraw();
     },
     renameSheet: (sheet, name) => {
-      refused = null;
-      said = null;
       naming = null;
       adding = name;
       redraw();
-      host.postMessage({ kind: 'renameSheet', sheet, name });
+      send({ kind: 'renameSheet', sheet, name });
     },
     select: (row, col) => {
       selected = { row, col };
@@ -326,38 +323,29 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       host.postMessage({ kind: 'window', sheet: named(), row, col });
     },
     edit: (row, col, text) => {
-      refused = null;
-      said = null;
       typedAt = { row, col };
-      host.postMessage({ kind: 'edit', sheet: named(), row, col, text });
+      send({ kind: 'edit', sheet: named(), row, col, text });
     },
     editRun: (row, col, index, text) => {
-      refused = null;
-      said = null;
       typedAt = { row, col };
-      host.postMessage({ kind: 'editRun', sheet: named(), row, col, index, text });
+      send({ kind: 'editRun', sheet: named(), row, col, index, text });
     },
     showRun: (index) => {
       if (selected !== null) run = { ...selected, at: index };
     },
     empty: (row, col) => {
-      refused = null;
-      said = null;
-
       const rect = spanned();
       if (rect === null) {
         typedAt = { row, col };
-        host.postMessage({ kind: 'edit', sheet: named(), row, col, text: '' });
+        send({ kind: 'edit', sheet: named(), row, col, text: '' });
         return;
       }
 
       typedAt = { row: rect.top, col: rect.left };
-      host.postMessage({ kind: 'empty', sheet: named(), ...rect });
+      send({ kind: 'empty', sheet: named(), ...rect });
     },
     undo: (redo) => {
-      refused = null;
-      said = null;
-      host.postMessage({ kind: 'undo', redo });
+      send({ kind: 'undo', redo });
     },
     copy: (row, col, cut) => {
       refused = null;
@@ -369,9 +357,7 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       restated();
     },
     paste: (row, col) => {
-      refused = null;
-      said = null;
-      host.postMessage({
+      send({
         kind: 'pasteAt',
         sheet: named(),
         row,
@@ -390,70 +376,48 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       restated();
     },
     freeze: (at) => {
-      refused = null;
-      said = null;
-      host.postMessage({ kind: 'freeze', sheet: named(), at });
+      send({ kind: 'freeze', sheet: named(), at });
     },
     filter: (on) => {
-      refused = null;
-      said = null;
-      host.postMessage({ kind: 'filter', sheet: named(), on, ...acting() });
+      send({ kind: 'filter', sheet: named(), on, ...acting() });
     },
     formatTable: (on) => {
-      refused = null;
-      said = null;
-      host.postMessage({ kind: 'tabled', sheet: named(), on, ...acting() });
+      send({ kind: 'tabled', sheet: named(), on, ...acting() });
     },
     chart: () => {
-      refused = null;
-      said = null;
-      host.postMessage({ kind: 'chart', sheet: named(), ...acting() });
+      send({ kind: 'chart', sheet: named(), ...acting() });
     },
     image: (row, col) => {
-      refused = null;
-      said = null;
-      host.postMessage({ kind: 'image', sheet: named(), row, col });
+      send({ kind: 'image', sheet: named(), row, col });
     },
     moveFloat: (node, to) => {
-      refused = null;
-      said = null;
-      host.postMessage({ kind: 'moveFloat', sheet: named(), node, ...to });
+      send({ kind: 'moveFloat', sheet: named(), node, ...to });
     },
     sizeFloat: (node, size) => {
-      refused = null;
-      said = null;
-      host.postMessage({ kind: 'sizeFloat', sheet: named(), node, ...size });
+      send({ kind: 'sizeFloat', sheet: named(), node, ...size });
     },
     askAt: (asked) => {
       asking = asked;
       redraw();
     },
     note: (row, col, text) => {
-      refused = null;
-      said = null;
       asking = null;
       redraw();
-      host.postMessage({ kind: 'note', sheet: named(), row, col, text });
+      send({ kind: 'note', sheet: named(), row, col, text });
     },
     link: (row, col, to) => {
-      refused = null;
-      said = null;
       asking = null;
       redraw();
-      host.postMessage({ kind: 'link', sheet: named(), row, col, link: to });
+      send({ kind: 'link', sheet: named(), row, col, link: to });
     },
     validate: (choices) => {
-      refused = null;
-      said = null;
       asking = null;
       redraw();
-      host.postMessage({ kind: 'validate', sheet: named(), ...acting(), choices });
+      send({ kind: 'validate', sheet: named(), ...acting(), choices });
     },
     follow: (row, col) => {
-      refused = null;
-      said = null;
       pressed = false;
-      host.postMessage({ kind: 'follow', sheet: named(), row, col });
+      send({ kind: 'follow', sheet: named(), row, col });
     },
     takeAll: () => {
       const of = drawing?.sheets[sheet];
@@ -501,67 +465,47 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       redraw();
     },
     hide: (axis, first, last, hidden) => {
-      refused = null;
-      said = null;
-      host.postMessage({ kind: 'hide', sheet: named(), axis, first, last, hidden });
+      send({ kind: 'hide', sheet: named(), axis, first, last, hidden });
     },
     sort: (down) => {
       const rect = spanned();
       if (rect === null) return;
 
-      refused = null;
-      said = null;
-      host.postMessage({ kind: 'sort', sheet: named(), ...rect, down });
+      send({ kind: 'sort', sheet: named(), ...rect, down });
     },
     fill: (axis) => {
       const rect = spanned();
       if (rect === null) return;
 
-      refused = null;
-      said = null;
-      host.postMessage({ kind: 'fill', sheet: named(), ...rect, axis });
+      send({ kind: 'fill', sheet: named(), ...rect, axis });
     },
     table: () => {
       const rect = spanned();
       if (rect === null) return;
 
-      refused = null;
-      said = null;
-      host.postMessage({ kind: 'table', sheet: named(), ...rect });
+      send({ kind: 'table', sheet: named(), ...rect });
     },
     merge: (merged) => {
       const rect = spanned();
       if (rect === null && merged) return;
 
-      refused = null;
-      said = null;
       const where = rect ?? between(selected ?? { row: 1, col: 1 }, selected ?? { row: 1, col: 1 });
-      host.postMessage({ kind: 'merge', sheet: named(), ...where, merged });
+      send({ kind: 'merge', sheet: named(), ...where, merged });
     },
     line: (axis, at, by) => {
-      refused = null;
-      said = null;
-      host.postMessage({ kind: 'line', sheet: named(), axis, at, by });
+      send({ kind: 'line', sheet: named(), axis, at, by });
     },
     group: (axis, first, last, level) => {
-      refused = null;
-      said = null;
-      host.postMessage({ kind: 'group', sheet: named(), axis, first, last, level });
+      send({ kind: 'group', sheet: named(), axis, first, last, level });
     },
     fit: (axis, at) => {
-      refused = null;
-      said = null;
-      host.postMessage({ kind: 'fit', sheet: named(), axis, at });
+      send({ kind: 'fit', sheet: named(), axis, at });
     },
     resize: (axis, at, size) => {
-      refused = null;
-      said = null;
-      host.postMessage({ kind: 'resize', sheet: named(), axis, ...dragging(axis, at), size });
+      send({ kind: 'resize', sheet: named(), axis, ...dragging(axis, at), size });
     },
     wear: (want, over) => {
-      refused = null;
-      said = null;
-      host.postMessage({ kind: 'wear', sheet: named(), ...over, want, whole: taken });
+      send({ kind: 'wear', sheet: named(), ...over, want, whole: taken });
     },
     look: (asked) => {
       // `null` is the key asking for the search, which is about whatever it
@@ -601,9 +545,7 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
     // One path for every question the host asks: the message it refused comes
     // back with the answer taken, and the host reads its own `kind` (ADR-048).
     answer: (asked, choice) => {
-      refused = null;
-      said = null;
-      host.postMessage({ ...asked, choice });
+      send({ ...asked, choice });
     },
     overrideWith: (typed, reason) => {
       // `kind` last, or a spread message carrying its own `kind` is that message.

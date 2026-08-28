@@ -1,23 +1,10 @@
-import { compile } from '@yxl-vscode/compile';
-import { parse } from '@yxl-vscode/cst';
-import { type IncludeReader, load } from '@yxl-vscode/loader';
-import { type FilePath, filePath, type Rect, type SheetName } from '@yxl-vscode/units';
-import { type Ctx, checked } from '@yxl-vscode/verify';
+import type { Rect, SheetName } from '@yxl-vscode/units';
 import { describe, expect, it } from 'vitest';
-import { reading } from './direct';
+import { files, tried } from './harness';
 import { setMerged } from './merge';
 
-const ROOT = filePath('spec.yxl.yaml') ?? ('' as FilePath);
 const SALES = 'sheets:\n  - name: Sales\n';
 const CELLS = '    cells:\n      A1: Title\n      B1: covered\n';
-
-function files(source: string) {
-  const includes: IncludeReader = (_from, path) => (path === ROOT ? { file: ROOT, source } : null);
-  const { doc } = load(parse(source, { file: ROOT }), includes);
-  if (doc === null) throw new Error('did not load');
-
-  return { doc, grid: compile(doc, { read: includes }), read: reading(() => source), includes };
-}
 
 const at = (top: number, left: number, bottom = top, right = left): Rect => ({
   top,
@@ -30,14 +17,7 @@ const at = (top: number, left: number, bottom = top, right = left): Rect => ({
 function drawn(source: string, rect: Rect, merged: boolean): string {
   const { doc, grid, read } = files(source);
   const intent = setMerged({ doc, grid }, { sheet: 'Sales' as SheetName, rect, merged }, read);
-  if (intent.kind === 'refused') return `refused: ${intent.why}`;
-  if (intent.kind !== 'edit') throw new Error('a file was not written');
-
-  const { includes } = files(source);
-  const ctx: Ctx = { root: ROOT, file: intent.file, read: includes };
-  const done = checked(source, intent.patch, intent.expects, ctx);
-
-  return done.ok === false ? `refused: ${done.diagnostics[0]?.message ?? 'a surprise'}` : done.text;
+  return tried(source, intent);
 }
 
 describe('a rectangle drawn as one cell', () => {

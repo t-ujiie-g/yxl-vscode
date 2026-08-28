@@ -1,36 +1,15 @@
-import { compile } from '@yxl-vscode/compile';
-import { parse } from '@yxl-vscode/cst';
-import { type IncludeReader, load } from '@yxl-vscode/loader';
 import type { LinkTarget } from '@yxl-vscode/spec';
-import { type A1Addr, type FilePath, filePath, type SheetName } from '@yxl-vscode/units';
-import { type Ctx, checked } from '@yxl-vscode/verify';
+import type { A1Addr, SheetName } from '@yxl-vscode/units';
 import { describe, expect, it } from 'vitest';
-import { reading } from './direct';
+import { files, tried } from './harness';
 import { setLink } from './link';
-
-const ROOT = filePath('spec.yxl.yaml') ?? ('' as FilePath);
-
-function files(source: string) {
-  const includes: IncludeReader = (_from, path) => (path === ROOT ? { file: ROOT, source } : null);
-  const { doc } = load(parse(source, { file: ROOT }), includes);
-  if (doc === null) throw new Error('did not load');
-
-  return { doc, grid: compile(doc, { read: includes }), read: reading(() => source), includes };
-}
 
 /** The link set, through the checker — the file, or why not. */
 function linked(source: string, at: string, target: LinkTarget | null): string {
   const { doc, grid, read } = files(source);
   const where = { sheet: 'S' as SheetName, at: at as A1Addr, target };
   const intent = setLink({ doc, grid }, where, read);
-  if (intent.kind === 'refused') return `refused: ${intent.why}`;
-  if (intent.kind !== 'edit') throw new Error('a file was not written');
-
-  const { includes } = files(source);
-  const ctx: Ctx = { root: ROOT, file: intent.file, read: includes };
-  const done = checked(source, intent.patch, intent.expects, ctx);
-
-  return done.ok === false ? `refused: ${done.diagnostics[0]?.message ?? 'a surprise'}` : done.text;
+  return tried(source, intent);
 }
 
 const url = (text: string): LinkTarget => ({ kind: 'url', text });

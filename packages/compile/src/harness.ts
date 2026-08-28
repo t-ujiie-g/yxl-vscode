@@ -29,6 +29,13 @@ export function layers(source: string, at: string): readonly StyleLayer[] {
   return styleAt(sheet(source), at as A1Addr);
 }
 
+/** A spec compiled with parameters set from outside it, as the preview's panel sets them (`docs/spec.md` §7). */
+export function given(source: string, params: Record<string, string>): CompiledGrid {
+  const { doc } = load(parse(source, { file: FILE }));
+  if (doc === null) throw new Error('did not load');
+  return compile(doc, { params: new Map(Object.entries(params)) });
+}
+
 export function codes(source: string, read?: DataReader): string[] {
   return grid(source, read).diagnostics.map((one) => one.code);
 }
