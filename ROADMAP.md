@@ -1734,16 +1734,27 @@ Opened 2026-08-29 from a reader's own list, with screenshots, after working in
 the preview on yxl's examples. Five things: four are defects with a cause named
 below, and one is the answer panel becoming a thing you have to answer.
 
-- [ ] **A preview that comes back when its tab does.** Two previews open in the
+- [x] **A preview that comes back when its tab does.** Two previews open in the
       same column; the one that loses the tab comes back **blank**. The panel is
       created with neither `retainContextWhenHidden` nor an
       `onDidChangeViewState` listener, so VS Code tears the webview down when it
       is hidden and reloads the page when it returns — into a view that has
       never been sent a drawing, and a host that only sends one when the text
-      changes. The fix is the handshake rather than the flag: the view says it
-      is ready, the host answers with what it holds, and a panel coming back
-      asks again. A `WebviewPanelSerializer` is the same question for a window
-      reload and belongs with it.
+      changes.
+      **Both, and each for its own reason.** The *fix* is a handshake: the view
+      posts `ready` as its last act of wiring, and the host answers with the
+      drawing it already holds — which is what makes a first load deterministic
+      too, since a message posted before a webview is listening is dropped. The
+      *flag* is separate and is about the reader rather than correctness:
+      `retainContextWhenHidden` keeps their selection, their scroll and their
+      open menu, none of which the host has to send back. The grid draws a
+      window rather than a sheet (ADR-019), so what is retained is bounded.
+      **And a `WebviewPanelSerializer`**, for the other way a panel goes empty:
+      a window reload. The view keeps the one thing it cannot be given back —
+      the spec it was drawn from — in VS Code's own `setState`, and a revived
+      panel is handed to a `Preview` that starts as any other does. A state
+      with no file in it, or a spec that has been moved since, closes the panel
+      rather than showing an empty grid.
 - [ ] **The answers to a refused edit, as something you have to answer.** They
       are a panel under the grid today, and the grid behind it still takes
       keystrokes — so a reader cannot tell whether their edit happened. A
@@ -3379,6 +3390,36 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-29 — A preview that comes back when its tab does
+Phase 17's first line, and the defect a reader photographed: two previews open
+in one column, and the one that lost the tab came back blank.
+
+- **The cause was a webview that had been torn down and a host that had stopped
+  talking.** VS Code destroys a hidden webview unless told otherwise, and
+  reloads the page when the tab comes back; this host only posts a drawing when
+  the text changes, so the reloaded view sat there with nothing. The same hole
+  swallows a *first* drawing posted before the webview is listening, which is
+  why the panel worked only because a redraw happened to come later.
+- **The fix is a handshake.** `wire()` posts `ready` as its last act, and the
+  host answers with the drawing it already holds — no recompute, since `redraw`
+  keeps `drawn` up to date whether or not the post lands.
+- **The flag is a separate choice, about the reader rather than correctness.**
+  `retainContextWhenHidden` keeps their selection, their scroll and their open
+  menu, which the host has no way to send back. The grid draws a window rather
+  than a whole sheet (ADR-019), so what is held is bounded.
+- **A window reload is the other way a panel goes empty**, and a
+  `WebviewPanelSerializer` answers it: the view keeps the one thing it cannot be
+  given back — the spec it was drawn from — in VS Code's own `setState`, and a
+  revived panel is handed to a `Preview` that starts as any other does. A state
+  with no file, or a spec moved since, closes the panel rather than showing an
+  empty grid.
+- Two tests, both on the view's half, which is the half that has any: it says
+  `ready` before anything else, and it keeps the file it was drawn from. The
+  host's half is `vscode`, which this project deliberately does not mock (§6) —
+  so it was checked by hand, and the steps are in the PR.
+- 2355 → 2357 tests. Comment shape: export 836 blocks / 1855 lines / avg 2.2,
+  private 556 / 556 / avg 1.0, inline 125 / 195 / avg 1.6; 0 over the limit.
 
 ### 2026-08-29 — The release programme, from a reader's own list
 Phase 15 closed this morning, and the next thing is not more schema: it is a

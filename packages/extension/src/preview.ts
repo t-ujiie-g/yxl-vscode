@@ -163,16 +163,47 @@ export class Preview {
     Preview.open.set(document.uri.toString(), new Preview(document, extension));
   }
 
+  /** A panel VS Code kept across a window reload, given back the spec the view saved. */
+  static revive(
+    document: vscode.TextDocument,
+    extension: vscode.Uri,
+    panel: vscode.WebviewPanel,
+  ): void {
+    if (Preview.open.has(document.uri.toString())) {
+      panel.dispose();
+      return;
+    }
+
+    Preview.open.set(document.uri.toString(), new Preview(document, extension, panel));
+  }
+
   private constructor(
     private readonly document: vscode.TextDocument,
     extension: vscode.Uri,
+    panel?: vscode.WebviewPanel,
   ) {
-    this.panel = vscode.window.createWebviewPanel(
-      'yxl.preview',
-      `Preview ${document.uri.path.split('/').at(-1) ?? ''}`,
-      { viewColumn: vscode.ViewColumn.Beside, preserveFocus: true },
-      { enableScripts: true, localResourceRoots: [vscode.Uri.joinPath(extension, 'dist')] },
-    );
+    const options = {
+      enableScripts: true,
+      localResourceRoots: [vscode.Uri.joinPath(extension, 'dist')],
+    };
+
+    this.panel =
+      panel ??
+      vscode.window.createWebviewPanel(
+        'yxl.preview',
+        `Preview ${document.uri.path.split('/').at(-1) ?? ''}`,
+        { viewColumn: vscode.ViewColumn.Beside, preserveFocus: true },
+        {
+          ...options,
+          // A hidden panel is torn down otherwise, and the reader loses where
+          // they were in the sheet, which the host cannot send back to them.
+          retainContextWhenHidden: true,
+        },
+      );
+
+    // A revived panel arrives without them: what VS Code hands back is the
+    // panel, not what it was opened with.
+    this.panel.webview.options = options;
 
     this.problems = vscode.languages.createDiagnosticCollection('yxl');
     this.panel.webview.html = this.page(extension);
@@ -322,8 +353,20 @@ export class Preview {
     void this.panel.webview.postMessage({ kind: 'fitting', sheet: name, axis, at, cells });
   }
 
+  /** What the host holds, sent again: a webview that has reloaded has nothing of its own. */
+  private shown(): void {
+    const drawing = this.drawn?.drawing;
+    if (drawing === undefined) this.redraw();
+    else void this.panel.webview.postMessage(drawing);
+  }
+
   /** What the view asked for. */
   private answer(asked: FromView): void {
+    if (asked.kind === 'ready') {
+      this.shown();
+      return;
+    }
+
     const writes = WRITES[asked.kind as keyof typeof WRITES];
     if (writes !== undefined) {
       const { kind, choice, ...about } = asked as { kind: string; choice?: string };

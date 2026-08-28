@@ -566,11 +566,12 @@ interface Answerable {
 }
 
 /**
- * Everything the view sends back. `edit` and `override` carry what the reader
- * typed, not what it means — that is decided once, on the host. A sheet is
- * named, not numbered (ADR-023).
+ * Everything the view sends back — what the reader typed, not what it means,
+ * which is decided once on the host. A sheet is named, not numbered (ADR-023);
+ * `ready` is the view saying it holds nothing until the host answers.
  */
 export type FromView =
+  | { readonly kind: 'ready' }
   | { readonly kind: 'inspect'; readonly sheet: string; readonly row: number; readonly col: number }
   | {
       readonly kind: 'reveal';
