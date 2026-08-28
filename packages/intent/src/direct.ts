@@ -193,6 +193,11 @@ function valuePath(origin: FacetOrigin, sheet: CompiledSheet, at: A1Addr, read: 
     return refused(`\`${at}\` holds a formula — type a formula to change it, starting with \`=\``);
   }
 
+  // A cell cannot be `rich` and hold a value too (`docs/spec.md` §3).
+  if (holds(written.node, KEY.rich)) {
+    return refused(`\`${at}\` holds rich text — edit it a run at a time in the bar over the grid`);
+  }
+
   if (holds(written.node, 'value')) return { ...written, path: [...written.path, 'value'] };
 
   return { ...written, add: true };

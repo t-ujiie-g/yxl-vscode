@@ -43,6 +43,7 @@ export {
 export { type Tabled, tableOver } from './region';
 export { type Renaming, renameSheet } from './renaming';
 export { type Candidate, candidates, type Resolving } from './resolve';
+export { type Running, setRun } from './rich';
 export {
   type Adding,
   addSheet,

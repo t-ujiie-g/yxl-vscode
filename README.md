@@ -71,7 +71,7 @@ written from the code, so it cannot drift from it.
 | Key | | |
 |---|---|---|
 | `name` | **edited** | renamed from its tab; every formula that names it follows |
-| `cells` | **edited** | typed into, cleared, pasted over, styled |
+| `cells` | **edited** | typed into, cleared, pasted over, styled; rich text a run at a time |
 | `formulas` | **edited** | what a fill writes, and what a fill can be split out of |
 | `data` | **edited** | sorted, extended, and what a rectangle converts to |
 | `columns` | **edited** | width, hidden, group and a look over a whole column |

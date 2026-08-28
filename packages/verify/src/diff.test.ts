@@ -40,6 +40,20 @@ describe('what two compilations disagree about', () => {
     ]);
   });
 
+  it('names a run whose text or font moved, which is part of what a cell holds', () => {
+    const before = `${SALES}    cells:\n      A1:\n        rich:\n          - "Figures are "\n          - { text: unaudited, font: { italic: true } }\n`;
+    const retyped = before.replace('text: unaudited', 'text: provisional');
+    const refonted = before.replace('italic: true', 'bold: true');
+
+    expect(between(before, retyped)).toEqual([
+      { kind: 'cell', sheet: 'Sales', at: 'A1', what: 'value' },
+    ]);
+    expect(between(before, refonted)).toEqual([
+      { kind: 'cell', sheet: 'Sales', at: 'A1', what: 'value' },
+    ]);
+    expect(between(before, before)).toEqual([]);
+  });
+
   it('says nothing about a range split into pieces that hold the same formulas', () => {
     const before = `${SALES}    cells:\n      A1: 1\n      A2: 2\n      A3: 3\n    formulas:\n      - at: B1:B3\n        formula: "A1*2"\n`;
     const after = `${SALES}    cells:\n      A1: 1\n      A2: 2\n      A3: 3\n    formulas:\n      - at: B1:B1\n        formula: "A1*2"\n      - at: B2:B3\n        formula: "A2*2"\n`;

@@ -3,7 +3,7 @@
 import { describe, expect, it } from 'vitest';
 import { cell, sheet as drawnSheet } from './harness';
 import { type Host, wire } from './index';
-import type { Drawing, DrawnSheet, FromView, Refused, Typed } from './protocol';
+import type { Drawing, DrawnRun, DrawnSheet, FromView, Refused, Typed } from './protocol';
 
 /** The sheet these tests draw: one cell that holds something, and a column with a width. */
 function sheet(of: Partial<DrawnSheet> = {}): DrawnSheet {
@@ -987,6 +987,41 @@ describe('the bar over the grid', () => {
 
     expect(box.value).toBe('APAC');
     expect(sent.filter((one) => one.kind === 'edit')).toEqual([]);
+  });
+
+  it('shows a rich cell a run at a time, and sends the run the picker is on', () => {
+    const runs: DrawnRun[] = [
+      { text: 'Figures are ', style: {} },
+      { text: 'unaudited', style: { 'font.italic': true } },
+    ];
+    const { into, sent, told } = view();
+    told({
+      ...drawing,
+      sheets: [sheet({ cells: [cell(1, 1, { rich: runs, editable: 'rich' })] })],
+    });
+
+    at(into, 1, 1)?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    expect(holds(into)?.value).toBe('Figures are ');
+
+    const picker = into.querySelector<HTMLSelectElement>('.formula .runs');
+    if (picker === null) throw new Error('no run to pick');
+    expect([...picker.options].map((one) => one.textContent)).toEqual([
+      '1. Figures are',
+      '2. unaudited',
+    ]);
+
+    picker.value = '1';
+    picker.dispatchEvent(new Event('change'));
+    expect(holds(into)?.value).toBe('unaudited');
+
+    const box = holds(into);
+    if (box === null) throw new Error('nothing to type into');
+    box.value = 'provisional';
+    box.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+
+    expect(sent.filter((one) => one.kind === 'editRun')).toEqual([
+      { kind: 'editRun', sheet: 'Sales', row: 1, col: 1, index: 1, text: 'provisional' },
+    ]);
   });
 
   it('takes the whole sheet on `Cmd`+`A` wherever the keyboard is, and not the panel round it', () => {

@@ -42,6 +42,7 @@ function showing(of: {
     copied: null,
     looking: null,
     editable: 'direct',
+    run: 0,
     line: 'thin',
     menu: of.menu ?? null,
     pointed: null,

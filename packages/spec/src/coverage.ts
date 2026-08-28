@@ -52,7 +52,11 @@ export const SHEET_KEYS: readonly Covered[] = [
     standing: 'editable',
     says: 'renamed from its tab; every formula that names it follows',
   },
-  { key: 'cells', standing: 'editable', says: 'typed into, cleared, pasted over, styled' },
+  {
+    key: 'cells',
+    standing: 'editable',
+    says: 'typed into, cleared, pasted over, styled; rich text a run at a time',
+  },
   {
     key: 'formulas',
     standing: 'editable',

@@ -147,6 +147,14 @@ describe('what typing into a cell will not do', () => {
     );
   });
 
+  it('refuses a cell that holds runs, and says where they are edited', () => {
+    const spec = `${SALES}    cells:\n      A1:\n        rich:\n          - "Figures are "\n`;
+    const said = why({ [ROOT]: spec }, 'A1');
+
+    expect(said).toContain('holds rich text');
+    expect(said).toContain('a run at a time');
+  });
+
   it('refuses an address nothing is written at', () => {
     expect(why({ [ROOT]: `${SALES}    cells:\n      A1: 1\n` }, 'Z9')).toContain('nothing writes');
   });

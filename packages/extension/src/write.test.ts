@@ -17,6 +17,7 @@ import { wear } from './look';
 import { note } from './notes';
 import { filter, freeze } from './panes';
 import { formatTable } from './regions';
+import { editRun } from './runs';
 import { add, move, remove, rename, tab } from './sheets';
 import { resize } from './size';
 import { sort } from './sorts';
@@ -718,6 +719,21 @@ describe("a cell's note, written from its own menu", () => {
 
     await note(spec, { sheet: 'Sales', row: 1, col: 1, text: null }, port);
     expect(refusals[0]).toBe('`A1` has no note to take off');
+  });
+});
+
+describe('a run of a rich cell, retyped in the bar', () => {
+  it('writes the run it names, keeps its font, and refuses a run that is not there', async () => {
+    const runs = `${SALES}    cells:\n      A1:\n        rich:\n          - "Figures are "\n          - { text: unaudited, font: { italic: true } }\n`;
+    const { spec, port, files, told, refusals } = editor({ [ROOT]: runs });
+    const where = { sheet: 'Sales', row: 1, col: 1 };
+
+    await editRun(spec, { ...where, index: 1, text: 'provisional' }, port);
+    expect(files[ROOT]).toBe(runs.replace('text: unaudited', 'text: provisional'));
+    expect(told).toEqual(['Run 2 of A1 now reads provisional.']);
+
+    await editRun(spec, { ...where, index: 4, text: 'fifth' }, port);
+    expect(refusals[0]).toBe('`A1` has 2 runs, and no run 5');
   });
 });
 

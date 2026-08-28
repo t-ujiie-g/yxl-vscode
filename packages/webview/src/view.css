@@ -528,6 +528,17 @@ body {
   font-style: italic;
 }
 
+/* Which run of a rich cell the bar is on: a cell of runs has no one text to
+   hold, so the picker says which of them the box is showing. */
+.formula .runs {
+  flex: none;
+  max-width: 10rem;
+  border: 1px solid var(--vscode-input-border, var(--vscode-panel-border));
+  background: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+  font: inherit;
+}
+
 .formula .holds {
   flex: 1;
   min-width: 0;

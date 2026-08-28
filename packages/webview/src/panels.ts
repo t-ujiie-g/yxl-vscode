@@ -1,6 +1,6 @@
 import { columnLabel, nextSheetName, painted, type SheetName } from '@yxl-vscode/units';
 import { says } from './menus';
-import type { Choice, Drawing, Refused, Summed, Uncomputed } from './protocol';
+import type { Choice, Drawing, Editable, Refused, Summed, Uncomputed } from './protocol';
 import type { Asks, Reached, Showing } from './showing';
 
 /** The parameters as boxes to turn (`docs/spec.md` §7); emptying one gives the default back. */
@@ -126,16 +126,21 @@ function moved(choice: Choice): string {
 }
 
 /** That this cell cannot be typed into, in the terms of what stands in the way. */
-export function locked(editable: 'mediated' | 'external'): HTMLElement {
+export function locked(editable: Exclude<Editable, 'direct'>): HTMLElement {
   const said = document.createElement('p');
   said.className = 'locked';
-  said.textContent =
-    editable === 'external'
-      ? 'This cell cannot be typed into: its value comes from a file beside the spec. Type into it anyway to be offered an override.'
-      : 'This cell cannot be typed into: more than one thing could change to make that edit. Type into it anyway to be offered an override.';
+  said.textContent = LOCKED[editable];
 
   return said;
 }
+
+const LOCKED: Record<Exclude<Editable, 'direct'>, string> = {
+  external:
+    'This cell cannot be typed into: its value comes from a file beside the spec. Type into it anyway to be offered an override.',
+  mediated:
+    'This cell cannot be typed into: more than one thing could change to make that edit. Type into it anyway to be offered an override.',
+  rich: 'This cell holds rich text. Pick a run in the bar over the grid to retype it; a run keeps the font it wears.',
+};
 
 /** What the cursor is reaching, said above the grid so the highlight is explained. */
 export function reaching(reached: Reached): HTMLElement {
