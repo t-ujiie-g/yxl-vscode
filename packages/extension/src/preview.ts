@@ -215,9 +215,9 @@ export class Preview {
         },
       );
 
-    // A revived panel arrives without them: what VS Code hands back is the
-    // panel, not what it was opened with.
-    this.panel.webview.options = options;
+    // Only the revived one: setting these reloads the webview, and a panel just
+    // created has them already.
+    if (panel !== undefined) this.panel.webview.options = options;
 
     this.problems = vscode.languages.createDiagnosticCollection('yxl');
     this.panel.webview.html = this.page(extension);
