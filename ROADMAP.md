@@ -3624,7 +3624,14 @@ Phase 19's first three lines, and the decision the rest of it waits on
   book's two languages hold different ids, when an id is not named for the
   package that says it, and when a Japanese sentence reads exactly as the
   English one — which is what a line copied and not translated looks like.
-- 2406 → 2422 tests. Comment shape: export 874 blocks / 1948 lines / avg 2.2,
+- **And the panel says anything at all again.** The pass before this one folded
+  sixteen `postMessage` calls into one `send`, and folded `send` itself: its
+  body was a call to itself, so the first message a panel sent overflowed the
+  stack and the grid drew nothing. Nothing caught it — the panel's own wiring
+  has no tests — so `tests/calls.test.ts` now reads every source for a body
+  whose first statement calls the name it belongs to, which is what that class
+  of rewrite leaves behind. It fails on the old code.
+- 2406 → 2423 tests. Comment shape: export 874 blocks / 1948 lines / avg 2.2,
   private 570 / 570 / avg 1.0, inline 135 / 215 / avg 1.6; 0 over the limit.
 
 ### 2026-08-29 — One way to say what a cell copies as

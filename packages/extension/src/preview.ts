@@ -438,7 +438,7 @@ export class Preview {
 
   /** An answer on its way to the view, which is the only thing this panel says to it. */
   private send(message: ToView): void {
-    this.send(message);
+    void this.panel.webview.postMessage(message);
   }
 
   /** What the host holds, sent again: a webview that has reloaded has nothing of its own. */
