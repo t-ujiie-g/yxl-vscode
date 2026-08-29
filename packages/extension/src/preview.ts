@@ -34,6 +34,7 @@ import { moved, resized } from './anchors';
 import { chart } from './charts';
 import { paste, pastedWith, pasteFrom, whose } from './clipboard';
 import { asOpen, put, reveal, textOf } from './documents';
+import { edgeFrom } from './edges';
 import { besideSpec } from './files';
 import { fill } from './fills';
 import { group } from './group';
@@ -47,7 +48,7 @@ import { merge } from './merges';
 import { note } from './notes';
 import { filter, freeze } from './panes';
 import { measureBeside } from './pictures';
-import { drawRun, type Projected, project, redraw, type Window } from './project';
+import { drawRun, extent, type Projected, project, redraw, type Window } from './project';
 import { formatTable } from './regions';
 import { editRun } from './runs';
 import { add, move, remove, rename, tab } from './sheets';
@@ -364,6 +365,33 @@ export class Preview {
     void this.panel.webview.postMessage({ kind: 'summed', sheet: ranged.sheet, ...comes });
   }
 
+  /** Where a `Cmd`+arrow lands, over every cell rather than the drawn window (ADR-019). */
+  private edging(asked: {
+    sheet: string;
+    row: number;
+    col: number;
+    rows: number;
+    cols: number;
+    extend: boolean;
+  }): void {
+    const sheet = this.drawn?.grid?.sheets.find((one) => one.name === asked.sheet);
+    if (sheet === undefined) return;
+
+    const at = edgeFrom(sheet, extent(sheet), addrAt({ col: asked.col, row: asked.row }), {
+      rows: asked.rows,
+      cols: asked.cols,
+    });
+    const { col, row } = cellOf(at);
+
+    void this.panel.webview.postMessage({
+      kind: 'edged',
+      sheet: asked.sheet,
+      row,
+      col,
+      extend: asked.extend,
+    });
+  }
+
   /** Every cell of a run, for the view to measure a fit against (ADR-043). */
   private measuring(name: string, axis: Axis, at: number): void {
     const sheet = this.drawn?.grid?.sheets.find((one) => one.name === name);
@@ -432,6 +460,11 @@ export class Preview {
 
     if (asked.kind === 'find') {
       this.searched(asked.sheet, asked.text);
+      return;
+    }
+
+    if (asked.kind === 'edge') {
+      this.edging(asked);
       return;
     }
 

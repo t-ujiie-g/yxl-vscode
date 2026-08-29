@@ -166,11 +166,12 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
   const named = (): string => drawing?.sheets[sheet]?.name ?? '';
 
   /** The selection put on a cell, and the window moved where the cell is outside the one drawn. */
-  const goToCell = (at: { row: number; col: number } | undefined): void => {
+  const goToCell = (at: { row: number; col: number } | undefined, extend = false): void => {
     if (at === undefined) return;
 
+    if (!extend) anchor = at;
+    else anchor ??= selected;
     selected = at;
-    anchor = at;
     inspected = null;
     host.postMessage({ kind: 'inspect', sheet: named(), row: at.row, col: at.col });
 
@@ -334,6 +335,9 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
     editRun: (row, col, index, text) => {
       typedAt = { row, col };
       send({ kind: 'editRun', sheet: named(), row, col, index, text });
+    },
+    edgeTo: (row, col, by, extend) => {
+      host.postMessage({ kind: 'edge', sheet: named(), row, col, ...by, extend });
     },
     showRun: (index) => {
       if (selected !== null) run = { ...selected, at: index };
@@ -677,6 +681,11 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       reached = null;
       redraw();
       goToCell({ row: sent.row, col: sent.col });
+      return;
+    }
+
+    if (sent.kind === 'edged') {
+      if (sent.sheet === named()) goToCell({ row: sent.row, col: sent.col }, sent.extend);
       return;
     }
 

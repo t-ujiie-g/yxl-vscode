@@ -191,6 +191,12 @@ export interface Asks {
   readonly edit: (row: number, col: number, text: string) => void;
   readonly editRun: (row: number, col: number, index: number, text: string) => void;
   readonly showRun: (index: number) => void;
+  readonly edgeTo: (
+    row: number,
+    col: number,
+    by: { rows: number; cols: number },
+    extend: boolean,
+  ) => void;
   readonly empty: (row: number, col: number) => void;
   readonly undo: (redo: boolean) => void;
   readonly copy: (row: number, col: number, cut: boolean) => void;

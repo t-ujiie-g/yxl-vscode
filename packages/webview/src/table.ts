@@ -2,7 +2,7 @@ import type { Axis } from '@yxl-vscode/spec';
 import { columnLabel } from '@yxl-vscode/units';
 import { corner } from './boxes';
 import { askInto, drawCell, shows, spills, typeInto } from './cell';
-import { copying, filling, going, looking as lookingFor, pasting, undoing } from './keys';
+import { copying, edging, filling, going, looking as lookingFor, pasting, undoing } from './keys';
 import {
   behind,
   drawOutline,
@@ -521,6 +521,13 @@ function line(
       // key sets off, and the view decides there which paste this is.
       if (pasting(event)) {
         asks.paste(row, col);
+        return;
+      }
+
+      const far = edging(event);
+      if (far !== null) {
+        event.preventDefault();
+        asks.edgeTo(row, col, far, event.shiftKey);
         return;
       }
 

@@ -22,6 +22,7 @@ export function asks(): Asks {
     edit: vi.fn(),
     editRun: vi.fn(),
     showRun: vi.fn(),
+    edgeTo: vi.fn(),
     empty: vi.fn(),
     undo: vi.fn(),
     reachTo: vi.fn(),
