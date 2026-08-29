@@ -73,6 +73,9 @@ export interface Looking {
   readonly text: string;
   readonly cells: readonly At[];
   readonly at: number;
+
+  /** What goes in the place of what was found, as the reader has typed it so far. */
+  readonly becomes: string;
 }
 
 /** A rectangle the reader has copied, and whether putting it down takes it from where it is. */
@@ -227,6 +230,8 @@ export interface Asks {
   readonly look: (text: string | null) => void;
   readonly goOn: (by: number) => void;
   readonly goTo: (address: string) => void;
+  readonly replaceWith: (text: string) => void;
+  readonly replace: (all: boolean) => void;
   readonly stopLooking: () => void;
   readonly stopAsking: () => void;
   readonly answer: (asked: About, choice: string) => void;

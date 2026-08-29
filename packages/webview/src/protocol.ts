@@ -238,6 +238,17 @@ export interface EditedRun {
   readonly text: string;
 }
 
+/**
+ * What a find turned up, written again with the text replaced: `at` is the one
+ * cell the reader is on, or `null` for every cell the search turns up.
+ */
+export interface Replaced {
+  readonly sheet: string;
+  readonly at: string | null;
+  readonly looking: string;
+  readonly becomes: string;
+}
+
 /** A cell's note, as it is written or `text: null` to take it off (`docs/spec.md` §10). */
 export interface Noted {
   readonly sheet: string;
@@ -637,6 +648,7 @@ export type FromView =
   | ({ readonly kind: 'editRun' } & EditedRun)
   | ({ readonly kind: 'edge' } & Edging)
   | ({ readonly kind: 'copyOut' } & Ranged)
+  | ({ readonly kind: 'replace' } & Replaced)
   | ({ readonly kind: 'sum' } & Ranged)
   | ({ readonly kind: 'override'; readonly reason: string } & Typed)
   | {

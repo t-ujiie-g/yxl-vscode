@@ -86,7 +86,12 @@ function onCells(
   if (typeof entries === 'string') return null;
 
   const held: Held[] = [];
-  const put = landed(spec, sheet, where.sheet, entries, read, held, 'refuse');
+  const put = landed(spec, sheet, where.sheet, entries, read, {
+    doing: 'refuse',
+    refusals: held,
+    verb: 'filled',
+    nothing: 'nothing in this rectangle can be filled from the line above it',
+  });
   if (typeof put === 'string') return null;
 
   const files = [...put.ops.keys()];

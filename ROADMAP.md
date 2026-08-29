@@ -1929,10 +1929,21 @@ small — which is why they are one phase and not two.
       **It needs `redhat.vscode-yaml`**, which this editor does not depend on:
       the contribution is inert without it and everything else still works.
       Saying so is Phase 20's README line rather than a forced install.
-- [ ] **Replace what a find turned up** *(proposed)*. `Cmd`+`F` finds; a
-      spreadsheet replaces. Every replacement is an ordinary cell write, so this
-      is the gesture that exists, over a list — including the refusals, which is
-      the interesting half.
+- [x] **Replace what a find turned up** *(proposed)*. `Cmd`+`F` finds; a
+      spreadsheet replaces. The find bar takes what goes in the place of it, and
+      offers *Replace* — the one the reader has gone to — and *Replace all*.
+      **The refusals were the interesting half, and they came for free.** A
+      replacement is an ordinary cell write, so `landed` already knew how to
+      write many of them as one edit and count what stood in the way by group
+      (§8 Q14) — a `formulas:` range's anchor is *found* by a search and is not
+      something a replacement may write, since changing the formula there
+      changes every cell it fills. What `landed` needed was its own words: the
+      verb a refusal counts in is a parameter now, so *pasted*, *filled* and
+      *replaced* are one function.
+      **What is replaced is what was searched** — a cell's value, or a formula's
+      body, as `finds` matches them — and the new text is read the way a
+      reader's keystrokes are, so `2400000` with `24`→`25` stays a number rather
+      than becoming a string of digits.
 
 ### Phase 19 — 日本語 and English
 Asked for on 2026-08-29 by a reader working in Japanese. The work is not
@@ -3523,6 +3534,29 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-29 — Replace, which is a write like any other
+Phase 18's last line. `Cmd`+`F` found things and left the reader to retype them.
+
+- **The find bar takes what goes there**, with *Replace* — the one they have
+  gone to — and *Replace all*. The buttons are written into rather than rebuilt
+  as the search finds things, for the same reason the formula bar is: the reader
+  is typing in one of those boxes.
+- **The refusals came for free**, which is the point. A replacement is an
+  ordinary cell write, so `landed` already knew how to write many as one edit
+  and count what stood in the way by group (§8 Q14). A `formulas:` range's
+  anchor *is* found by a search and is not something a replacement may write —
+  changing the formula there changes every cell it fills — so it refuses the
+  whole and names the group, as a paste over the same cell does.
+- **What `landed` needed was its own words.** The verb a refusal counts in was
+  the string `'pasted'`, written into a function three gestures share; it is a
+  parameter now, so *pasted*, *filled* and *replaced* are one function rather
+  than the beginning of three.
+- **What is replaced is what was searched**: a cell's value, or a formula's
+  body, as `finds` matches them. The new text is read the way a reader's
+  keystrokes are, so `2400000` with `24`→`25` stays a number.
+- 2386 → 2396 tests. Comment shape: export 850 blocks / 1907 lines / avg 2.2,
+  private 569 / 569 / avg 1.0, inline 133 / 211 / avg 1.6; 0 over the limit.
 
 ### 2026-08-29 — `Home` and `End` go the same way as the arrows
 Phase 17 left `End` reading the drawn window, on the reasoning that a window is

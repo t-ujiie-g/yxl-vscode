@@ -15,8 +15,17 @@ export function told(into: HTMLElement, showing: Showing, asks: Asks): void {
     bar.replaceWith(formulaBar(showing, asks));
   }
 
+  const looking = showing.looking;
   const count = into.querySelector('.looking .count');
-  if (count !== null && showing.looking !== null) count.textContent = counted(showing.looking);
+  if (count === null || looking === null) return;
+
+  // Written into rather than rebuilt, for the same reason the bar above is: the
+  // reader is typing in one of these boxes.
+  count.textContent = counted(looking);
+  const one = into.querySelector<HTMLButtonElement>('.looking .swap:not(.all)');
+  const all = into.querySelector<HTMLButtonElement>('.looking .swap.all');
+  if (one !== null) one.disabled = looking.at < 0;
+  if (all !== null) all.disabled = looking.cells.length === 0;
 }
 
 /** The corner above the row numbers: the button that takes the whole sheet, as everywhere else. */
@@ -181,7 +190,41 @@ export function findBar(what: Looking, asks: Asks): HTMLElement {
   count.textContent = counted(what);
 
   bar.append(mark, box, count, step('‹', -1, asks), step('›', 1, asks));
+  bar.append(...replacing(what, asks));
+
   return bar;
+}
+
+/** What goes in the place of what was found: the one the reader is on, or every cell of it. */
+function replacing(what: Looking, asks: Asks): HTMLElement[] {
+  const box = document.createElement('input');
+  box.type = 'text';
+  box.className = 'with';
+  box.value = what.becomes;
+  box.placeholder = 'Replace with';
+  box.addEventListener('input', () => asks.replaceWith(box.value));
+  box.addEventListener('keydown', (event) => {
+    event.stopPropagation();
+    if (event.key === 'Enter') asks.replace(false);
+    if (event.key === 'Escape') asks.stopLooking();
+  });
+
+  const one = document.createElement('button');
+  one.type = 'button';
+  one.className = 'swap';
+  one.textContent = 'Replace';
+  one.disabled = what.at < 0;
+  one.title = what.at < 0 ? 'Go to one of them first' : 'Replace the one you are on';
+  one.addEventListener('click', () => asks.replace(false));
+
+  const all = document.createElement('button');
+  all.type = 'button';
+  all.className = 'swap all';
+  all.textContent = 'Replace all';
+  all.disabled = what.cells.length === 0;
+  all.addEventListener('click', () => asks.replace(true));
+
+  return [box, one, all];
 }
 
 /** How far through what was found, or that there was none of it. */

@@ -22,6 +22,7 @@ import type {
   PastedAt,
   PastedText,
   Ranged,
+  Replaced,
   Resized,
   SizedFloat,
   Sorted,
@@ -52,6 +53,7 @@ import { filter, freeze } from './panes';
 import { measureBeside } from './pictures';
 import { drawRun, extent, type Projected, project, redraw, type Window } from './project';
 import { formatTable } from './regions';
+import { replace } from './replacing';
 import { editRun } from './runs';
 import { add, move, remove, rename, tab } from './sheets';
 import { resize } from './size';
@@ -99,6 +101,7 @@ const WRITES = {
   moveFloat: (spec: Spec, one: MovedFloat, port: Port) => moved(spec, one, port),
   sizeFloat: (spec: Spec, one: SizedFloat, port: Port) => resized(spec, one, port, measureBeside),
   note: (spec: Spec, asked: Noted, port: Port) => note(spec, asked, port),
+  replace: (spec: Spec, asked: Replaced, port: Port) => replace(spec, asked, port),
   editRun: (spec: Spec, asked: EditedRun, port: Port) => editRun(spec, asked, port),
   link: (spec: Spec, asked: Linked, port: Port) => link(spec, asked, port),
   validate: (spec: Spec, asked: Validated, port: Port) => validate(spec, asked, port),
