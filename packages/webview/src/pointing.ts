@@ -1,5 +1,4 @@
 import type { Axis } from '@yxl-vscode/spec';
-import { spanSaid } from '@yxl-vscode/units';
 import { HELD } from './keys';
 import { entry, pointedAt, says, swatches } from './menus';
 import type { DrawnCell, DrawnSheet } from './protocol';
@@ -11,6 +10,7 @@ import {
   type PointedTab,
   type Showing,
 } from './showing';
+import { chrome, spanned } from './worded';
 
 /** The menu the reader asked for at the pointer, over whatever they pointed at. */
 export function pointing(showing: Showing, asks: Asks): HTMLElement | null {
@@ -40,12 +40,12 @@ function onCell(showing: Showing, asks: Asks, at: PointedCell): HTMLElement | nu
     ...(rect.bottom > rect.top
       ? [
           entry(
-            'Sort A to Z',
+            chrome('view.sort-a-to-z'),
             {},
             shut(() => asks.sort(false)),
           ),
           entry(
-            'Sort Z to A',
+            chrome('view.sort-z-to-a'),
             {},
             shut(() => asks.sort(true)),
           ),
@@ -54,7 +54,7 @@ function onCell(showing: Showing, asks: Asks, at: PointedCell): HTMLElement | nu
     ...(rect.bottom > rect.top
       ? [
           entry(
-            'Fill down',
+            chrome('view.fill-down'),
             { chord: `${HELD}D` },
             shut(() => asks.fill('row')),
           ),
@@ -63,7 +63,7 @@ function onCell(showing: Showing, asks: Asks, at: PointedCell): HTMLElement | nu
     ...(rect.right > rect.left
       ? [
           entry(
-            'Fill right',
+            chrome('view.fill-right'),
             { chord: `${HELD}R` },
             shut(() => asks.fill('column')),
           ),
@@ -72,7 +72,7 @@ function onCell(showing: Showing, asks: Asks, at: PointedCell): HTMLElement | nu
     ...(rect.bottom > rect.top
       ? [
           entry(
-            'Make this a data table',
+            chrome('view.make-a-data-table'),
             {},
             shut(() => asks.table()),
           ),
@@ -81,7 +81,7 @@ function onCell(showing: Showing, asks: Asks, at: PointedCell): HTMLElement | nu
     ...(merged
       ? [
           entry(
-            'Unmerge cells',
+            chrome('view.unmerge-cells'),
             {},
             shut(() => asks.merge(false)),
           ),
@@ -90,7 +90,7 @@ function onCell(showing: Showing, asks: Asks, at: PointedCell): HTMLElement | nu
     ...(wide && !merged
       ? [
           entry(
-            'Merge cells',
+            chrome('view.merge-cells'),
             {},
             shut(() => asks.merge(true)),
           ),
@@ -111,8 +111,8 @@ function onCell(showing: Showing, asks: Asks, at: PointedCell): HTMLElement | nu
       ours,
     ),
     entry(
-      'Clear contents',
-      { chord: 'Delete' },
+      chrome('view.clear-contents'),
+      { chord: chrome('view.delete') },
       shut(() => asks.empty(at.row, at.col)),
     ),
     ...noting(showing, asks, at, shut),
@@ -122,14 +122,14 @@ function onCell(showing: Showing, asks: Asks, at: PointedCell): HTMLElement | nu
     ...(showing.drawing.sheets[showing.sheet]?.filter === null
       ? [
           entry(
-            'Create a filter',
+            chrome('view.create-a-filter'),
             {},
             shut(() => asks.filter(true)),
           ),
         ]
       : [
           entry(
-            'Remove filter',
+            chrome('view.remove-filter'),
             {},
             shut(() => asks.filter(false)),
           ),
@@ -137,14 +137,14 @@ function onCell(showing: Showing, asks: Asks, at: PointedCell): HTMLElement | nu
     ...(rect.right > rect.left
       ? [
           entry(
-            'Insert a chart…',
+            chrome('view.insert-a-chart'),
             {},
             shut(() => asks.chart()),
           ),
         ]
       : []),
     entry(
-      'Insert an image…',
+      chrome('view.insert-an-image'),
       {},
       shut(() => asks.image(at.row, at.col)),
     ),
@@ -161,12 +161,13 @@ function noting(
   shut: (take: () => void) => () => void,
 ): HTMLElement[] {
   const ask = shut(() => asks.askAt({ at: { row: at.row, col: at.col }, what: 'note' }));
-  if ((cellAt(showing, at)?.note ?? null) === null) return [entry('Insert note', {}, ask)];
+  if ((cellAt(showing, at)?.note ?? null) === null)
+    return [entry(chrome('view.insert-note'), {}, ask)];
 
   return [
-    entry('Edit note', {}, ask),
+    entry(chrome('view.edit-note'), {}, ask),
     entry(
-      'Delete note',
+      chrome('view.delete-note'),
       {},
       shut(() => asks.note(at.row, at.col, null)),
     ),
@@ -185,13 +186,16 @@ function linking(
 
   const link = cellAt(showing, at)?.link ?? null;
   if (link === null) {
-    return [entry('Link to a page…', {}, ask('url')), entry('Link to a cell…', {}, ask('to'))];
+    return [
+      entry(chrome('view.link-to-a-page'), {}, ask('url')),
+      entry(chrome('view.link-to-a-cell'), {}, ask('to')),
+    ];
   }
 
   return [
-    entry('Edit link', {}, ask(link.kind)),
+    entry(chrome('view.edit-link'), {}, ask(link.kind)),
     entry(
-      'Remove link',
+      chrome('view.remove-link'),
       {},
       shut(() => asks.link(at.row, at.col, null)),
     ),
@@ -208,7 +212,7 @@ function validating(
   if ((cellAt(showing, at)?.validation ?? null) === null) {
     return [
       entry(
-        'Data validation…',
+        chrome('view.data-validation'),
         {},
         shut(() => asks.askAt({ at: { row: at.row, col: at.col }, what: 'list' })),
       ),
@@ -217,7 +221,7 @@ function validating(
 
   return [
     entry(
-      'Remove validation',
+      chrome('view.remove-validation'),
       {},
       shut(() => asks.validate(null)),
     ),
@@ -239,7 +243,7 @@ function tabling(
   if (inside) {
     return [
       entry(
-        'Remove table',
+        chrome('view.remove-table'),
         {},
         shut(() => asks.formatTable(false)),
       ),
@@ -248,7 +252,7 @@ function tabling(
 
   return [
     entry(
-      'Format as table',
+      chrome('view.format-as-table'),
       {},
       shut(() => asks.formatTable(true)),
     ),
@@ -263,8 +267,8 @@ function cellAt(showing: Showing, at: PointedCell): DrawnCell | undefined {
 
 /** Paste, which only the keyboard can reach the clipboard for unless the preview copied it. */
 function pasting(take: () => void, ours: boolean): HTMLElement {
-  const one = entry('Paste', { chord: `${HELD}V`, disabled: !ours }, take);
-  if (!ours) says(one, `Press ${HELD}V: the clipboard is the keyboard’s to give`);
+  const one = entry(chrome('view.paste'), { chord: `${HELD}V`, disabled: !ours }, take);
+  if (!ours) says(one, chrome('view.paste-is-the-keyboards', { chord: `${HELD}V` }));
 
   return one;
 }
@@ -292,30 +296,26 @@ function onHeading(showing: Showing, asks: Asks, at: PointedHeading): HTMLElemen
     asks.line(at.axis, where, by);
   };
 
-  const these = many === 1 ? `${at.axis}` : `${many} ${at.axis}s`;
-  const before = at.axis === 'column' ? 'left' : 'above';
-  const after = at.axis === 'column' ? 'right' : 'below';
+  const bands = { many, axis: at.axis };
 
   const entries = [
-    entry(`Insert ${these} ${before}`, {}, line(run.first, many)),
-    entry(`Insert ${these} ${after}`, {}, line(run.last + 1, many)),
-    entry(`Delete ${many === 1 ? `this ${at.axis}` : these}`, {}, line(run.first, -many)),
-    entry(
-      many === 1 ? `Hide this ${at.axis}` : `Hide these ${many} ${at.axis}s`,
-      {},
-      hide(run.first, run.last, true),
-    ),
+    entry(chrome('view.insert-before', bands), {}, line(run.first, many)),
+    entry(chrome('view.insert-after', bands), {}, line(run.last + 1, many)),
+    entry(chrome('view.delete-bands', bands), {}, line(run.first, -many)),
+    entry(chrome('view.hide-bands', bands), {}, hide(run.first, run.last, true)),
     ...(behind === null
       ? []
       : [
           entry(
-            `Show ${spanSaid(at.axis, behind.first, behind.last)} again`,
+            chrome('view.show-again', { span: spanned(at.axis, behind.first, behind.last) }),
             {},
             hide(behind.first, behind.last, false),
           ),
         ]),
-    entry(many === 1 ? `Group this ${at.axis}` : `Group these ${many} ${at.axis}s`, {}, group(1)),
-    ...(grouping(sheet, at.axis, run) ? [entry('Take out of the outline', {}, group(0))] : []),
+    entry(chrome('view.group-bands', bands), {}, group(1)),
+    ...(grouping(sheet, at.axis, run)
+      ? [entry(chrome('view.take-out-of-the-outline'), {}, group(0))]
+      : []),
   ];
 
   return pointedAt(showing, asks, entries);
@@ -369,22 +369,22 @@ function onTab(showing: Showing, asks: Asks, at: PointedTab): HTMLElement | null
 
   const entries = [
     entry(
-      'Rename',
+      chrome('view.rename'),
       { disabled: buried },
       shut(() => asks.nameSheet(at.sheet)),
     ),
     entry(
-      'Delete',
+      chrome('view.delete'),
       { disabled: buried },
       shut(() => asks.deleteSheet(sheet.name)),
     ),
     entry(
-      hidden ? 'Unhide' : 'Hide',
+      hidden ? chrome('view.unhide') : chrome('view.hide'),
       { disabled: buried },
       shut(() => asks.setTab(sheet.name, { visibility: hidden ? 'visible' : 'hidden' })),
     ),
     entry(
-      'Gridlines',
+      chrome('view.gridlines'),
       { disabled: buried, checked: sheet.gridlines },
       shut(() => asks.setTab(sheet.name, { gridlines: !sheet.gridlines })),
     ),
@@ -395,7 +395,7 @@ function onTab(showing: Showing, asks: Asks, at: PointedTab): HTMLElement | null
 
   const colours = document.createElement('div');
   colours.className = 'entry tabbed';
-  colours.append('Tab colour');
+  colours.append(chrome('view.tab-colour'));
   colours.append(
     ...swatches(sheet.tabColor, '#4A86E8', (digits) => {
       asks.pointAt(null);
@@ -404,7 +404,7 @@ function onTab(showing: Showing, asks: Asks, at: PointedTab): HTMLElement | null
   );
 
   const clears = entry(
-    'No tab colour',
+    chrome('view.no-tab-colour'),
     { disabled: sheet.tabColor === null, className: 'clears' },
     shut(() => asks.setTab(sheet.name, { color: null })),
   );

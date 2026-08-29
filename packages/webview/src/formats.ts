@@ -5,6 +5,7 @@ import { underFormat } from './cell';
 import { chosen, says } from './menus';
 import type { DrawnCell } from './protocol';
 import { type Asks, cellOf, over, type Showing, wornBy } from './showing';
+import { chrome } from './worded';
 
 /** The formats the box offers, the ones both spreadsheets keep at the top of theirs. */
 const NUMBERS: readonly (string | null)[] = [
@@ -32,7 +33,8 @@ export function numbers(showing: Showing, asks: Asks): HTMLElement {
 
   return chosen({
     name: 'numbers',
-    said: now === null ? 'Number format' : `Number format: ${now}`,
+    said:
+      now === null ? chrome('view.number-format') : chrome('view.number-format-now', { code: now }),
     now: now ?? '',
     disabled: showing.selected === null,
     options: (known ? NUMBERS : [...NUMBERS, now]).map((code) => ({
@@ -46,7 +48,7 @@ export function numbers(showing: Showing, asks: Asks): HTMLElement {
 
 /** What a format is called here: what it would make of this cell's number, or the code where there is none. */
 function called(code: string | null, of: DrawnCell | undefined): string {
-  if (code === null) return 'General';
+  if (code === null) return chrome('view.general');
 
   return (of === undefined ? null : underFormat(of, code)) ?? code;
 }
@@ -63,18 +65,24 @@ export function quickly(showing: Showing, asks: Asks): HTMLElement[] {
   const set = (format: string | null) => () => asks.wear({ format }, where);
 
   return [
-    button('percent', '%', 'Format as percent', none, set(now === PERCENT ? null : PERCENT)),
+    button(
+      'percent',
+      '%',
+      chrome('view.format-as-percent'),
+      none,
+      set(now === PERCENT ? null : PERCENT),
+    ),
     button(
       'fewer',
       '.0←',
-      'Fewer decimal places',
+      chrome('view.fewer-decimals'),
       none || places === 0,
       set(withDecimals(now, places - 1)),
     ),
     button(
       'more',
       '.00→',
-      'More decimal places',
+      chrome('view.more-decimals'),
       none || places === MOST_DECIMALS,
       set(withDecimals(now, places + 1)),
     ),
@@ -88,7 +96,7 @@ export function cleared(showing: Showing, asks: Asks): HTMLElement {
     STYLE_PROPERTIES.map((key: StyleProperty) => [key, null]),
   ) as StyleSays;
 
-  return button('clear', 'T', 'Clear formatting', showing.selected === null, () =>
+  return button('clear', 'T', chrome('view.clear-formatting'), showing.selected === null, () =>
     asks.wear(off, where),
   );
 }

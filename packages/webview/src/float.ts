@@ -12,6 +12,7 @@ import type {
 } from './protocol';
 import { type Asks, GUTTER, HEADING } from './showing';
 import { across, down, landing, pixelsOf } from './window';
+import { chrome } from './worded';
 
 /**
  * Everything that floats above a sheet, laid over the grid where it sits and at
@@ -166,12 +167,19 @@ function chart(sheet: DrawnSheet, one: DrawnChart): HTMLElement {
 
 /** What a chart is, said in full where the sketch has no room: its type, its ranges, and its axes. */
 function chartSaid(one: DrawnChart): string {
-  const lines = [`A ${spelled(one.type)} chart. This preview sketches it; Excel draws it.`];
+  const lines = [chrome('view.a-chart', { type: spelled(one.type) })];
 
   for (const each of one.series) {
     const name = each.name ?? each.values;
-    const over = each.categories === null ? '' : ` over ${each.categories}`;
-    lines.push(`${name}: ${each.values}${over}`);
+    lines.push(
+      each.categories === null
+        ? `${name}: ${each.values}`
+        : chrome('view.chart-over', {
+            name,
+            values: each.values,
+            categories: each.categories,
+          }),
+    );
   }
 
   const said = [axisSaid('X', one.x), axisSaid('Y', one.y)].filter((line) => line !== '');
@@ -182,12 +190,15 @@ function axisSaid(which: string, axis: DrawnChartAxis | null): string {
   if (axis === null) return '';
 
   const ends = [
-    axis.min === null ? '' : `from ${axis.min}`,
-    axis.max === null ? '' : `to ${axis.max}`,
+    axis.min === null ? '' : chrome('view.chart-from', { min: axis.min }),
+    axis.max === null ? '' : chrome('view.chart-to', { max: axis.max }),
   ].filter((one) => one !== '');
-  const named = axis.title === null ? '' : ` ${axis.title}`;
 
-  return `${which} axis:${named}${ends.length === 0 ? '' : ` ${ends.join(' ')}`}`.trim();
+  return chrome('view.chart-axis', {
+    which,
+    title: axis.title === null ? '' : ` ${axis.title}`,
+    ends: ends.length === 0 ? '' : ` ${ends.join(' ')}`,
+  });
 }
 
 /** The axis titles a chart writes, along the edges they belong to. */

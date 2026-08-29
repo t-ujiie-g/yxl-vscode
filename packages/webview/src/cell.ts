@@ -4,6 +4,7 @@ import { format as excel } from 'numfmt';
 import { iconOf } from './icons';
 import type { DrawnBar, DrawnCell, DrawnMerge, DrawnRun } from './protocol';
 import { sparkline } from './sparkline';
+import { chrome } from './worded';
 
 /** One cell as a `<td>`: what it says, and the look it was sent wearing. */
 export function drawCell(
@@ -22,7 +23,7 @@ export function drawCell(
   // the ones a style unlocks (`docs/spec.md` §16).
   if (protectedSheet && cell?.style['protection.locked'] === false) {
     drawn.classList.add('unlocked');
-    drawn.title = 'Excel will let a reader type into this one; the rest of the sheet is locked.';
+    drawn.title = chrome('view.unlocked-cell');
   }
 
   if (cell === undefined) return drawn;
@@ -49,8 +50,10 @@ export function drawCell(
   if (cell.editable !== 'direct') drawn.classList.add('locked');
 
   const about = [
-    cell.overridden ? 'written as an override' : '',
-    cell.editable === 'direct' ? '' : `cannot be typed into: ${standing(cell.editable)}`,
+    cell.overridden ? chrome('view.written-as-an-override') : '',
+    cell.editable === 'direct'
+      ? ''
+      : chrome('view.cannot-be-typed-into', { why: standing(cell.editable) }),
   ].filter((one) => one !== '');
   if (about.length > 0)
     drawn.title = [drawn.title, ...about].filter((one) => one !== '').join(' — ');
@@ -294,10 +297,10 @@ export function written(cell: DrawnCell | undefined): string {
 
 /** What stands between this cell and being typed into. */
 function standing(editable: Exclude<DrawnCell['editable'], 'direct'>): string {
-  if (editable === 'rich') return 'it holds rich text, edited a run at a time in the bar';
-  if (editable === 'external') return 'its value comes from a file beside the spec';
+  if (editable === 'rich') return chrome('view.standing-rich');
+  if (editable === 'external') return chrome('view.standing-external');
 
-  return 'more than one thing could change to make that edit';
+  return chrome('view.standing-mediated');
 }
 
 /** One run of a rich cell, wearing its own font over the cell's style. */

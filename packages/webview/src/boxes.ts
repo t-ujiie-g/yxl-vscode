@@ -3,6 +3,7 @@ import { breaking, written } from './cell';
 import { looking as lookingFor } from './keys';
 import type { DrawnRun } from './protocol';
 import { type Asks, cellOf, GUTTER, type Looking, type Showing } from './showing';
+import { chrome } from './worded';
 
 /**
  * The boxes outside the grid, said again. The bar is *rebuilt* rather than
@@ -38,8 +39,8 @@ export function corner(asks: Asks, left = 0): HTMLElement {
   const all = document.createElement('button');
   all.type = 'button';
   all.className = 'all';
-  all.title = 'Select the whole sheet';
-  all.setAttribute('aria-label', 'Select the whole sheet');
+  all.title = chrome('view.select-whole-sheet');
+  all.setAttribute('aria-label', all.title);
   all.addEventListener('click', () => asks.takeAll());
 
   cell.append(all);
@@ -59,8 +60,8 @@ export function formulaBar(showing: Showing, asks: Asks): HTMLElement {
   at.type = 'text';
   at.className = 'address';
   at.value = showing.selected === null ? '' : addrAt(showing.selected);
-  at.title = 'Go to an address';
-  at.setAttribute('aria-label', 'Go to an address');
+  at.title = chrome('view.go-to-an-address');
+  at.setAttribute('aria-label', at.title);
   at.addEventListener('keydown', (event) => {
     event.stopPropagation();
     if (event.key === 'Enter') asks.goTo(at.value);
@@ -83,7 +84,8 @@ export function formulaBar(showing: Showing, asks: Asks): HTMLElement {
   holds.value = said();
   holds.rows = rowsOf(holds.value);
   holds.disabled = showing.selected === null;
-  holds.title = runs === null ? 'What this cell holds' : 'What this run of the cell says';
+  holds.title =
+    runs === null ? chrome('view.what-this-cell-holds') : chrome('view.what-this-run-says');
   holds.setAttribute('aria-label', holds.title);
   holds.addEventListener('input', () => {
     holds.rows = rowsOf(holds.value);
@@ -125,8 +127,8 @@ export function formulaBar(showing: Showing, asks: Asks): HTMLElement {
 function picker(runs: readonly DrawnRun[], at: number, take: (index: number) => void): HTMLElement {
   const box = document.createElement('select');
   box.className = 'runs';
-  box.title = 'Which run of this cell to edit';
-  box.setAttribute('aria-label', 'Which run of this cell to edit');
+  box.title = chrome('view.which-run-to-edit');
+  box.setAttribute('aria-label', box.title);
 
   for (const [index, run] of runs.entries()) {
     const option = document.createElement('option');
@@ -168,7 +170,7 @@ export function findBar(what: Looking, asks: Asks): HTMLElement {
   box.type = 'text';
   box.className = 'for';
   box.value = what.text;
-  box.placeholder = 'Find in this sheet';
+  box.placeholder = chrome('view.find-in-this-sheet');
   box.addEventListener('input', () => asks.look(box.value));
   box.addEventListener('keydown', (event) => {
     event.stopPropagation();
@@ -196,8 +198,8 @@ export function findBar(what: Looking, asks: Asks): HTMLElement {
   close.type = 'button';
   close.className = 'step close';
   close.textContent = '✕';
-  close.title = 'Close the search (Esc)';
-  close.setAttribute('aria-label', 'Close the search');
+  close.title = chrome('view.close-the-search-key');
+  close.setAttribute('aria-label', chrome('view.close-the-search'));
   close.addEventListener('click', () => asks.stopLooking());
   bar.append(close);
 
@@ -210,7 +212,7 @@ function replacing(what: Looking, asks: Asks): HTMLElement[] {
   box.type = 'text';
   box.className = 'with';
   box.value = what.becomes;
-  box.placeholder = 'Replace with';
+  box.placeholder = chrome('view.replace-with');
   box.addEventListener('input', () => asks.replaceWith(box.value));
   box.addEventListener('keydown', (event) => {
     event.stopPropagation();
@@ -221,15 +223,15 @@ function replacing(what: Looking, asks: Asks): HTMLElement[] {
   const one = document.createElement('button');
   one.type = 'button';
   one.className = 'swap';
-  one.textContent = 'Replace';
+  one.textContent = chrome('view.replace');
   one.disabled = what.at < 0;
-  one.title = what.at < 0 ? 'Go to one of them first' : 'Replace the one you are on';
+  one.title = what.at < 0 ? chrome('view.go-to-one-first') : chrome('view.replace-the-one');
   one.addEventListener('click', () => asks.replace(false));
 
   const all = document.createElement('button');
   all.type = 'button';
   all.className = 'swap all';
-  all.textContent = 'Replace all';
+  all.textContent = chrome('view.replace-all');
   all.disabled = what.cells.length === 0;
   all.addEventListener('click', () => asks.replace(true));
 
@@ -238,9 +240,14 @@ function replacing(what: Looking, asks: Asks): HTMLElement[] {
 
 /** How far through what was found, or that there was none of it. */
 function counted(what: Looking): string {
-  if (what.cells.length > 0) return `${Math.max(what.at, 0) + 1} of ${what.cells.length}`;
+  if (what.cells.length > 0) {
+    return chrome('view.which-of-them', {
+      at: Math.max(what.at, 0) + 1,
+      of: what.cells.length,
+    });
+  }
 
-  return what.text === '' ? '' : 'nothing here holds that';
+  return what.text === '' ? '' : chrome('view.nothing-holds-that');
 }
 
 function step(mark: string, by: number, asks: Asks): HTMLElement {

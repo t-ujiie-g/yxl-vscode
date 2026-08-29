@@ -1,7 +1,7 @@
 import type { Axis } from '@yxl-vscode/spec';
-import { spanSaid } from '@yxl-vscode/units';
 import type { DrawnSheet, Sized } from './protocol';
 import { type Asks, OUTLINE } from './showing';
+import { chrome, spanned } from './worded';
 
 /** How many levels of outline this axis has, which is how wide its gutter is (ADR-045). */
 export function levelsOf(sheet: DrawnSheet, axis: Axis): number {
@@ -77,7 +77,8 @@ function control(axis: Axis, run: Grouped, open: boolean, asks: Asks): HTMLEleme
     `${((run.group ?? 1) - 1) * LEVEL}px`,
   );
   drawn.textContent = open ? '+' : '\u2212';
-  drawn.title = `${open ? 'Open' : 'Collapse'} ${spanSaid(axis, run.first, run.last)}`;
+  const span = spanned(axis, run.first, run.last);
+  drawn.title = open ? chrome('view.open-run', { span }) : chrome('view.collapse-run', { span });
   drawn.addEventListener('mousedown', (event) => {
     event.preventDefault();
     event.stopPropagation();
@@ -106,7 +107,7 @@ export function groupOver(sheet: DrawnSheet, axis: Axis, run: Span): Grouped | n
 export function hidden(heading: HTMLElement, axis: Axis, run: Span, asks: Asks): void {
   const mark = document.createElement('span');
   mark.className = `hiding ${axis}`;
-  mark.title = `Show ${spanSaid(axis, run.first, run.last)} again`;
+  mark.title = chrome('view.show-again', { span: spanned(axis, run.first, run.last) });
   mark.addEventListener('mousedown', (event) => {
     event.preventDefault();
     event.stopPropagation();

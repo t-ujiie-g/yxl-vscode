@@ -33,7 +33,7 @@ import {
   banding,
   choicesIn,
   dropdown,
-  FILTERED,
+  filtered as filterSaid,
   filters,
   linkSaid,
   noted,
@@ -423,7 +423,7 @@ function line(
     if (checks !== null) drawn.append(validated(checks));
     if (shows(here)) drawn.classList.add('holds');
     tells(drawn, [
-      filtered ? FILTERED : '',
+      filtered ? filterSaid() : '',
       heads && table !== null ? tableSaid(table) : '',
       note === null ? '' : noteSaid(note),
       link === null ? '' : linkSaid(link),
