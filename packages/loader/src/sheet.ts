@@ -1,4 +1,5 @@
 import type { Node, Path } from '@yxl-vscode/cst';
+import type { Saying } from '@yxl-vscode/diag';
 import {
   type Cell,
   type Chart,
@@ -47,6 +48,7 @@ import {
 import { readSparklines } from './sparkline';
 import { readTables } from './table';
 import { ADDRESS, COLOR, RANGE, readAs, SHEET_NAME, spelling } from './template';
+import { about, entryOf, say, under } from './text';
 import { readValidations } from './validation';
 
 /** The workbook's `sheets:` sequence, in tab order. */
@@ -61,15 +63,20 @@ function readSheet(site: Site): Sheet | null {
   const here = opened.ctx;
   const { entries } = opened;
 
-  const named = findEntry(entries, 'name');
-  if (named === undefined) {
-    reject(here, CODE.missingKey, 'a sheet needs a `name`', opened.node.span);
+  const naming = findEntry(entries, 'name');
+  if (naming === undefined) {
+    reject(
+      here,
+      CODE.missingKey,
+      say('loader.needs', { what: about('sheet', ''), key: 'name' }),
+      opened.node.span,
+    );
     return null;
   }
-  const name = readAs(here, named.value, 'a sheet `name`', SHEET_NAME);
+  const name = readAs(here, naming.value, under(about('sheet', ''), 'name'), SHEET_NAME);
   if (name === null) return null;
 
-  const what = `sheet \`${scalarText(named.value) ?? ''}\``;
+  const what = about('sheet', String(scalarText(naming.value) ?? ''));
   let cells: Cell[] = [];
   let formulas: FormulaRange[] = [];
   let data: DataBlock[] = [];
@@ -120,31 +127,31 @@ function readSheet(site: Site): Sheet | null {
         merges = readMerges(here, entry.value, at, what);
         break;
       case 'freeze':
-        freeze = readAs(here, entry.value, `${what} \`freeze\``, ADDRESS);
+        freeze = readAs(here, entry.value, under(what, 'freeze'), ADDRESS);
         break;
       case 'visibility':
-        visibility = readAs(here, entry.value, `${what} \`visibility\``, spelling(VISIBILITIES));
+        visibility = readAs(here, entry.value, under(what, 'visibility'), spelling(VISIBILITIES));
         break;
       case 'tab_color':
-        tabColor = readAs(here, entry.value, `${what} \`tab_color\``, COLOR);
+        tabColor = readAs(here, entry.value, under(what, 'tab_color'), COLOR);
         break;
       case 'gridlines':
-        gridlines = expectBool(here, entry.value, `${what} \`gridlines\``);
+        gridlines = expectBool(here, entry.value, under(what, 'gridlines'));
         break;
       case 'split':
-        split = readSplit(here, entry.value, `${what} \`split\``);
+        split = readSplit(here, entry.value, under(what, 'split'));
         break;
       case 'conditional':
         conditional = readConditional(here, entry.value, at);
         break;
       case 'filter':
-        filter = readAs(here, entry.value, `${what} \`filter\``, RANGE);
+        filter = readAs(here, entry.value, under(what, 'filter'), RANGE);
         break;
       case 'print':
-        print = readPrint(here, entry.value, `${what} \`print\``);
+        print = readPrint(here, entry.value, under(what, 'print'));
         break;
       case 'protect':
-        protect = readProtect(here, entry.value, `${what} \`protect\``);
+        protect = readProtect(here, entry.value, under(what, 'protect'));
         break;
       case 'comments':
         comments = readNotes(here, entry.value, at);
@@ -207,7 +214,7 @@ function readSheet(site: Site): Sheet | null {
 }
 
 /** A `split:` mapping, in points from the top-left; a missing axis is `0`, which is unsplit. */
-function readSplit(ctx: Ctx, node: Node, what: string): Split | null {
+function readSplit(ctx: Ctx, node: Node, what: Saying): Split | null {
   const opened = openEntries(ctx, node, [], what);
   if (opened === null) return null;
 
@@ -219,9 +226,9 @@ function readSplit(ctx: Ctx, node: Node, what: string): Split | null {
   return x === null || y === null ? null : { x, y };
 }
 
-function readMerges(ctx: Ctx, node: Node, path: Path, what: string): Merge[] {
-  return readEach(ctx, node, path, `${what} \`merges\``, (site) => {
-    const at = readAs(site.ctx, site.node, 'a `merges` entry', RANGE);
+function readMerges(ctx: Ctx, node: Node, path: Path, what: Saying): Merge[] {
+  return readEach(ctx, node, path, under(what, 'merges'), (site) => {
+    const at = readAs(site.ctx, site.node, entryOf('merges'), RANGE);
     return at === null ? null : { ...identify(site.ctx, site.path, site.node.span), at };
   });
 }
@@ -231,7 +238,7 @@ function readFormulaRanges(ctx: Ctx, node: Node, path: Path): FormulaRange[] {
 }
 
 function readFormulaRange(site: Site): FormulaRange | null {
-  const what = 'a `formulas` entry';
+  const what = entryOf('formulas');
   const opened = openEntries(site.ctx, site.node, site.path, what);
   if (opened === null) return null;
 
@@ -247,12 +254,12 @@ function readFormulaRange(site: Site): FormulaRange | null {
   const written = findEntry(entries, 'formula');
   if (anchor === undefined || written === undefined) {
     const missing = anchor === undefined ? 'at' : 'formula';
-    reject(here, CODE.missingKey, `${what} needs a \`${missing}\``, opened.node.span);
+    reject(here, CODE.missingKey, say('loader.needs', { what, key: missing }), opened.node.span);
     return null;
   }
 
-  const at = readAs(here, anchor.value, `${what} \`at\``, RANGE);
-  const formula = expectText(here, written.value, `${what} \`formula\``);
+  const at = readAs(here, anchor.value, under(what, 'at'), RANGE);
+  const formula = expectText(here, written.value, under(what, 'formula'));
   if (at === null || formula === null) return null;
 
   const range = identify(here, opened.path, opened.node.span);

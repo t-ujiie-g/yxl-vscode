@@ -26,6 +26,17 @@ describe('what the host words', () => {
     expect(reader('ja')(problem)).toBe('`nosuch` という名前の値は宣言されていません');
   });
 
+  it('reads a message the loader built out of the path it was reading', () => {
+    const what = {
+      id: 'loader.under',
+      args: { what: { id: 'loader.an-entry', args: { key: 'charts' } }, key: 'at' },
+    };
+    const problem = { id: 'loader.must-be-text', args: { what } };
+
+    expect(reader('en')(problem)).toBe('a `charts` entry `at` must be text');
+    expect(reader('ja')(problem)).toBe('`charts` のエントリの `at`は文字列である必要があります');
+  });
+
   it('reads every book this editor holds, whichever package said it', () => {
     expect(reader('ja')({ id: 'cst.key-exists', args: { key: 'A1' } })).toBe(
       '`A1` はすでにあります',

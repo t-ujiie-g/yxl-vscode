@@ -61,3 +61,4 @@ export {
   type QualifiedRange,
   qualified,
 } from './qualified';
+export { WORDS } from './text';

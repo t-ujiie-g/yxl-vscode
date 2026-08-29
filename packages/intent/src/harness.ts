@@ -4,13 +4,13 @@ import { WORDS as cst, parse } from '@yxl-vscode/cst';
 import { type Saying, reading as wording } from '@yxl-vscode/diag';
 import { type IncludeReader, load } from '@yxl-vscode/loader';
 import type { SpecDoc } from '@yxl-vscode/spec';
-import { type FilePath, filePath } from '@yxl-vscode/units';
+import { type FilePath, filePath, WORDS as units } from '@yxl-vscode/units';
 import { type Checked, type Ctx, checked } from '@yxl-vscode/verify';
 import { type Intent, type Reading, reading, type Text } from './direct';
 import { WORDS } from './text';
 
 /** What the core said, in English, which is the language a test reads its own assertions in. */
-export const english: (saying: Saying) => string = wording('en', cst, WORDS);
+export const english: (saying: Saying) => string = wording('en', units, cst, WORDS);
 
 /** The spec these tests edit, which is the file a one-file spec is written in. */
 export const ROOT = filePath('spec.yxl.yaml') ?? ('' as FilePath);

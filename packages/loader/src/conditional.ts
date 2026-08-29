@@ -1,4 +1,5 @@
 import type { Node } from '@yxl-vscode/cst';
+import type { Saying } from '@yxl-vscode/diag';
 import {
   type Comparison,
   type Conditional,
@@ -22,6 +23,7 @@ import {
 } from './read';
 import { readStyleUse } from './style';
 import { COLOR, RANGE, readAs } from './template';
+import { entryOf, under } from './text';
 
 /** A sheet's `conditional:` rules, in the order written, which is Excel's priority order. */
 export function readConditional(
@@ -29,7 +31,7 @@ export function readConditional(
   node: Node,
   path: readonly (string | number)[],
 ): Conditional[] {
-  const what = 'a `conditional` entry';
+  const what = entryOf('conditional');
 
   return readEach(ctx, node, path, '`conditional`', (site: Site) => {
     const rule = openEntries(site.ctx, site.node, site.path, what);
@@ -51,17 +53,17 @@ export function readConditional(
   });
 }
 
-function readAt(rule: Opened, what: string): Conditional['at'] | null {
+function readAt(rule: Opened, what: Saying): Conditional['at'] | null {
   const found = rule.entries.find((entry) => keyOf(entry) === 'at');
   if (found === undefined) return null;
 
-  return readAs(rule.ctx, found.value, `${what} \`at\``, RANGE);
+  return readAs(rule.ctx, found.value, under(what, 'at'), RANGE);
 }
 
 /** The look a matching cell wears, and whether a match stops the rules after it. */
 function readLook(
   rule: Opened,
-  what: string,
+  what: Saying,
 ): { style: StyleUse | null; format: string | null; stopIfTrue: boolean } {
   let style: StyleUse | null = null;
   let format: string | null = null;
@@ -69,7 +71,7 @@ function readLook(
 
   for (const entry of rule.entries) {
     const key = keyOf(entry);
-    const at = `${what} \`${key}\``;
+    const at = under(what, key);
     if (key === 'style') style = readStyleUse(rule.ctx, entry.value, at);
     if (key === 'format') format = expectText(rule.ctx, entry.value, at);
     if (key === 'stop_if_true') stopIfTrue = expectBool(rule.ctx, entry.value, at) === true;
@@ -81,10 +83,10 @@ function readLook(
 }
 
 /** What decides the rule: exactly one of the nine keys that can (`docs/spec.md` §10). */
-function readTest(rule: Opened, what: string): ConditionalTest | null {
+function readTest(rule: Opened, what: Saying): ConditionalTest | null {
   for (const entry of rule.entries) {
     const key = keyOf(entry);
-    const at = `${what} \`${key}\``;
+    const at = under(what, key);
 
     switch (key) {
       case 'cell': {
@@ -131,7 +133,7 @@ const COMPARES = [
 ] as const;
 
 /** A comparison as a `cell:` rule and a validation both spell it (`docs/spec.md` §10). */
-export function readComparison(ctx: Ctx, node: Node, what: string): Comparison | null {
+export function readComparison(ctx: Ctx, node: Node, what: Saying): Comparison | null {
   const opened = openEntries(ctx, node, [], what);
   const entry = opened?.entries[0];
   if (opened === null || entry === undefined) return null;
@@ -154,7 +156,7 @@ export function readComparison(ctx: Ctx, node: Node, what: string): Comparison |
 
 const ASKS = ['contains', 'not_contains', 'begins_with', 'ends_with'] as const;
 
-function readTextTest(ctx: Ctx, node: Node, what: string): TextTest | null {
+function readTextTest(ctx: Ctx, node: Node, what: Saying): TextTest | null {
   const opened = openEntries(ctx, node, [], what);
   const entry = opened?.entries[0];
   if (opened === null || entry === undefined) return null;
@@ -170,7 +172,7 @@ function readTextTest(ctx: Ctx, node: Node, what: string): TextTest | null {
 function readRanked(
   ctx: Ctx,
   node: Node,
-  what: string,
+  what: Saying,
   kind: 'top' | 'bottom',
 ): ConditionalTest | null {
   if (node.kind === 'scalar') {
@@ -191,7 +193,7 @@ function readRanked(
   return count === null ? null : { kind, count, percent };
 }
 
-function readColorScale(ctx: Ctx, node: Node, what: string): ConditionalTest | null {
+function readColorScale(ctx: Ctx, node: Node, what: Saying): ConditionalTest | null {
   const opened = openEntries(ctx, node, [], what);
   if (opened === null) return null;
 
@@ -200,7 +202,7 @@ function readColorScale(ctx: Ctx, node: Node, what: string): ConditionalTest | n
   let high: Templated<Color> | null = null;
   for (const entry of opened.entries) {
     const key = keyOf(entry);
-    const read = readAs(opened.ctx, entry.value, `${what} \`${key}\``, COLOR);
+    const read = readAs(opened.ctx, entry.value, under(what, key), COLOR);
     if (key === 'low') low = read;
     if (key === 'middle') middle = read;
     if (key === 'high') high = read;
@@ -209,7 +211,7 @@ function readColorScale(ctx: Ctx, node: Node, what: string): ConditionalTest | n
   return low === null || high === null ? null : { kind: 'colorScale', low, middle, high };
 }
 
-function readDataBar(ctx: Ctx, node: Node, what: string): ConditionalTest | null {
+function readDataBar(ctx: Ctx, node: Node, what: Saying): ConditionalTest | null {
   const opened = openEntries(ctx, node, [], what);
   if (opened === null) return null;
 
@@ -217,14 +219,14 @@ function readDataBar(ctx: Ctx, node: Node, what: string): ConditionalTest | null
   let barOnly = false;
   for (const entry of opened.entries) {
     const key = keyOf(entry);
-    if (key === 'color') color = readAs(opened.ctx, entry.value, `${what} \`color\``, COLOR);
+    if (key === 'color') color = readAs(opened.ctx, entry.value, under(what, 'color'), COLOR);
     if (key === 'bar_only') barOnly = expectBool(opened.ctx, entry.value, what) === true;
   }
 
   return color === null ? null : { kind: 'dataBar', color, barOnly };
 }
 
-function readIconSet(ctx: Ctx, node: Node, what: string): ConditionalTest | null {
+function readIconSet(ctx: Ctx, node: Node, what: Saying): ConditionalTest | null {
   if (node.kind === 'scalar') {
     const name = expectText(ctx, node, what);
     return name === null ? null : { kind: 'iconSet', name, reverse: false, iconsOnly: false };

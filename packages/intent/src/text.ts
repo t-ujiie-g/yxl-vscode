@@ -35,7 +35,7 @@ export type Says = {
   'intent.these-cannot-be-written': { why: Saying };
   'intent.sheet-not-a-mapping': Nothing;
   'intent.rich-not-pasted': { at: string };
-  'intent.formula-cannot-move': { at: string; why: string };
+  'intent.formula-cannot-move': { at: string; why: Saying };
   'intent.nothing-on-that-line': Nothing;
   'intent.not-a-cell-of-its-own': { at: string };
   'intent.more-than-a-value': { at: string };
@@ -52,7 +52,7 @@ export type Says = {
   'intent.no-such-band': { axis: string; at: number };
   'intent.nothing-moves': { axis: string; at: number; last: number };
   'intent.band-across-files': { axis: string; at: number; last: number };
-  'intent.formula-would-break': { at: string; formula: string; why: string };
+  'intent.formula-would-break': { at: string; formula: string; why: Saying };
   'intent.rows-from-file': { file: string };
   'intent.merge-needs-more': Nothing;
   'intent.already-merged': { range: string };
@@ -72,7 +72,7 @@ export type Says = {
   'intent.already-called-that': { name: string };
   'intent.already-a-sheet-named': { name: string };
   'intent.no-place-to-rename': Nothing;
-  'intent.named-formula-breaks': { what: string; why: string };
+  'intent.named-formula-breaks': { what: string; why: Saying };
   'intent.named-across-files': { sheet: string };
   'intent.nothing-to-look-for': Nothing;
   'intent.nothing-holds-that': { sheet: string };
@@ -223,7 +223,8 @@ const en: Words<Says> = {
   'intent.sheet-not-a-mapping': () => 'these cells cannot be written: the sheet is not a mapping',
   'intent.rich-not-pasted': ({ at }) =>
     `\`${at}\` holds rich text, which this editor does not paste`,
-  'intent.formula-cannot-move': ({ at, why }) => `\`${at}\` holds a formula that ${why}`,
+  'intent.formula-cannot-move': ({ at, why }, worded) =>
+    `\`${at}\` holds a formula that ${worded(why)}`,
   'intent.nothing-on-that-line': () =>
     'nothing on that line is written, so there is nothing to fill',
   'intent.not-a-cell-of-its-own': ({ at }) =>
@@ -250,8 +251,8 @@ const en: Words<Says> = {
   'intent.nothing-moves': (one) => `nothing here moves when ${spanned(one, 'en')} is drawn`,
   'intent.band-across-files': (one) =>
     `${spanned(one, 'en')} reaches more than one file, which this cannot write at once`,
-  'intent.formula-would-break': ({ at, formula, why }) =>
-    `\`${at}\` holds \`=${formula}\`, and ${why}`,
+  'intent.formula-would-break': ({ at, formula, why }, worded) =>
+    `\`${at}\` holds \`=${formula}\`, and ${worded(why)}`,
   'intent.rows-from-file': ({ file }) =>
     `the rows here come from \`${file}\`, which this cannot open a gap in`,
   'intent.merge-needs-more': () =>
@@ -279,7 +280,8 @@ const en: Words<Says> = {
   'intent.already-called-that': ({ name }) => `this sheet is called \`${name}\` already`,
   'intent.already-a-sheet-named': ({ name }) => `there is already a sheet named \`${name}\``,
   'intent.no-place-to-rename': () => 'this sheet has no place in the file to rename',
-  'intent.named-formula-breaks': ({ what, why }) => `${what} holds a formula that ${why}`,
+  'intent.named-formula-breaks': ({ what, why }, worded) =>
+    `${what} holds a formula that ${worded(why)}`,
   'intent.named-across-files': ({ sheet }) =>
     `\`${sheet}\` is named in more than one file, which this cannot rewrite at once`,
   'intent.nothing-to-look-for': () => 'there is nothing to look for',
@@ -414,7 +416,8 @@ const ja: Words<Says> = {
     'これらのセルは書き込めません: シートがマッピングになっていません',
   'intent.rich-not-pasted': ({ at }) =>
     `\`${at}\` はリッチテキストで、このエディタは貼り付けません`,
-  'intent.formula-cannot-move': ({ at, why }) => `\`${at}\` は${why}数式を持っています`,
+  'intent.formula-cannot-move': ({ at, why }, worded) =>
+    `\`${at}\` が持つ数式について: ${worded(why)}`,
   'intent.nothing-on-that-line': () => 'その行には何も書かれていないため、埋めるものがありません',
   'intent.not-a-cell-of-its-own': ({ at }) =>
     `\`${at}\` は独立したセルとして書かれていないため、テーブルが取り込めません`,
@@ -440,8 +443,8 @@ const ja: Words<Says> = {
   'intent.nothing-moves': (one) => `${spanned(one, 'ja')}を引いても、ここでは何も動きません`,
   'intent.band-across-files': (one) =>
     `${spanned(one, 'ja')}は複数のファイルにまたがっており、一度には書けません`,
-  'intent.formula-would-break': ({ at, formula, why }) =>
-    `\`${at}\` は \`=${formula}\` を持っており、${why}`,
+  'intent.formula-would-break': ({ at, formula, why }, worded) =>
+    `\`${at}\` は \`=${formula}\` を持っています: ${worded(why)}`,
   'intent.rows-from-file': ({ file }) =>
     `ここの行は \`${file}\` から来ており、そこに隙間を空けることはできません`,
   'intent.merge-needs-more': () =>
@@ -471,7 +474,8 @@ const ja: Words<Says> = {
   'intent.already-called-that': ({ name }) => `このシートはすでに \`${name}\` という名前です`,
   'intent.already-a-sheet-named': ({ name }) => `\`${name}\` という名前のシートはすでにあります`,
   'intent.no-place-to-rename': () => 'このシートには、名前を変更できる場所がファイル上にありません',
-  'intent.named-formula-breaks': ({ what, why }) => `${what} は${why}数式を持っています`,
+  'intent.named-formula-breaks': ({ what, why }, worded) =>
+    `${what} が持つ数式について: ${worded(why)}`,
   'intent.named-across-files': ({ sheet }) =>
     `\`${sheet}\` は複数のファイルで名指しされており、一度には書き換えられません`,
   'intent.nothing-to-look-for': () => '検索する文字列がありません',

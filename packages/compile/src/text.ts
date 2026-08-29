@@ -1,4 +1,4 @@
-import { type Book, type Nothing, speaking, type Words } from '@yxl-vscode/diag';
+import { type Book, type Nothing, type Saying, speaking, type Words } from '@yxl-vscode/diag';
 
 /** Every sentence this package says, with what fills it; an id is stable, so it is API (ADR-051). */
 export type Says = {
@@ -23,7 +23,15 @@ export type Says = {
   'compile.data-needs-a-path': Nothing;
   'compile.nothing-can-read': { path: string };
   'compile.cannot-read': { path: string };
-  'compile.bad-table': { file: string; problem: string };
+  'compile.bad-table': { file: string; problem: Saying };
+  'compile.csv-unclosed-quote': Nothing;
+  'compile.invalid-json': { why: string };
+  'compile.json-must-be-an-array': Nothing;
+  'compile.row-is-an-array': { at: number };
+  'compile.row-must-be-a-row': { at: number };
+  'compile.row-needs-columns': { at: number };
+  'compile.row-has-no-field': { at: number; name: string };
+  'compile.field-is-not-a-value': { at: number };
 };
 
 export const say = speaking<Says>();
@@ -50,7 +58,19 @@ const en: Words<Says> = {
   'compile.data-needs-a-path': () => 'a `data` entry needs a path',
   'compile.nothing-can-read': ({ path }) => `nothing here can read \`${path}\``,
   'compile.cannot-read': ({ path }) => `cannot read \`${path}\``,
-  'compile.bad-table': ({ file, problem }) => `\`${file}\`: ${problem}`,
+  'compile.bad-table': ({ file, problem }, worded) => `\`${file}\`: ${worded(problem)}`,
+  'compile.csv-unclosed-quote': () => 'the CSV ends inside a quoted field',
+  'compile.invalid-json': ({ why }) => `invalid JSON: ${why}`,
+  'compile.json-must-be-an-array': () => 'a JSON table must be an array of rows',
+  'compile.row-is-an-array': ({ at }) =>
+    `\`columns\` names the fields of objects, but row ${at} is an array`,
+  'compile.row-must-be-a-row': ({ at }) =>
+    `row ${at} of a JSON table must be an array or an object`,
+  'compile.row-needs-columns': ({ at }) =>
+    `row ${at} is an object, so \`columns\` must name the fields to take (object key order is not dependable)`,
+  'compile.row-has-no-field': ({ at, name }) => `row ${at} has no field \`${name}\``,
+  'compile.field-is-not-a-value': ({ at }) =>
+    `row ${at} has a field that is an array or an object; a cell holds a string, a number, a boolean, or null`,
 };
 
 const ja: Words<Says> = {
@@ -78,7 +98,20 @@ const ja: Words<Says> = {
   'compile.data-needs-a-path': () => '`data` のエントリにはパスが必要です',
   'compile.nothing-can-read': ({ path }) => `ここでは \`${path}\` を読めません`,
   'compile.cannot-read': ({ path }) => `\`${path}\` を読めません`,
-  'compile.bad-table': ({ file, problem }) => `${problem}（\`${file}\`）`,
+  'compile.bad-table': ({ file, problem }, worded) => `${worded(problem)}（\`${file}\`）`,
+  'compile.csv-unclosed-quote': () => 'CSV が引用符の途中で終わっています',
+  'compile.invalid-json': ({ why }) => `JSON が不正です: ${why}`,
+  'compile.json-must-be-an-array': () => 'JSON のテーブルは行の配列である必要があります',
+  'compile.row-is-an-array': ({ at }) =>
+    `\`columns\` はオブジェクトのフィールドを指しますが、${at} 行目は配列です`,
+  'compile.row-must-be-a-row': ({ at }) =>
+    `JSON テーブルの ${at} 行目は配列かオブジェクトである必要があります`,
+  'compile.row-needs-columns': ({ at }) =>
+    `${at} 行目はオブジェクトなので、取り出すフィールドを \`columns\` で指定する必要があります（オブジェクトのキー順は当てにできません）`,
+  'compile.row-has-no-field': ({ at, name }) =>
+    `${at} 行目に \`${name}\` というフィールドがありません`,
+  'compile.field-is-not-a-value': ({ at }) =>
+    `${at} 行目に配列またはオブジェクトのフィールドがあります。セルが持てるのは文字列・数値・真偽値・null です`,
 };
 
 /** This package's sentences in every language, for the edge that words them. */

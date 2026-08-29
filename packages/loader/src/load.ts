@@ -8,6 +8,7 @@ import { NO_DEFS, readDefs, readParams } from './defs';
 import { readOverrides } from './override';
 import { expectBool, openEntries } from './read';
 import { readSheets } from './sheet';
+import { say } from './text';
 
 /** What reading one file produced; `doc` is null only where there was nothing to read at all. */
 export interface Loaded {
@@ -24,7 +25,7 @@ export function load(parsed: Parsed, include?: IncludeReader): Loaded {
   const file = filePath(parsed.file);
   if (file === null) {
     const at = { file: parsed.file, span: span(0, 0) };
-    const unnamed = error(CODE.unnamedFile, 'a spec is read from a named file', at);
+    const unnamed = error(CODE.unnamedFile, say('loader.unnamed-file'), at);
     return { doc: null, diagnostics: [unnamed] };
   }
 

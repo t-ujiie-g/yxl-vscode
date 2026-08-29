@@ -1,4 +1,5 @@
 import type { Node } from '@yxl-vscode/cst';
+import type { Saying } from '@yxl-vscode/diag';
 import {
   type Align,
   BORDER_SIDES,
@@ -26,9 +27,10 @@ import {
   rejectUnknownKey,
 } from './read';
 import { COLOR, readAs, STYLE_NAME, spelling } from './template';
+import { say, under } from './text';
 
 /** A `style:` key: a bareword naming a definition, or a style written in place. */
-export function readStyleUse(ctx: Ctx, node: Node, what: string): StyleUse | null {
+export function readStyleUse(ctx: Ctx, node: Node, what: Saying): StyleUse | null {
   if (node.kind === 'scalar') {
     const name = readAs(ctx, node, what, STYLE_NAME);
     return name === null ? null : { kind: 'ref', name };
@@ -39,7 +41,7 @@ export function readStyleUse(ctx: Ctx, node: Node, what: string): StyleUse | nul
 }
 
 /** A style written out in place, with each of its facets read (`docs/spec.md` §6). */
-export function readStyle(ctx: Ctx, node: Node, what: string): Style | null {
+export function readStyle(ctx: Ctx, node: Node, what: Saying): Style | null {
   const opened = openEntries(ctx, node, [], what);
   if (opened === null) return null;
   const here = opened.ctx;
@@ -55,7 +57,7 @@ export function readStyle(ctx: Ctx, node: Node, what: string): Style | null {
 
   for (const entry of opened.entries) {
     const key = keyOf(entry);
-    const at = `${what} \`${key}\``;
+    const at = under(what, key);
     if (key !== 'extends' && isCleared(entry.value)) {
       clear(cleared, key);
       continue;
@@ -100,7 +102,7 @@ function clear(cleared: Set<StyleProperty>, key: string, group = ''): void {
 export function readFont(
   ctx: Ctx,
   node: Node,
-  what: string,
+  what: Saying,
   cleared: Set<StyleProperty>,
 ): Font | null {
   const opened = openEntries(ctx, node, [], what);
@@ -117,7 +119,7 @@ export function readFont(
 
   for (const entry of opened.entries) {
     const key = keyOf(entry);
-    const at = `${what} \`${key}\``;
+    const at = under(what, key);
     if (isCleared(entry.value) && MODELED_KEYS.font.has(key)) {
       clear(cleared, key, 'font');
       continue;
@@ -154,7 +156,7 @@ export function readFont(
 }
 
 /** A fill is its colour: the hex shorthand and the `{ color }` mapping are one thing. */
-function readFill(ctx: Ctx, node: Node, what: string): Style['fill'] {
+function readFill(ctx: Ctx, node: Node, what: Saying): Style['fill'] {
   if (node.kind === 'scalar') return readAs(ctx, node, what, COLOR);
 
   const opened = openEntries(ctx, node, [], what);
@@ -164,20 +166,21 @@ function readFill(ctx: Ctx, node: Node, what: string): Style['fill'] {
   let color: Style['fill'] = null;
   for (const entry of opened.entries) {
     if (keyOf(entry) === 'color') {
-      color = readAs(here, entry.value, `${what} \`color\``, COLOR);
+      color = readAs(here, entry.value, under(what, 'color'), COLOR);
     } else {
       rejectUnknownKey(here, entry, what, MODELED_KEYS.fill);
     }
   }
 
-  if (color === null) reject(here, CODE.missingKey, `${what} needs a \`color\``, opened.node.span);
+  if (color === null)
+    reject(here, CODE.missingKey, say('loader.needs', { what, key: 'color' }), opened.node.span);
   return color;
 }
 
 function readBorder(
   ctx: Ctx,
   node: Node,
-  what: string,
+  what: Saying,
   cleared: Set<StyleProperty>,
 ): readonly BorderSide[] | null {
   if (node.kind === 'scalar') {
@@ -202,14 +205,14 @@ function readBorder(
       continue;
     }
 
-    const edge = readBorderEdge(here, entry.value, `${what} \`${side}\``);
+    const edge = readBorderEdge(here, entry.value, under(what, side));
     if (edge !== null) sides.push({ side, edge });
   }
 
   return sides;
 }
 
-function readBorderEdge(ctx: Ctx, node: Node, what: string): BorderEdge | null {
+function readBorderEdge(ctx: Ctx, node: Node, what: Saying): BorderEdge | null {
   if (node.kind === 'scalar') {
     const style = readAs(ctx, node, what, spelling(BORDER_STYLES));
     return style === null ? null : { style, color: null };
@@ -223,7 +226,7 @@ function readBorderEdge(ctx: Ctx, node: Node, what: string): BorderEdge | null {
   let color: BorderEdge['color'] = null;
 
   for (const entry of opened.entries) {
-    const at = `${what} \`${keyOf(entry)}\``;
+    const at = under(what, keyOf(entry));
     switch (keyOf(entry)) {
       case 'style':
         style = readAs(here, entry.value, at, spelling(BORDER_STYLES));
@@ -237,13 +240,13 @@ function readBorderEdge(ctx: Ctx, node: Node, what: string): BorderEdge | null {
   }
 
   if (style === null) {
-    reject(here, CODE.missingKey, `${what} needs a \`style\``, opened.node.span);
+    reject(here, CODE.missingKey, say('loader.needs', { what, key: 'style' }), opened.node.span);
     return null;
   }
   return { style, color };
 }
 
-function readAlign(ctx: Ctx, node: Node, what: string, cleared: Set<StyleProperty>): Align | null {
+function readAlign(ctx: Ctx, node: Node, what: Saying, cleared: Set<StyleProperty>): Align | null {
   const opened = openEntries(ctx, node, [], what);
   if (opened === null) return null;
   const here = opened.ctx;
@@ -254,7 +257,7 @@ function readAlign(ctx: Ctx, node: Node, what: string, cleared: Set<StylePropert
 
   for (const entry of opened.entries) {
     const key = keyOf(entry);
-    const at = `${what} \`${key}\``;
+    const at = under(what, key);
     if (isCleared(entry.value) && MODELED_KEYS.align.has(key)) {
       clear(cleared, key, 'align');
       continue;
@@ -281,7 +284,7 @@ function readAlign(ctx: Ctx, node: Node, what: string, cleared: Set<StylePropert
 function readProtection(
   ctx: Ctx,
   node: Node,
-  what: string,
+  what: Saying,
   cleared: Set<StyleProperty>,
 ): Protection | null {
   const opened = openEntries(ctx, node, [], what);
@@ -293,7 +296,7 @@ function readProtection(
 
   for (const entry of opened.entries) {
     const key = keyOf(entry);
-    const at = `${what} \`${key}\``;
+    const at = under(what, key);
     if (isCleared(entry.value) && MODELED_KEYS.protection.has(key)) {
       clear(cleared, key, 'protection');
       continue;

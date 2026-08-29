@@ -1,5 +1,6 @@
 import { reading, setSorted } from '@yxl-vscode/intent';
 import type { Sorted } from '@yxl-vscode/webview/protocol';
+import { say } from './text';
 import { applied, type Port, rectIn, type Spec, sheetNamed } from './write';
 
 /**
@@ -16,5 +17,5 @@ export async function sort(spec: Spec, sorted: Sorted, port: Port): Promise<void
   const intent = setSorted(spec, where, reading(port.text));
 
   const done = await applied(spec, intent, port, { anyway: false, from: 'sort', about: null });
-  if (done) port.said(`${rect.bottom - rect.top + 1} rows in order.`);
+  if (done) port.said(say('host.rows-in-order', { many: rect.bottom - rect.top + 1 }));
 }

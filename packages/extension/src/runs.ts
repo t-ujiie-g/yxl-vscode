@@ -1,6 +1,7 @@
 import { reading, setRun } from '@yxl-vscode/intent';
 import { addrAt } from '@yxl-vscode/units';
 import type { EditedRun } from '@yxl-vscode/webview/protocol';
+import { say } from './text';
 import { applied, type Port, type Spec, sheetNamed } from './write';
 
 /**
@@ -17,5 +18,5 @@ export async function editRun(spec: Spec, asked: EditedRun, port: Port): Promise
   const intent = setRun(spec, where, reading(port.text));
 
   const done = await applied(spec, intent, port, { anyway: false, from: null, about: null });
-  if (done) port.said(`Run ${asked.index + 1} of ${at} now reads ${asked.text}.`);
+  if (done) port.said(say('host.run-now-reads', { index: asked.index + 1, at, text: asked.text }));
 }

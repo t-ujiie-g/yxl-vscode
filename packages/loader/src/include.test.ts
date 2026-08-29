@@ -1,9 +1,13 @@
 import { CODE as CST_CODE, parse } from '@yxl-vscode/cst';
+import { reading } from '@yxl-vscode/diag';
 import { filePath } from '@yxl-vscode/units';
 import { describe, expect, it } from 'vitest';
 import { CODE } from './codes';
 import type { IncludeReader } from './ctx';
 import { load } from './load';
+import { WORDS } from './text';
+
+const english = reading('en', WORDS);
 
 const MAIN = 'spec.yxl.yaml';
 
@@ -132,7 +136,7 @@ describe('an `$include` that cannot be followed', () => {
       'b.yaml': '$include: a.yaml\n',
     }).diagnostics;
     expect(diagnostic?.code).toBe(CODE.includeCycle);
-    expect(diagnostic?.message).toContain(`${MAIN} → a.yaml → b.yaml → a.yaml`);
+    expect(english(diagnostic?.message ?? '')).toContain(`${MAIN} → a.yaml → b.yaml → a.yaml`);
   });
 
   it('refuses a file that includes itself', () => {

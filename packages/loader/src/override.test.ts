@@ -1,8 +1,12 @@
 import { parse } from '@yxl-vscode/cst';
+import { reading } from '@yxl-vscode/diag';
 import type { Override } from '@yxl-vscode/spec';
 import { describe, expect, it } from 'vitest';
 import { CODE } from './codes';
 import { load } from './load';
+import { WORDS } from './text';
+
+const english = reading('en', WORDS);
 
 function loaded(body: string) {
   const source = `sheets:\n  - name: Sales\n    cells:\n      A1: x\noverrides:\n${body}`;
@@ -98,7 +102,7 @@ describe('an override that will not read', () => {
   it('reports a key it does not know, naming `at` and `reason` beside the facets', () => {
     const [diagnostic] = loaded('  - at: Sales!A1\n    valeu: fixed\n').diagnostics;
     expect(diagnostic?.code).toBe(CODE.unknownKey);
-    expect(diagnostic?.message).toContain('expected at, reason, value, formula');
+    expect(english(diagnostic?.message ?? '')).toContain('expected at, reason, value, formula');
   });
 
   it('keeps a `${...}` address whole, for the compiler to fill in', () => {

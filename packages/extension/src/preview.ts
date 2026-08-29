@@ -62,6 +62,7 @@ import { resize } from './size';
 import { sort } from './sorts';
 import { summed } from './summing';
 import { table } from './tables';
+import { say } from './text';
 import { goBack } from './undo';
 import { validate } from './validations';
 import { reader } from './words';
@@ -573,7 +574,7 @@ export class Preview {
     const port = this.port();
     if (went.kind === 'open') {
       void vscode.env.openExternal(vscode.Uri.parse(went.url));
-      port.said(`Opened ${went.url}.`);
+      port.said(say('host.opened', { url: went.url }));
       return;
     }
 
@@ -583,7 +584,11 @@ export class Preview {
       row: went.row,
       col: went.col,
     });
-    port.said(`Went to ${qualified(went.sheet, addrAt({ col: went.col, row: went.row }))}.`);
+    port.said(
+      say('host.went-to', {
+        at: qualified(went.sheet, addrAt({ col: went.col, row: went.row })),
+      }),
+    );
   }
 
   /** A write, with the spec and port it needs; a spec still loading and a failure are both said rather than dropped. */
@@ -607,7 +612,7 @@ export class Preview {
   private writing(make: (spec: Spec, port: Port) => Promise<void>): void {
     const spec = this.spec();
     if (spec === null) {
-      this.refuse('this spec has not finished loading', null);
+      this.refuse(say('host.still-loading'), null);
       return;
     }
 

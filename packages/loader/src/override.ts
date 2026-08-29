@@ -5,6 +5,7 @@ import { CODE } from './codes';
 import { type Ctx, identify, keyOf, reject, type Site } from './ctx';
 import { expectText, findEntry, openEntries, readEach, rejectUnknownKey } from './read';
 import { QUALIFIED, readAs } from './template';
+import { about, say, under } from './text';
 
 /** The top-level `overrides:` sequence (`docs/spec.md` §23); where one may land is checked with the whole workbook in view. */
 export function readOverrides(ctx: Ctx, node: Node, path: Path): Override[] {
@@ -20,20 +21,25 @@ function readOverride(site: Site): Override | null {
 
   const anchor = findEntry(entries, 'at');
   if (anchor === undefined) {
-    reject(here, CODE.missingKey, 'an override needs an `at`', opened.node.span);
+    reject(
+      here,
+      CODE.missingKey,
+      say('loader.needs', { what: about('override', ''), key: 'at' }),
+      opened.node.span,
+    );
     return null;
   }
-  const at = readAs(here, anchor.value, 'an override `at`', QUALIFIED);
+  const at = readAs(here, anchor.value, under(about('override', ''), 'at'), QUALIFIED);
   if (at === null) return null;
 
-  const what = `override \`${label(at)}\``;
+  const what = about('override', String(label(at)));
   let reason: string | null = null;
 
   for (const entry of entries) {
     const key = keyOf(entry);
     if (key === 'at' || MODELED_KEYS.cell.has(key)) continue;
     if (key === 'reason') {
-      reason = expectText(here, entry.value, `${what} \`reason\``);
+      reason = expectText(here, entry.value, under(what, 'reason'));
       continue;
     }
     rejectUnknownKey(here, entry, what, MODELED_KEYS.override);

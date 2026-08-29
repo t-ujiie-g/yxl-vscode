@@ -3,6 +3,7 @@ import { INCLUDE_KEY } from '@yxl-vscode/spec';
 import { filePath } from '@yxl-vscode/units';
 import { CODE } from './codes';
 import { type Ctx, keyOf, reject, type Site } from './ctx';
+import { say } from './text';
 
 /**
  * Where a node really is, following an `$include` that stands in its place —
@@ -14,38 +15,43 @@ export function follow(ctx: Ctx, node: Node, path: Path): Site | null {
   if (written === null) return { ctx, node, path };
 
   if (node.kind === 'map' && node.entries.length > 1) {
-    const message = `an \`${INCLUDE_KEY}\` replaces its whole node, so it takes no other key`;
+    const message = say('loader.include-takes-no-sibling');
     reject(ctx, CODE.includeWithSiblings, message, node.span);
     return null;
   }
 
   if (ctx.include === null) {
-    reject(ctx, CODE.includeNotExpanded, `\`${INCLUDE_KEY}\` is not expanded here`, node.span);
+    reject(ctx, CODE.includeNotExpanded, say('loader.include-not-expanded'), node.span);
     return null;
   }
 
   const target = filePath(written);
   if (target === null) {
-    reject(ctx, CODE.badPath, `an \`${INCLUDE_KEY}\` needs a path`, node.span);
+    reject(ctx, CODE.badPath, say('loader.include-needs-a-path'), node.span);
     return null;
   }
 
   const included = ctx.include(ctx.file, target);
   if (included === null) {
-    reject(ctx, CODE.includeUnreadable, `cannot read \`${target}\``, node.span);
+    reject(
+      ctx,
+      CODE.includeUnreadable,
+      say('loader.include-unreadable', { path: target }),
+      node.span,
+    );
     return null;
   }
 
   if (ctx.chain.includes(included.file)) {
     const loop = [...ctx.chain, included.file].join(' → ');
-    reject(ctx, CODE.includeCycle, `an \`${INCLUDE_KEY}\` comes back round: ${loop}`, node.span);
+    reject(ctx, CODE.includeCycle, say('loader.include-cycle', { loop }), node.span);
     return null;
   }
 
   const parsed = parse(included.source, { file: included.file });
   ctx.diagnostics.push(...parsed.diagnostics);
   if (parsed.root === null) {
-    reject(ctx, CODE.includeEmpty, `\`${included.file}\` holds nothing to include`, node.span);
+    reject(ctx, CODE.includeEmpty, say('loader.include-empty', { file: included.file }), node.span);
     return null;
   }
 

@@ -1,4 +1,5 @@
 import type { Entry, Node, Path } from '@yxl-vscode/cst';
+import type { Saying } from '@yxl-vscode/diag';
 import {
   CELL_TYPES,
   type Cell,
@@ -25,6 +26,7 @@ import {
   spelling,
   VALUE_NAME,
 } from './template';
+import { about, entryOf, say, under } from './text';
 
 /** A sheet's `cells:` mapping: one entry per addressed cell. */
 export function readCells(ctx: Ctx, node: Node, path: Path): Cell[] {
@@ -41,10 +43,10 @@ export function readCells(ctx: Ctx, node: Node, path: Path): Cell[] {
 
 function readCell(ctx: Ctx, entry: Entry, path: Path): Cell | null {
   const key = keyOf(entry);
-  const at = readTextAs(ctx, key, entry.key.span, 'a `cells` key', ADDRESS);
+  const at = readTextAs(ctx, key, entry.key.span, entryOf('cells'), ADDRESS);
   if (at === null) return null;
 
-  const what = `cell \`${key}\``;
+  const what = about('cell', String(key));
   const site = identify(ctx, [...path, key], entry.span);
 
   if (entry.value.kind !== 'map') {
@@ -72,7 +74,7 @@ const NOTHING_ELSE = {
   style: null,
 } as const;
 
-function readExpandedCell(ctx: Ctx, node: Node, what: string): CellFacets | null {
+function readExpandedCell(ctx: Ctx, node: Node, what: Saying): CellFacets | null {
   const opened = openEntries(ctx, node, [], what);
   if (opened === null) return null;
   const here = opened.ctx;
@@ -89,7 +91,7 @@ function readExpandedCell(ctx: Ctx, node: Node, what: string): CellFacets | null
 }
 
 /** The six keys a `cells:` entry and an override both write (`docs/spec.md` §3); other keys are the caller's. */
-export function readFacets(ctx: Ctx, entries: readonly Entry[], what: string): CellFacets {
+export function readFacets(ctx: Ctx, entries: readonly Entry[], what: Saying): CellFacets {
   let value: CellValue | null = null;
   let formula: FormulaBody | null = null;
   let rich: readonly RichRun[] | null = null;
@@ -99,7 +101,7 @@ export function readFacets(ctx: Ctx, entries: readonly Entry[], what: string): C
   let style: StyleUse | null = null;
 
   for (const entry of entries) {
-    const at = `${what} \`${keyOf(entry)}\``;
+    const at = under(what, keyOf(entry));
     switch (keyOf(entry)) {
       case 'value':
         value = readCellValue(ctx, entry.value, at);
@@ -129,7 +131,7 @@ export function readFacets(ctx: Ctx, entries: readonly Entry[], what: string): C
 }
 
 /** Whether the cell says anything at all, and whether what it says fits together (`docs/spec.md` §3). */
-export function holdsSomething(ctx: Ctx, body: CellFacets, node: Node, what: string): boolean {
+export function holdsSomething(ctx: Ctx, body: CellFacets, node: Node, what: Saying): boolean {
   const holdsNothing =
     body.value === null &&
     body.formula === null &&
@@ -138,33 +140,23 @@ export function holdsSomething(ctx: Ctx, body: CellFacets, node: Node, what: str
     body.format === null &&
     !body.clearsFormat;
   if (holdsNothing) {
-    reject(
-      ctx,
-      CODE.emptyCell,
-      `${what} needs a \`value\`, a \`formula\`, or a \`style\``,
-      node.span,
-    );
+    reject(ctx, CODE.emptyCell, say('loader.cell-needs-something', { what }), node.span);
     return false;
   }
 
   if (body.rich !== null && (body.value !== null || body.formula !== null)) {
-    reject(ctx, CODE.conflictingKeys, `${what} cannot be \`rich\` and hold a value too`, node.span);
+    reject(ctx, CODE.conflictingKeys, say('loader.rich-and-a-value', { what }), node.span);
   }
 
   // `type` coerces a written value; a formula's result is Excel's to type.
   if (body.type !== null && (body.formula !== null || body.rich !== null)) {
-    reject(
-      ctx,
-      CODE.conflictingKeys,
-      `${what} has a \`type\` with no value to apply it to`,
-      node.span,
-    );
+    reject(ctx, CODE.conflictingKeys, say('loader.type-with-no-value', { what }), node.span);
   }
   if (body.type !== null && body.value?.kind === 'ref') {
     reject(
       ctx,
       CODE.conflictingKeys,
-      `${what} cannot give a \`type\` to a \`${REF_KEY}\``,
+      say('loader.type-on-a-ref', { what, key: REF_KEY }),
       node.span,
     );
   }
@@ -172,7 +164,7 @@ export function holdsSomething(ctx: Ctx, body: CellFacets, node: Node, what: str
   return true;
 }
 
-function readCellValue(ctx: Ctx, node: Node, what: string): CellValue | null {
+function readCellValue(ctx: Ctx, node: Node, what: Saying): CellValue | null {
   if (node.kind === 'map') {
     const name = refName(ctx, node, what, VALUE_NAME);
     if (name !== null) return { kind: 'ref', name };
@@ -182,7 +174,7 @@ function readCellValue(ctx: Ctx, node: Node, what: string): CellValue | null {
   return value === null ? null : { kind: 'literal', value };
 }
 
-function readFormulaBody(ctx: Ctx, node: Node, what: string): FormulaBody | null {
+function readFormulaBody(ctx: Ctx, node: Node, what: Saying): FormulaBody | null {
   if (node.kind === 'map') {
     const name = refName(ctx, node, what, FORMULA_NAME);
     if (name !== null) return { kind: 'ref', name };
@@ -198,32 +190,32 @@ export function withoutLeadingEquals(formula: string): string {
 }
 
 /** The name in a `{ $ref: name }`, or `null`; a `$ref` beside any other key is not a reference. */
-function refName<T>(ctx: Ctx, node: Node, what: string, kind: Kind<T>): Templated<T> | null {
+function refName<T>(ctx: Ctx, node: Node, what: Saying, kind: Kind<T>): Templated<T> | null {
   if (node.kind !== 'map' || node.entries.length !== 1) return null;
 
   const [only] = node.entries;
   if (only === undefined || keyOf(only) !== REF_KEY) return null;
 
-  return readAs(ctx, only.value, `${what} \`${REF_KEY}\``, kind);
+  return readAs(ctx, only.value, under(what, REF_KEY), kind);
 }
 
-function readRich(ctx: Ctx, node: Node, what: string): readonly RichRun[] | null {
+function readRich(ctx: Ctx, node: Node, what: Saying): readonly RichRun[] | null {
   const opened = openSeq(ctx, node, [], what);
   if (opened === null) return null;
 
   if (opened.node.items.length === 0) {
-    reject(ctx, CODE.missingKey, `${what} needs at least one run`, node.span);
+    reject(ctx, CODE.missingKey, say('loader.needs-a-run', { what }), node.span);
   }
 
   const runs: RichRun[] = [];
   for (const [index, item] of opened.node.items.entries()) {
-    const run = readRichRun(opened.ctx, item, `${what} run ${index + 1}`);
+    const run = readRichRun(opened.ctx, item, say('loader.a-run-of', { what, index: index + 1 }));
     if (run !== null) runs.push(run);
   }
   return runs;
 }
 
-function readRichRun(ctx: Ctx, node: Node, what: string): RichRun | null {
+function readRichRun(ctx: Ctx, node: Node, what: Saying): RichRun | null {
   if (node.kind === 'scalar') {
     const text = expectText(ctx, node, what);
     return text === null ? null : { text, font: null };
@@ -237,7 +229,7 @@ function readRichRun(ctx: Ctx, node: Node, what: string): RichRun | null {
   let font: RichRun['font'] = null;
 
   for (const entry of opened.entries) {
-    const at = `${what} \`${keyOf(entry)}\``;
+    const at = under(what, keyOf(entry));
     switch (keyOf(entry)) {
       case 'text':
         text = expectText(here, entry.value, at);
@@ -248,7 +240,7 @@ function readRichRun(ctx: Ctx, node: Node, what: string): RichRun | null {
         const cleared = new Set<StyleProperty>();
         font = readFont(here, entry.value, at, cleared);
         if (cleared.size > 0) {
-          reject(here, CODE.notText, `${at} cannot take an attribute away`, entry.value.span);
+          reject(here, CODE.notText, say('loader.cannot-unset', { what: at }), entry.value.span);
         }
         break;
       }
@@ -258,7 +250,7 @@ function readRichRun(ctx: Ctx, node: Node, what: string): RichRun | null {
   }
 
   if (text === null) {
-    reject(here, CODE.missingKey, `${what} needs a \`text\``, opened.node.span);
+    reject(here, CODE.missingKey, say('loader.needs', { what, key: 'text' }), opened.node.span);
     return null;
   }
   return { text, font };

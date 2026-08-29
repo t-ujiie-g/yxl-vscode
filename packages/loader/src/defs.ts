@@ -14,6 +14,7 @@ import { CODE } from './codes';
 import { type Ctx, identify, keyOf, reject } from './ctx';
 import { expectText, expectValue, openEntries, rejectUnknownKey } from './read';
 import { readStyle } from './style';
+import { say } from './text';
 
 export const NO_DEFS: Defs = { styles: [], values: [], formulas: [] };
 
@@ -135,5 +136,5 @@ export function readParams(ctx: Ctx, node: Node, path: Path): Param[] {
 }
 
 function rejectEmptyName(ctx: Ctx, what: string, at: Span): void {
-  reject(ctx, CODE.badName, `a ${what} name cannot be empty`, at);
+  reject(ctx, CODE.badName, say('loader.empty-name', { of: what }), at);
 }

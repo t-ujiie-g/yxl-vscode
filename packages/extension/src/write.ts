@@ -215,7 +215,7 @@ export async function emptied(
   port: Port,
 ): Promise<void> {
   if (choice !== ONLY) {
-    port.refuse('that answer is no longer one of the ways this edit could be made', null);
+    port.refuse(say('host.answer-is-gone'), null);
     return;
   }
 
@@ -248,7 +248,7 @@ export async function resolve(
   const taken = answers.find((one) => one.id === choice);
 
   if (taken === undefined) {
-    port.refuse('that answer is no longer one of the ways this edit could be made', null);
+    port.refuse(say('host.answer-is-gone'), null);
     return;
   }
 
@@ -348,7 +348,7 @@ export async function applied(
 
   const source = port.text(intent.file);
   if (source === null) {
-    port.refuse(`${intent.file} could not be read`, null);
+    port.refuse(say('host.file-unreadable', { file: intent.file }), null);
     return false;
   }
 
