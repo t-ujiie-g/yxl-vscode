@@ -10,8 +10,9 @@ import {
   parse,
   removalOf,
 } from '@yxl-vscode/cst';
-import { type Diagnostic, error, type Span, span } from '@yxl-vscode/diag';
+import { type Diagnostic, error, type Message, type Span, span } from '@yxl-vscode/diag';
 import { CODE } from './codes';
+import { say } from './text';
 
 /** One edit to a spec, as the ops that carry it out: the unit that is applied, undone, and checked. */
 export interface Patch {
@@ -124,7 +125,7 @@ function inverseOf(
   going: ReadonlySet<string>,
 ): Op | null {
   const found = nodeAt(root, op.path);
-  const refuse = (message: string): null => {
+  const refuse = (message: Message): null => {
     const where: Span = found?.span ?? span(0, 0);
     into.push(error(CODE.noInverse, message, { file: options.file, span: where }));
     return null;
@@ -132,7 +133,7 @@ function inverseOf(
 
   switch (op.op) {
     case 'write': {
-      if (found === null) return refuse('nothing is there to write over');
+      if (found === null) return refuse(say('patch.nothing-to-write-over'));
 
       return { op: 'write', path: op.path, source: slice(source, found) };
     }
@@ -140,7 +141,7 @@ function inverseOf(
     case 'set':
     case 'clear': {
       if (found === null || found.kind !== 'scalar') {
-        return refuse('only a scalar can be written over and put back');
+        return refuse(say('patch.only-a-scalar'));
       }
 
       // The bytes, not the value: `1.50` and `1.5` are one value and two files.
@@ -151,7 +152,7 @@ function inverseOf(
 
     case 'renameKey': {
       const key = keyOf(root, op.path);
-      if (key === null) return refuse('a rename puts back a key, and there is none here');
+      if (key === null) return refuse(say('patch.no-key-to-rename'));
 
       return { op: 'renameKey', path: [...op.path.slice(0, -1), op.to], to: key };
     }
@@ -167,11 +168,11 @@ function inverseOf(
       return { op: 'remove', path: [...op.path, op.key] };
 
     case 'remove': {
-      if (found === null) return refuse('nothing is there to put back');
-      if (op.path.length === 0) return refuse('the document root cannot be put back');
+      if (found === null) return refuse(say('patch.nothing-to-put-back'));
+      if (op.path.length === 0) return refuse(say('patch.root-cannot-be-put-back'));
 
       const taken = removalOf(source, root, op.path);
-      if (taken === null) return refuse('nothing is there to put back');
+      if (taken === null) return refuse(say('patch.nothing-to-put-back'));
 
       if (taken.of === 'flow') {
         return { op: 'write', path: taken.path, source: taken.source };

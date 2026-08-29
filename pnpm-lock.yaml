@@ -228,12 +228,18 @@ importers:
       '@yxl-vscode/compile':
         specifier: workspace:*
         version: link:../compile
+      '@yxl-vscode/cst':
+        specifier: workspace:*
+        version: link:../cst
       '@yxl-vscode/diag':
         specifier: workspace:*
         version: link:../diag
       '@yxl-vscode/evaluate':
         specifier: workspace:*
         version: link:../evaluate
+      '@yxl-vscode/patch':
+        specifier: workspace:*
+        version: link:../patch
       '@yxl-vscode/spec':
         specifier: workspace:*
         version: link:../spec
@@ -252,6 +258,9 @@ importers:
       '@yxl-vscode/cst':
         specifier: workspace:*
         version: link:../packages/cst
+      '@yxl-vscode/diag':
+        specifier: workspace:*
+        version: link:../packages/diag
       '@yxl-vscode/intent':
         specifier: workspace:*
         version: link:../packages/intent

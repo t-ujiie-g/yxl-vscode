@@ -8,6 +8,7 @@
   "dependencies": {
     "@yxl-vscode/compile": "workspace:*",
     "@yxl-vscode/cst": "workspace:*",
+    "@yxl-vscode/diag": "workspace:*",
     "@yxl-vscode/intent": "workspace:*",
     "@yxl-vscode/loader": "workspace:*",
     "@yxl-vscode/patch": "workspace:*",

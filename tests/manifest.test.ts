@@ -22,6 +22,18 @@ interface Manifest {
 const manifest = JSON.parse(readFileSync(join(EXTENSION, 'package.json'), 'utf8')) as Manifest;
 const { commands, menus, keybindings } = manifest.contributes;
 
+/** One of VS Code's own translation files, which is where the manifest's `%key%` are answered (ADR-051). */
+function nls(language: string): Record<string, string> {
+  const name = language === 'en' ? 'package.nls.json' : `package.nls.${language}.json`;
+  return JSON.parse(readFileSync(join(EXTENSION, name), 'utf8')) as Record<string, string>;
+}
+
+/** Every `%key%` the manifest asks for, wherever it is written. */
+function asked(): string[] {
+  const source = readFileSync(join(EXTENSION, 'package.json'), 'utf8');
+  return [...new Set([...source.matchAll(/%([\w.]+)%/g)].map((one) => one[1] ?? ''))];
+}
+
 /** Every command the extension actually registers, read from where it registers them. */
 function registered(): string[] {
   const source = readFileSync(join(EXTENSION, 'src/extension.ts'), 'utf8');
@@ -75,8 +87,20 @@ describe('what this editor contributes to VS Code', () => {
   });
 
   it('names what a command opens, since the palette says `yxl` for it already', () => {
-    const preview = commands.find((one) => one.command === 'yxl.showPreview');
-    expect(preview?.title).toContain('Grid');
-    expect(preview?.title).not.toContain('yxl');
+    const title = commands.find((one) => one.command === 'yxl.showPreview')?.title ?? '';
+    const preview = nls('en')[title.replaceAll('%', '')];
+    expect(preview).toContain('Grid');
+    expect(preview).not.toContain('yxl');
+  });
+
+  it('answers every `%key%` it asks for, in every language it says it reads', () => {
+    for (const language of ['en', 'ja']) {
+      const held = nls(language);
+      expect(asked().filter((one) => held[one] === undefined)).toEqual([]);
+    }
+  });
+
+  it('says the same list in both languages, so neither can quietly fall behind', () => {
+    expect(Object.keys(nls('ja')).sort()).toEqual(Object.keys(nls('en')).sort());
   });
 });

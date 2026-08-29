@@ -1,0 +1,8 @@
+{
+  "extension.description": "The VS Code preview: the panel beside the text, the filesystem, and the yxl CLI.",
+  "command.showPreview": "Open the Grid Beside the Spec",
+  "command.showSource": "Go to the Spec Behind the Grid",
+  "command.check": "Check the Spec",
+  "command.build": "Build the Workbook",
+  "configuration.path": "The `yxl` compiler this extension runs. A bare name is looked up on `PATH`; an absolute path is used as given."
+}

@@ -1,7 +1,11 @@
+import { reading } from '@yxl-vscode/diag';
 import { describe, expect, it } from 'vitest';
 import { apply } from './apply';
 import { CODE } from './codes';
 import type { Op } from './op';
+import { WORDS } from './text';
+
+const english = reading('en', WORDS);
 
 function edit(source: string, ...ops: Op[]) {
   return apply(source, ops, { file: 'test.yxl.yaml' });
@@ -201,7 +205,7 @@ describe('apply', () => {
         path: ['sheets', 3, 'cells', 'A1'],
         value: 1,
       });
-      expect(diagnostics[0]?.message).toContain('sheets[3].cells.A1');
+      expect(english(diagnostics[0]?.message ?? '')).toContain('sheets[3].cells.A1');
     });
 
     it('applies the ops it understood even when one is refused', () => {

@@ -14,7 +14,7 @@ import type {
   Orientation,
   PixelOffset,
   Positioning,
-  Said,
+  Saying,
   ScalarValue,
   Scale,
   ShapeKind,
@@ -241,8 +241,8 @@ export interface CompiledValidation {
   readonly rect: Rect;
   readonly asks: CompiledAsk;
   readonly allowBlank: boolean;
-  readonly prompt: Said | null;
-  readonly error: (Said & { readonly style: ErrorStyle }) | null;
+  readonly prompt: Saying | null;
+  readonly error: (Saying & { readonly style: ErrorStyle }) | null;
   readonly node: NodeId;
 }
 

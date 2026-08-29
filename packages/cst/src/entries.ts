@@ -1,10 +1,11 @@
-import { type Span, span } from '@yxl-vscode/diag';
+import { type Message, type Span, span } from '@yxl-vscode/diag';
 import { CODE } from './codes';
 import { cutOf, itemAt, withEntry, withoutEntry } from './flow';
 import { aboveComments, belowComments, indentWidth, lineBreak, lineEnd, lineStart } from './lines';
 import { entryOf, formatPath, holds, locate, nodeAt, type Site } from './locate';
 import type { Mapping, Node, Sequence } from './node';
 import type { Edit, Op, Path, Refuse } from './op';
+import { say } from './text';
 import { renderScalar } from './write';
 
 /** A construct written into a sequence on lines of its own, indented into place here. */
@@ -49,7 +50,11 @@ function intoSequence(
 ): { at: number; prefix: string } | undefined {
   const target = site.node;
   if (target.kind !== 'seq') {
-    refuse(CODE.notASequence, `\`${formatPath(op.path)}\` is not a sequence`, target.span);
+    refuse(
+      CODE.notASequence,
+      say('cst.not-a-sequence', { path: formatPath(op.path) }),
+      target.span,
+    );
     return undefined;
   }
   if (target.flow) {
@@ -61,7 +66,7 @@ function intoSequence(
   if (!neighbour) {
     refuse(
       CODE.emptySequence,
-      `\`${formatPath(op.path)}\` has no item to take its layout from`,
+      say('cst.no-item-to-copy', { path: formatPath(op.path) }),
       target.span,
     );
     return undefined;
@@ -99,7 +104,7 @@ export function addedBlock(
   if (!last) {
     refuse(
       CODE.emptyMapping,
-      `\`${formatPath(op.path)}\` has no entry to take its layout from`,
+      say('cst.no-entry-to-copy', { path: formatPath(op.path) }),
       target.span,
     );
     return undefined;
@@ -144,7 +149,7 @@ export function addition(
   if (!first) {
     refuse(
       CODE.emptyMapping,
-      `\`${formatPath(op.path)}\` has no entry to take its layout from`,
+      say('cst.no-entry-to-copy', { path: formatPath(op.path) }),
       target.span,
     );
     return undefined;
@@ -152,7 +157,7 @@ export function addition(
 
   const above = op.before === null ? undefined : entryOf(target, op.before);
   if (op.before !== null && above === undefined) {
-    refuse(CODE.noSuchKey, `nothing is keyed \`${op.before}\` here`, target.span);
+    refuse(CODE.noSuchKey, say('cst.no-such-key', { key: String(op.before) }), target.span);
     return undefined;
   }
 
@@ -187,11 +192,11 @@ function mappingFor(
 ): Mapping | undefined {
   const target = site.node;
   if (target.kind !== 'map') {
-    refuse(CODE.notAMapping, `\`${formatPath(op.path)}\` is not a mapping`, target.span);
+    refuse(CODE.notAMapping, say('cst.not-a-mapping', { path: formatPath(op.path) }), target.span);
     return undefined;
   }
   if (holds(target, op.key)) {
-    refuse(CODE.keyExists, `\`${op.key}\` is already there`, target.span);
+    refuse(CODE.keyExists, say('cst.key-exists', { key: String(op.key) }), target.span);
     return undefined;
   }
   return target;
@@ -214,7 +219,7 @@ function stepOf(source: string): string {
 /** An entry taken out of the file, with the lines that belong to it. */
 export function removal(source: string, path: Path, site: Site, refuse: Refuse): Edit | undefined {
   if (site.in === 'root') {
-    refuse(CODE.cannotRemoveRoot, 'the document root cannot be removed', site.node.span);
+    refuse(CODE.cannotRemoveRoot, say('cst.cannot-remove-root'), site.node.span);
     return undefined;
   }
   if (site.parent.flow) {
@@ -286,7 +291,7 @@ export type Removal =
       readonly span: Span;
       readonly key: string | number;
       readonly before: string | null;
-      readonly inexact: string | null;
+      readonly inexact: Message | null;
     }
   | {
       readonly of: 'flow';
@@ -313,22 +318,18 @@ export function removalOf(source: string, root: Node, path: Path): Removal | nul
   const next = siblings[site.index + 1];
   const previous = siblings[site.index - 1];
   const at = taken(source, site);
-  const named = `\`${formatPath(path)}\``;
+  const named = { path: formatPath(path) };
 
-  const inexact = (): string | null => {
+  const inexact = (): Message | null => {
     if (next !== undefined) {
       const between = source.slice(at.end, lineStart(source, next.span.start)).split('\n');
       return between.slice(0, -1).some((line) => line.trim() === '')
-        ? `${named} has a blank line under it that would not be where it was`
+        ? say('cst.blank-line-under', named)
         : null;
     }
-    if (previous === undefined) {
-      return `${named} is the only entry here, and nothing would be left to put it back beside`;
-    }
+    if (previous === undefined) return say('cst.only-entry-here', named);
 
-    return lineEnd(source, previous.span.end) === at.start
-      ? null
-      : `${named} has lines above it that would not be where they were`;
+    return lineEnd(source, previous.span.end) === at.start ? null : say('cst.lines-above', named);
   };
 
   const followed = site.in === 'map' ? site.parent.entries[site.index + 1] : undefined;
@@ -351,7 +352,11 @@ export function restoration(
 ): Edit | undefined {
   const target = site.node;
   if (target.kind === 'scalar') {
-    refuse(CODE.notAMapping, `\`${formatPath(op.path)}\` holds no entries`, target.span);
+    refuse(
+      CODE.notAMapping,
+      say('cst.holds-no-entries', { path: formatPath(op.path) }),
+      target.span,
+    );
     return undefined;
   }
   if (target.flow) {
@@ -371,7 +376,7 @@ function whereItWas(
 ): number | undefined {
   const nothingLeft = (): undefined => {
     const code = target.kind === 'map' ? CODE.emptyMapping : CODE.emptySequence;
-    refuse(code, `\`${formatPath(op.path)}\` has nothing left to put it back beside`, target.span);
+    refuse(code, say('cst.nothing-left-beside', { path: formatPath(op.path) }), target.span);
     return undefined;
   };
 
@@ -384,14 +389,14 @@ function whereItWas(
   }
 
   if (holds(target, String(op.key))) {
-    refuse(CODE.keyExists, `\`${op.key}\` is already there`, target.span);
+    refuse(CODE.keyExists, say('cst.key-exists', { key: String(op.key) }), target.span);
     return undefined;
   }
 
   const above = entryOf(target, op.before ?? '');
   if (above !== undefined) return aboveComments(source, lineStart(source, above.span.start));
   if (op.before !== null) {
-    refuse(CODE.noSuchKey, `nothing is keyed \`${op.before}\` here`, target.span);
+    refuse(CODE.noSuchKey, say('cst.no-such-key', { key: String(op.before) }), target.span);
     return undefined;
   }
 
@@ -399,12 +404,12 @@ function whereItWas(
   return last === undefined ? nothingLeft() : lineEnd(source, last.span.end);
 }
 
-function carriesTheDash(path: Path): string {
-  return `\`${formatPath(path)}\` carries the \`- \` that opens its item, which this editor does not move`;
+function carriesTheDash(path: Path): Message {
+  return say('cst.carries-the-dash', { path: formatPath(path) });
 }
 
-function insideFlow(path: Path): string {
-  return `\`${formatPath(path)}\` is inside a flow collection, which this editor does not rewrite yet`;
+function insideFlow(path: Path): Message {
+  return say('cst.inside-flow', { path: formatPath(path) });
 }
 
 /**

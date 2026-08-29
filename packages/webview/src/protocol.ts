@@ -1,3 +1,4 @@
+import type { Saying } from '@yxl-vscode/diag';
 import type { Computed } from '@yxl-vscode/evaluate';
 import type { Axis, ScalarValue, StyleSays, StyleValues } from '@yxl-vscode/spec';
 
@@ -280,7 +281,7 @@ export interface Frozen {
 export interface MarkedCell {
   readonly row: number;
   readonly col: number;
-  readonly message: string;
+  readonly message: Saying;
 }
 
 /**
@@ -418,7 +419,7 @@ export interface Highlighted {
  */
 export interface Refused {
   readonly kind: 'refused';
-  readonly why: string;
+  readonly why: Saying;
   readonly about: About | null;
   readonly canOverride: boolean;
   readonly choices: readonly Choice[];
@@ -725,7 +726,7 @@ export interface Ranged {
 /** Something the projection could not do; the span is carried only to ask the host to go there. */
 export interface DrawnDiagnostic {
   readonly code: string;
-  readonly message: string;
+  readonly message: Saying;
   readonly file: string;
   readonly start: number;
   readonly end: number;

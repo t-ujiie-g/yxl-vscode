@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "license": "Apache-2.0",
-  "description": "The VS Code preview: the panel beside the text, the filesystem, and the yxl CLI.",
+  "description": "%extension.description%",
   "type": "module",
   "displayName": "yxl preview",
   "publisher": "t-ujiie-g",
@@ -22,25 +22,25 @@
     "commands": [
       {
         "command": "yxl.showPreview",
-        "title": "Open the Grid Beside the Spec",
+        "title": "%command.showPreview%",
         "category": "yxl",
         "icon": "$(table)"
       },
       {
         "command": "yxl.showSource",
-        "title": "Go to the Spec Behind the Grid",
+        "title": "%command.showSource%",
         "category": "yxl",
         "icon": "$(go-to-file)"
       },
       {
         "command": "yxl.check",
-        "title": "Check the Spec",
+        "title": "%command.check%",
         "category": "yxl",
         "icon": "$(check)"
       },
       {
         "command": "yxl.build",
-        "title": "Build the Workbook",
+        "title": "%command.build%",
         "category": "yxl",
         "icon": "$(package)"
       }
@@ -102,7 +102,7 @@
         "yxl.path": {
           "type": "string",
           "default": "yxl",
-          "markdownDescription": "The `yxl` compiler this extension runs. A bare name is looked up on `PATH`; an absolute path is used as given."
+          "markdownDescription": "%configuration.path%"
         }
       }
     },

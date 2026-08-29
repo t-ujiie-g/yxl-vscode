@@ -7,7 +7,7 @@ import {
   sheetOf,
 } from '@yxl-vscode/compile';
 import { reading, setValidation } from '@yxl-vscode/intent';
-import type { Comparison, Said } from '@yxl-vscode/spec';
+import type { Comparison, Saying } from '@yxl-vscode/spec';
 import { type A1Addr, addrAt, cellOf, rangeOf, type SheetName, within } from '@yxl-vscode/units';
 import type { Validated } from '@yxl-vscode/webview/protocol';
 import { applied, type Port, rectIn, type Spec, sheetNamed } from './write';
@@ -67,7 +67,7 @@ export function validationSaid(one: CompiledValidation): string {
   return lines.filter((line) => line !== '').join('\n');
 }
 
-function said(one: Said | null): string {
+function said(one: Saying | null): string {
   if (one === null) return '';
   return [one.title, one.body].filter((part) => part !== null && part !== '').join(': ');
 }

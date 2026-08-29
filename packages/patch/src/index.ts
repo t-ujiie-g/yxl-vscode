@@ -9,3 +9,4 @@ export {
   type Patch,
   rewrites,
 } from './patch';
+export { type Says, WORDS } from './text';

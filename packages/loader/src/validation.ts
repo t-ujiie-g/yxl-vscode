@@ -2,7 +2,7 @@ import type { Node, Path } from '@yxl-vscode/cst';
 import {
   ERROR_STYLES,
   MODELED_KEYS,
-  type Said,
+  type Saying,
   type Validation,
   type ValidationTest,
 } from '@yxl-vscode/spec';
@@ -145,7 +145,7 @@ function readError(opened: Opened, what: string): Validation['error'] {
 }
 
 /** A `{ title, body }`, either of which the spec may leave out. */
-function readSaid(opened: Opened, key: 'prompt' | 'error', what: string): Said | null {
+function readSaid(opened: Opened, key: 'prompt' | 'error', what: string): Saying | null {
   const found = findEntry(opened.entries, key);
   if (found === undefined) return null;
 

@@ -4,6 +4,7 @@ import { type IncludeReader, load } from '@yxl-vscode/loader';
 import { did, type History, nothing } from '@yxl-vscode/patch';
 import { type FilePath, filePath, parseColor } from '@yxl-vscode/units';
 import type { Choice, Frozen, Resized, Typed, Worn } from '@yxl-vscode/webview/protocol';
+import { reader } from '@yxl-vscode/webview/words';
 import { describe, expect, it } from 'vitest';
 import { moved, resized } from './anchors';
 import { chart } from './charts';
@@ -31,6 +32,7 @@ const ROOT = filePath('/specs/report.yxl.yaml') ?? ('' as FilePath);
 function editor(sources: Record<string, string>) {
   const files = { ...sources };
   const refusals: string[] = [];
+  const english = reader('en');
 
   const read: IncludeReader = (_from, path) => {
     const file = filePath(path.startsWith('/') ? path : `/specs/${path}`);
@@ -53,7 +55,7 @@ function editor(sources: Record<string, string>) {
       left.set(file, text);
     },
     refuse: (why, offer) => {
-      refusals.push(why);
+      refusals.push(english(why));
       offers.push(offer?.canOverride === true && offer.about?.kind === 'edit' ? offer.about : null);
       answers.push([...(offer?.choices ?? [])]);
     },

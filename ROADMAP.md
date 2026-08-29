@@ -1962,20 +1962,23 @@ translation but **where the words are**: today they are English prose built at
 the place the thing goes wrong, which is the one place a second language cannot
 reach.
 
-- [ ] **The decision first (§8 Q18)**, as an ADR: a diagnostic and a refusal
-      carry a **code and its parts** and are rendered at the edge, or the two
-      languages sit together where the sentence is written. The first is right
-      and costs a pass over every message site; the second is cheap and freezes
-      the wording of a project whose messages are half its product.
-- [ ] `package.nls.json` for the manifest — the commands, the settings, the
-      panel's title — which is VS Code's own mechanism and needs no decision.
+- [x] **The decision first (§8 Q18)**, as an ADR: a diagnostic and a refusal
+      carry a **code and its parts** and are worded at the edge — **ADR-051**.
+      With it, the mechanism `diag` owns: a `Says` type per package mapping each
+      id to what fills it, a book of sentences per language beside it, and a
+      reader at each edge. `cst` and `patch` are converted, which is what proves
+      it; `Saying = string | Message` carries the rest until they follow.
+- [x] `package.nls.json` for the manifest — the commands and the setting —
+      which is VS Code's own mechanism and needs no decision.
 - [ ] The view's chrome: the toolbar's tooltips, the menus, the headings under
       the grid, the formula bar, the inspector's facet names, the sentences a
       preview says about `print:` and `protect:`.
 - [ ] Every refusal and every diagnostic, which is the long tail and the reason
-      the decision comes first.
-- [ ] The language follows VS Code's own (`vscode.env.language`); no setting of
-      our own until somebody asks for one.
+      the decision comes first: `loader` and `compile` (94 sites behind
+      `reject`), then `intent`'s 122 refusals, then `verify` and `normalize`.
+- [x] The language follows VS Code's own (`vscode.env.language`); no setting of
+      our own until somebody asks for one. The host sets `<html lang>` from it,
+      and the view reads it from there.
 - [ ] **What stays English, and is said so**: the schema's key names, the
       `docs/spec.md` references, and the compiler's own output, which is yxl's
       to translate rather than ours to paraphrase.
@@ -3247,6 +3250,50 @@ changing a run's font are not gestures either. They are all structure rather
 than text, and each would want its own answer to *which run, and where*; none is
 promised by Phase 15's line, which is about the text.
 
+### ADR-051 — What the core says is a code and its parts, worded at the edge
+**Accepted** 2026-08-29. Answers §8 Q18.
+
+*The problem is where the words are.* A refusal and a diagnostic were English
+prose built at the place the thing went wrong — a template literal in `loader`,
+a sentence in `intent` — which is the one place a second language cannot reach.
+Some three hundred of them.
+
+*So a message is data, and the sentence is written where it is read.* The core
+says `{ id, args }`: which sentence, and the values that go in it. An edge holds
+the sentences — one function per id per language — and words the message in the
+reader's own language when it draws it. `code` is untouched: it stays the stable,
+greppable class of the thing that went wrong, and one code may have several
+sentences (`cst.not-a-mapping` says two different things about two different
+paths).
+
+*The sentences live beside the ids that name them*, in the package that says
+them (`packages/cst/src/text.ts`), not in one file at the bottom of the tree.
+The ids are typed — a `Says` type maps each id to what fills it — so a language
+that is missing a sentence, an id nobody declared, and an argument a sentence
+does not take are all compile errors rather than a blank in front of a reader.
+`diag` owns only the mechanism.
+
+*Each side words what it draws.* The view words the panel: the cell marks, the
+refusals, its own chrome, reading the language off `<html lang>`, which the host
+sets from `vscode.env.language`. The host words what VS Code shows for it — the
+Problems panel — reading the same setting. Nothing is worded before it is sent,
+so the protocol carries the message, and the backticks a spec's own words are
+written in are dropped where the text is drawn rather than before it crosses.
+
+*The alternative was to carry both languages where the sentence is written.* It
+is a smaller change, and it freezes the wording: a project whose messages are
+half of what it is would be rewriting two strings every time it reworded one,
+and a translator would be editing source.
+
+*The pass is staged rather than a flag day.* `Diagnostic.message` and a
+refusal's `why` are `Saying = string | Message` while packages convert one at a
+time; the `string` half goes when the last site does. `tests/languages.test.ts`
+holds the two languages to the same list, and to different sentences — a
+Japanese line copied from the English one is a failure, not a silence.
+
+*What stays English*: the schema's key names, `docs/spec.md` references, and
+`yxl`'s own output, which is the compiler's to translate (ADR-011).
+
 ## 8. Open questions
 
 - **Q1 — `cells:` A1 keys and row insertion.** ✅ *Answered 2026-08-23.*
@@ -3440,8 +3487,9 @@ promised by Phase 15's line, which is about the text.
   that let the host measure was going to be wrong for half the specs this is
   for. Measuring only what is drawn was the other rejected answer: a width that
   depends on where the reader had scrolled to is the wrong kind of surprise.
-- **Q18 — How deep does the second language go?** *(Phase 19, opened
-  2026-08-29.)* The chrome is easy and the manifest is VS Code's own problem.
+- **Q18 — How deep does the second language go?** ✅ *Answered 2026-08-29 by
+  ADR-051: a code and its parts, worded at the edge.* The reasoning, kept
+  because the cost was the argument against it: The chrome is easy and the manifest is VS Code's own problem.
   The question is the **refusals and the diagnostics**, of which there are some
   three hundred, each written as prose at the place the thing goes wrong. Either
   they become a **code and its parts**, rendered where the reader is — which is
@@ -3545,6 +3593,39 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-29 — A message is a code and its parts
+
+Phase 19's first three lines, and the decision the rest of it waits on
+(**ADR-051**, answering §8 Q18).
+
+- **The words move to the edge.** A refusal and a diagnostic were English prose
+  built where the thing went wrong, which is the one place a second language
+  cannot reach. The core now says `{ id, args }` — which sentence, and what goes
+  in it — and the side that draws it words it in the reader's language.
+- **The ids are typed.** Each package declares a `Says` type mapping every id to
+  what fills its sentence, and keeps a book per language beside it. A language
+  missing a sentence, an id nobody declared, and an argument a sentence does not
+  take are compile errors, not a blank in front of a reader.
+- **`code` did not change.** It is still the stable, greppable class of what went
+  wrong, and one code may have several sentences — `cst.not-a-mapping` says two
+  different things about two different paths, and now says each of them once.
+- **`cst` and `patch` are converted**, which is what proves the mechanism rather
+  than describing it: 24 message sites, 29 sentences, both languages.
+  `Saying = string | Message` carries every site that has not been converted yet,
+  and goes when the last one is.
+- **The manifest is VS Code's own mechanism**: `package.nls.json` and
+  `package.nls.ja.json`, with the manifest test holding them to the same list of
+  keys and to answering every `%key%` the manifest asks.
+- **The language is VS Code's.** The host sets `<html lang>` from
+  `vscode.env.language` and words the Problems panel from the same setting; the
+  view reads the page's own tag. No setting of ours, as the phase says.
+- **Two languages, held apart by a test.** `tests/languages.test.ts` fails when a
+  book's two languages hold different ids, when an id is not named for the
+  package that says it, and when a Japanese sentence reads exactly as the
+  English one — which is what a line copied and not translated looks like.
+- 2406 → 2422 tests. Comment shape: export 874 blocks / 1948 lines / avg 2.2,
+  private 570 / 570 / avg 1.0, inline 135 / 215 / avg 1.6; 0 over the limit.
 
 ### 2026-08-29 — One way to say what a cell copies as
 

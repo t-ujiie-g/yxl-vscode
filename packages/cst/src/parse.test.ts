@@ -1,7 +1,11 @@
+import { reading } from '@yxl-vscode/diag';
 import { describe, expect, it } from 'vitest';
 import { CODE } from './codes';
 import type { Mapping, Node, Scalar, Sequence } from './node';
 import { parse } from './parse';
+import { WORDS } from './text';
+
+const english = reading('en', WORDS);
 
 function read(source: string) {
   return parse(source, { file: 'test.yxl.yaml' });
@@ -157,7 +161,7 @@ describe('parse', () => {
       const { diagnostics } = read('base: &b { bold: true }\nuse: *b\n');
       expect(diagnostics).toHaveLength(1);
       expect(diagnostics[0]?.code).toBe(CODE.alias);
-      expect(diagnostics[0]?.message).toContain('defs:');
+      expect(english(diagnostics[0]?.message ?? '')).toContain('defs:');
     });
 
     it('rejects a key that is a collection rather than a scalar', () => {

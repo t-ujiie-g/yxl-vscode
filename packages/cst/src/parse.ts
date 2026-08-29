@@ -1,8 +1,9 @@
-import { type Diagnostic, error, type Span, span, union } from '@yxl-vscode/diag';
+import { type Diagnostic, error, type Saying, type Span, span, union } from '@yxl-vscode/diag';
 import { CST, Parser } from 'yaml';
 import { CODE, type Code } from './codes';
 import type { Entry, Node, Parsed, Scalar, ScalarStyle, Sequence } from './node';
 import { resolvePlain } from './scalar';
+import { say } from './text';
 
 const STYLES: Record<string, ScalarStyle> = {
   scalar: 'plain',
@@ -20,7 +21,7 @@ export function parse(source: string, options: { file: string }): Parsed {
 
   const [first, ...rest] = documents;
   for (const extra of rest) {
-    reader.reject(CODE.multipleDocuments, 'a spec holds one document; the rest are ignored', {
+    reader.reject(CODE.multipleDocuments, say('cst.multiple-documents'), {
       start: extra.offset,
       end: extra.offset,
     });
@@ -38,7 +39,7 @@ class Reader {
     private readonly text: string,
   ) {}
 
-  reject(code: Code, message: string, at: Span): void {
+  reject(code: Code, message: Saying, at: Span): void {
     this.diagnostics.push(error(code, message, { file: this.file, span: at }));
   }
 
@@ -56,21 +57,25 @@ class Reader {
       case 'block-scalar':
         return this.scalar(token);
       case 'alias':
-        this.reject(
-          CODE.alias,
-          'YAML aliases are not supported; name the value in `defs:` and reference it',
-          extent(token),
-        );
+        this.reject(CODE.alias, say('cst.alias'), extent(token));
         return null;
       default:
-        this.reject(CODE.unexpectedToken, `unexpected ${token.type}`, extent(token));
+        this.reject(
+          CODE.unexpectedToken,
+          say('cst.unexpected-token', { token: token.type }),
+          extent(token),
+        );
         return null;
     }
   }
 
   scalar(token: CST.Token): Scalar | null {
     if (!CST.isScalar(token)) {
-      this.reject(CODE.unexpectedToken, `expected a scalar, found ${token.type}`, extent(token));
+      this.reject(
+        CODE.unexpectedToken,
+        say('cst.expected-scalar', { token: token.type }),
+        extent(token),
+      );
       return null;
     }
 
@@ -96,7 +101,7 @@ class Reader {
       const key = this.scalar(item.key);
       if (!key) continue;
       if (typeof key.value !== 'string') {
-        this.reject(CODE.nonStringKey, 'a mapping key must be text', key.span);
+        this.reject(CODE.nonStringKey, say('cst.non-string-key'), key.span);
         continue;
       }
 

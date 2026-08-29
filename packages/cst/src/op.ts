@@ -1,4 +1,4 @@
-import type { Diagnostic, Span } from '@yxl-vscode/diag';
+import type { Diagnostic, Saying, Span } from '@yxl-vscode/diag';
 import type { Code } from './codes';
 import type { Value } from './write';
 
@@ -58,4 +58,4 @@ export interface Applied {
 }
 
 /** How an op says it cannot be applied. */
-export type Refuse = (code: Code, message: string, at: Span) => void;
+export type Refuse = (code: Code, message: Saying, at: Span) => void;

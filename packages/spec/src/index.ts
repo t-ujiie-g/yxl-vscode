@@ -105,7 +105,7 @@ export {
 export {
   ERROR_STYLES,
   type ErrorStyle,
-  type Said,
+  type Saying,
   type Validation,
   type ValidationTest,
 } from './validation';

@@ -1,0 +1,8 @@
+{
+  "extension.description": "VS Code のプレビュー: テキストの隣のパネル、ファイルシステム、そして yxl CLI。",
+  "command.showPreview": "スペックの隣にグリッドを開く",
+  "command.showSource": "グリッドのもとになったスペックへ移動",
+  "command.check": "スペックを検査",
+  "command.build": "ブックをビルド",
+  "configuration.path": "この拡張が実行する `yxl` コンパイラ。名前だけなら `PATH` から探し、絶対パスならそのまま使います。"
+}

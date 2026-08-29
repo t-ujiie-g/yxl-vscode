@@ -6,4 +6,5 @@ export type { Entry, Mapping, Node, Parsed, Scalar, ScalarStyle, Sequence } from
 export type { Applied, Edit, Op, Path } from './op';
 export { parse } from './parse';
 export { resolvePlain } from './scalar';
+export { type Says, WORDS } from './text';
 export { renderScalar, type Value } from './write';
