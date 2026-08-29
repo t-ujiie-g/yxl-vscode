@@ -195,7 +195,7 @@ function tabled(one: CompiledSheet['tables'][number]): Omit<DrawnTable, keyof Dr
 }
 
 /** How far the sheet is drawn: what it writes, a look past that into a filled range, and room to work in. */
-function extent(sheet: CompiledSheet): { rows: number; columns: number } {
+export function extent(sheet: CompiledSheet): { rows: number; columns: number } {
   let rows = 0;
   let columns = 0;
 

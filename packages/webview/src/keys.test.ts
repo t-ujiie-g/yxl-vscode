@@ -6,6 +6,7 @@ import { sheet as drawnSheet } from './harness';
 import {
   between,
   copying,
+  edging,
   filling,
   going,
   looking,
@@ -52,24 +53,22 @@ describe('where a key takes the reader', () => {
     expect(back).toEqual({ to: { row: 1, col: 1 }, extend: false });
   });
 
-  it('runs to the end of a block of cells on cmd-arrow', () => {
-    // A1..A3 hold something, A4 does not: from A1 the run ends at A3.
+  it('answers nothing for a cmd-arrow, which the sheet rather than the window knows', () => {
+    // Where a block ends is past the end of the drawn window as often as not
+    // (ADR-019), so `edging` names the step and the host answers with the cell.
     const cells = held('1:1', '1:2', '1:3');
-    const to = going(key({ key: 'ArrowDown', metaKey: true }), sheet(), cells, { row: 1, col: 1 });
+    expect(
+      going(key({ key: 'ArrowDown', metaKey: true }), sheet(), cells, { row: 1, col: 1 }),
+    ).toBe(null);
 
-    expect(to?.to).toEqual({ row: 3, col: 1 });
+    expect(edging(key({ key: 'ArrowDown', metaKey: true }))).toEqual({ rows: 1, cols: 0 });
+    expect(edging(key({ key: 'ArrowLeft', metaKey: true }))).toEqual({ rows: 0, cols: -1 });
   });
 
-  it('crosses the gap to the next block, where it starts beside nothing', () => {
-    const cells = held('1:1', '1:5', '1:6');
-    const to = going(key({ key: 'ArrowDown', metaKey: true }), sheet(), cells, { row: 1, col: 1 });
-
-    expect(to?.to).toEqual({ row: 5, col: 1 });
-  });
-
-  it('stops at the edge of the sheet where there is nothing to run to', () => {
-    const to = going(key({ key: 'ArrowUp', metaKey: true }), sheet(), held(), { row: 1, col: 1 });
-    expect(to?.to).toEqual({ row: 1, col: 1 });
+  it('is not a cmd-arrow without the cmd, or with a key that does not move a cell', () => {
+    expect(edging(key({ key: 'ArrowDown' }))).toBeNull();
+    expect(edging(key({ key: 'PageDown', metaKey: true }))).toBeNull();
+    expect(edging(key({ key: 'ArrowDown', metaKey: true, altKey: true }))).toBeNull();
   });
 
   it('goes to the row on home, and to the first cell of the sheet with cmd', () => {

@@ -1799,11 +1799,21 @@ below, and one is the answer panel becoming a thing you have to answer.
       and registered and *undeclared*, because a key taken from VS Code is not
       an offer to a reader (ADR-046). Two of its four checks fail on the old
       manifest.
-- [ ] **`Cmd`+arrow reaching the sheet's edge, not the window's.** `edge()` in
-      `webview/keys.ts` walks the cells of the **drawn window** (ADR-019), so a
-      column longer than the window stops where the drawing stops. The host has
-      every cell: this is ADR-043's shape again — the view asks, the host
-      answers with the address, the view goes there.
+- [x] **`Cmd`+arrow reaching the sheet's edge, not the window's.** `edge()` in
+      `webview/keys.ts` walked the cells of the **drawn window** (ADR-019), so a
+      column longer than the window stopped where the drawing stopped.
+      **ADR-043's shape again**: the key names the *step* (`edging`) and the
+      host answers with the *address* (`edges.ts`, over every cell the sheet
+      holds), which the view then goes to — through the same `goToCell` that
+      already moves the window when the answer is outside it. `Shift` rides on
+      the question and comes back on the answer, so neither side has to remember
+      what was asked. The walk that was in the view is gone rather than left
+      beside the new one; its three tests moved to the host, where the case that
+      started this — four hundred rows, of which fifty are drawn — is one of them.
+      **`Home` and `End` have the same seam and are left as they are**: `End`
+      reads the drawn window too, but a window is wider than almost every sheet,
+      so it is wrong only where a sheet runs past the *columns* drawn. The same
+      call answers it the day that matters.
 - [ ] **A column width Excel agrees with** *(lower priority — the reader said
       so)*. Two errors, one arithmetic and one font. `PER_CHARACTER = 7` turns
       pixels into Excel's unit but drops the 5px of padding Excel's own formula
@@ -3445,7 +3455,31 @@ put the keyboard back when the question went.
   before — and ADR-035 says `execCommand('copy')` was measured working in the
   extension host, so the focus is the likeliest whole answer. It is a question
   for the reader's next run rather than a claim to make from here.
-- 2372 → 2373 tests (on this branch's count). Comment shape: unchanged.
+- 2366 → 2367 tests. Comment shape: unchanged.
+
+### 2026-08-29 — `Cmd`+arrow reaches the sheet, not the window
+Phase 17's fourth line, and the one a reader hit with a long column: `Cmd`+`↓`
+stopped partway down.
+
+- **The view was answering a question it cannot see the end of.** `edge()` walked
+  `held` — the cells of the *drawn window* (ADR-019) — so a block longer than the
+  window looked to it like a block that ends there.
+- **The key names the step; the host names the cell.** `edging` says which way a
+  `Cmd`+arrow goes, `edges.ts` walks the sheet's own cells, and the view goes to
+  the address it gets back — through the same `goToCell` that already moves the
+  window when the answer is outside it. That is ADR-043's shape, which fitting a
+  column already uses: the host has every cell, the view has the window.
+- **`Shift` rides along.** It goes out on the question and comes back on the
+  answer, so neither side keeps a note of what was asked.
+- **The old walk is gone**, not left beside the new one. Its three tests moved to
+  the host, where the case that started this is one of them: four hundred rows,
+  of which about fifty are ever drawn.
+- **`Home` and `End` have the same seam**, and are deliberately left: `End` reads
+  the drawn window too, but a window is wider than almost every sheet, so it is
+  wrong only where a sheet runs past the columns drawn. The same call answers it
+  the day that matters.
+- 2367 → 2373 tests. Comment shape: export 841 blocks / 1869 lines / avg 2.2,
+  private 560 / 560 / avg 1.0, inline 129 / 203 / avg 1.6; 0 over the limit.
 
 ### 2026-08-29 — A command a reader can find, and a way back
 Phase 17's third line. *Open Preview to the Side* named neither yxl nor a grid,

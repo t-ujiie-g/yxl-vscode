@@ -75,6 +75,40 @@ function reachFrom(
   );
 }
 
+describe('a `Cmd`+arrow', () => {
+  it('asks the host where the block ends, since the view holds a window', () => {
+    const { into, sent } = view();
+
+    at(into, 1, 1)?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    at(into, 1, 1)?.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'ArrowDown', metaKey: true, bubbles: true }),
+    );
+
+    expect(sent.filter((one) => one.kind === 'edge')).toEqual([
+      { kind: 'edge', sheet: 'Sales', row: 1, col: 1, rows: 1, cols: 0, extend: false },
+    ]);
+  });
+
+  it('carries the reader`s `Shift`, and takes the selection with it when the answer comes', () => {
+    const { into, sent, told } = view();
+
+    at(into, 1, 1)?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    at(into, 1, 1)?.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: 'ArrowDown',
+        metaKey: true,
+        shiftKey: true,
+        bubbles: true,
+      }),
+    );
+    expect(sent.filter((one) => one.kind === 'edge').at(-1)).toMatchObject({ extend: true });
+
+    told({ kind: 'edged', sheet: 'Sales', row: 2, col: 1, extend: true });
+    expect(into.querySelector('td.selected')?.getAttribute('data-at')).toBe('1:2');
+    expect(into.querySelectorAll('td.ranged').length).toBeGreaterThan(0);
+  });
+});
+
 describe('a view with nothing in it yet', () => {
   it('says it is ready before anything else, since the host holds the drawing', () => {
     const { sent } = view();

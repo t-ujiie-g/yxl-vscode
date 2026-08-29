@@ -10,7 +10,7 @@ import { type Nodes, nodesOf } from './inspect';
 import type { PictureReader } from './pictures';
 
 export type { Window, Windows } from './drawing';
-export { drawRun } from './drawing';
+export { drawRun, extent } from './drawing';
 
 /** A spec read and drawn, with the `doc` and `grid` the inspector answers from. */
 export interface Projected {

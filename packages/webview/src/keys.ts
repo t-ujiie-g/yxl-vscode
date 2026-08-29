@@ -37,12 +37,32 @@ export function going(
   const step = stepping(event, sheet);
   if (step === null) return null;
 
-  const to = jump
-    ? edge(sheet, held, from, step)
-    : { row: from.row + step.rows, col: from.col + step.cols };
+  // A `Cmd`+arrow goes to the edge of a block, which this window cannot see the
+  // end of (ADR-019): `edging` asks the host instead.
+  if (jump && edging(event) !== null) return null;
+
+  const to = { row: from.row + step.rows, col: from.col + step.cols };
 
   // Shift+Tab steps back rather than reaching, as in every spreadsheet.
   return { to, extend: event.key === 'Tab' ? false : extend };
+}
+
+/** The step a `Cmd`+arrow asks for, or `null` where the key is not one. */
+export function edging(event: KeyboardEvent): { rows: number; cols: number } | null {
+  if (!(event.metaKey || event.ctrlKey) || event.altKey) return null;
+
+  switch (event.key) {
+    case 'ArrowUp':
+      return { rows: -1, cols: 0 };
+    case 'ArrowDown':
+      return { rows: 1, cols: 0 };
+    case 'ArrowLeft':
+      return { rows: 0, cols: -1 };
+    case 'ArrowRight':
+      return { rows: 0, cols: 1 };
+    default:
+      return null;
+  }
 }
 
 /** How far an ordinary movement key goes, before any of it is clamped. */
@@ -68,27 +88,6 @@ function stepping(event: KeyboardEvent, sheet: DrawnSheet): { rows: number; cols
     default:
       return null;
   }
-}
-
-/** The edge of the block: the far end of a run, across a gap to the next thing, or the sheet's own edge. */
-function edge(
-  sheet: DrawnSheet,
-  held: ReadonlyMap<string, DrawnCell>,
-  from: At,
-  step: { rows: number; cols: number },
-): At {
-  const filled = (at: At): boolean => held.has(`${at.col}:${at.row}`);
-  const next = (at: At): At => ({ row: at.row + step.rows, col: at.col + step.cols });
-  const inside = (at: At): boolean =>
-    at.row >= 1 && at.col >= 1 && at.row <= sheet.of.rows && at.col <= sheet.of.columns;
-
-  let here = from;
-  if (!inside(next(here))) return here;
-
-  const running = filled(next(here));
-  while (inside(next(here)) && filled(next(here)) === running) here = next(here);
-
-  return running ? here : inside(next(here)) ? next(here) : here;
 }
 
 /** The last column of this row that holds anything, or the first where none does. */

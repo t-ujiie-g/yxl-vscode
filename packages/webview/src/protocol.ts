@@ -534,6 +534,19 @@ export interface Summed {
   readonly sum: number;
 }
 
+/**
+ * Where a `Cmd`+arrow lands, which only the host can say: the view holds a
+ * window, and a block runs past the end of one (ADR-019). `extend` is the
+ * reader's `Shift`, carried back so the answer needs no memory of the question.
+ */
+export interface Edged {
+  readonly kind: 'edged';
+  readonly sheet: string;
+  readonly row: number;
+  readonly col: number;
+  readonly extend: boolean;
+}
+
 /** Where a link inside the workbook goes, for the view to take the reader (`docs/spec.md` §10). */
 export interface WentTo {
   readonly kind: 'goTo';
@@ -550,6 +563,7 @@ export interface Focus {
 /** Everything the host sends the view. */
 export type ToView =
   | Drawing
+  | Edged
   | Fitting
   | Inspected
   | Highlighted
@@ -593,6 +607,15 @@ export type FromView =
   | ({ readonly kind: 'moveFloat' } & MovedFloat)
   | ({ readonly kind: 'sizeFloat' } & SizedFloat)
   | ({ readonly kind: 'editRun' } & EditedRun)
+  | {
+      readonly kind: 'edge';
+      readonly sheet: string;
+      readonly row: number;
+      readonly col: number;
+      readonly rows: number;
+      readonly cols: number;
+      readonly extend: boolean;
+    }
   | ({ readonly kind: 'sum' } & Ranged)
   | ({ readonly kind: 'override'; readonly reason: string } & Typed)
   | {
