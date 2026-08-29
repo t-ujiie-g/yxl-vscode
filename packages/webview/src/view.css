@@ -1106,9 +1106,25 @@ body {
   width: 100%;
 }
 
+/* Not a link like the answers are: leaving the edit alone is not one of them,
+   and a button drawn in the editor's own pair is readable in every theme. */
 .refused .cancel {
+  align-self: flex-end;
   margin-top: 0.2rem;
-  color: var(--vscode-descriptionForeground);
+  padding: 0.25rem 0.8rem;
+  border: 1px solid var(--vscode-button-border, transparent);
+  border-radius: 2px;
+  background: var(--vscode-button-secondaryBackground, var(--vscode-button-background, #3a3d41));
+  color: var(--vscode-button-secondaryForeground, var(--vscode-button-foreground, #ffffff));
+  font: inherit;
+  cursor: pointer;
+}
+
+.refused .cancel:hover {
+  background: var(
+    --vscode-button-secondaryHoverBackground,
+    var(--vscode-button-hoverBackground, #45494e)
+  );
 }
 
 .reason {

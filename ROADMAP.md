@@ -1776,6 +1776,13 @@ below, and one is the answer panel becoming a thing you have to answer.
       for nothing — and **jsdom 30 does not implement it** (measured, not
       recalled), so the shipped path would have been the one no test runs. The
       focus trap is ours, and every rule above has a test.
+      **The one thing a test here cannot see is a colour.** *Leave it as it is*
+      first went out as a control with a ground of its own and a foreground
+      borrowed from the description text — grey on grey, and a reader said so.
+      It is the editor's own button pair now, falling back to the primary pair
+      where a theme declares no secondary one, so the two always come from the
+      same place. jsdom does not resolve `var()`, so no test here can tell: this
+      one was found by looking, which is the only way it could have been.
 - [ ] **A command a reader can find.** *Open Preview to the Side* names neither
       yxl nor a grid, and it is a text button in the editor's title bar. A name
       that says what it opens, an icon beside it, and the same command in the
@@ -3429,6 +3436,13 @@ needed to know, *did my edit happen*, was the one thing the panel did not say.
   choosing, not recalled — so the shipped path would have been the one no test
   runs. Ours is `role="dialog"`, `aria-modal`, and a focus trap of about a dozen
   lines, and every rule above has a test.
+- **A colour is the one thing none of them can see.** *Leave it as it is* went
+  out as a control with a ground of its own and a foreground taken from the
+  description text: grey on grey, which a reader read back to us from a
+  screenshot. It takes the editor's own button pair now, falling back to the
+  primary pair where a theme declares no secondary one, so the two always come
+  from one place. jsdom does not resolve `var()` — measured — so no suite here
+  could have caught it, and the honest note is that looking is what did.
 - 2357 → 2362 tests. Comment shape: export 836 blocks / 1856 lines / avg 2.2,
   private 559 / 559 / avg 1.0, inline 127 / 199 / avg 1.6; 0 over the limit.
 
