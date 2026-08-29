@@ -2,7 +2,8 @@ import type { Axis } from '@yxl-vscode/spec';
 import { addrAt, cellOf, parseA1Addr, type Rect } from '@yxl-vscode/units';
 import { sheetAgain } from './again';
 import { flavours, onto } from './clipboard';
-import { draw, focusCell, restate } from './draw';
+import { draw, restate } from './draw';
+import { keyboard } from './keyboard';
 import { between } from './keys';
 import { ruler, widest } from './measure';
 import type {
@@ -158,9 +159,9 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
     return at.kind === 'cell' ? reaches(now, at) : headed(now, at.axis, at.at);
   };
 
-  /** The keyboard put on the cell the selection starts at, where the grid is drawing it. */
+  /** The keyboard where the rule puts it, the panel having asked for what it is drawing. */
   const focused = (): void => {
-    if (drawing !== null) focusCell(into, showing(drawing));
+    if (drawing !== null) keyboard(into, showing(drawing), { panel: true, keeping: false });
   };
 
   const named = (): string => drawing?.sheets[sheet]?.name ?? '';
@@ -526,8 +527,8 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       host.postMessage({ kind: 'find', sheet: named(), text });
       if (!first) return;
 
-      // Only the first time: redrawing while the reader is typing would take
-      // the box out from under them.
+      // Only the first time: a redraw while the reader is typing would take the
+      // box out from under them, and the bar only ever keeps the keyboard.
       redraw();
       into.querySelector<HTMLInputElement>('.looking .for')?.focus();
     },
@@ -603,7 +604,7 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
     }
 
     if (sent.kind === 'focus') {
-      if (drawing !== null) focusCell(into, showing(drawing));
+      focused();
       return;
     }
 
@@ -649,10 +650,9 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       if (went === null) return;
 
       seen(went);
-      // The view asked for this window, so the reader is in the grid: without
+      // The view asked for this window, so the reader is in the panel: without
       // this the first key after a long jump reaches a page with no focus.
-      if (looking === null) focused();
-      else into.querySelector<HTMLInputElement>('.looking .for')?.focus();
+      focused();
       return;
     }
 

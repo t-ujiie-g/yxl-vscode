@@ -1,5 +1,6 @@
 import { findBar, formulaBar, told } from './boxes';
 import { floats } from './float';
+import { heldBy, keyboard } from './keyboard';
 import { takingAll, wearing } from './keys';
 import { fit } from './menus';
 import { gutterOf } from './outline';
@@ -40,7 +41,7 @@ export function draw(into: HTMLElement, showing: Showing, asks: Asks): void {
   const { drawing } = showing;
   // Focus is put back only where the grid had it: taking it would take it
   // from the text editor beside.
-  const held = into.contains(document.activeElement);
+  const held = heldBy(into);
   const was = into.querySelector('.scroller');
   const same = was?.getAttribute('data-of') === looking(showing);
   const kept: Where =
@@ -81,20 +82,10 @@ export function draw(into: HTMLElement, showing: Showing, asks: Asks): void {
   fit(into);
   into.addEventListener('keydown', (event) => keyed(into, event, asks));
 
-  const box = into.querySelector<HTMLInputElement>('.tab.naming');
-  const writing = into.querySelector<HTMLTextAreaElement>('.asking');
-  if (box !== null) {
-    // Only once it is in the page: an element outside it cannot take the keys.
-    box.focus();
-    box.select();
-  } else if (writing !== null) {
-    writing.focus();
-    writing.select();
-  } else if (held) {
-    focusCell(into, showing);
-  }
-
   asking(into, showing, asks);
+  // Only once everything is in the page: an element outside it cannot take the
+  // keys, and the question is appended above.
+  keyboard(into, showing, held);
 }
 
 /** The question a refusal asks, over the panel; the one already open stays, so a redraw takes no keyboard back. */
@@ -109,15 +100,16 @@ function asking(into: HTMLElement, showing: Showing, asks: Asks): void {
     // key: without this the grid takes nothing until something is clicked.
     const had = open.contains(document.activeElement);
     open.remove();
-    if (had) focusCell(into, showing);
+    keyboard(into, showing, { panel: had, keeping: false });
     return;
   }
   if (open?.getAttribute('data-why') === refused.why) return;
 
   open?.remove();
-  const over = refusal(refused, asks);
-  into.append(over);
-  over.querySelector<HTMLElement>('button')?.focus();
+  into.append(refusal(refused, asks));
+  // A question the reader cannot answer is worse than a keystroke taken: it
+  // only ever appears in answer to a gesture they made here (ADR-048).
+  keyboard(into, showing, { panel: true, keeping: false });
 }
 
 /** The keys the page answers rather than a cell, and never where a box of text has them. */
@@ -144,14 +136,6 @@ function keyed(into: HTMLElement, event: KeyboardEvent, asks: Asks): void {
   if (!takingAll(event)) return;
   event.preventDefault();
   asks.takeAll();
-}
-
-/** The keyboard on the cell the reader has selected, where there is one. */
-export function focusCell(into: HTMLElement, showing: Showing): void {
-  if (showing.selected === null) return;
-
-  const at = cellKey(showing.selected.col, showing.selected.row);
-  into.querySelector<HTMLElement>(`td[data-at="${at}"]`)?.focus({ preventScroll: true });
 }
 
 /** What the view holds of its own, shown without rebuilding what the host sent. */
@@ -198,6 +182,7 @@ export function restate(into: HTMLElement, showing: Showing, asks: Asks): void {
   say(under, showing, asks);
   told(into, showing, asks);
   asking(into, showing, asks);
+  keyboard(into, showing, heldBy(into));
   fit(into);
 }
 
