@@ -3424,6 +3424,29 @@ than widening it silently.
 
 ## 11. Living changelog
 
+### 2026-08-29 — The keyboard, put back where the question took it from
+A reader said copying had stopped working. It had, and so had every other key:
+the question this morning made a control the keyboard goes *into*, and nothing
+put the keyboard back when the question went.
+
+- **What it was.** `asking()` removes the question and, with it, the button that
+  had focus — so `document.activeElement` fell back to the page body. The grid
+  answers keys from the *cell*, so from that moment `Cmd`+`C`, the arrows and
+  `Delete` all reached nothing. Copy is what a reader notices first, because it
+  is the one that fails silently: the others look like a grid that has stopped.
+- **The fix is three lines** and one test that fails without them: if the
+  question held the keyboard when it went, the selected cell takes it back.
+- **Also**: setting `webview.options` reloads a webview, and the panel this
+  editor creates already has them — so only a *revived* panel is given them now.
+  Every preview opened since yesterday was loading its page twice.
+- **What is still unproven** is the reader's other half: whether copy works from
+  a preview that has never shown a question. Nothing in the copy path has
+  changed — `clipboard.ts`, `keys.ts` and `table.ts` are untouched since
+  before — and ADR-035 says `execCommand('copy')` was measured working in the
+  extension host, so the focus is the likeliest whole answer. It is a question
+  for the reader's next run rather than a claim to make from here.
+- 2372 → 2373 tests (on this branch's count). Comment shape: unchanged.
+
 ### 2026-08-29 — A command a reader can find, and a way back
 Phase 17's third line. *Open Preview to the Side* named neither yxl nor a grid,
 and it sat in the editor's title bar as a line of text.

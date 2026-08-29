@@ -102,7 +102,13 @@ function asking(into: HTMLElement, showing: Showing, asks: Asks): void {
   const refused = showing.refused;
 
   if (refused === null) {
-    open?.remove();
+    if (open === null) return;
+
+    // The keyboard was in the question, and a question that is gone answers no
+    // key: without this the grid takes nothing until something is clicked.
+    const had = open.contains(document.activeElement);
+    open.remove();
+    if (had) focusCell(into, showing);
     return;
   }
   if (open?.getAttribute('data-why') === refused.why) return;

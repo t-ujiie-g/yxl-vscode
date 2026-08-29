@@ -154,6 +154,25 @@ describe('what the view says about a spec', () => {
     expect(into.querySelectorAll('.over')).toHaveLength(1);
   });
 
+  it('puts the keyboard back on the grid when the question goes', () => {
+    // Answered or left, the question is removed with the keyboard inside it —
+    // and a grid with no focus answers no key, `Cmd`+`C` among them.
+    const refused = {
+      kind: 'refused',
+      why: 'B5 is filled by a range',
+      about: null,
+      canOverride: false,
+      choices: [],
+    } as const;
+    const at = { row: 1, col: 1 };
+    const on = asks();
+    const into = shown({ selected: at, anchor: at, refused }, on);
+    expect(into.querySelector('.refused')?.contains(document.activeElement)).toBe(true);
+
+    restate(into, showingOf({ selected: at, anchor: at }), on);
+    expect(document.activeElement).toBe(into.querySelector('td[data-at="1:1"]'));
+  });
+
   it('marks a cell a diagnostic is about, and says what', () => {
     const problems = [{ row: 1, col: 1, message: 'no value is declared as `nosuch`' }];
     const drawn = at(shown({ drawing: drawing({ sheets: [sheet({ problems })] }) }), 1, 1);
