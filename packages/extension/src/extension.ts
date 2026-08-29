@@ -15,6 +15,7 @@ export function activate(context: vscode.ExtensionContext): void {
       const document = specInFocus();
       if (document !== undefined) Preview.show(document, context.extensionUri);
     }),
+    vscode.commands.registerCommand('yxl.showSource', () => Preview.showSource()),
     vscode.commands.registerCommand('yxl.check', () => {
       const document = specInFocus();
       if (document !== undefined) void compiler.check(document.uri);
