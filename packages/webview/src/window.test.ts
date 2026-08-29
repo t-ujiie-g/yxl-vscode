@@ -10,8 +10,10 @@ function sheet(of: Partial<DrawnSheet> = {}): DrawnSheet {
 
 describe('how big a sheet is on the page', () => {
   it('gives a row Excel default height and a column Excel default width', () => {
+    // Excel's own numbers: 8.43 characters of seven pixels, and the five a cell
+    // keeps around them, is the 64px column every workbook opens with.
     expect(heightOf(sheet(), 1)).toBe(20);
-    expect(widthOf(sheet(), 1)).toBeCloseTo(59.01, 2);
+    expect(widthOf(sheet(), 1)).toBeCloseTo(64.01, 2);
   });
 
   it('takes the size a run of rows or columns declares', () => {
@@ -21,14 +23,14 @@ describe('how big a sheet is on the page', () => {
     });
 
     expect([heightOf(sized, 2), heightOf(sized, 4)]).toEqual([40, 20]);
-    expect([widthOf(sized, 2), widthOf(sized, 3)]).toEqual([70, widthOf(sheet(), 3)]);
+    expect([widthOf(sized, 2), widthOf(sized, 3)]).toEqual([75, widthOf(sheet(), 3)]);
   });
 
   it('puts a row and a column where the rows and columns before them end', () => {
     expect(down(sheet(), 11)).toBe(200);
     expect(
       across(sheet({ widths: [{ first: 1, last: 2, size: 10, hidden: false, group: null }] }), 3),
-    ).toBe(140);
+    ).toBe(150);
   });
 });
 
@@ -76,8 +78,10 @@ describe('the window a scrolled view wants', () => {
 
 describe('a dragged size in the units a spec writes it in', () => {
   it('is character units across, which is what a column band keeps', () => {
-    expect(sizeOf('column', 70)).toBe(10);
-    expect(sizeOf('column', 59)).toBe(8.43);
+    // The five pixels a cell keeps around its text come off first, so a drag
+    // and the width it writes are Excel's own round trip: 8.43 draws as 64.
+    expect(sizeOf('column', 75)).toBe(10);
+    expect(sizeOf('column', 64)).toBe(8.43);
   });
 
   it('is points down, which is what a row band keeps', () => {
@@ -86,7 +90,7 @@ describe('a dragged size in the units a spec writes it in', () => {
   });
 
   it('is rounded to what a person would write, not to what the pointer said', () => {
-    expect(sizeOf('column', 71)).toBe(10.14);
+    expect(sizeOf('column', 76)).toBe(10.14);
   });
 
   it('stops where the grip it was dragged by would go with it', () => {

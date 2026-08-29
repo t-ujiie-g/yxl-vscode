@@ -64,12 +64,12 @@ describe('what floats over a sheet', () => {
 
   it('puts each one where its anchor cell sits, at the size it takes', () => {
     const drawn = floats(sheet({ charts: [chart()] }), asks());
-    expect(placed(drawn)).toEqual({ left: 162, top: 44, width: 480 });
+    expect(placed(drawn)).toEqual({ left: 172, top: 44, width: 480 });
   });
 
   it('moves an image in by the offset it is anchored with', () => {
     const drawn = floats(sheet({ images: [image({ at: { ...AT, x: 4, y: 6 } })] }), asks());
-    expect(placed(drawn).left).toBe(166);
+    expect(placed(drawn).left).toBe(176);
   });
 });
 
@@ -92,7 +92,8 @@ describe('a float dragged', () => {
     const box = drawn?.querySelector('.float.chart');
     if (box == null) throw new Error('nothing was drawn');
 
-    drag(box, { x: 60, y: 20 });
+    // One column across and one row down, in the pixels a column now takes.
+    drag(box, { x: 70, y: 20 });
     expect(on.moveFloat).toHaveBeenCalledWith('a-chart', { row: 3, col: 4 });
   });
 

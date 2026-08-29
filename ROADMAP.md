@@ -1848,12 +1848,24 @@ below, and one is the answer panel becoming a thing you have to answer.
       A suite over *the boundary itself*: for each gesture, a sheet whose block
       runs past the drawn window, and the answer that must not be the window's.
       Both of these are how this phase stops producing the next one.
-- [ ] **A column width Excel agrees with** *(lower priority — the reader said
-      so)*. Two errors, one arithmetic and one font. `PER_CHARACTER = 7` turns
-      pixels into Excel's unit but drops the 5px of padding Excel's own formula
-      adds, while the measurement puts our `AROUND = 10` in — so a fitted column
-      is about two thirds of a character wide before any question of font. The
-      arithmetic half is exact and worth fixing; the font half is §8 Q19.
+- [x] **A column width Excel agrees with** *(lower priority — the reader said
+      so)*. Two errors, one arithmetic and one font. `PER_CHARACTER = 7` turned
+      pixels into Excel's unit but dropped the 5px Excel's own formula adds,
+      while the measurement put our `AROUND = 10` in — so a fitted column was
+      about two thirds of a character wide before any question of font.
+      **The arithmetic is Excel's now**, in one constant: a width is a count of
+      `0`s and a cell keeps five pixels around them, so 8.43 draws as the 64
+      every workbook opens with rather than as 59. The cell's own padding went
+      from four pixels either side to **two**, which is Excel's, so a width
+      means the same thing in both — and a fit, which measures the text and adds
+      that same five, lands on exactly the width Excel's own AutoFit would.
+      **Twelve tests carried the old numbers** and say the new ones with the
+      rule beside them; the round trip a drag makes — px to width and back — is
+      pinned at Excel's default in `window.test.ts`.
+      **The font half is not fixed and cannot be here** (§8 Q19): the canvas
+      measures whatever face the reader's machine substitutes for Calibri, which
+      on macOS is not Calibri. A fitted width is this editor's best guess at
+      Excel's, and the README's table will say so.
 
 ### Phase 18 — From nothing to a workbook
 The two ends of a reader's day. Neither is in the editor today, and both are
@@ -3469,6 +3481,29 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-29 — A column width Excel agrees with, to the pixel it can
+Phase 17's last line, and the arithmetic half of §8 Q19.
+
+- **A width is a count of `0`s, and a cell keeps five pixels around them.** That
+  is Excel's own formula, and this editor had the first half without the second:
+  `8.43 × 7` is 59, and every workbook opens at **64**. Every column was five
+  pixels narrow, and a fitted width came back about two thirds of a character
+  too wide, because the measurement added our own ten pixels of padding while
+  the conversion took none of them off.
+- **The cell now keeps what Excel keeps**: two pixels either side and the
+  gridline, rather than four and the gridline. So a width means the same thing
+  in both, and a fit — the text measured, plus that same five — lands on exactly
+  the width Excel's own AutoFit would.
+- **Twelve tests carried the old numbers.** They say the new ones with the rule
+  written beside them, and the round trip a drag makes — pixels to a width and
+  back — is pinned at Excel's default rather than at a literal nobody can check.
+- **The font half is not fixed and cannot be fixed here** (§8 Q19). The canvas
+  measures whatever face the machine substitutes for Calibri, and on macOS that
+  is never Calibri. A fitted width is this editor's best guess at Excel's, which
+  is what the README will say rather than implying a promise.
+- 2379 tests, unchanged in number: this pass moved what they assert, not how
+  many. Comment shape: unchanged.
 
 ### 2026-08-29 — The number a phase runs in, and the two seams that bit twice
 No code. A reader read §6 and asked why Phase 16 sits below Phase 20, which is

@@ -1,9 +1,12 @@
 import type { Axis } from '@yxl-vscode/spec';
 import type { DrawnSheet, Sized } from './protocol';
 
-/** Excel's own units, as CSS: a character width is about 7px, a point is 4/3 of one. */
+/** Excel's own units: a width counts `0`s, seven pixels of one at 96 DPI, and a point is 4/3 of a pixel. */
 const PER_CHARACTER = 7;
 const PER_POINT = 4 / 3;
+
+/** What a cell keeps around its text: two pixels either side and the gridline, so 8.43 draws as 64. */
+export const PADDING = 5;
 
 /** A point as the page draws it: a spec says a splitter and a line weight in points, CSS counts pixels. */
 export function pixelsOf(points: number): number {
@@ -18,7 +21,7 @@ const LEAST = { column: 1, row: 6 };
  * points down (`docs/spec.md` §4) — to the two places a reader would read.
  */
 export function sizeOf(axis: Axis, px: number): number {
-  const size = px / (axis === 'column' ? PER_CHARACTER : PER_POINT);
+  const size = axis === 'column' ? (px - PADDING) / PER_CHARACTER : px / PER_POINT;
   return Math.max(LEAST[axis], Math.round(size * 100) / 100);
 }
 
@@ -39,7 +42,7 @@ export function heightOf(sheet: DrawnSheet, row: number): number {
 export function widthOf(sheet: DrawnSheet, col: number): number {
   const run = sized(sheet.widths, col);
   if (run?.hidden === true) return 0;
-  return (run?.size ?? DEFAULT.width) * PER_CHARACTER;
+  return (run?.size ?? DEFAULT.width) * PER_CHARACTER + PADDING;
 }
 
 const DEFAULT = { height: 15, width: 8.43 };
