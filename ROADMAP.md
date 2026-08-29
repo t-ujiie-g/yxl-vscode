@@ -3546,6 +3546,40 @@ than widening it silently.
 
 ## 11. Living changelog
 
+### 2026-08-29 — One way to say what a cell copies as
+
+A pass over the whole tree with §8's lenses, in order. What it found and what it
+did with it:
+
+- **Two implementations of the same tab-separated text.** The view built it for
+  the clipboard and the host built it again for a copy that reaches past the
+  drawn window (ADR-035), and the two had already drifted: the host wrote
+  nothing at all for a rich cell, where the view wrote its runs. That is a
+  divergence a reader meets as "the copy is empty when the selection is large",
+  which is the worst kind — it depends on how far the sheet is scrolled. There
+  is one `fields.ts` in `webview` now, and both halves call it; the host's
+  `copying.ts` is three lines around a drawing.
+- **`Cmd`+`End` walked a different sheet than the drawing does.** The corner it
+  reported counted `cells:` only, so a spec whose rows come from a `formulas:`
+  range stopped short of them — the cells hold a formula, whatever the drawing
+  happens to reach. `drawing.ts` names that walk `corner` now and both callers
+  use it, so what the sheet writes is decided once.
+- **`Preview` said the same three things sixteen times.** `sheet()` for the
+  lookup, `send()` for the post, and the panel's view type is `PANEL` beside the
+  class rather than a bare string in two files.
+- **Checked and left alone**, so the next pass need not look again: the exports
+  that appear unused are types in exported signatures; `cst`'s
+  `empty-mapping` / `empty-sequence` diagnostics are still unreachable and still
+  worth having when a caller can reach them; `preview.ts` and the view's
+  `index.ts` are long but have no logical seam — splitting either one would cut
+  a message table in half (§8.3).
+- **The README named a command that no longer exists.** *Open Preview to the
+  Side* was renamed to *Open the Grid Beside the Spec*; the install steps now
+  say which button in the title bar does it, and mention that the text half gets
+  yxl's schema where `redhat.vscode-yaml` is installed.
+- 2399 → 2406 tests. Comment shape: export 855 blocks / 1920 lines / avg 2.2,
+  private 569 / 569 / avg 1.0, inline 135 / 215 / avg 1.6; 0 over the limit.
+
 ### 2026-08-29 — Replace, which is a write like any other
 Phase 18's last line. `Cmd`+`F` found things and left the reader to retype them.
 

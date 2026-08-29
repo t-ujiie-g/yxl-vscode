@@ -16,7 +16,15 @@ import {
 import type { Diagnostic } from '@yxl-vscode/diag';
 import { conditionKey, type Evaluation } from '@yxl-vscode/evaluate';
 import type { Axis, ScalarValue, SpecDoc } from '@yxl-vscode/spec';
-import { type A1Addr, addrAt, cellOf, type NodeId, qualified, within } from '@yxl-vscode/units';
+import {
+  type A1Addr,
+  addrAt,
+  cellOf,
+  type NodeId,
+  qualified,
+  type Rect,
+  within,
+} from '@yxl-vscode/units';
 import type {
   Drawing,
   DrawnCell,
@@ -194,27 +202,35 @@ function tabled(one: CompiledSheet['tables'][number]): Omit<DrawnTable, keyof Dr
   };
 }
 
-/** How far the sheet is drawn: what it writes, a look past that into a filled range, and room to work in. */
-export function extent(sheet: CompiledSheet): { rows: number; columns: number } {
+/**
+ * The corner of what a sheet writes: its cells, its merges, and what floats
+ * from them. Where a *range* fills to is the caller's to add — a drawing looks
+ * only so far past it, and `Cmd`+`End` goes all the way.
+ */
+export function corner(sheet: CompiledSheet): { rows: number; columns: number } {
   let rows = 0;
   let columns = 0;
 
-  for (const cell of sheet.cells.values()) {
-    const { col, row } = cellOf(cell.at);
+  const reaching = (at: A1Addr): void => {
+    const { col, row } = cellOf(at);
     rows = Math.max(rows, row);
     columns = Math.max(columns, col);
-  }
+  };
+
+  for (const cell of sheet.cells.values()) reaching(cell.at);
+  for (const at of anchorsIn(sheet)) reaching(at);
 
   for (const merge of sheet.merges) {
     rows = Math.max(rows, merge.rect.bottom);
     columns = Math.max(columns, merge.rect.right);
   }
 
-  for (const at of anchorsIn(sheet)) {
-    const { col, row } = cellOf(at);
-    rows = Math.max(rows, row);
-    columns = Math.max(columns, col);
-  }
+  return { rows, columns };
+}
+
+/** How far the sheet is drawn: what it writes, a look past that into a filled range, and room to work in. */
+export function extent(sheet: CompiledSheet): { rows: number; columns: number } {
+  let { rows, columns } = corner(sheet);
 
   for (const fill of sheet.fills) {
     rows = Math.max(rows, Math.min(fill.rect.bottom, rows + BEYOND));
@@ -336,6 +352,21 @@ export function drawRun(
     axis === 'column'
       ? { at: { row: 1, col: at }, rows: of.rows, columns: 1 }
       : { at: { row: at, col: 1 }, rows: 1, columns: of.columns };
+
+  return drawCells(sheet, { ...window, freeze: null }, evaluation);
+}
+
+/** Every cell of a rectangle, drawn as the view draws them: what a copy the view cannot make is made of. */
+export function drawOver(
+  sheet: CompiledSheet,
+  rect: Rect,
+  evaluation: Evaluation | null,
+): DrawnCell[] {
+  const window = {
+    at: { row: rect.top, col: rect.left },
+    rows: rect.bottom - rect.top + 1,
+    columns: rect.right - rect.left + 1,
+  };
 
   return drawCells(sheet, { ...window, freeze: null }, evaluation);
 }

@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { Compiler } from './commands';
-import { Preview } from './preview';
+import { PANEL, Preview } from './preview';
 
 /** The yxl this preview targets, compiled in from the one place it is pinned. */
 declare const YXL_TARGET: string;
@@ -27,7 +27,7 @@ export function activate(context: vscode.ExtensionContext): void {
     // Bound to the look shortcuts while the preview is active, so that VS Code
     // does not answer the keys the view has already taken (ADR-046).
     vscode.commands.registerCommand('yxl.keepKey', () => {}),
-    vscode.window.registerWebviewPanelSerializer('yxl.preview', {
+    vscode.window.registerWebviewPanelSerializer(PANEL, {
       deserializeWebviewPanel: (panel, state) => revive(panel, state, context.extensionUri),
     }),
   );

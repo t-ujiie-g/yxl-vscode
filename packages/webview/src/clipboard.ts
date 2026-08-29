@@ -1,5 +1,6 @@
 import type { Rect } from '@yxl-vscode/units';
 import { fillOf, shown, styleText } from './cell';
+import { tabbed } from './fields';
 import type { DrawnCell, DrawnSheet } from './protocol';
 
 /** What a copied rectangle puts on the clipboard: the values as text, the look as a table (ADR-028). */
@@ -22,24 +23,17 @@ export function flavours(sheet: DrawnSheet, rect: Rect): Flavours | null {
   if (!drawn) return null;
 
   const held = new Map(sheet.cells.map((one) => [`${one.col}:${one.row}`, one]));
-  const lines: string[] = [];
   const rows: string[] = [];
 
   for (let row = rect.top; row <= rect.bottom; row += 1) {
-    const fields: string[] = [];
     const cells: string[] = [];
+    for (let col = rect.left; col <= rect.right; col += 1)
+      cells.push(td(held.get(`${col}:${row}`)));
 
-    for (let col = rect.left; col <= rect.right; col += 1) {
-      const cell = held.get(`${col}:${row}`);
-      fields.push(field(plain(cell)));
-      cells.push(td(cell));
-    }
-
-    lines.push(fields.join('\t'));
     rows.push(`<tr>${cells.join('')}</tr>`);
   }
 
-  return { text: lines.join('\n'), html: `<table>${rows.join('')}</table>` };
+  return { text: tabbed(sheet.cells, rect), html: `<table>${rows.join('')}</table>` };
 }
 
 /**
@@ -64,18 +58,6 @@ export function onto(what: Flavours): boolean {
   }
 }
 
-/** What the plain text carries: the value itself, unformatted; the HTML carries how it looked (ADR-028). */
-function plain(cell: DrawnCell | undefined): string {
-  if (cell === undefined) return '';
-
-  const computed = cell.computed;
-  if (computed?.kind === 'error') return computed.error;
-  if (computed?.kind === 'value') return computed.value === null ? '' : String(computed.value);
-  if (cell.value !== null) return String(cell.value);
-
-  return cell.formula === null ? '' : `=${cell.formula}`;
-}
-
 /** One cell as the other spreadsheets read one; the fill goes on twice, because Excel reads `bgcolor` and Sheets the CSS. */
 function td(cell: DrawnCell | undefined): string {
   if (cell === undefined) return '<td></td>';
@@ -90,13 +72,6 @@ function td(cell: DrawnCell | undefined): string {
   ].join('');
 
   return `${open}${escaped(shown(cell))}</td>`;
-}
-
-/** A field as a spreadsheet reads one back: quoted where it holds what a row or a field ends on. */
-function field(text: string): string {
-  if (!/["\t\r\n]/.test(text)) return text;
-
-  return `"${text.replace(/"/g, '""')}"`;
 }
 
 function escaped(text: string): string {

@@ -1,6 +1,7 @@
 import { type CompiledSheet, cellAt } from '@yxl-vscode/compile';
 import { type A1Addr, addrAt, type CellRef, cellOf } from '@yxl-vscode/units';
 import type { Far } from '@yxl-vscode/webview/protocol';
+import { corner } from './drawing';
 
 /**
  * Where a far end is: the end of a block in a direction, the last cell of the
@@ -51,16 +52,15 @@ function lastIn(sheet: CompiledSheet, of: { columns: number }, row: number): num
   return last;
 }
 
-/** The corner of what the sheet writes, which is where `Cmd`+`End` goes in a spreadsheet. */
+/** Where `Cmd`+`End` goes: the corner the sheet writes to, a range counted to its end rather than the drawing's. */
 function lastCell(sheet: CompiledSheet): A1Addr {
-  let row = 1;
-  let col = 1;
+  const of = corner(sheet);
+  let { rows: row, columns: col } = of;
 
-  for (const cell of sheet.cells.values()) {
-    const at = cellOf(cell.at);
-    row = Math.max(row, at.row);
-    col = Math.max(col, at.col);
+  for (const fill of sheet.fills) {
+    row = Math.max(row, fill.rect.bottom);
+    col = Math.max(col, fill.rect.right);
   }
 
-  return addrAt({ row, col });
+  return addrAt({ row: Math.max(row, 1), col: Math.max(col, 1) });
 }

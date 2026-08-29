@@ -6,8 +6,8 @@ beside its text, and will translate grid gestures back into edits on the spec �
 not into a workbook.
 
 > ⚠️ **Status: the preview is complete, and the first edits write back.**
-> *yxl: Open Preview to the Side* draws a spec as a grid next to the text and
-> redraws it as you type. Under it: YAML parses into a span-carrying tree, edits
+> *yxl: Open the Grid Beside the Spec* draws a spec as a grid next to the text
+> and redraws it as you type. Under it: YAML parses into a span-carrying tree, edits
 > apply as minimal byte patches that leave every untouched byte alone, a whole
 > spec — `$include`, `csv:`, and all — reads into a model of itself, and that
 > model projects to a grid where every value and every property of every look
@@ -104,11 +104,17 @@ written from the code, so it cannot drift from it.
 
 Not published yet. To run it from a checkout: `pnpm install`, then **F5** in VS
 Code (*Run the preview*), which builds both bundles and opens an Extension
-Development Host; open a `*.yxl.yaml` there and run **yxl: Open Preview to the
-Side**.
+Development Host; open a `*.yxl.yaml` there and press the **grid** button in its
+title bar, or run **yxl: Open the Grid Beside the Spec**.
 
-The **Check** and **Build** commands need the `yxl` compiler on your `PATH`, or
-`yxl.path` set to it; the preview itself needs nothing.
+The **Build** and **Check** buttons beside it need the `yxl` compiler on your
+`PATH`, or `yxl.path` set to it; the grid itself needs nothing.
+
+The *text* half answers too, where [`redhat.vscode-yaml`][yaml] is installed:
+this editor points it at yxl's own schema, so a key the format does not have is
+a squiggle rather than a surprise at build time.
+
+[yaml]: https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml
 
 ## What it is for
 
