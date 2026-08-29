@@ -1,5 +1,5 @@
 import type { Brand } from './brand';
-import { columnIndex, columnLabel, endpoints } from './grid';
+import { columnIndex, endpoints } from './grid';
 
 /** Which way a band runs: over columns, or over rows (`docs/spec.md` §4). */
 export type Axis = 'column' | 'row';
@@ -29,12 +29,4 @@ export function parseRowSpan(text: string): RowSpan | null {
   if (last === null) return text as RowSpan;
   if (!ROW.test(last) || Number(last) < Number(first)) return null;
   return text as RowSpan;
-}
-
-/** A run of columns or rows as a reader sees it named: `column B`, `rows 3-7`. */
-export function spanSaid(axis: Axis, first: number, last: number): string {
-  const said = (at: number) => (axis === 'column' ? columnLabel(at) : String(at));
-  const one = axis === 'column' ? 'column' : 'row';
-
-  return first === last ? `${one} ${said(first)}` : `${one}s ${said(first)}-${said(last)}`;
 }

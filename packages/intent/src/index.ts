@@ -55,7 +55,7 @@ export {
   setTab,
   type Tabbed,
 } from './sheets';
-export { type Does, lineSaid, type Moving, type Shift, shifting } from './shift';
+export { type Does, type Moving, type Shift, shifting } from './shift';
 export { type Dragged, setSize } from './size';
 export { type Sorting, setSorted } from './sort';
 export { type Projection, setStyle } from './style';

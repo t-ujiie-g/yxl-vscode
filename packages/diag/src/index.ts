@@ -10,7 +10,6 @@ export type {
   Message,
   Nothing,
   Saying,
-  Sentence,
   Speech,
   Words,
 } from './words';

@@ -2,7 +2,7 @@ import type { Saying } from '@yxl-vscode/diag';
 import type { Candidate, Reading } from '@yxl-vscode/intent';
 import { reading } from '@yxl-vscode/intent';
 import type { Axis } from '@yxl-vscode/spec';
-import { type SheetName, spanSaid } from '@yxl-vscode/units';
+import type { SheetName } from '@yxl-vscode/units';
 import type { About } from '@yxl-vscode/webview/protocol';
 import { say } from './text';
 import { ANYWAY, applied, type Port, type Spec, sheetNamed, shown } from './write';
@@ -71,7 +71,7 @@ export async function asked<T extends { readonly sheet: string }>(
   if (done) port.said(how.done(one, taken));
 }
 
-/** The run a gesture named, as the reader is told about it: `column B`, `rows 3-7`. */
+/** The run a gesture named, as a sentence about it takes one; how it reads is the sentence's own (ADR-051). */
 export function many(one: { readonly axis: Axis; readonly first: number; readonly last: number }) {
-  return spanSaid(one.axis, one.first, one.last);
+  return { axis: one.axis, first: one.first, last: one.last };
 }

@@ -1,4 +1,11 @@
-import { type Book, type Nothing, type Saying, speaking, type Words } from '@yxl-vscode/diag';
+import {
+  type Book,
+  type Language,
+  type Nothing,
+  type Saying,
+  speaking,
+  type Words,
+} from '@yxl-vscode/diag';
 import { columnLabel } from '@yxl-vscode/units';
 import type { Stood } from './direct';
 
@@ -565,7 +572,7 @@ const ja: Words<Says> = {
 /** A run of rows or columns, as a refusal names it. */
 function spanned(
   { axis, at, last }: { axis: string; at: number; last: number },
-  language: 'en' | 'ja',
+  language: Language,
 ): string {
   const one = axis === 'column' ? columnLabel(at) : String(at);
   const other = axis === 'column' ? columnLabel(last) : String(last);
@@ -581,7 +588,7 @@ function spanned(
 /** What a line gesture does, as the answer offering it says so. */
 function lined(
   one: { axis: string; many: number; at: number; last: number },
-  language: 'en' | 'ja',
+  language: Language,
 ): string {
   const span = spanned(one, language);
   if (language === 'ja') {
@@ -594,7 +601,7 @@ function lined(
 }
 
 /** What a line gesture costs, in the lines of YAML it would touch and the cell keys among them. */
-function costing(one: { things: number; keys: number }, language: 'en' | 'ja'): string {
+function costing(one: { things: number; keys: number }, language: Language): string {
   if (language === 'ja') {
     const all = `${one.things} 箇所`;
     return one.keys === 0 ? all : `${all}（うち ${one.keys} 件は \`cells:\` のキー）`;
@@ -607,7 +614,7 @@ function costing(one: { things: number; keys: number }, language: 'en' | 'ja'): 
 }
 
 /** What stood in the way of several, counted by kind: one cell's own reason does not scale to five hundred. */
-function grouped(held: readonly { at: string; by: Stood }[], language: 'en' | 'ja'): string {
+function grouped(held: readonly { at: string; by: Stood }[], language: Language): string {
   const kinds = [...new Set(held.map((one) => one.by))];
 
   return kinds
@@ -626,13 +633,13 @@ function grouped(held: readonly { at: string; by: Stood }[], language: 'en' | 'j
 }
 
 /** The verb a refusal counts in, in the past: `emptied`, `pasted`, `replaced`. */
-const DOING: Record<'en' | 'ja', Record<string, string>> = {
+const DOING: Record<Language, Record<string, string>> = {
   en: { emptied: 'emptied', pasted: 'pasted', filled: 'filled', replaced: 'replaced' },
   ja: { emptied: '空にでき', pasted: '貼り付けられ', filled: '埋められ', replaced: '置換でき' },
 };
 
 /** What one such cell is. */
-const THE: Record<'en' | 'ja', Record<Stood, string>> = {
+const THE: Record<Language, Record<Stood, string>> = {
   en: {
     range: 'is filled by a range',
     definition: 'reads a definition',
@@ -656,7 +663,7 @@ const THE: Record<'en' | 'ja', Record<Stood, string>> = {
 };
 
 /** What several of them are; the same list, said in a crowd. */
-const THEY: Record<'en' | 'ja', Record<Stood, string>> = {
+const THEY: Record<Language, Record<Stood, string>> = {
   en: {
     range: 'are filled by a range',
     definition: 'read a definition',
@@ -680,7 +687,7 @@ const THEY: Record<'en' | 'ja', Record<Stood, string>> = {
 };
 
 /** What a sheet keeps under each key, in the reader's word for it rather than the schema's. */
-const HELD: Record<'en' | 'ja', Record<HeldKey, string>> = {
+const HELD: Record<Language, Record<HeldKey, string>> = {
   en: {
     cells: 'cells',
     comments: 'notes',

@@ -1,6 +1,6 @@
 import { WORDS as compile } from '@yxl-vscode/compile';
 import { WORDS as cst } from '@yxl-vscode/cst';
-import { type Language, reading, type Saying } from '@yxl-vscode/diag';
+import { type Book, type Language, reading, type Saying } from '@yxl-vscode/diag';
 import { WORDS as loader } from '@yxl-vscode/loader';
 import { WORDS as patch } from '@yxl-vscode/patch';
 import { WORDS as units } from '@yxl-vscode/units';
@@ -11,7 +11,13 @@ export function spoken(tag: string): Language {
   return tag.toLowerCase().startsWith('ja') ? 'ja' : 'en';
 }
 
-/** Everything the core can say, in the language a tag names (ADR-051). */
+/**
+ * Every book below this one, in the order they were written; an edge that words
+ * more than these adds its own to the end (ADR-051).
+ */
+export const BOOKS: readonly Book[] = [units, cst, loader, compile, patch, view];
+
+/** Everything the core and the panel can say, in the language a tag names (ADR-051). */
 export function reader(tag: string): (saying: Saying) => string {
-  return reading(spoken(tag), units, cst, loader, compile, patch, view);
+  return reading(spoken(tag), ...BOOKS);
 }

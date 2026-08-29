@@ -3602,6 +3602,33 @@ than widening it silently.
 
 ## 11. Living changelog
 
+### 2026-08-29 — The books, and what reads them
+
+A §8 pass over the whole tree, the first since the language work landed. What it
+found:
+
+- **A defect the language test could not see.** The host's band messages took a
+  span as *text* — `many()` handed them `rows 3-5`, which is English however the
+  reader reads — so 日本語 said `ここでは rows 3-5 を非表示にできません`. The view
+  and `intent` both compose a run in the language they are being read in; the
+  host was the one place that did not. It takes the run now (`{ axis, first,
+  last }`) and each sentence says it its own way. A test pins both languages.
+- **Three ways to say a run of rows, two of them dead.** With the host composing
+  its own, `units.spanSaid` had no caller but `intent`'s `lineSaid`, which had
+  no caller but its own test and an export nobody imported. Both deleted, and
+  their tests with them.
+- **The list of books was written twice**, so adding one meant remembering two
+  files. The view exports `BOOKS` — every book below it, in layer order — and
+  the host spreads that and adds its own two.
+- **`'en' | 'ja'` was written eight times** in `intent`'s catalogue where `diag`
+  has `Language` (§8.1).
+- **Two directory walkers in `tests/`**, one per suite that reads the tree.
+  `sourcesOf` in `tests/corpus.ts` is the one (§8.2).
+- **`Sentence` left `diag`'s public surface**: it is the shape of a book's
+  values, which no package outside `diag` names (§8.2).
+- 2430 → 2431 tests. Comment shape: export 895 blocks / 1972 lines / avg 2.2,
+  private 585 / 585 / avg 1.0, inline 135 / 215 / avg 1.6; 0 over the limit.
+
 ### 2026-08-29 — Nothing this editor says is written in English any more
 
 Phase 19, closed. Every sentence this editor says for itself is a code and its

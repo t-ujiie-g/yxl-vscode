@@ -4,7 +4,7 @@ import { type IncludeReader, load } from '@yxl-vscode/loader';
 import { type FilePath, filePath, type Line, type SheetName } from '@yxl-vscode/units';
 import { describe, expect, it } from 'vitest';
 import { english } from './harness';
-import { lineSaid, type Moving, shifting } from './shift';
+import { type Moving, shifting } from './shift';
 
 const ROOT = filePath('spec.yxl.yaml') ?? ('' as FilePath);
 const SALES = 'sheets:\n  - name: Sales\n';
@@ -123,16 +123,6 @@ describe('what a row taken away would move', () => {
 
     expect(shifting(sheet(spec), row(5, -1)).stops.map(english)).toEqual([
       '`B1` holds `=A5*2`, and `A5` names a row this would take away',
-    ]);
-  });
-});
-
-describe('the run a line covers, as the reader is told it', () => {
-  it('is the one row inserted, and the rows a delete takes', () => {
-    expect([lineSaid(row(5)), lineSaid(row(5, -3)), lineSaid(column(2, -1))]).toEqual([
-      'row 5',
-      'rows 5-7',
-      'column B',
     ]);
   });
 });

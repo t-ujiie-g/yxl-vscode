@@ -6,15 +6,7 @@ import {
   REACH,
 } from '@yxl-vscode/compile';
 import type { Saying } from '@yxl-vscode/diag';
-import {
-  type A1Addr,
-  cellOf,
-  type Line,
-  type NodeId,
-  type Rect,
-  shifted,
-  spanSaid,
-} from '@yxl-vscode/units';
+import { type A1Addr, cellOf, type Line, type NodeId, type Rect, shifted } from '@yxl-vscode/units';
 import { say } from './text';
 
 /** What a line does to one construct: it moves whole, it takes the line in, or it goes with it. */
@@ -179,8 +171,3 @@ export function along(line: Line): Along {
 }
 
 /** The run a line covers, as the reader sees it named: one row inserted, or the rows a delete takes. */
-export function lineSaid(line: Line): string {
-  const last = line.by < 0 ? line.at - line.by - 1 : line.at;
-
-  return spanSaid(line.axis, line.at, last);
-}
