@@ -1909,11 +1909,21 @@ small — which is why they are one phase and not two.
       grid *in front of them* is the subject where there is one, and the text
       otherwise. `panel.active` is the live answer; the panel this editor
       remembers is only the last.
-- [ ] **The spec's own schema in the *text* half** *(proposed, not asked for)*.
+- [x] **The spec's own schema in the *text* half** *(proposed, not asked for)*.
       Upstream generates `docs/yxl.schema.json` (§8 Q7); a `yamlValidation`
       contribution points the YAML extension at it, and a reader gets completion
       and inline errors in the half of the editor this project does not draw.
-      Ten lines of manifest for the largest single win on the text side.
+      **The schema is carried rather than fetched**, for two reasons: a reader
+      on a train still gets it, and §8 Q6 pins this editor to *one* yxl version
+      — validating the text against whatever `main` says today would be a
+      different rule from the one the compiler and the loader follow.
+      **A copy is only safe while something checks it**, so a test compares it
+      byte for byte with the checkout next door and says how to take a new one
+      (`SCHEMA=write`), which is the same shape the README's coverage table
+      uses. A version bump takes the schema with it, in the same commit.
+      **It needs `redhat.vscode-yaml`**, which this editor does not depend on:
+      the contribution is inert without it and everything else still works.
+      Saying so is Phase 20's README line rather than a forced install.
 - [ ] **Replace what a find turned up** *(proposed)*. `Cmd`+`F` finds; a
       spreadsheet replaces. Every replacement is an ordinary cell write, so this
       is the gesture that exists, over a list — including the refusals, which is
@@ -3508,6 +3518,28 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-29 — The spec's own schema, in the half this editor does not draw
+Phase 18's third line, and the cheapest thing on it: ten lines of manifest for
+completion and inline errors in the *text*, which is half of what this project
+is for and none of what it draws.
+
+- **Upstream generates the schema** (§8 Q7), so there is nothing to write: a
+  `yamlValidation` contribution points `redhat.vscode-yaml` at it for
+  `*.yxl.yaml`, and the YAML half of the editor starts answering.
+- **It is carried, not fetched.** A reader on a train still gets it, and §8 Q6
+  pins this editor to one yxl version — validating the text against whatever
+  `main` says today would be a different rule from the one the loader and the
+  compiler follow.
+- **A copy is only safe while something checks it.** A test compares it byte for
+  byte with the checkout next door and says how to take a new one
+  (`SCHEMA=write pnpm test tests/schema.test.ts`) — the same shape the README's
+  coverage table already uses, so a version bump carries the schema in the same
+  commit rather than leaving it to be noticed.
+- **The YAML extension is not a dependency.** Without it the contribution is
+  inert and everything else works; forcing an install for one half of one
+  feature is not this editor's call to make. Phase 20's README says so.
+- 2380 → 2382 tests. Comment shape: unchanged.
 
 ### 2026-08-29 — Build, where a reader can click it
 Phase 18's second line, and the half of *where a reader finds any of it* that
