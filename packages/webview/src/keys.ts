@@ -1,6 +1,6 @@
 import type { Axis } from '@yxl-vscode/spec';
 import type { Rect } from '@yxl-vscode/units';
-import type { DrawnCell, DrawnSheet } from './protocol';
+import type { DrawnSheet, Far } from './protocol';
 
 /** A cell of the grid, as the view points at one. */
 export interface At {
@@ -15,31 +15,23 @@ interface Going {
 }
 
 /**
- * Where a key moves the reader, or `null`: arrows, tab, page, `Cmd`+arrow to
- * the edge of a block, `Home` and `End`. `Shift` takes the selection with it.
+ * Where a key moves the reader, or `null`: arrows, tab, page and `Home`. What
+ * reaches past the drawn window is `edging`'s, and the host's to answer
+ * (ADR-019). `Shift` takes the selection with it.
  */
-export function going(
-  event: KeyboardEvent,
-  sheet: DrawnSheet,
-  held: ReadonlyMap<string, DrawnCell>,
-  from: At,
-): Going | null {
+export function going(event: KeyboardEvent, sheet: DrawnSheet, from: At): Going | null {
   const jump = event.metaKey || event.ctrlKey;
   const extend = event.shiftKey;
 
+  // The first cell of the row, or of the sheet, is where it is whatever is
+  // drawn; every other far end is `edging`'s and the host's to answer.
   if (event.key === 'Home') {
     return { to: jump ? { row: 1, col: 1 } : { row: from.row, col: 1 }, extend };
   }
-  if (event.key === 'End') {
-    return { to: { row: from.row, col: lastIn(sheet, held, from.row) }, extend };
-  }
+  if (edging(event) !== null) return null;
 
   const step = stepping(event, sheet);
   if (step === null) return null;
-
-  // A `Cmd`+arrow goes to the edge of a block, which this window cannot see the
-  // end of (ADR-019): `edging` asks the host instead.
-  if (jump && edging(event) !== null) return null;
 
   const to = { row: from.row + step.rows, col: from.col + step.cols };
 
@@ -47,19 +39,26 @@ export function going(
   return { to, extend: event.key === 'Tab' ? false : extend };
 }
 
-/** The step a `Cmd`+arrow asks for, or `null` where the key is not one. */
-export function edging(event: KeyboardEvent): { rows: number; cols: number } | null {
-  if (!(event.metaKey || event.ctrlKey) || event.altKey) return null;
+/**
+ * The far end a key asks for, or `null` where it asks for none: the end of a
+ * block in a direction, of the row, or of the sheet. Which cell that is, is the
+ * host's — the view holds a window (ADR-019).
+ */
+export function edging(event: KeyboardEvent): Far | null {
+  const jump = event.metaKey || event.ctrlKey;
+  if (event.altKey) return null;
+  if (event.key === 'End') return jump ? { kind: 'sheet' } : { kind: 'row' };
+  if (!jump) return null;
 
   switch (event.key) {
     case 'ArrowUp':
-      return { rows: -1, cols: 0 };
+      return { kind: 'block', rows: -1, cols: 0 };
     case 'ArrowDown':
-      return { rows: 1, cols: 0 };
+      return { kind: 'block', rows: 1, cols: 0 };
     case 'ArrowLeft':
-      return { rows: 0, cols: -1 };
+      return { kind: 'block', rows: 0, cols: -1 };
     case 'ArrowRight':
-      return { rows: 0, cols: 1 };
+      return { kind: 'block', rows: 0, cols: 1 };
     default:
       return null;
   }
@@ -88,15 +87,6 @@ function stepping(event: KeyboardEvent, sheet: DrawnSheet): { rows: number; cols
     default:
       return null;
   }
-}
-
-/** The last column of this row that holds anything, or the first where none does. */
-function lastIn(sheet: DrawnSheet, held: ReadonlyMap<string, DrawnCell>, row: number): number {
-  let last = 1;
-  for (let col = 1; col <= sheet.of.columns; col += 1) {
-    if (held.has(`${col}:${row}`)) last = col;
-  }
-  return last;
 }
 
 /** Whether this is the key that takes an edit back, or with `Shift` puts it again. */

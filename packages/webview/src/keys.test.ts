@@ -15,78 +15,81 @@ import {
   undoing,
   wearing,
 } from './keys';
-import type { DrawnCell, DrawnSheet } from './protocol';
+import type { DrawnSheet } from './protocol';
 
 /** A sheet with room to move about in, since these tests are about where a key takes the reader. */
 const sheet = (of: Partial<DrawnSheet> = {}): DrawnSheet =>
   drawnSheet({ rows: 20, columns: 10, of: { rows: 20, columns: 10 }, ...of });
 
-/** The cells a sheet holds, as the grid maps them: a block, then a gap, then one. */
-function held(...at: string[]): ReadonlyMap<string, DrawnCell> {
-  const cell = {} as DrawnCell;
-  return new Map(at.map((one) => [one, cell]));
-}
-
 const key = (of: Partial<KeyboardEvent>): KeyboardEvent => new KeyboardEvent('keydown', of);
 
 describe('where a key takes the reader', () => {
   it('says nothing about a key that is not a movement', () => {
-    expect(going(key({ key: 'x' }), sheet(), held(), { row: 1, col: 1 })).toBeNull();
+    expect(going(key({ key: 'x' }), sheet(), { row: 1, col: 1 })).toBeNull();
   });
 
   it('moves one cell by an arrow, and a window by a page', () => {
-    const down = going(key({ key: 'ArrowDown' }), sheet(), held(), { row: 2, col: 2 });
-    const page = going(key({ key: 'PageDown' }), sheet({ rows: 5 }), held(), { row: 2, col: 2 });
+    const down = going(key({ key: 'ArrowDown' }), sheet(), { row: 2, col: 2 });
+    const page = going(key({ key: 'PageDown' }), sheet({ rows: 5 }), { row: 2, col: 2 });
 
     expect(down?.to).toEqual({ row: 3, col: 2 });
     expect(page?.to).toEqual({ row: 6, col: 2 });
   });
 
   it('reaches rather than moves while shift is held, except on tab', () => {
-    const reach = going(key({ key: 'ArrowRight', shiftKey: true }), sheet(), held(), {
+    const reach = going(key({ key: 'ArrowRight', shiftKey: true }), sheet(), {
       row: 1,
       col: 1,
     });
-    const back = going(key({ key: 'Tab', shiftKey: true }), sheet(), held(), { row: 1, col: 2 });
+    const back = going(key({ key: 'Tab', shiftKey: true }), sheet(), { row: 1, col: 2 });
 
     expect(reach).toEqual({ to: { row: 1, col: 2 }, extend: true });
     expect(back).toEqual({ to: { row: 1, col: 1 }, extend: false });
   });
 
-  it('answers nothing for a cmd-arrow, which the sheet rather than the window knows', () => {
+  it('answers nothing for a far end, which the sheet rather than the window knows', () => {
     // Where a block ends is past the end of the drawn window as often as not
-    // (ADR-019), so `edging` names the step and the host answers with the cell.
-    const cells = held('1:1', '1:2', '1:3');
-    expect(
-      going(key({ key: 'ArrowDown', metaKey: true }), sheet(), cells, { row: 1, col: 1 }),
-    ).toBe(null);
+    // (ADR-019), so `edging` names the end and the host answers with the cell.
+    for (const far of [
+      key({ key: 'ArrowDown', metaKey: true }),
+      key({ key: 'End' }),
+      key({ key: 'End', metaKey: true }),
+    ]) {
+      expect(going(far, sheet(), { row: 1, col: 1 })).toBe(null);
+    }
 
-    expect(edging(key({ key: 'ArrowDown', metaKey: true }))).toEqual({ rows: 1, cols: 0 });
-    expect(edging(key({ key: 'ArrowLeft', metaKey: true }))).toEqual({ rows: 0, cols: -1 });
+    expect(edging(key({ key: 'ArrowDown', metaKey: true }))).toEqual({
+      kind: 'block',
+      rows: 1,
+      cols: 0,
+    });
+    expect(edging(key({ key: 'ArrowLeft', metaKey: true }))).toEqual({
+      kind: 'block',
+      rows: 0,
+      cols: -1,
+    });
   });
 
-  it('is not a cmd-arrow without the cmd, or with a key that does not move a cell', () => {
+  it('asks for the row on end, and for the sheet with cmd', () => {
+    expect(edging(key({ key: 'End' }))).toEqual({ kind: 'row' });
+    expect(edging(key({ key: 'End', metaKey: true }))).toEqual({ kind: 'sheet' });
+  });
+
+  it('is not a far end without the cmd, or with a key that does not move a cell', () => {
     expect(edging(key({ key: 'ArrowDown' }))).toBeNull();
     expect(edging(key({ key: 'PageDown', metaKey: true }))).toBeNull();
     expect(edging(key({ key: 'ArrowDown', metaKey: true, altKey: true }))).toBeNull();
+    expect(edging(key({ key: 'End', altKey: true }))).toBeNull();
   });
 
   it('goes to the row on home, and to the first cell of the sheet with cmd', () => {
-    const row = going(key({ key: 'Home' }), sheet(), held(), { row: 4, col: 7 });
-    const all = going(key({ key: 'Home', metaKey: true }), sheet(), held(), { row: 4, col: 7 });
+    const row = going(key({ key: 'Home' }), sheet(), { row: 4, col: 7 });
+    const all = going(key({ key: 'Home', metaKey: true }), sheet(), { row: 4, col: 7 });
 
     expect([row?.to, all?.to]).toEqual([
       { row: 4, col: 1 },
       { row: 1, col: 1 },
     ]);
-  });
-
-  it('goes to the last cell of the row on end', () => {
-    const cells = held('1:4', '2:4', '5:4');
-    expect(going(key({ key: 'End' }), sheet(), cells, { row: 4, col: 1 })?.to).toEqual({
-      row: 4,
-      col: 5,
-    });
   });
 });
 

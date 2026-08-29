@@ -2,13 +2,14 @@ import { type CompiledSheet, compile } from '@yxl-vscode/compile';
 import { parse } from '@yxl-vscode/cst';
 import { load } from '@yxl-vscode/loader';
 import { type A1Addr, addrAt } from '@yxl-vscode/units';
+import type { Far } from '@yxl-vscode/webview/protocol';
 import { describe, expect, it } from 'vitest';
 import { extent } from './drawing';
-import { edgeFrom, type Step } from './edges';
+import { edgeFrom } from './edges';
 
-const DOWN: Step = { rows: 1, cols: 0 };
-const UP: Step = { rows: -1, cols: 0 };
-const RIGHT: Step = { rows: 0, cols: 1 };
+const DOWN: Far = { kind: 'block', rows: 1, cols: 0 };
+const UP: Far = { kind: 'block', rows: -1, cols: 0 };
+const RIGHT: Far = { kind: 'block', rows: 0, cols: 1 };
 
 function sheet(body: string): CompiledSheet {
   const { doc } = load(
@@ -22,7 +23,7 @@ function sheet(body: string): CompiledSheet {
 }
 
 /** Where a `Cmd`+arrow from `at` lands on a sheet written with that body. */
-function edge(body: string, at: string, by: Step): string {
+function edge(body: string, at: string, by: Far): string {
   const one = sheet(body);
   return edgeFrom(one, extent(one), at as A1Addr, by);
 }
@@ -31,6 +32,9 @@ function edge(body: string, at: string, by: Step): string {
 function column(many: number): string {
   return Array.from({ length: many }, (_, index) => `      A${index + 1}: ${index + 1}\n`).join('');
 }
+
+const ROW: Far = { kind: 'row' };
+const SHEET: Far = { kind: 'sheet' };
 
 describe('where a `Cmd`+arrow lands', () => {
   it('runs to the far end of a block, however long the block is', () => {
@@ -61,5 +65,27 @@ describe('where a `Cmd`+arrow lands', () => {
   it('runs to the last of a block from inside it, not to the one beyond', () => {
     expect(edge(column(400), 'A200', DOWN)).toBe('A400');
     expect(edge(column(400), 'A200', UP)).toBe('A1');
+  });
+});
+
+describe('where `End` lands', () => {
+  it('is the last cell of the row that holds anything, however wide the sheet is', () => {
+    const spec = '      A4: one\n      B4: two\n      E4: five\n      A9: elsewhere\n';
+    expect(edge(spec, 'A4', ROW)).toBe('E4');
+  });
+
+  it("is the first cell of a row that holds none, rather than the sheet's far edge", () => {
+    expect(edge('      A1: one\n', 'A9', ROW)).toBe('A9');
+  });
+
+  it('is the corner of what the sheet writes, with `Cmd`, and not the room past it', () => {
+    // Excel's own `Cmd`+`End`: the last row and the last column it writes,
+    // which is a cell that may itself hold nothing.
+    const spec = '      A1: one\n      C1: three\n      A40: forty\n';
+    expect(edge(spec, 'A1', SHEET)).toBe('C40');
+  });
+
+  it('is A1 where the sheet writes nothing at all', () => {
+    expect(edge('      A1: one\n', 'A1', SHEET)).toBe('A1');
   });
 });

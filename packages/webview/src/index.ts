@@ -336,8 +336,8 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       typedAt = { row, col };
       send({ kind: 'editRun', sheet: named(), row, col, index, text });
     },
-    edgeTo: (row, col, by, extend) => {
-      host.postMessage({ kind: 'edge', sheet: named(), row, col, ...by, extend });
+    edgeTo: (row, col, to, extend) => {
+      host.postMessage({ kind: 'edge', sheet: named(), row, col, to, extend });
     },
     showRun: (index) => {
       if (selected !== null) run = { ...selected, at: index };

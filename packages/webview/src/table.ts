@@ -531,7 +531,7 @@ function line(
         return;
       }
 
-      const move = going(event, sheet, held, { row, col });
+      const move = going(event, sheet, { row, col });
       if (move !== null) {
         event.preventDefault();
         goTo(drawn, sheet, move.to, asks, move.extend);
