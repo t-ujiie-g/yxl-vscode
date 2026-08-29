@@ -1,6 +1,9 @@
+import { statSync } from 'node:fs';
 import * as vscode from 'vscode';
 import { Compiler } from './commands';
 import { PANEL, Preview } from './preview';
+import { say } from './text';
+import { reader } from './words';
 
 /** The yxl this preview targets, compiled in from the one place it is pinned. */
 declare const YXL_TARGET: string;
@@ -26,6 +29,14 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
     // Bound to the look shortcuts while the preview is active, so that VS Code
     // does not answer the keys the view has already taken (ADR-046).
+    vscode.commands.registerCommand('yxl.newSpec', async (into?: vscode.Uri) => {
+      const written = await compiler.init(intoFolder(into));
+      if (written === null) return;
+
+      const document = await vscode.workspace.openTextDocument(written);
+      await vscode.window.showTextDocument(document, { preview: false });
+      Preview.show(document, context.extensionUri);
+    }),
     vscode.commands.registerCommand('yxl.keepKey', () => {}),
     vscode.window.registerWebviewPanelSerializer(PANEL, {
       deserializeWebviewPanel: (panel, state) => revive(panel, state, context.extensionUri),
@@ -63,8 +74,17 @@ function specInFocus(): vscode.TextDocument | undefined {
   // holds the last text they touched, which may be another spec entirely.
   const document = Preview.spec() ?? vscode.window.activeTextEditor?.document;
   if (document === undefined) {
-    void vscode.window.showInformationMessage('Open a `*.yxl.yaml` spec first.');
+    void vscode.window.showInformationMessage(
+      reader(vscode.env.language)(say('host.open-a-spec-first')),
+    );
   }
 
   return document;
+}
+
+/** The folder a *New Spec* was asked for in: the one right-clicked, or the one holding the file that was. */
+function intoFolder(one: vscode.Uri | undefined): vscode.Uri | undefined {
+  if (one === undefined) return undefined;
+
+  return statSync(one.fsPath).isDirectory() ? one : vscode.Uri.joinPath(one, '..');
 }

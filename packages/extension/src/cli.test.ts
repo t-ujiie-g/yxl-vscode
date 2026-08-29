@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { run, versionOf, versionWarning } from './cli';
+import { older, run, versionOf, versionWarning } from './cli';
+import { reader } from './words';
+
+const english = reader('en');
 
 describe('versionOf', () => {
   it('reads what `yxl version` answers', () => {
-    expect(versionOf('yxl 0.3.5')).toBe('0.3.5');
+    expect(versionOf('yxl 0.3.6')).toBe('0.3.6');
   });
 
   it('is nothing when the answer holds no version', () => {
@@ -13,27 +16,28 @@ describe('versionOf', () => {
 
 describe('what to say about the compiler that is installed', () => {
   it('says nothing when it is the one this editor targets', () => {
-    expect(versionWarning('0.3.5', '0.3.5')).toBeNull();
+    expect(versionWarning('0.3.6', '0.3.6')).toBeNull();
   });
 
   it('warns that an older one may not have the construct', () => {
-    expect(versionWarning('0.3.4', '0.3.5')).toContain('older');
+    expect(english(versionWarning('0.3.5', '0.3.6') ?? '')).toContain('older');
   });
 
   it('warns that a newer one may have moved the schema, and still builds', () => {
-    const said = versionWarning('0.4.0', '0.3.5');
+    const said = english(versionWarning('0.4.0', '0.3.6') ?? '');
     expect(said).toContain('newer');
     expect(said).toContain('still builds');
   });
 
   it('compares by number, not by text', () => {
     // `0.10.0` is newer than `0.9.0`, which string order gets backwards.
-    expect(versionWarning('0.10.0', '0.9.0')).toContain('newer');
-    expect(versionWarning('0.9.0', '0.10.0')).toContain('older');
+    expect(english(versionWarning('0.10.0', '0.9.0') ?? '')).toContain('newer');
+    expect(english(versionWarning('0.9.0', '0.10.0') ?? '')).toContain('older');
+    expect([older('0.10.0', '0.9.0'), older('0.9.0', '0.10.0')]).toEqual([false, true]);
   });
 
   it('says so when the compiler did not answer', () => {
-    expect(versionWarning(null, '0.3.5')).toContain('did not say');
+    expect(english(versionWarning(null, '0.3.6') ?? '')).toContain('did not say');
   });
 });
 

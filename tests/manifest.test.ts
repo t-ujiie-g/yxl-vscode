@@ -100,6 +100,15 @@ describe('what this editor contributes to VS Code', () => {
     }
   });
 
+  it('puts what makes a spec where VS Code puts new files, rather than in the palette alone', () => {
+    // The palette is where a command goes to hide: a reader who wanted a new
+    // spec looked in *New File…* and in the folder they were standing on.
+    const inMenu = (menu: string): boolean =>
+      (menus[menu] ?? []).some((one) => one.command === 'yxl.newSpec');
+
+    expect([inMenu('file/newFile'), inMenu('explorer/context')]).toEqual([true, true]);
+  });
+
   it('says the same list in both languages, so neither can quietly fall behind', () => {
     expect(Object.keys(nls('ja')).sort()).toEqual(Object.keys(nls('en')).sort());
   });

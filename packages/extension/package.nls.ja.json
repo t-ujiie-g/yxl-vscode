@@ -1,5 +1,6 @@
 {
   "extension.description": "VS Code のプレビュー: テキストの隣のパネル、ファイルシステム、そして yxl CLI。",
+  "command.newSpec": "yxl スペック: 空のブック",
   "command.showPreview": "スペックの隣にグリッドを開く",
   "command.showSource": "グリッドのもとになったスペックへ移動",
   "command.check": "スペックを検査",

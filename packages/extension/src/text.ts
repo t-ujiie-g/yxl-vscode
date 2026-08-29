@@ -79,6 +79,19 @@ export type Says = {
   'host.rows-one-table': { many: number };
   'host.still-loading': Nothing;
   'host.nothing-on-clipboard': Nothing;
+  'host.spec-is-ok': { file: string };
+  'host.built': { file: string };
+  'host.open-it': Nothing;
+  'host.create': Nothing;
+  'host.a-yxl-spec': Nothing;
+  'host.no-compiler': { binary: string };
+  'host.how-to-install': Nothing;
+  'host.refused-the-spec': Nothing;
+  'host.open-a-spec-first': Nothing;
+  'host.no-init': { found: string; since: string };
+  'host.version-unknown': Nothing;
+  'host.older-compiler': { found: string; target: string };
+  'host.newer-compiler': { found: string; target: string };
   'host.file-unreadable': { file: string };
 };
 
@@ -153,6 +166,22 @@ const en: Words<Says> = {
   'host.rows-one-table': ({ many }) => `${many} rows are one table now.`,
   'host.still-loading': () => 'this spec has not finished loading',
   'host.nothing-on-clipboard': () => 'there is nothing on the clipboard to put down',
+  'host.spec-is-ok': ({ file }) => `${file}: ok`,
+  'host.built': ({ file }) => `Built ${file}`,
+  'host.open-it': () => 'Open it',
+  'host.create': () => 'Create',
+  'host.a-yxl-spec': () => 'yxl spec',
+  'host.no-compiler': ({ binary }) =>
+    `Could not run \`${binary}\`. Install yxl, or set \`yxl.path\` to it.`,
+  'host.how-to-install': () => 'How to install',
+  'host.refused-the-spec': () => 'yxl refused the spec.',
+  'host.open-a-spec-first': () => 'Open a `*.yxl.yaml` spec first.',
+  'host.no-init': ({ found, since }) => `yxl ${found} has no \`init\`; it arrived in ${since}.`,
+  'host.version-unknown': () => '`yxl version` did not say which version it is.',
+  'host.older-compiler': ({ found, target }) =>
+    `yxl ${found} is older than the ${target} this preview targets: a construct it understands may not exist there.`,
+  'host.newer-compiler': ({ found, target }) =>
+    `yxl ${found} is newer than the ${target} this preview targets: what it writes still builds, but the schema may have moved.`,
   'host.file-unreadable': ({ file }) => `${file} could not be read`,
 };
 
@@ -225,6 +254,23 @@ const ja: Words<Says> = {
   'host.rows-one-table': ({ many }) => `${many} 行を 1 つのテーブルにしました。`,
   'host.still-loading': () => 'この spec はまだ読み込み中です',
   'host.nothing-on-clipboard': () => 'クリップボードに貼り付けるものがありません',
+  'host.spec-is-ok': ({ file }) => `${file}: 問題ありません`,
+  'host.built': ({ file }) => `${file} をビルドしました`,
+  'host.open-it': () => '開く',
+  'host.create': () => '作成',
+  'host.a-yxl-spec': () => 'yxl スペック',
+  'host.no-compiler': ({ binary }) =>
+    `\`${binary}\` を実行できませんでした。yxl をインストールするか、\`yxl.path\` に指定してください。`,
+  'host.how-to-install': () => 'インストール方法',
+  'host.refused-the-spec': () => 'yxl がこの spec を受け付けませんでした。',
+  'host.open-a-spec-first': () => 'まず `*.yxl.yaml` の spec を開いてください。',
+  'host.no-init': ({ found, since }) =>
+    `yxl ${found} には \`init\` がありません（${since} からの機能です）。`,
+  'host.version-unknown': () => '`yxl version` がバージョンを答えませんでした。',
+  'host.older-compiler': ({ found, target }) =>
+    `yxl ${found} はこのプレビューが対象とする ${target} より古いバージョンです。ここで扱える構文が、そちらには無いかもしれません。`,
+  'host.newer-compiler': ({ found, target }) =>
+    `yxl ${found} はこのプレビューが対象とする ${target} より新しいバージョンです。書いたものはビルドできますが、スキーマが動いている可能性があります。`,
   'host.file-unreadable': ({ file }) => `${file} を読めませんでした`,
 };
 

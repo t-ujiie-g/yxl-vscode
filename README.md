@@ -105,10 +105,15 @@ written from the code, so it cannot drift from it.
 Not published yet. To run it from a checkout: `pnpm install`, then **F5** in VS
 Code (*Run the preview*), which builds both bundles and opens an Extension
 Development Host; open a `*.yxl.yaml` there and press the **grid** button in its
-title bar, or run **yxl: Open the Grid Beside the Spec**.
+title bar, or run **yxl: Open the Grid Beside the Spec**. To start from nothing,
+**New File…** offers *A yxl Spec: an Empty Workbook*, and so does the right-click
+menu on a folder.
 
 The **Build** and **Check** buttons beside it need the `yxl` compiler on your
-`PATH`, or `yxl.path` set to it; the grid itself needs nothing.
+`PATH`, or `yxl.path` set to it, and so does making a new spec; the grid itself
+needs nothing. This editor targets **yxl 0.3.6** — an older or newer compiler is
+a warning rather than a refusal, and a release says which one it was built
+against.
 
 The *text* half answers too, where [`redhat.vscode-yaml`][yaml] is installed:
 this editor points it at yxl's own schema, so a key the format does not have is
