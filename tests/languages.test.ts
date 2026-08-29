@@ -1,3 +1,4 @@
+import { WORDS as compile } from '@yxl-vscode/compile';
 import { WORDS as cst } from '@yxl-vscode/cst';
 import type { Book, Language } from '@yxl-vscode/diag';
 import { WORDS as intent } from '@yxl-vscode/intent';
@@ -10,7 +11,7 @@ import { WORDS as host } from 'yxl-vscode/text';
  * Every book of sentences this editor holds, which is the list the languages
  * are held to. A package that starts saying things belongs here (ADR-051).
  */
-const BOOKS: Record<string, Book> = { cst, patch, view, intent, host };
+const BOOKS: Record<string, Book> = { cst, compile, patch, view, intent, host };
 
 /**
  * One sentence as it is written, rather than as it reads: an argument may be

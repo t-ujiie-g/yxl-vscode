@@ -1,4 +1,4 @@
-import { type Diagnostic, error } from '@yxl-vscode/diag';
+import { type Diagnostic, error, type Saying } from '@yxl-vscode/diag';
 import type {
   FormulaDef,
   ScalarValue,
@@ -11,6 +11,7 @@ import type {
 import type { FilePath, NodeId } from '@yxl-vscode/units';
 import { CODE, type Code } from './codes';
 import { asIs, behind, type Filled, fill, resolveParams } from './params';
+import { say } from './text';
 
 /**
  * A file a `data:` block names, opened. Its path resolves against the spec that
@@ -75,10 +76,10 @@ export function context(doc: SpecDoc, read: DataReader | null, set: Setting): Ct
   };
 
   for (const cycle of cycles) {
-    reject(ctx, CODE.paramCycle, `a parameter's default comes back round: ${cycle}`, doc);
+    reject(ctx, CODE.paramCycle, say('compile.param-cycle', { cycle }), doc);
   }
   for (const name of unknown) {
-    reject(ctx, CODE.noSuchParam, `this spec declares no parameter \`${name}\` to set`, doc);
+    reject(ctx, CODE.noSuchParam, say('compile.no-param-to-set', { name }), doc);
   }
   return ctx;
 }
@@ -86,7 +87,7 @@ export function context(doc: SpecDoc, read: DataReader | null, set: Setting): Ct
 /** What a caller wants the parameters to be, by name, as text (`docs/spec.md` §7). */
 export type Setting = ReadonlyMap<string, string>;
 
-export function reject(ctx: Ctx, code: Code, message: string, node: SpecNode): void {
+export function reject(ctx: Ctx, code: Code, message: Saying, node: SpecNode): void {
   ctx.diagnostics.push(error(code, message, { file: node.file, span: node.span }));
 }
 
@@ -110,9 +111,9 @@ export function text(ctx: Ctx, value: ScalarValue | Template, node: SpecNode): s
 
 function report(ctx: Ctx, done: Filled, node: SpecNode): void {
   for (const name of done.missing) {
-    reject(ctx, CODE.unknownParam, `no parameter is declared as \`${name}\``, node);
+    reject(ctx, CODE.unknownParam, say('compile.no-such-param', { name }), node);
   }
   if (done.unclosed) {
-    reject(ctx, CODE.unclosedPlaceholder, 'a `${` is never closed', node);
+    reject(ctx, CODE.unclosedPlaceholder, say('compile.unclosed-placeholder'), node);
   }
 }

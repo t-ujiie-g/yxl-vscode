@@ -54,6 +54,7 @@ import { protecting } from './protect';
 import type { FacetOrigin } from './provenance';
 import { layersOf } from './style';
 import { readCsv, readJson } from './table';
+import { say } from './text';
 
 /** A sheet under construction, its cell map still open for the overrides that apply last. */
 export interface Drafted {
@@ -151,25 +152,30 @@ function readTable(
   const spelled = text(ctx, source.path, block);
   const path = filePath(spelled);
   if (path === null) {
-    reject(ctx, CODE.badPath, 'a `data` entry needs a path', block);
+    reject(ctx, CODE.badPath, say('compile.data-needs-a-path'), block);
     return null;
   }
 
   if (ctx.read === null) {
-    reject(ctx, CODE.noDataReader, `nothing here can read \`${path}\``, block);
+    reject(ctx, CODE.noDataReader, say('compile.nothing-can-read', { path }), block);
     return null;
   }
 
   const opened = ctx.read(ctx.from, path);
   if (opened === null) {
-    reject(ctx, CODE.unreadableData, `cannot read \`${path}\``, block);
+    reject(ctx, CODE.unreadableData, say('compile.cannot-read', { path }), block);
     return null;
   }
 
   const columns = source.kind === 'json' ? source.columns : null;
   const table = source.kind === 'csv' ? readCsv(opened.source) : readJson(opened.source, columns);
   if ('problem' in table) {
-    reject(ctx, CODE.badTable, `\`${opened.file}\`: ${table.problem}`, block);
+    reject(
+      ctx,
+      CODE.badTable,
+      say('compile.bad-table', { file: opened.file, problem: table.problem }),
+      block,
+    );
     return null;
   }
 
@@ -211,7 +217,7 @@ function placeFill(ctx: Ctx, range: FormulaRange, fills: CompiledFill[]): void {
   const spelled = text(ctx, range.at, range);
   const read = parseA1Range(spelled);
   if (read === null) {
-    reject(ctx, CODE.badRange, `\`${spelled}\` is not a range`, range);
+    reject(ctx, CODE.badRange, say('compile.not-a-range', { spelled }), range);
     return;
   }
 
@@ -240,7 +246,7 @@ function columnBand(ctx: Ctx, band: ColumnBand): CompiledBand | null {
   const spelled = text(ctx, band.at, band);
   const read = parseColumnSpan(spelled);
   if (read === null) {
-    reject(ctx, CODE.badColumn, `\`${spelled}\` is not a column or a range of columns`, band);
+    reject(ctx, CODE.badColumn, say('compile.not-a-column', { spelled }), band);
     return null;
   }
 
@@ -260,7 +266,7 @@ function rowBand(ctx: Ctx, band: RowBand): CompiledBand | null {
   const spelled = text(ctx, band.at, band);
   const read = parseRowSpan(spelled);
   if (read === null) {
-    reject(ctx, CODE.badRow, `\`${spelled}\` is not a row or a range of rows`, band);
+    reject(ctx, CODE.badRow, say('compile.not-a-row', { spelled }), band);
     return null;
   }
 
@@ -280,7 +286,7 @@ function mergedRegion(ctx: Ctx, merge: Sheet['merges'][number]): CompiledMerge |
   const spelled = text(ctx, merge.at, merge);
   const read = parseA1Range(spelled);
   if (read === null) {
-    reject(ctx, CODE.badRange, `\`${spelled}\` is not a range`, merge);
+    reject(ctx, CODE.badRange, say('compile.not-a-range', { spelled }), merge);
     return null;
   }
   return { rect: rectOf(read), node: merge.id };
@@ -291,7 +297,7 @@ function conditionalRule(ctx: Ctx, rule: Conditional): CompiledRule | null {
   const spelled = text(ctx, rule.at, rule);
   const read = parseA1Range(spelled);
   if (read === null) {
-    reject(ctx, CODE.badRange, `\`${spelled}\` is not a range`, rule);
+    reject(ctx, CODE.badRange, say('compile.not-a-range', { spelled }), rule);
     return null;
   }
 
@@ -349,7 +355,7 @@ function validation(ctx: Ctx, one: Validation): CompiledValidation | null {
   const spelled = text(ctx, one.at, one);
   const read = parseA1Range(spelled);
   if (read === null) {
-    reject(ctx, CODE.badRange, `\`${spelled}\` is not a range`, one);
+    reject(ctx, CODE.badRange, say('compile.not-a-range', { spelled }), one);
     return null;
   }
 
@@ -380,7 +386,7 @@ function asking(ctx: Ctx, one: Validation): CompiledAsk | null {
   const spelled = text(ctx, test.from, one);
   const read = parseQualifiedRange(spelled);
   if (read === null) {
-    reject(ctx, CODE.badRange, `\`${spelled}\` is not a range`, one);
+    reject(ctx, CODE.badRange, say('compile.not-a-range', { spelled }), one);
     return null;
   }
 
@@ -411,7 +417,7 @@ function table(ctx: Ctx, one: Table): CompiledTable | null {
   const spelled = text(ctx, one.at, one);
   const read = parseA1Range(spelled);
   if (read === null) {
-    reject(ctx, CODE.badRange, `\`${spelled}\` is not a range`, one);
+    reject(ctx, CODE.badRange, say('compile.not-a-range', { spelled }), one);
     return null;
   }
 
@@ -434,7 +440,7 @@ function filterOf(ctx: Ctx, sheet: Sheet): Rect | null {
   const spelled = text(ctx, sheet.filter, sheet);
   const read = parseA1Range(spelled);
   if (read === null) {
-    reject(ctx, CODE.badRange, `\`${spelled}\` is not a range`, sheet);
+    reject(ctx, CODE.badRange, say('compile.not-a-range', { spelled }), sheet);
     return null;
   }
 

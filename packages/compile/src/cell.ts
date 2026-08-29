@@ -20,12 +20,14 @@ import {
   durationSerial,
 } from './serial';
 import { flatten, layersOf, type StyleSource, settled } from './style';
+import { say } from './text';
 
 /** An address after its parameters are substituted, or `null` with the reason reported. */
 export function address(ctx: Ctx, at: Templated<A1Addr>, node: SpecNode): A1Addr | null {
   const spelled = text(ctx, at, node);
   const read = parseA1Addr(spelled);
-  if (read === null) reject(ctx, CODE.badAddress, `\`${spelled}\` is not a cell reference`, node);
+  if (read === null)
+    reject(ctx, CODE.badAddress, say('compile.not-a-cell-reference', { spelled }), node);
   return read;
 }
 
@@ -39,7 +41,12 @@ export function spelling<T extends string>(
   const spelled = text(ctx, said, node);
   const found = vocabulary.find((known) => known === spelled);
   if (found === undefined) {
-    reject(ctx, CODE.badSpelling, `\`${spelled}\` is not one of ${vocabulary.join(', ')}`, node);
+    reject(
+      ctx,
+      CODE.badSpelling,
+      say('compile.not-one-of', { spelled, choices: vocabulary.join(', ') }),
+      node,
+    );
   }
   return found ?? null;
 }
@@ -48,7 +55,8 @@ export function spelling<T extends string>(
 export function colour(ctx: Ctx, said: Templated<Color>, node: SpecNode): Color | null {
   const spelled = text(ctx, said, node);
   const read = parseColor(spelled);
-  if (read === null) reject(ctx, CODE.badColour, `\`${spelled}\` is not a hex colour`, node);
+  if (read === null)
+    reject(ctx, CODE.badColour, say('compile.not-a-hex-colour', { spelled }), node);
   return read;
 }
 
@@ -93,7 +101,7 @@ function asTyped(
   if (type === 'date') {
     const read = dateSerial(value, ctx.from1904);
     if (read === null) {
-      reject(ctx, CODE.badDate, `\`${value}\` is not a date`, node);
+      reject(ctx, CODE.badDate, say('compile.not-a-date', { value: String(value) }), node);
       return { value, format: null };
     }
     return { value: read.serial, format: read.withTime ? DATETIME_FORMAT : DATE_FORMAT };
@@ -102,7 +110,12 @@ function asTyped(
   if (type === 'duration') {
     const read = durationSerial(value);
     if (read === null) {
-      reject(ctx, CODE.badDuration, `\`${value}\` is not an elapsed time`, node);
+      reject(
+        ctx,
+        CODE.badDuration,
+        say('compile.not-an-elapsed-time', { value: String(value) }),
+        node,
+      );
       return { value, format: null };
     }
     return { value: read, format: DURATION_FORMAT };
@@ -125,7 +138,7 @@ function compileValue(
     const name = text(ctx, node.value.name, node);
     const def = ctx.values.get(name);
     if (def === undefined) {
-      reject(ctx, CODE.unknownValue, `no value is declared as \`${name}\``, node);
+      reject(ctx, CODE.unknownValue, say('compile.no-such-value', { name }), node);
       return { value: null, origin: own };
     }
     return {
@@ -157,7 +170,7 @@ function compileFormula(ctx: Ctx, node: SpecNode & CellFacets): string | null {
     const def = ctx.formulas.get(name);
     if (def !== undefined) return def.body;
 
-    reject(ctx, CODE.unknownFormula, `no formula is declared as \`${name}\``, node);
+    reject(ctx, CODE.unknownFormula, say('compile.no-such-formula', { name }), node);
     return null;
   }
 

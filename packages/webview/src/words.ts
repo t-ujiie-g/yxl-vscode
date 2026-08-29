@@ -1,3 +1,4 @@
+import { WORDS as compile } from '@yxl-vscode/compile';
 import { WORDS as cst } from '@yxl-vscode/cst';
 import { type Language, reading, type Saying } from '@yxl-vscode/diag';
 import { WORDS as patch } from '@yxl-vscode/patch';
@@ -10,5 +11,5 @@ export function spoken(tag: string): Language {
 
 /** Everything the core can say, in the language a tag names (ADR-051). */
 export function reader(tag: string): (saying: Saying) => string {
-  return reading(spoken(tag), cst, patch, view);
+  return reading(spoken(tag), cst, compile, patch, view);
 }

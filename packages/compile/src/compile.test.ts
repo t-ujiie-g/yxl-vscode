@@ -1,3 +1,4 @@
+import { reading } from '@yxl-vscode/diag';
 import { filePath, nodeId, type SheetName } from '@yxl-vscode/units';
 import { describe, expect, it } from 'vitest';
 import { CODE } from './codes';
@@ -6,6 +7,9 @@ import type { DataReader } from './ctx';
 import { cell as at, codes, given, grid, sheet } from './harness';
 import { reaches } from './impact';
 import { resolve } from './style';
+import { WORDS } from './text';
+
+const english = reading('en', WORDS);
 
 const SALES = 'sheets:\n  - name: Sales\n';
 
@@ -177,7 +181,7 @@ describe('a parameter', () => {
     const set = given(spec, { region: 'EMEA', quarter: 'Q4' });
 
     expect(set.diagnostics.map((one) => one.code)).toEqual([CODE.noSuchParam]);
-    expect(set.diagnostics[0]?.message).toContain('`quarter`');
+    expect(english(set.diagnostics[0]?.message ?? '')).toContain('`quarter`');
   });
 });
 
@@ -258,7 +262,7 @@ describe('a `data:` block that names a file', () => {
     const broken = `${SALES}    data:\n      - at: A2\n        csv: broken.csv\n`;
     const [diagnostic] = grid(broken, reader).diagnostics;
     expect(diagnostic?.code).toBe(CODE.badTable);
-    expect(diagnostic?.message).toContain('broken.csv');
+    expect(english(diagnostic?.message ?? '')).toContain('broken.csv');
   });
 });
 
