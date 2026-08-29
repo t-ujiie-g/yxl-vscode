@@ -535,9 +535,27 @@ export interface Summed {
 }
 
 /**
- * Where a `Cmd`+arrow lands, which only the host can say: the view holds a
- * window, and a block runs past the end of one (ADR-019). `extend` is the
- * reader's `Shift`, carried back so the answer needs no memory of the question.
+ * A far end a key asks for: the end of a block in a direction, of the row, or of
+ * the sheet. Which cell that is, only the host can say (ADR-019).
+ */
+export type Far =
+  | { readonly kind: 'block'; readonly rows: number; readonly cols: number }
+  | { readonly kind: 'row' }
+  | { readonly kind: 'sheet' };
+
+/** Where the reader is asking from, what far end they asked for, and their `Shift`. */
+export interface Edging {
+  readonly sheet: string;
+  readonly row: number;
+  readonly col: number;
+  readonly to: Far;
+  readonly extend: boolean;
+}
+
+/**
+ * Where that far end is, which only the host can say: the view holds a window,
+ * and a block runs past the end of one (ADR-019). `extend` is the reader's
+ * `Shift`, carried back so the answer needs no memory of the question.
  */
 export interface Edged {
   readonly kind: 'edged';
@@ -617,15 +635,7 @@ export type FromView =
   | ({ readonly kind: 'moveFloat' } & MovedFloat)
   | ({ readonly kind: 'sizeFloat' } & SizedFloat)
   | ({ readonly kind: 'editRun' } & EditedRun)
-  | {
-      readonly kind: 'edge';
-      readonly sheet: string;
-      readonly row: number;
-      readonly col: number;
-      readonly rows: number;
-      readonly cols: number;
-      readonly extend: boolean;
-    }
+  | ({ readonly kind: 'edge' } & Edging)
   | ({ readonly kind: 'copyOut' } & Ranged)
   | ({ readonly kind: 'sum' } & Ranged)
   | ({ readonly kind: 'override'; readonly reason: string } & Typed)

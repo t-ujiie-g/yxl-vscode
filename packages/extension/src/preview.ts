@@ -5,6 +5,7 @@ import { did, type History, nothing } from '@yxl-vscode/patch';
 import type { Axis } from '@yxl-vscode/spec';
 import { addrAt, cellOf, filePath, parseColor, qualified, rangeOf } from '@yxl-vscode/units';
 import type {
+  Edging,
   EditedRun,
   Filled,
   Filtered,
@@ -388,21 +389,11 @@ export class Preview {
   }
 
   /** Where a `Cmd`+arrow lands, over every cell rather than the drawn window (ADR-019). */
-  private edging(asked: {
-    sheet: string;
-    row: number;
-    col: number;
-    rows: number;
-    cols: number;
-    extend: boolean;
-  }): void {
+  private edging(asked: Edging): void {
     const sheet = this.drawn?.grid?.sheets.find((one) => one.name === asked.sheet);
     if (sheet === undefined) return;
 
-    const at = edgeFrom(sheet, extent(sheet), addrAt({ col: asked.col, row: asked.row }), {
-      rows: asked.rows,
-      cols: asked.cols,
-    });
+    const at = edgeFrom(sheet, extent(sheet), addrAt({ col: asked.col, row: asked.row }), asked.to);
     const { col, row } = cellOf(at);
 
     void this.panel.webview.postMessage({

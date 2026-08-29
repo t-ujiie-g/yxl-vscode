@@ -85,7 +85,14 @@ describe('a `Cmd`+arrow', () => {
     );
 
     expect(sent.filter((one) => one.kind === 'edge')).toEqual([
-      { kind: 'edge', sheet: 'Sales', row: 1, col: 1, rows: 1, cols: 0, extend: false },
+      {
+        kind: 'edge',
+        sheet: 'Sales',
+        row: 1,
+        col: 1,
+        to: { kind: 'block', rows: 1, cols: 0 },
+        extend: false,
+      },
     ]);
   });
 

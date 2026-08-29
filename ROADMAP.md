@@ -1814,10 +1814,15 @@ below, and one is the answer panel becoming a thing you have to answer.
       what was asked. The walk that was in the view is gone rather than left
       beside the new one; its three tests moved to the host, where the case that
       started this — four hundred rows, of which fifty are drawn — is one of them.
-      **`Home` and `End` have the same seam and are left as they are**: `End`
-      reads the drawn window too, but a window is wider than almost every sheet,
-      so it is wrong only where a sheet runs past the *columns* drawn. The same
-      call answers it the day that matters.
+      **`Home` and `End` went the same way**, a day later and at a reader's
+      asking rather than when it bit: `End` read the drawn window too, and the
+      message now names *which* far end a key wants — a block in a direction,
+      the row's, or the sheet's — so all three are one question with one answer.
+      `Cmd`+`End` came with it, since the host that knows the row's last cell
+      knows the sheet's corner. `Home` needed nothing: the first cell of a row
+      is where it is whatever is drawn.
+      **The view no longer reads the window to move at all**: `going` lost the
+      cells it was handed, and the fixture that built them went with it.
 - [x] **A copy that reaches past the window** — the line above's own
       consequence, found the same afternoon by the reader who asked for it. A
       selection could not run past the drawn window before, so *this reaches past
@@ -3518,6 +3523,25 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-29 — `Home` and `End` go the same way as the arrows
+Phase 17 left `End` reading the drawn window, on the reasoning that a window is
+wider than almost every sheet. A reader asked for it anyway, which is the right
+call: *almost* is not a rule, and the seam was already open.
+
+- **The message names the end rather than the step.** `Cmd`+arrow asks for a
+  block in a direction, `End` for the row's last cell, `Cmd`+`End` for the
+  sheet's corner — one question, one answer, and the host walks its own cells
+  for all three (ADR-019, ADR-043).
+- **`Cmd`+`End` came free.** The host that knows a row's last cell knows the
+  corner of what the sheet writes, which is where a spreadsheet puts it — a cell
+  that may itself hold nothing, as in Excel.
+- **`Home` needed nothing.** The first cell of a row, or of the sheet, is where
+  it is whatever is drawn.
+- **The view no longer reads the window to move at all.** `going` lost the map of
+  drawn cells it was handed, and the fixture that built them went with it — the
+  clearest sign the seam is now in one place rather than two.
+- 2382 → 2386 tests. Comment shape: unchanged.
 
 ### 2026-08-29 — The spec's own schema, in the half this editor does not draw
 Phase 18's third line, and the cheapest thing on it: ten lines of manifest for
