@@ -1,9 +1,11 @@
+import { copyFileSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { compile } from '@yxl-vscode/compile';
 import { parse } from '@yxl-vscode/cst';
 import { load } from '@yxl-vscode/loader';
 import type { SpecDoc } from '@yxl-vscode/spec';
 import { describe, expect, it } from 'vitest';
-import { includeReader, type Sample, yxlExamples } from './corpus';
+import { includeReader, REPO_ROOT, type Sample, yxlExamples, yxlRoot } from './corpus';
 
 /** A spec, rather than a fragment an `$include` pulls into one. */
 function isDocument(sample: Sample): boolean {
@@ -104,3 +106,36 @@ function seen(docs: readonly SpecDoc[]): Record<string, boolean> {
     sparklines: sheets.some((sheet) => sheet.sparklines.length > 0),
   };
 }
+
+/**
+ * The schema the *text* half is validated against, which is upstream's own —
+ * carried here so a reader has it offline and at the version this editor is
+ * pinned to (§8 Q6). A copy is only safe while something checks it.
+ */
+describe('the schema this editor ships', () => {
+  const ours = join(REPO_ROOT, 'packages/extension/schema/yxl.schema.json');
+  const theirs = join(yxlRoot(), 'docs/yxl.schema.json');
+
+  it('is the pinned upstream schema, byte for byte', () => {
+    // `SCHEMA=write pnpm test tests/schema.test.ts` takes the new one, which is
+    // what a version bump does — the same shape as the README's coverage table.
+    const { SCHEMA } = process.env;
+    if (SCHEMA === 'write') copyFileSync(theirs, ours);
+
+    const said = 'run `SCHEMA=write pnpm test tests/schema.test.ts` to take it';
+    expect({ said, schema: readFileSync(ours, 'utf8') }).toEqual({
+      said,
+      schema: readFileSync(theirs, 'utf8'),
+    });
+  });
+
+  it('is the one the manifest points the YAML extension at', () => {
+    const manifest = JSON.parse(
+      readFileSync(join(REPO_ROOT, 'packages/extension/package.json'), 'utf8'),
+    ) as { contributes: { yamlValidation?: { fileMatch: string[]; url: string }[] } };
+
+    const [validation] = manifest.contributes.yamlValidation ?? [];
+    expect(validation?.url).toBe('./schema/yxl.schema.json');
+    expect(validation?.fileMatch).toEqual(['*.yxl.yaml', '*.yxl.yml']);
+  });
+});

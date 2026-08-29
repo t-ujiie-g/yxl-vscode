@@ -87,6 +87,15 @@
         }
       ]
     },
+    "yamlValidation": [
+      {
+        "fileMatch": [
+          "*.yxl.yaml",
+          "*.yxl.yml"
+        ],
+        "url": "./schema/yxl.schema.json"
+      }
+    ],
     "configuration": {
       "title": "yxl",
       "properties": {

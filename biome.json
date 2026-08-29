@@ -6,7 +6,7 @@
     "useIgnoreFile": true
   },
   "files": {
-    "includes": ["**", "!**/node_modules", "!**/dist", "!**/*.vsix"]
+    "includes": ["**", "!**/node_modules", "!**/dist", "!**/*.vsix", "!packages/extension/schema"]
   },
   "formatter": {
     "enabled": true,
