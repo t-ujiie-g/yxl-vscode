@@ -159,6 +159,12 @@ export class Preview {
   /** The preview a reader is in, which is the one a command about *this* preview is about. */
   private static showing: Preview | undefined;
 
+  /** The spec the grid in front of the reader draws, where one is: `showing` is the last, not the live. */
+  static spec(): vscode.TextDocument | undefined {
+    const showing = Preview.showing;
+    return showing?.panel.active === true ? showing.document : undefined;
+  }
+
   /** The spec behind the grid, put back in front of the reader (ADR-020). */
   static showSource(): void {
     const document = Preview.showing?.document;

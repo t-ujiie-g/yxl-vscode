@@ -1895,11 +1895,20 @@ small — which is why they are one phase and not two.
       a folder; whatever acts on one belongs in a title bar. Written down here
       because it is a rule about every command this editor adds, not a note
       about one of them.
-- [ ] **Build where it can be clicked.** `yxl.build` already builds to a sibling
-      `.xlsx`, offers *Open it*, warns about a version mismatch in both
-      directions, and answers a missing compiler with the install link. It is
-      only in the command palette. A button in the preview's title bar and in
-      the editor's, for it and for *Check*.
+- [x] **Build where it can be clicked.** `yxl.build` already built to a sibling
+      `.xlsx`, offered *Open it*, warned about a version mismatch in both
+      directions, and answered a missing compiler with the install link — from
+      the command palette and nowhere else.
+      **In both title bars now**, `$(package)` and `$(check)`, on the spec's own
+      editor and on the preview, since the text and the grid are two views of
+      one spec and a command about the spec belongs wherever the reader is
+      looking at it. The manifest suite pins that: a `when` that names one
+      surface and not the other fails it.
+      **Which spec, decided by what has the keyboard.** `activeTextEditor` holds
+      the last text a reader touched, which may be another spec entirely — so a
+      grid *in front of them* is the subject where there is one, and the text
+      otherwise. `panel.active` is the live answer; the panel this editor
+      remembers is only the last.
 - [ ] **The spec's own schema in the *text* half** *(proposed, not asked for)*.
       Upstream generates `docs/yxl.schema.json` (§8 Q7); a `yamlValidation`
       contribution points the YAML extension at it, and a reader gets completion
@@ -3499,6 +3508,26 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-29 — Build, where a reader can click it
+Phase 18's second line, and the half of *where a reader finds any of it* that
+needed no upstream.
+
+- **`yxl.build` was already good and unreachable.** It builds to a sibling
+  `.xlsx`, offers *Open it*, warns about a version mismatch in both directions
+  and answers a missing compiler with the install link — from the command
+  palette, which is where a command goes to hide.
+- **It is in both title bars now**, with *Check* beside it: the spec's own
+  editor and the preview. The text and the grid are two views of one spec, so a
+  command about the spec belongs wherever the reader is looking at it — and the
+  manifest suite pins it, failing a `when` that names one surface and not the
+  other.
+- **Which spec is decided by what has the keyboard.** `activeTextEditor` holds
+  the last text a reader touched, which may be another spec entirely; so a grid
+  in front of them is the subject where there is one, and the text otherwise.
+  `panel.active` is the live answer — the panel this editor remembers is only
+  the last one to have been active, which is a different question.
+- 2379 → 2380 tests. Comment shape: unchanged.
 
 ### 2026-08-29 — Where a starter spec belongs, decided by giving it away
 A day's work closed rather than merged, which is the entry worth writing.

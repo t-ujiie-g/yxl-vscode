@@ -57,12 +57,14 @@ async function revive(
   }
 }
 
-/** The spec a command is about: the one being edited. */
+/** The spec a command is about: the one being edited, or the one the grid in front of the reader draws. */
 function specInFocus(): vscode.TextDocument | undefined {
-  const editor = vscode.window.activeTextEditor;
-  if (editor === undefined) {
+  // The grid the reader is in decides, where they are in one: `activeTextEditor`
+  // holds the last text they touched, which may be another spec entirely.
+  const document = Preview.spec() ?? vscode.window.activeTextEditor?.document;
+  if (document === undefined) {
     void vscode.window.showInformationMessage('Open a `*.yxl.yaml` spec first.');
-    return undefined;
   }
-  return editor.document;
+
+  return document;
 }

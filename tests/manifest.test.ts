@@ -14,7 +14,7 @@ const EXTENSION = join(REPO_ROOT, 'packages/extension');
 interface Manifest {
   readonly contributes: {
     readonly commands: readonly { command: string; title: string; icon?: string }[];
-    readonly menus: Record<string, readonly { command: string; group?: string }[]>;
+    readonly menus: Record<string, readonly { command: string; group?: string; when?: string }[]>;
     readonly keybindings: readonly { command: string }[];
   };
 }
@@ -55,6 +55,23 @@ describe('what this editor contributes to VS Code', () => {
       .filter((one) => one?.icon === undefined);
 
     expect(bare).toEqual([]);
+  });
+
+  it('offers what acts on a spec wherever a reader is looking at one', () => {
+    // The text and the grid are two views of one spec, so a command about the
+    // spec belongs in both title bars — which is where a reader looks for it.
+    const both = (menu: string, command: string): boolean =>
+      (menus[menu] ?? [])
+        .filter((one) => one.command === command)
+        .some(
+          (one) =>
+            (one.when ?? '').includes('resourceFilename') &&
+            (one.when ?? '').includes('activeWebviewPanelId'),
+        );
+
+    expect(both('editor/title', 'yxl.build')).toBe(true);
+    expect(both('editor/title', 'yxl.check')).toBe(true);
+    expect(both('commandPalette', 'yxl.build')).toBe(true);
   });
 
   it('names what a command opens, since the palette says `yxl` for it already', () => {
