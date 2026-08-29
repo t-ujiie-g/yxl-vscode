@@ -2012,17 +2012,24 @@ reach.
 The manifest is `private: true` at version `0.0.0`, so nothing can publish it by
 accident. This is §8 Q6's open half, and the v1.0 gate's last line.
 
-- [ ] A publisher, a version, and `private` off
-- [ ] An icon, keywords, `repository`, `bugs`, and the licence in the
-      **package's own** manifest
-- [ ] The extension's own `README.md`: the marketplace shows the package's, not
+- [x] A publisher, a version, and `private` off — `t-ujiie-g`, `0.1.0`
+- [x] An icon, keywords, `repository`, `bugs`, and the licence in the
+      **package's own** manifest, with `LICENSE` copied beside it — the
+      marketplace reads the package, not the repository
+- [x] The extension's own `README.md`: the marketplace shows the package's, not
       the repo's. What it is, what it needs (`yxl` on `PATH`, the pinned
       version), and §2's list of what it is **not** — the honest description the
       v1.0 gate asks for
-- [ ] `CHANGELOG.md`, and the rule that ties a release to the pinned yxl (§8 Q6)
-- [ ] `.vscodeignore`, and a `.vsix` that installs on a machine that has never
-      seen this repository
-- [ ] It collects nothing, and the README says so
+- [x] `CHANGELOG.md`, and the rule that ties a release to the pinned yxl (§8 Q6)
+      — both the README and the changelog name it, and `tests/manifest.test.ts`
+      fails when either stops matching the pin
+- [x] `.vscodeignore`, and a `.vsix` that packages: 13 files, 745 KB — the two
+      bundles, the schema the YAML extension is pointed at, both `package.nls`
+      files, the icon, the licence, the README and the changelog, and nothing
+      else. `pnpm package` in `packages/extension` builds it. **Installing it on
+      a machine that has never seen this repository is the reader's to confirm**
+      — it cannot be done from here.
+- [x] It collects nothing, and the README says so, in a section of its own
 - [ ] Tiers 1–4 green in CI, Tier 5 performed on a real workbook (§5)
 - [ ] **A `customEditors` contribution at `priority: option`** *(proposed)*, so
       *Open With…* offers the grid on a `*.yxl.yaml` without a command
@@ -3625,6 +3632,37 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-30 — A `.vsix`, and the listing a reader would read
+
+Phase 20's first half: everything a package needs to *be* a package, short of
+the publisher registration, which is not this editor's to do.
+
+- **`private` off, `0.1.0`, publisher `t-ujiie-g`**, with the icon, keywords,
+  `repository`, `bugs` and the licence in the **package's own** manifest — the
+  marketplace reads that one, not the repository's.
+- **The package's own README**, which is the listing: what it draws, what it
+  edits, what it refuses and what it offers instead, the compiler it needs and
+  the version it targets, and §2's *what it is not*. And a section saying it
+  collects nothing — no telemetry, no analytics, no request of its own.
+- **A `CHANGELOG.md` that names the yxl each release was built against**, which
+  is §8 Q6's rule made concrete. `tests/manifest.test.ts` fails when either the
+  README or the changelog stops naming the pinned version, so the pin cannot be
+  raised without the release saying so.
+- **`pnpm package` builds the `.vsix`**: 13 files, 745 KB — the two bundles, the
+  schema the YAML extension is pointed at, both `package.nls` files, the icon,
+  the licence, the README and the changelog. `.vscodeignore` keeps the sources
+  and the sourcemaps out.
+- **`vsce` is not a dependency.** It arrives through `pnpm dlx` at a pinned
+  version, because a release tool that drags a native credential store into
+  every install is a cost paid daily for a step that runs monthly.
+- **The icon is a first one**, drawn here rather than commissioned: a grid with
+  one cell selected, in the blue a spec's header row is usually filled with.
+- **What is left in Phase 20**: installing the `.vsix` on a machine that has
+  never seen this repository, Tier 5 on a real workbook, the publisher
+  registration, and the proposed `customEditors` contribution. The first two are
+  the reader's to do and are written down as such.
+- 2446 → 2449 tests. Comment shape: unchanged.
 
 ### 2026-08-30 — Where the keyboard is, and what crosses the window's edge
 

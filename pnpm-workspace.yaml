@@ -6,7 +6,9 @@ packages:
 # pnpm 11 refuses to run one unless it is named here, which is the right
 # default: a build script is arbitrary code from a dependency.
 allowBuilds:
+  '@vscode/vsce-sign': set this to true or false
   esbuild: true
+  keytar: set this to true or false
   # Arrives under the formula engine, through Univer's collaboration protocol.
   # Nothing here speaks protobuf — the engine is used for arithmetic — so its
   # install script has nothing to prepare that this repository needs.

@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { REPO_ROOT } from './corpus';
@@ -12,6 +12,13 @@ import { REPO_ROOT } from './corpus';
 const EXTENSION = join(REPO_ROOT, 'packages/extension');
 
 interface Manifest {
+  readonly name: string;
+  readonly version: string;
+  readonly publisher?: string;
+  readonly private?: boolean;
+  readonly icon?: string;
+  readonly repository?: { url: string };
+  readonly license?: string;
   readonly contributes: {
     readonly commands: readonly { command: string; title: string; icon?: string }[];
     readonly menus: Record<string, readonly { command: string; group?: string; when?: string }[]>;
@@ -107,6 +114,44 @@ describe('what this editor contributes to VS Code', () => {
       (menus[menu] ?? []).some((one) => one.command === 'yxl.newSpec');
 
     expect([inMenu('file/newFile'), inMenu('explorer/context')]).toEqual([true, true]);
+  });
+
+  it('is publishable: what the marketplace refuses a package without', () => {
+    expect({
+      publisher: manifest.publisher,
+      private: manifest.private,
+      licence: manifest.license,
+      repository: manifest.repository?.url,
+    }).toEqual({
+      publisher: 't-ujiie-g',
+      private: undefined,
+      licence: 'Apache-2.0',
+      repository: 'https://github.com/t-ujiie-g/yxl-vscode.git',
+    });
+    expect(manifest.version).toMatch(/^\d+\.\d+\.\d+$/);
+  });
+
+  it('ships what a listing is read from, and the icon it is found by', () => {
+    const held = ['README.md', 'CHANGELOG.md', 'LICENSE', manifest.icon ?? ''];
+
+    expect(held.filter((one) => !existsSync(join(EXTENSION, one)))).toEqual([]);
+  });
+
+  it('names the yxl it was built against, since a release is tied to the pin (§8 Q6)', () => {
+    // The schema is not frozen until yxl's v1.0, so which compiler a version
+    // targets is part of what the version means.
+    const pinned = (
+      JSON.parse(readFileSync(join(REPO_ROOT, 'package.json'), 'utf8')) as {
+        yxl: { targetVersion: string };
+      }
+    ).yxl.targetVersion;
+
+    for (const name of ['README.md', 'CHANGELOG.md']) {
+      expect([name, readFileSync(join(EXTENSION, name), 'utf8').includes(pinned)]).toEqual([
+        name,
+        true,
+      ]);
+    }
   });
 
   it('says the same list in both languages, so neither can quietly fall behind', () => {
