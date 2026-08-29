@@ -44,6 +44,7 @@ import {
   validated,
 } from './wears';
 import { across, down, heightOf, sizeOf, widthOf } from './window';
+import { worded } from './worded';
 
 /** The sheet as one `<table>`: the headings, the rows drawn of it, and the bands that stay put. */
 export function grid(sheet: DrawnSheet, showing: Showing, asks: Asks): HTMLElement {
@@ -122,7 +123,7 @@ function markedBy(sheet: DrawnSheet): Map<string, string[]> {
 
   for (const problem of sheet.problems) {
     const at = cellKey(problem.col, problem.row);
-    problems.set(at, [...(problems.get(at) ?? []), problem.message]);
+    problems.set(at, [...(problems.get(at) ?? []), worded(problem.message)]);
   }
 
   return problems;

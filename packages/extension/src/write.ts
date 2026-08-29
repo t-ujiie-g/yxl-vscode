@@ -1,4 +1,5 @@
 import type { CompiledGrid, DataReader, Setting } from '@yxl-vscode/compile';
+import type { Saying } from '@yxl-vscode/diag';
 import {
   type Candidate,
   candidates,
@@ -40,7 +41,7 @@ import type { About, Choice, Ranged, Typed } from '@yxl-vscode/webview/protocol'
 export interface Port {
   readonly text: (file: FilePath) => string | null;
   readonly put: (file: FilePath, text: string) => void | Promise<void>;
-  readonly refuse: (why: string, offer: Offer | null) => void;
+  readonly refuse: (why: Saying, offer: Offer | null) => void;
   readonly said: (what: string) => void;
   readonly kept: (step: Step | null) => void;
   readonly left: (file: FilePath) => string | null;

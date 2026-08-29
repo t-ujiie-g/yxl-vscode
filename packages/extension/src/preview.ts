@@ -1,4 +1,5 @@
 import { type CompiledSheet, finds, reaches } from '@yxl-vscode/compile';
+import type { Saying } from '@yxl-vscode/diag';
 import { type Engine, univerEngine } from '@yxl-vscode/evaluate';
 import type { Tabbed } from '@yxl-vscode/intent';
 import { did, type History, nothing } from '@yxl-vscode/patch';
@@ -32,6 +33,7 @@ import type {
   Validated,
   Worn,
 } from '@yxl-vscode/webview/protocol';
+import { reader } from '@yxl-vscode/webview/words';
 import * as vscode from 'vscode';
 import { moved, resized } from './anchors';
 import { chart } from './charts';
@@ -161,6 +163,9 @@ export class Preview {
   private history: History = nothing;
   /** What this editor left each file at, which is what says whether its own undo is the honest one (ADR-030). */
   private readonly left = new Map<string, string>();
+
+  /** What the core said, in VS Code's own language (ADR-051). */
+  private readonly worded = reader(vscode.env.language);
 
   /** One engine for the life of the panel: standing one up registers five hundred functions. */
   private readonly engine: Engine = univerEngine();
@@ -353,7 +358,11 @@ export class Preview {
             this.document.positionAt(one.span.start),
             this.document.positionAt(one.span.end),
           );
-          const shown = new vscode.Diagnostic(at, one.message, vscode.DiagnosticSeverity.Error);
+          const shown = new vscode.Diagnostic(
+            at,
+            this.worded(one.message),
+            vscode.DiagnosticSeverity.Error,
+          );
           shown.source = 'yxl';
           shown.code = one.code;
           return shown;
@@ -429,7 +438,7 @@ export class Preview {
 
   /** An answer on its way to the view, which is the only thing this panel says to it. */
   private send(message: ToView): void {
-    this.send(message);
+    void this.panel.webview.postMessage(message);
   }
 
   /** What the host holds, sent again: a webview that has reloaded has nothing of its own. */
@@ -674,16 +683,13 @@ export class Preview {
   }
 
   /** Why an edit did not happen, said in the preview where the reader is looking. */
-  private refuse(why: string, offer: Offer | null): void {
+  private refuse(why: Saying, offer: Offer | null): void {
     this.send({
       kind: 'refused',
-      why: why.replace(/`/g, ''),
+      why,
       about: offer?.about ?? null,
       canOverride: offer?.canOverride ?? false,
-      choices: (offer?.choices ?? []).map((one) => ({
-        ...one,
-        what: one.what.replace(/`/g, ''),
-      })),
+      choices: offer?.choices ?? [],
     });
   }
 
@@ -703,7 +709,7 @@ export class Preview {
     const nonce = Math.random().toString(36).slice(2);
 
     return `<!DOCTYPE html>
-<html lang="en">
+<html lang="${vscode.env.language}">
   <head>
     <meta charset="utf-8" />
     <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource}; script-src 'nonce-${nonce}';" />

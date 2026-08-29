@@ -16,7 +16,7 @@ export type ValidationTest =
     };
 
 /** What a validation says: to the reader when the cell is selected, or when a value is refused. */
-export interface Said {
+export interface Saying {
   readonly title: string | null;
   readonly body: string | null;
 }
@@ -34,6 +34,6 @@ export interface Validation extends SpecNode {
   readonly at: Templated<A1Range>;
   readonly test: ValidationTest;
   readonly allowBlank: boolean;
-  readonly prompt: Said | null;
-  readonly error: (Said & { readonly style: Templated<ErrorStyle> }) | null;
+  readonly prompt: Saying | null;
+  readonly error: (Saying & { readonly style: Templated<ErrorStyle> }) | null;
 }

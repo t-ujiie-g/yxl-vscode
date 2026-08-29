@@ -7,6 +7,7 @@ import { asTable, drawLine, reading, setMerged, setSorted, setStyle } from '@yxl
 import { load } from '@yxl-vscode/loader';
 import { type A1Addr, type FilePath, filePath, type SheetName } from '@yxl-vscode/units';
 import type { Typed } from '@yxl-vscode/webview/protocol';
+import { reader } from '@yxl-vscode/webview/words';
 import { describe, expect, it } from 'vitest';
 import {
   applied,
@@ -18,6 +19,8 @@ import {
 } from 'yxl-vscode/write';
 import { includeReader, yxlExamples } from './corpus';
 import { build, extract, oracleVersion, PINNED } from './oracle';
+
+const english = reader('en');
 
 /** Tier 4: the write path the UI calls, then the compiler that ships, then what the workbook holds. */
 const QUICKSTART = yxlExamples().find((one) => one.name === 'quickstart.yxl.yaml');
@@ -40,7 +43,7 @@ function opened(sample: { path: string }) {
     },
     put: (file, text) => writeFileSync(file, text),
     refuse: (why) => {
-      refusals.push(why);
+      refusals.push(english(why));
     },
     said: () => {},
     kept: () => {},

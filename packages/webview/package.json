@@ -8,12 +8,15 @@
   "exports": {
     ".": "./src/index.ts",
     "./fields": "./src/fields.ts",
-    "./protocol": "./src/protocol.ts"
+    "./protocol": "./src/protocol.ts",
+    "./words": "./src/words.ts"
   },
   "dependencies": {
     "@yxl-vscode/compile": "workspace:*",
+    "@yxl-vscode/cst": "workspace:*",
     "@yxl-vscode/diag": "workspace:*",
     "@yxl-vscode/evaluate": "workspace:*",
+    "@yxl-vscode/patch": "workspace:*",
     "@yxl-vscode/spec": "workspace:*",
     "@yxl-vscode/units": "workspace:*",
     "numfmt": "^3.2.6"

@@ -1,9 +1,13 @@
+import { reading } from '@yxl-vscode/diag';
 import { describe, expect, it } from 'vitest';
 import { apply } from './apply';
 import { CODE } from './codes';
 import { removalOf, reordered } from './entries';
 import type { Op } from './op';
 import { parse } from './parse';
+import { WORDS } from './text';
+
+const english = reading('en', WORDS);
 
 function edit(source: string, ...ops: Op[]) {
   return apply(source, ops, { file: 'test.yxl.yaml' });
@@ -655,7 +659,7 @@ describe('entries of a collection', () => {
     it('gives the reason when the lines could not go back where they were', () => {
       const source = 'cells:\n  A1: 1\n\n  # counted twice\n\n  B1: 2\n';
       const found = removing(source, ['cells', 'B1']);
-      expect(found?.of === 'entry' && found.inexact).toContain('lines above it');
+      expect(english((found?.of === 'entry' && found.inexact) || '')).toContain('lines above it');
     });
 
     it('keeps a flow collection whole, since there are no lines to put back', () => {

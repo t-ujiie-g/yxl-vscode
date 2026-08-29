@@ -11,6 +11,7 @@ import type {
   Uncomputed,
 } from './protocol';
 import type { Asks, Reached, Showing } from './showing';
+import { plainly, worded } from './worded';
 
 /** The parameters as boxes to turn (`docs/spec.md` §7); emptying one gives the default back. */
 export function parameters(drawing: Drawing, asks: Asks): HTMLElement {
@@ -89,7 +90,7 @@ export function uncomputed(said: Uncomputed): string {
 export function refusal(refused: Refused, asks: Asks): HTMLElement {
   const over = document.createElement('div');
   over.className = 'over';
-  over.setAttribute('data-why', refused.why);
+  over.setAttribute('data-why', plainly(refused.why));
 
   const asking = document.createElement('div');
   asking.className = 'refused';
@@ -98,7 +99,7 @@ export function refusal(refused: Refused, asks: Asks): HTMLElement {
 
   const why = document.createElement('p');
   why.className = 'why';
-  why.textContent = refused.why;
+  why.textContent = plainly(refused.why);
   asking.append(why);
 
   const about = refused.about;
@@ -108,7 +109,8 @@ export function refusal(refused: Refused, asks: Asks): HTMLElement {
       pick.type = 'button';
       pick.className = 'choice';
       const says = moved(choice);
-      pick.textContent = says === '' ? choice.what : `${choice.what} — ${says}`;
+      const what = plainly(choice.what);
+      pick.textContent = says === '' ? what : `${what} — ${says}`;
       pick.addEventListener('click', () => asks.answer(about, choice.id));
       asking.append(pick);
     }
@@ -405,7 +407,7 @@ export function problems(drawing: Drawing, asks: Asks): HTMLElement {
     const go = document.createElement('button');
     go.type = 'button';
     go.className = 'go';
-    go.textContent = problem.message;
+    go.textContent = worded(problem.message);
     go.title = problem.file;
     go.addEventListener('click', () => asks.reveal({ facet: problem.code, says: '', ...problem }));
 

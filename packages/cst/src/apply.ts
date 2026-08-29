@@ -1,4 +1,4 @@
-import { error, span } from '@yxl-vscode/diag';
+import { error, type Message, span } from '@yxl-vscode/diag';
 import { CODE } from './codes';
 import { addedBlock, addition, insertedBlock, insertion, removal, restoration } from './entries';
 import { lineBreak, lineEnd } from './lines';
@@ -6,6 +6,7 @@ import { formatPath, locate, type Site } from './locate';
 import type { Node } from './node';
 import type { Applied, Edit, Op, Path, Refuse } from './op';
 import { parse } from './parse';
+import { say } from './text';
 import { renderScalar, type Value } from './write';
 
 /**
@@ -25,7 +26,7 @@ export function apply(source: string, ops: readonly Op[], options: { file: strin
   for (const op of ops) {
     const site = root ? locate(root, op.path) : undefined;
     if (!site) {
-      refuse(CODE.noSuchPath, `nothing at \`${formatPath(op.path)}\``, span(0, 0));
+      refuse(CODE.noSuchPath, say('cst.no-such-path', { path: formatPath(op.path) }), span(0, 0));
       continue;
     }
     const edit = editFor(source, op, site, refuse);
@@ -49,7 +50,7 @@ function editFor(source: string, op: Op, site: Site, refuse: Refuse): Edit | und
 
     case 'renameKey': {
       if (site.in !== 'map') {
-        refuse(CODE.notAKey, `\`${formatPath(op.path)}\` is not a mapping entry`, site.node.span);
+        refuse(CODE.notAKey, say('cst.not-a-key', { path: formatPath(op.path) }), site.node.span);
         return undefined;
       }
       return { span: site.entry.key.span, text: renderScalar(op.to, site.entry.key.style) };
@@ -109,11 +110,7 @@ function intoBlock(source: string, value: Value, node: Node, refuse: Refuse): Ed
   const indent = /^[ \t]*/.exec(source.slice(body, lineEnd(source, body)))?.[0] ?? '';
 
   if (body >= node.span.end || indent === '') {
-    refuse(
-      CODE.emptyBlockScalar,
-      'this block scalar has no body to take its layout from',
-      node.span,
-    );
+    refuse(CODE.emptyBlockScalar, say('cst.empty-block-scalar'), node.span);
     return undefined;
   }
 
@@ -124,8 +121,8 @@ function intoBlock(source: string, value: Value, node: Node, refuse: Refuse): Ed
   return { span: span(body, node.span.end), text: `${lines.join(line)}${line}` };
 }
 
-function blockScalar(path: Path): string {
-  return `\`${formatPath(path)}\` is a block scalar, which this editor does not empty`;
+function blockScalar(path: Path): Message {
+  return say('cst.block-scalar', { path: formatPath(path) });
 }
 
 /** Back to front, so earlier offsets stay valid; overlapping edits are refused, not resolved. */
@@ -136,7 +133,7 @@ function splice(source: string, edits: readonly Edit[], refuse: Refuse): string 
 
   for (const edit of ordered) {
     if (edit.span.end > previousStart) {
-      refuse(CODE.overlappingEdits, 'two edits cover the same text', edit.span);
+      refuse(CODE.overlappingEdits, say('cst.overlapping-edits'), edit.span);
       continue;
     }
     text = text.slice(0, edit.span.start) + edit.text + text.slice(edit.span.end);
