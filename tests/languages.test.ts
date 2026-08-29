@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { WORDS as compile } from '@yxl-vscode/compile';
 import { WORDS as cst } from '@yxl-vscode/cst';
@@ -10,7 +10,7 @@ import { WORDS as units } from '@yxl-vscode/units';
 import { WORDS as view } from '@yxl-vscode/webview/text';
 import { describe, expect, it } from 'vitest';
 import { WORDS as host } from 'yxl-vscode/text';
-import { REPO_ROOT } from './corpus';
+import { REPO_ROOT, sourcesOf } from './corpus';
 
 /**
  * Every book of sentences this editor holds, which is the list the languages
@@ -53,23 +53,10 @@ describe('what is left in English, and is meant to be', () => {
   it('builds no sentence where a thing goes wrong, which is what the books replaced', () => {
     const said =
       /\b(port\.said|port\.refuse|this\.refuse|refused)\((['`])|reject\([^,]+, [^,]+, ['`]/;
-    const sources = readdirSync(join(REPO_ROOT, 'packages'), { withFileTypes: true })
-      .filter((one) => one.isDirectory())
-      .flatMap((one) => walked(join(REPO_ROOT, 'packages', one.name, 'src')));
-
-    const prose = sources.filter((path) => said.test(readFileSync(path, 'utf8')));
+    const prose = sourcesOf(join(REPO_ROOT, 'packages')).filter((path) =>
+      said.test(readFileSync(path, 'utf8')),
+    );
 
     expect(prose.map((path) => path.slice(REPO_ROOT.length + 1))).toEqual([]);
   });
 });
-
-/** Every source of a package, tests aside. */
-function walked(from: string): string[] {
-  if (!existsSync(from)) return [];
-
-  return readdirSync(from, { withFileTypes: true }).flatMap((one) => {
-    const path = join(from, one.name);
-    if (one.isDirectory()) return walked(path);
-    return one.name.endsWith('.ts') && !one.name.endsWith('.test.ts') ? [path] : [];
-  });
-}

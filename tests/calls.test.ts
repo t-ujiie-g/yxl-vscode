@@ -1,21 +1,13 @@
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { REPO_ROOT } from './corpus';
+import { REPO_ROOT, sourcesOf } from './corpus';
 
 /**
  * A function whose whole body is a call to itself, which no suite here can see:
  * the panel's own wiring has no tests, and a rewrite that folded sixteen calls
  * into one folded the one as well (#172).
  */
-function sources(from: string): string[] {
-  return readdirSync(from).flatMap((name) => {
-    const path = join(from, name);
-    if (name === 'node_modules' || name === 'dist') return [];
-    if (statSync(path).isDirectory()) return sources(path);
-    return name.endsWith('.ts') && !name.endsWith('.test.ts') ? [path] : [];
-  });
-}
 
 /**
  * Where the first statement of a body is a call to the name the body belongs
@@ -35,7 +27,7 @@ function callsItself(source: string): string[] {
 
 describe('what a function does with its own name', () => {
   it('never has a body that is only a call to itself', () => {
-    const found = sources(join(REPO_ROOT, 'packages')).flatMap((path) => {
+    const found = sourcesOf(join(REPO_ROOT, 'packages')).flatMap((path) => {
       const source = readFileSync(path, 'utf8');
       return callsItself(source).map((name) => `${path.slice(REPO_ROOT.length + 1)}: ${name}`);
     });

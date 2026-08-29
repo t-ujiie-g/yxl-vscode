@@ -16,12 +16,8 @@ const HIDE: Asking<Hidden> = {
   about: (hidden) => ({ ...hidden, kind: 'hide' }),
   answers: (spec, hidden, sheet, read) => setHidden(spec, { ...hidden, sheet }, read),
   nothing: (hidden) =>
-    hidden.hidden
-      ? say('host.cannot-hide', { span: many(hidden) })
-      : say('host.nothing-hides', { span: many(hidden) }),
-  why: (hidden) => say('host.band-over-more', { span: many(hidden) }),
+    hidden.hidden ? say('host.cannot-hide', many(hidden)) : say('host.nothing-hides', many(hidden)),
+  why: (hidden) => say('host.band-over-more', many(hidden)),
   done: (hidden) =>
-    hidden.hidden
-      ? say('host.hidden-done', { span: many(hidden) })
-      : say('host.shown-done', { span: many(hidden) }),
+    hidden.hidden ? say('host.hidden-done', many(hidden)) : say('host.shown-done', many(hidden)),
 };

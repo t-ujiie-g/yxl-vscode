@@ -17,11 +17,11 @@ const GROUP: Asking<Grouped> = {
   answers: (spec, grouped, sheet, read) => setGroup(spec, { ...grouped, sheet }, read),
   nothing: (grouped) =>
     grouped.level === 0
-      ? say('host.nothing-groups', { span: many(grouped) })
-      : say('host.cannot-group', { span: many(grouped) }),
-  why: (grouped) => say('host.band-over-more', { span: many(grouped) }),
+      ? say('host.nothing-groups', many(grouped))
+      : say('host.cannot-group', many(grouped)),
+  why: (grouped) => say('host.band-over-more', many(grouped)),
   done: (grouped) =>
     grouped.level === 0
-      ? say('host.ungrouped-done', { span: many(grouped) })
-      : say('host.grouped-done', { span: many(grouped) }),
+      ? say('host.ungrouped-done', many(grouped))
+      : say('host.grouped-done', many(grouped)),
 };

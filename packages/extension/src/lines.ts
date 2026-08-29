@@ -16,20 +16,18 @@ export function line(spec: Spec, lined: Lined, port: Port, choice?: string): Pro
 const LINE: Asking<Lined> = {
   about: (lined) => ({ ...lined, kind: 'line' }),
   answers: (spec, lined, sheet, read) => setLine(spec, { ...lined, sheet }, read),
-  nothing: (lined) => say('host.nothing-moves', { span: run(lined) }),
+  nothing: (lined) => say('host.nothing-moves', run(lined)),
   why: (_lined, answers) =>
     say('host.moves-a-lot', {
       what: answers[0]?.what ?? '',
       keys: answers[0]?.keys ?? 0,
     }),
   done: (lined) =>
-    lined.by < 0
-      ? say('host.lines-taken-away', { span: run(lined) })
-      : say('host.lines-put-in', { span: run(lined) }),
+    lined.by < 0 ? say('host.lines-taken-away', run(lined)) : say('host.lines-put-in', run(lined)),
 };
 
 /** The run the gesture named, as the reader is told about it. */
-function run(lined: Lined): string {
+function run(lined: Lined) {
   const last = lined.by < 0 ? lined.at - lined.by - 1 : lined.at + lined.by - 1;
   return many({ axis: lined.axis, first: lined.at, last });
 }

@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { IncludeReader } from '@yxl-vscode/loader';
@@ -61,4 +61,16 @@ function read(dir: string): Sample[] {
   }
 
   return found;
+}
+
+/** Every source of every package, tests aside — for the suites that read the tree rather than run it. */
+export function sourcesOf(from: string): string[] {
+  if (!existsSync(from)) return [];
+
+  return readdirSync(from, { withFileTypes: true }).flatMap((one) => {
+    const path = join(from, one.name);
+    if (one.name === 'node_modules' || one.name === 'dist') return [];
+    if (one.isDirectory()) return sourcesOf(path);
+    return one.name.endsWith('.ts') && !one.name.endsWith('.test.ts') ? [path] : [];
+  });
 }

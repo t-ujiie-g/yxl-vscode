@@ -37,6 +37,16 @@ describe('what the host words', () => {
     expect(reader('ja')(problem)).toBe('`charts` のエントリの `at`は文字列である必要があります');
   });
 
+  it('says a run of rows in each language’s own way, rather than one inside the other', () => {
+    const said = { id: 'host.cannot-hide', args: { axis: 'row', first: 3, last: 5 } };
+    const one = { id: 'host.hidden-done', args: { axis: 'column', first: 2, last: 2 } };
+
+    expect(reader('en')(said)).toBe('nothing here can hide rows 3-5');
+    expect(reader('ja')(said)).toBe('ここでは3〜5 行を非表示にできません');
+    expect(reader('en')(one)).toBe('column B hidden.');
+    expect(reader('ja')(one)).toBe('B 列を非表示にしました。');
+  });
+
   it('reads every book this editor holds, whichever package said it', () => {
     expect(reader('ja')({ id: 'cst.key-exists', args: { key: 'A1' } })).toBe(
       '`A1` はすでにあります',

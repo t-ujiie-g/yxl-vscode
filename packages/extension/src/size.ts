@@ -15,7 +15,7 @@ export function resize(spec: Spec, resized: Resized, port: Port, choice?: string
 const SIZE: Asking<Resized> = {
   about: (resized) => ({ ...resized, kind: 'resize' }),
   answers: (spec, resized, sheet, read) => setSize(spec, { ...resized, sheet }, read),
-  nothing: (resized) => say('host.no-width-here', { span: many(resized) }),
-  why: (resized) => say('host.size-from-a-band', { span: many(resized) }),
-  done: (resized) => say('host.resized', { span: many(resized) }),
+  nothing: (resized) => say('host.no-width-here', many(resized)),
+  why: (resized) => say('host.size-from-a-band', many(resized)),
+  done: (resized) => say('host.resized', many(resized)),
 };

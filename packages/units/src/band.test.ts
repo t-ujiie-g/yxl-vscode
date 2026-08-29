@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseColumnSpan, parseRowSpan, spanSaid } from './band';
+import { parseColumnSpan, parseRowSpan } from './band';
 
 describe('parseColumnSpan', () => {
   it('reads one column and a range of columns', () => {
@@ -42,17 +42,5 @@ describe('parseRowSpan', () => {
     for (const text of ['', '0', '0-4', 'B', '1-', '-4', '1-2-3']) {
       expect(parseRowSpan(text)).toBeNull();
     }
-  });
-});
-
-describe('a run as a reader sees it named', () => {
-  it('is the letter on the heading for a column, and the number for a row', () => {
-    expect(spanSaid('column', 2, 2)).toBe('column B');
-    expect(spanSaid('row', 3, 3)).toBe('row 3');
-  });
-
-  it('is both ends where the run is more than one', () => {
-    expect(spanSaid('column', 1, 28)).toBe('columns A-AB');
-    expect(spanSaid('row', 3, 7)).toBe('rows 3-7');
   });
 });

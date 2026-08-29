@@ -32,15 +32,8 @@ export function sentence(value: unknown): value is Saying {
   );
 }
 
-/**
- * One sentence in one language. `worded` is for an argument that is itself a
- * message — a reason a rectangle's refusal quotes, say — which only the edge
- * can turn into words.
- */
-export type Sentence<A extends Args = Args> = (
-  args: A,
-  worded: (saying: Saying) => string,
-) => string;
+/** One sentence in one language; `worded` is for an argument that is itself a message. */
+type Sentence<A extends Args = Args> = (args: A, worded: (saying: Saying) => string) => string;
 
 /** The ids a package declares, each with what fills its sentence. */
 export type Speech = Record<string, Args>;
