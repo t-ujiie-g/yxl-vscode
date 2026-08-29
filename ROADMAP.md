@@ -1871,12 +1871,30 @@ below, and one is the answer panel becoming a thing you have to answer.
 The two ends of a reader's day. Neither is in the editor today, and both are
 small — which is why they are one phase and not two.
 
-- [ ] **A new spec from nothing.** *yxl: New spec* writes a minimal valid file —
-      one sheet, a heading row, a number, a formula, a comment saying where the
-      format is documented — opens it, and opens the preview beside it. No
-      upstream command is needed: `yxl 0.3.5` has `build` and `extract` and no
-      `init`, and a template is the editor's business rather than the
-      compiler's. Asking for one would put the same file in two places.
+- [ ] **A new spec from nothing**, by running `yxl init` — *blocked on upstream*,
+      [yxl#77](https://github.com/t-ujiie-g/yxl/issues/77), filed 2026-08-29.
+      **Reversed on the day it was written.** The first answer was a template in
+      this extension, on the reasoning that a starter is an editor affordance
+      and `yxl 0.3.5` has no `init`. A reader said the other thing, and they are
+      right: a starter spec is a statement about the **format**, and the format
+      is upstream's. Kept here it is a second copy that drifts, and it is out of
+      reach of anyone using the compiler without this editor — which is the
+      argument that already puts `extract` there rather than here (ADR-011).
+      **What the day taught, and what the issue carries**: the starter should be
+      an **empty sheet**, not a worked example. A heading row, sample rows and a
+      `SUM` look helpful and are not — the reader deletes them before they can
+      begin. `sheets:\n  - name: Sheet1\n` compiles and builds today, checked,
+      so the command is small.
+      **What this editor then does** is run it, as it runs `build` and
+      `extract`, and degrade with a sentence where the pinned CLI has no `init`
+      (§8 Q6).
+- [ ] **Where a reader finds any of it.** The command palette is where a command
+      goes to hide — said by the reader who could not find *New Spec* there.
+      Whatever makes a spec belongs in **`file/newFile`** (VS Code's own *New
+      File…*, and the Welcome page's list) and in the explorer's context menu on
+      a folder; whatever acts on one belongs in a title bar. Written down here
+      because it is a rule about every command this editor adds, not a note
+      about one of them.
 - [ ] **Build where it can be clicked.** `yxl.build` already builds to a sibling
       `.xlsx`, offers *Open it*, warns about a version mismatch in both
       directions, and answers a missing compiler with the install link. It is
@@ -3481,6 +3499,31 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-29 — Where a starter spec belongs, decided by giving it away
+A day's work closed rather than merged, which is the entry worth writing.
+
+- **The template was written here, and should not live here.** *New Spec* wrote
+  a minimal spec into the extension, checked against the compiler, with the
+  discoverable places to reach it. A reader asked for it to be upstream instead,
+  and the argument holds: a starter spec is a statement about the **format**,
+  the format is `yxl`'s, and a copy kept here drifts and is invisible to anyone
+  using the compiler without this editor — which is exactly why `extract` is
+  upstream and not a gesture in this panel (ADR-011). PR #165 is closed.
+- **[yxl#77](https://github.com/t-ujiie-g/yxl/issues/77) filed**, carrying what
+  the day found rather than only the request: the starter should be an **empty
+  sheet**, not a worked example — a heading row and a `SUM` look helpful and are
+  the first thing a reader deletes — and `sheets:\n  - name: Sheet1\n` already
+  compiles and builds, so the command is small. The shape proposed matches the
+  CLI it joins (`yxl init -o <spec.yxl.yaml>`), and the two decisions that are
+  upstream's — an existing file, the sheet's name — are named as theirs.
+- **The editor's half is a run, not a write**, when it lands: ask where, run the
+  compiler, open the file and the grid. A pinned CLI without `init` degrades
+  with a sentence, as a missing one already does (§8 Q6).
+- **The palette is not a place a reader finds anything**, which is the other
+  half of what they said. Whatever creates a spec has to be in *File → New
+  File…* and the explorer's own menu; that is written into Phase 18 with the
+  command rather than left as a preference.
 
 ### 2026-08-29 — A column width Excel agrees with, to the pixel it can
 Phase 17's last line, and the arithmetic half of §8 Q19.
