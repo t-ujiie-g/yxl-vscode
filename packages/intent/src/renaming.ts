@@ -20,6 +20,7 @@ import {
   type Reading,
   refused,
 } from './direct';
+import { say } from './text';
 
 /** A sheet a reader asked to call something else. */
 export interface Renaming {
@@ -35,13 +36,13 @@ export function renameSheet(spec: Projection, where: Renaming, read: Reading): I
   const why = whyNotASheetName(where.name);
   const to = sheetName(where.name);
   if (why !== null || to === null) return refused(why ?? 'a sheet needs a name');
-  if (to === where.sheet) return refused(`this sheet is called \`${to}\` already`);
+  if (to === where.sheet) return refused(say('intent.already-called-that', { name: to }));
   if (spec.grid.sheets.some((one) => one.name === to)) {
-    return refused(`there is already a sheet named \`${to}\``);
+    return refused(say('intent.already-a-sheet-named', { name: to }));
   }
 
   const sheet = spec.doc.sheets.find((one) => nameOf(one) === where.sheet);
-  if (sheet === undefined) return refused(`there is no sheet named \`${where.sheet}\``);
+  if (sheet === undefined) return refused(say('intent.no-such-sheet', { sheet: where.sheet }));
 
   const ops = new Map<FilePath, Op[]>();
   const put = (id: NodeId, key: string | null, value: string): boolean => {
@@ -53,7 +54,7 @@ export function renameSheet(spec: Projection, where: Renaming, read: Reading): I
     return true;
   };
 
-  if (!put(sheet.id, KEY.name, to)) return refused('this sheet has no place in the file to rename');
+  if (!put(sheet.id, KEY.name, to)) return refused(say('intent.no-place-to-rename'));
 
   const bodies: { id: NodeId; key: string | null; body: string; what: string }[] = [
     ...spec.doc.sheets.flatMap((one) => [
@@ -86,7 +87,8 @@ export function renameSheet(spec: Projection, where: Renaming, read: Reading): I
 
   for (const one of bodies) {
     const now = renamed(one.body, where.sheet, to);
-    if (!now.ok) return refused(`${one.what} holds a formula that ${now.why}`);
+    if (!now.ok)
+      return refused(say('intent.named-formula-breaks', { what: one.what, why: now.why }));
     if (now.formula !== one.body) put(one.id, one.key, now.formula);
   }
 
@@ -101,9 +103,7 @@ export function renameSheet(spec: Projection, where: Renaming, read: Reading): I
   const files = [...ops.keys()];
   const file = files[0];
   if (file === undefined || files.length > 1) {
-    return refused(
-      `\`${where.sheet}\` is named in more than one file, which this cannot rewrite at once`,
-    );
+    return refused(say('intent.named-across-files', { sheet: where.sheet }));
   }
 
   return {

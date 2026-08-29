@@ -4,6 +4,7 @@ import type { SheetName } from '@yxl-vscode/units';
 import { type Says, type Span, setBandKey, spelled } from './bands';
 import type { Reading } from './direct';
 import type { Candidate } from './resolve';
+import { say } from './text';
 import type { Projection } from './writes';
 
 /** Columns or rows a reader asked to hide, or to show again (`docs/spec.md` §4 `hidden:`). */
@@ -22,7 +23,6 @@ export function setHidden(spec: Projection, hiding: Hiding, read: Reading): read
 
   const span: Span = { axis: hiding.axis, first: hiding.first, last: hiding.last };
   const bands = hiding.axis === 'column' ? sheet.columns : sheet.rows;
-  const said = hiding.hidden ? 'Hide' : 'Show';
 
   const says: Says = {
     key: KEY.hidden,
@@ -30,12 +30,19 @@ export function setHidden(spec: Projection, hiding: Hiding, read: Reading): read
     clears: !hiding.hidden,
     said: (band) => band.hidden === true,
     words: {
-      own: (one) => `${said} \`${spelled(one)}\``,
+      own: (one) =>
+        say(hiding.hidden ? 'intent.hide-span' : 'intent.show-span', { span: spelled(one) }),
       band: (over, many) =>
         many === span.last - span.first + 1
-          ? `${said} \`${spelled(over)}\``
-          : `${said} the band over \`${spelled(over)}\`, which is ${many} ${span.axis}s`,
-      apart: (one) => `Split it so \`${spelled(one)}\` alone is shown`,
+          ? say(hiding.hidden ? 'intent.hide-span' : 'intent.show-span', { span: spelled(over) })
+          : say('intent.which-is-many', {
+              said: say(hiding.hidden ? 'intent.hide-the-band' : 'intent.show-the-band', {
+                span: spelled(over),
+              }),
+              many,
+              axis: span.axis,
+            }),
+      apart: (one) => say('intent.split-so-shown', { span: spelled(one) }),
     },
   };
 

@@ -419,7 +419,7 @@ export interface Highlighted {
  */
 export interface Refused {
   readonly kind: 'refused';
-  readonly why: Saying;
+  readonly why: string;
   readonly about: About | null;
   readonly canOverride: boolean;
   readonly choices: readonly Choice[];

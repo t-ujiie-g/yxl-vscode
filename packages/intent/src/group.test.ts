@@ -2,7 +2,7 @@ import type { Axis } from '@yxl-vscode/spec';
 import type { SheetName } from '@yxl-vscode/units';
 import { describe, expect, it } from 'vitest';
 import { setGroup } from './group';
-import { files, wrote } from './harness';
+import { english, files, wrote } from './harness';
 import type { Candidate } from './resolve';
 
 const SALES = 'sheets:\n  - name: Sales\n';
@@ -33,7 +33,7 @@ describe('columns nothing groups yet', () => {
 
   it('are grouped by a band of their own, without asking', () => {
     const answers = offered(BARE, 2, 4, 1);
-    expect(answers.map((one) => [one.id, one.alone, one.what])).toEqual([
+    expect(answers.map((one) => [one.id, one.alone, english(one.what)])).toEqual([
       ['ofItsOwn', true, 'Group `B-D` at level 1'],
     ]);
 
@@ -87,8 +87,10 @@ describe('columns a wider band groups', () => {
   it('are a question: the whole band, or the run alone', () => {
     const answers = offered(WIDE, 2, 4, 0);
     expect(answers.map((one) => one.id)).toEqual(['band', 'apart']);
-    expect(answers[0]?.what).toBe('Take `A-F` out of the outline, which is 6 columns');
-    expect(answers[1]?.what).toBe('Split it so `B-D` alone is out');
+    expect(english(answers[0]?.what ?? '')).toBe(
+      'Take `A-F` out of the outline, which is 6 columns',
+    );
+    expect(english(answers[1]?.what ?? '')).toBe('Split it so `B-D` alone is out');
   });
 
   it('are taken out alone by the split, with the rest left in', () => {
@@ -107,7 +109,7 @@ describe('rows', () => {
     const [answer] = offered(spec, 3, 5, 1, 'row');
     if (answer === undefined) throw new Error('nothing was offered');
 
-    expect(answer.what).toBe('Group `3-5` at level 1');
+    expect(english(answer.what)).toBe('Group `3-5` at level 1');
     expect(taken(spec, answer)).toContain('    rows:\n      - at: 3-5\n        group: 1\n');
   });
 });

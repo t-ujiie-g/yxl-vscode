@@ -1,4 +1,5 @@
 import { type CompiledSheet, cellAt, sheetOf } from '@yxl-vscode/compile';
+import { type Saying, sentence } from '@yxl-vscode/diag';
 import { type Axis, KEY } from '@yxl-vscode/spec';
 import {
   type A1Addr,
@@ -13,6 +14,7 @@ import { putEntries, sequenceIn } from './anchored';
 import { type Held, keptElsewhere, located, type Projection, type Reading } from './direct';
 import { type Entry, landed, taking } from './landing';
 import type { Candidate } from './resolve';
+import { say } from './text';
 
 /** A rectangle to be filled from its first line: down from the top row, or right from the left column. */
 export interface Filling {
@@ -45,7 +47,7 @@ export function setFilled(spec: Projection, where: Filling, read: Reading): read
 }
 
 /** Every address the fill writes, and what it holds once it has moved there. */
-function going(sheet: CompiledSheet, where: Filling): Entry[] | string {
+function going(sheet: CompiledSheet, where: Filling): Entry[] | Saying {
   const down = where.axis === 'row';
   const entries: Entry[] = [];
 
@@ -64,15 +66,13 @@ function going(sheet: CompiledSheet, where: Filling): Entry[] | string {
       const at = down ? addrAt({ col: one, row: along }) : addrAt({ col: along, row: one });
       const by = down ? { cols: 0, rows: along - from } : { cols: along - from, rows: 0 };
       const holds = taking(cell, by);
-      if (typeof holds === 'string') return holds;
+      if (sentence(holds)) return holds;
 
       entries.push({ at, holds });
     }
   }
 
-  return entries.length === 0
-    ? 'nothing on that line is written, so there is nothing to fill'
-    : entries;
+  return entries.length === 0 ? say('intent.nothing-on-that-line') : entries;
 }
 
 /** The answer that writes every address as a cell of its own, the formulas moved with them. */
@@ -83,7 +83,7 @@ function onCells(
   read: Reading,
 ): Candidate | null {
   const entries = going(sheet, where);
-  if (typeof entries === 'string') return null;
+  if (sentence(entries)) return null;
 
   const held: Held[] = [];
   const put = landed(spec, sheet, where.sheet, entries, read, {
@@ -92,7 +92,7 @@ function onCells(
     verb: 'filled',
     nothing: 'nothing in this rectangle can be filled from the line above it',
   });
-  if (typeof put === 'string') return null;
+  if (sentence(put)) return null;
 
   const files = [...put.ops.keys()];
   const file = files[0];
@@ -100,7 +100,7 @@ function onCells(
 
   return {
     id: 'onCells',
-    what: `Write ${entries.length} cell${entries.length === 1 ? '' : 's'} of their own`,
+    what: say('intent.write-cells-of-their-own', { many: entries.length }),
     moves: entries.map((one) => ({ sheet: where.sheet, at: one.at })),
     alone: false,
     intent: {
@@ -147,7 +147,7 @@ function asRange(sheet: CompiledSheet, where: Filling, read: Reading): Candidate
 
   return {
     id: 'range',
-    what: `Write ${said(ranges.length)}, one formula that moves with the ${where.axis}s`,
+    what: say('intent.write-as-ranges', { many: ranges.length, axis: where.axis }),
     moves,
     alone: false,
     intent: {
@@ -167,10 +167,6 @@ function written(sheet: CompiledSheet, rect: Rect): boolean {
   return addressesOf(rect)
     .slice(1)
     .some((at) => cellAt(sheet, at) !== null);
-}
-
-function said(many: number): string {
-  return many === 1 ? 'one range' : `${many} ranges`;
 }
 
 function quoted(formula: string): string {

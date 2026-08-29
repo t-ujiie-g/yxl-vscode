@@ -13,11 +13,6 @@ export function worded(saying: Saying): string {
   return found(saying);
 }
 
-/** The same, as the panel shows it: prose without the backticks a spec's own words are written in. */
-export function plainly(saying: Saying): string {
-  return worded(saying).replace(/`/g, '');
-}
-
 /** One of the panel's own sentences, in the language the page is drawn in (ADR-051). */
 export function chrome<K extends keyof Says & string>(
   id: K,

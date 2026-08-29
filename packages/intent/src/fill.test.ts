@@ -2,7 +2,7 @@ import type { Axis } from '@yxl-vscode/spec';
 import type { Rect, SheetName } from '@yxl-vscode/units';
 import { describe, expect, it } from 'vitest';
 import { setFilled } from './fill';
-import { files, wrote } from './harness';
+import { english, files, wrote } from './harness';
 import type { Candidate } from './resolve';
 
 const SALES = 'sheets:\n  - name: Sales\n';
@@ -32,7 +32,7 @@ describe('a column of formulas filled down', () => {
   const spec = `${HOLDS}      C1: { formula: "B1*2" }\n`;
 
   it('is a range first, which is what a fill is in a spec', () => {
-    expect(offered(spec, at(1, 3, 3, 3)).map((one) => [one.id, one.what])).toEqual([
+    expect(offered(spec, at(1, 3, 3, 3)).map((one) => [one.id, english(one.what)])).toEqual([
       ['range', 'Write one range, one formula that moves with the rows'],
       ['onCells', 'Write 2 cells of their own'],
     ]);

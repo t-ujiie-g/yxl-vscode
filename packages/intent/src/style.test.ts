@@ -2,7 +2,7 @@ import { cellAt, resolve } from '@yxl-vscode/compile';
 import { STYLE_PROPERTIES, type StyleSays, type StyleValues } from '@yxl-vscode/spec';
 import { type A1Addr, parseColor, type Rect, type SheetName } from '@yxl-vscode/units';
 import { describe, expect, it } from 'vitest';
-import { files, wrote } from './harness';
+import { english, files, wrote } from './harness';
 import type { Candidate } from './resolve';
 import { setStyle } from './style';
 
@@ -158,7 +158,7 @@ describe('a look on a cell something else fills', () => {
   it('is an exception or the whole run, for a cell a formula range fills', () => {
     const answers = offered(RANGE, at(2, 3), BOLD);
 
-    expect(answers.map((one) => [one.id, one.what])).toEqual([
+    expect(answers.map((one) => [one.id, english(one.what)])).toEqual([
       ['exception', 'Write it as an override on `C2`'],
       ['ofItsOwn', 'Write it on the column `C`'],
     ]);
@@ -585,7 +585,9 @@ describe('a rectangle whose cells take it from different places', () => {
     const [answer] = answers();
     if (answer === undefined) throw new Error('nothing was offered');
 
-    expect(answer.what).toBe('Put it on the 3 cells from `A1`, whatever they take it from now');
+    expect(english(answer.what)).toBe(
+      'Put it on the 3 cells from `A1`, whatever they take it from now',
+    );
   });
 
   it('offers all of them alike and each origin apart, and picks between them for nobody', () => {
@@ -674,7 +676,7 @@ describe('a look over the whole of a column', () => {
     const answers = offered(CELLS, at(1, 2, 400, 2), BOLD, 'columns');
 
     expect(answers.map((one) => [one.id, one.alone])).toEqual([['ofItsOwn', true]]);
-    expect(answers[0]?.what).toBe('Write it on the column `B`');
+    expect(english(answers[0]?.what ?? '')).toBe('Write it on the column `B`');
   });
 
   it('writes one entry, in the block form a spec writes bands in', () => {

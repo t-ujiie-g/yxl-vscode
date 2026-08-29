@@ -18,6 +18,7 @@ import {
   type Reading,
   refused,
 } from './direct';
+import { say } from './text';
 
 /** A rectangle a reader asked to draw as one cell, or to take back apart (`docs/spec.md` §2). */
 export interface Merging {
@@ -32,20 +33,18 @@ export interface Merging {
  */
 export function setMerged(spec: Projection, where: Merging, read: Reading): Intent {
   const sheet = sheetOf(spec.grid, where.sheet);
-  if (sheet === null) return refused(`there is no sheet named \`${where.sheet}\``);
+  if (sheet === null) return refused(say('intent.no-such-sheet', { sheet: where.sheet }));
 
   const touched = sheet.merges.filter((one) => overlapping(one.rect, where.rect));
   if (!where.merged) return apart(where, sheet.merges, touched, read);
 
   if (where.rect.top === where.rect.bottom && where.rect.left === where.rect.right) {
-    return refused('a merge is more than one cell, so there is nothing here to draw as one');
+    return refused(say('intent.merge-needs-more'));
   }
 
   const over = touched[0];
   if (over !== undefined) {
-    return refused(
-      `\`${rangeOf(over.rect)}\` is already merged, and a merge may not cross another`,
-    );
+    return refused(say('intent.already-merged', { range: rangeOf(over.rect) }));
   }
 
   const found = located(sheet.node, read);
@@ -80,7 +79,7 @@ function apart(
   read: Reading,
 ): Intent {
   const first = touched[0];
-  if (first === undefined) return refused('nothing here is merged');
+  if (first === undefined) return refused(say('intent.nothing-merged'));
 
   const found = located(first.node, read);
   if (found.kind === 'refused') return found;

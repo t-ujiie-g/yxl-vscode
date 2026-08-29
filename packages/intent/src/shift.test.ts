@@ -3,6 +3,7 @@ import { parse } from '@yxl-vscode/cst';
 import { type IncludeReader, load } from '@yxl-vscode/loader';
 import { type FilePath, filePath, type Line, type SheetName } from '@yxl-vscode/units';
 import { describe, expect, it } from 'vitest';
+import { english } from './harness';
 import { lineSaid, type Moving, shifting } from './shift';
 
 const ROOT = filePath('spec.yxl.yaml') ?? ('' as FilePath);
@@ -75,7 +76,7 @@ describe('what a row inserted does to the constructs around the cells', () => {
     const spec = `${SALES}    data:\n      - at: A2\n        csv: rows.csv\n`;
     const drawn = sheet(spec, { 'rows.csv': 'APAC\nEMEA\nLATAM\n' });
 
-    expect(shifting(drawn, row(3)).stops).toEqual([
+    expect(shifting(drawn, row(3)).stops.map(english)).toEqual([
       'the rows here come from `rows.csv`, which this cannot open a gap in',
     ]);
     expect(shifting(drawn, row(3)).moves).toEqual([]);
@@ -120,7 +121,7 @@ describe('what a row taken away would move', () => {
   it('stops where a formula names a row it would take away', () => {
     const spec = `${SALES}    cells:\n      A5: 2\n      B1: { formula: "A5*2" }\n`;
 
-    expect(shifting(sheet(spec), row(5, -1)).stops).toEqual([
+    expect(shifting(sheet(spec), row(5, -1)).stops.map(english)).toEqual([
       '`B1` holds `=A5*2`, and `A5` names a row this would take away',
     ]);
   });

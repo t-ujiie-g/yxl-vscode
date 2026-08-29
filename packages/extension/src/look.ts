@@ -1,7 +1,9 @@
+import type { Saying } from '@yxl-vscode/diag';
 import { type Candidate, setStyle } from '@yxl-vscode/intent';
 import type { Rect } from '@yxl-vscode/units';
 import type { Worn } from '@yxl-vscode/webview/protocol';
 import { type Asking, asked } from './asked';
+import { say } from './text';
 import type { Port, Spec } from './write';
 
 /**
@@ -16,25 +18,21 @@ const LOOK: Asking<Worn> = {
   about: (worn) => ({ ...worn, kind: 'wear' }),
   answers: (spec, worn, sheet, read) =>
     setStyle(spec, { sheet, rect: rectOf(worn), whole: worn.whole }, worn.want, read),
-  nothing: () => 'nothing here can carry that look',
+  nothing: () => say('host.no-look-here'),
   why: (_worn, answers) => comes(answers),
-  done: (_worn, taken) =>
-    `${taken.moves.length} cell${taken.moves.length === 1 ? '' : 's'} restyled.`,
+  done: (_worn, taken) => say('host.restyled', { many: taken.moves.length }),
 };
 
 /** Why a look is a question: something other than these cells says how they look. */
-function comes(answers: readonly Candidate[]): string {
-  if (answers.some((one) => one.id === 'exception')) {
-    return 'a formula range fills this cell, so a look on it is either an exception or the whole run';
-  }
+function comes(answers: readonly Candidate[]): Saying {
+  if (answers.some((one) => one.id === 'exception')) return say('host.look-is-an-exception');
   if (answers.some((one) => one.id === 'all' || one.id === 'split')) {
-    return 'the cells here take that look from different places, so there is more than one way to change it';
+    return say('host.look-from-different-places');
   }
 
   const shared = answers.find((one) => one.id !== 'onCells');
-  const many = shared?.moves.length ?? 0;
 
-  return `this look comes from something ${many} cell${many === 1 ? '' : 's'} read, so there is more than one way to change it`;
+  return say('host.look-is-shared', { many: shared?.moves.length ?? 0 });
 }
 
 function rectOf(worn: Worn): Rect {

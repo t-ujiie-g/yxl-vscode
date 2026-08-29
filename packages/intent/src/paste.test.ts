@@ -3,7 +3,7 @@ import type { A1Addr, Rect, SheetName } from '@yxl-vscode/units';
 import { type Ctx, checked } from '@yxl-vscode/verify';
 import { describe, expect, it } from 'vitest';
 import type { Intent } from './direct';
-import { files, ROOT } from './harness';
+import { english, files, ROOT } from './harness';
 import { couldBlock, pasteRange, pasteText, type Shape, type Standing } from './paste';
 import { tabular } from './tabular';
 
@@ -40,7 +40,7 @@ function pasted(
 /** The gesture taken all the way through the checker, which is the only way in. */
 function after(source: string, from: Rect, at: string, options = {}): string {
   const intent = pasted(source, from, at, options);
-  if (intent.kind === 'refused') throw new Error(`refused: ${intent.why}`);
+  if (intent.kind === 'refused') throw new Error(`refused: ${english(intent.why)}`);
   if (intent.kind !== 'edit') throw new Error('a file was written, not a spec');
 
   const { includes } = files({ [ROOT]: source });
@@ -54,7 +54,7 @@ function after(source: string, from: Rect, at: string, options = {}): string {
 /** Why a paste did not happen. */
 function why(source: string, from: Rect, at: string, options = {}): string {
   const intent = pasted(source, from, at, options);
-  return intent.kind === 'refused' ? intent.why : 'it was not refused';
+  return intent.kind === 'refused' ? english(intent.why) : 'it was not refused';
 }
 
 describe('a rectangle put down somewhere else', () => {
@@ -238,7 +238,7 @@ describe('a rectangle from another spreadsheet', () => {
   const written = (source: string, text: string, at: string, shape: Shape = 'cells'): string => {
     const intent = from(source, text, at, shape);
     if (intent.kind !== 'edit') {
-      throw new Error(intent.kind === 'refused' ? intent.why : 'not a spec edit');
+      throw new Error(intent.kind === 'refused' ? english(intent.why) : 'not a spec edit');
     }
 
     const { includes } = files({ [ROOT]: source });
@@ -271,7 +271,9 @@ describe('a rectangle from another spreadsheet', () => {
 
   it('refuses a `data:` block over cells the spec already writes', () => {
     const intent = from(SHEET, 'LATAM', 'A1', 'data');
-    expect(intent.kind === 'refused' && intent.why).toContain('nothing writes those cells yet');
+    expect(intent.kind === 'refused' && english(intent.why)).toContain(
+      'nothing writes those cells yet',
+    );
   });
 
   it('says whether a `data:` block is one of the answers', () => {
@@ -284,7 +286,7 @@ describe('a rectangle from another spreadsheet', () => {
 
   it('refuses an empty clipboard rather than writing nothing', () => {
     const intent = from(SHEET, '', 'B1');
-    expect(intent.kind === 'refused' && intent.why).toContain('nothing on the clipboard');
+    expect(intent.kind === 'refused' && english(intent.why)).toContain('nothing on the clipboard');
   });
 
   it('comes back byte for byte', () => {
@@ -356,6 +358,8 @@ sheets:
 
   it('refuses a group answer where one of the cells is a range anchor', () => {
     const done = pasted(MIXED, rect(1, 1, 2, 1), 'B2', { doing: 'range' });
-    expect(done.kind === 'refused' && done.why).toContain('where a range keeps its one formula');
+    expect(done.kind === 'refused' && english(done.why)).toContain(
+      'where a range keeps its one formula',
+    );
   });
 });

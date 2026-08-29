@@ -5,6 +5,7 @@ import {
   type FacetOrigin,
 } from '@yxl-vscode/compile';
 import { holds, type Op, type Path, renderScalar, type Value } from '@yxl-vscode/cst';
+import { type Saying, sentence } from '@yxl-vscode/diag';
 import { CELL_HOLDS, KEY } from '@yxl-vscode/spec';
 import {
   type A1Addr,
@@ -32,6 +33,7 @@ import {
 import { type Excepted, overrides } from './override';
 import type { Standing } from './paste';
 import { detachment } from './resolve';
+import { say } from './text';
 import type { Projection } from './writes';
 
 /** One address a paste lands on, and what is going into it. */
@@ -54,7 +56,7 @@ export function landed(
   going: readonly Entry[],
   read: Reading,
   how: Landing,
-): Put | string {
+): Put | Saying {
   const { doing, refusals = [] } = how;
   const ops = new Map<FilePath, Op[]>();
   const fresh: Entry[] = [];
@@ -72,7 +74,7 @@ export function landed(
     }
 
     const landing = into(to, already.provenance.value, one, read);
-    if (typeof landing === 'string') {
+    if (sentence(landing)) {
       const by = stood(already.provenance.value);
       held.push({ at: one.at, why: landing, by });
       if (by === doing) excepting.push(one);
@@ -89,7 +91,7 @@ export function landed(
 
   if (excepting.length > 0 && doing !== 'refuse' && doing !== 'skip') {
     const made = excepted(spec, to, sheet, excepting, doing, read);
-    if (typeof made === 'string') return made;
+    if (sentence(made)) return made;
 
     ops.set(made.file, [...(ops.get(made.file) ?? []), ...made.ops]);
     for (const one of excepting) cells.add(qualified(sheet, one.at));
@@ -99,7 +101,7 @@ export function landed(
 
   if (fresh.length > 0) {
     const made = entries(to, fresh, read);
-    if (typeof made === 'string') return made;
+    if (sentence(made)) return made;
 
     ops.set(made.file, [...(ops.get(made.file) ?? []), ...made.ops]);
   }
@@ -113,14 +115,13 @@ function into(
   origin: FacetOrigin,
   one: Entry,
   read: Reading,
-): Landed | string {
+): Landed | Saying {
   const { at, holds } = one;
   const found = literalPath(origin, sheet, at, read);
-  if (found.kind === 'refused') return `\`${at}\` cannot be written: ${found.why}`;
+  if (found.kind === 'refused') return say('intent.cannot-be-written', { at, why: found.why });
 
   if (origin.kind === 'inline') {
-    if ('formula' in holds)
-      return `\`${at}\` is a field of a \`data:\` block, which holds no formula`;
+    if ('formula' in holds) return say('intent.data-field-no-formula', { at });
 
     const path = [...found.path, KEY.values, origin.row, origin.col];
     return { file: found.file, ops: [{ op: 'set', path, value: holds.value }] };
@@ -137,18 +138,18 @@ function excepted(
   these: readonly Entry[],
   by: Stood,
   read: Reading,
-): Landed | string {
+): Landed | Saying {
   if (by === 'definition') return detached(to, these, read);
 
-  const said = overrides(spec, sheet, these.map(saying), read);
+  const said = overrides(spec, sheet, these.map(overriding), read);
   if (said.kind === 'refused') return said.why;
-  if (said.kind !== 'edit') return 'these cells cannot be written as overrides';
+  if (said.kind !== 'edit') return say('intent.not-as-overrides');
 
   return { file: said.file, ops: said.patch.ops };
 }
 
 /** What an override says for a pasted cell: what the cell holds, and no reason — the reader gave none. */
-function saying(one: Entry): Excepted {
+function overriding(one: Entry): Excepted {
   return {
     at: one.at,
     says: 'formula' in one.holds ? { formula: one.holds.formula } : { value: one.holds.value },
@@ -156,28 +157,28 @@ function saying(one: Entry): Excepted {
 }
 
 /** The cells reading a definition, each written as a value of its own; a formula has no such form. */
-function detached(to: CompiledSheet, these: readonly Entry[], read: Reading): Landed | string {
+function detached(to: CompiledSheet, these: readonly Entry[], read: Reading): Landed | Saying {
   const ops: Op[] = [];
   let file: FilePath | null = null;
 
   for (const one of these) {
     const origin = cellAt(to, one.at)?.provenance.value;
-    if (origin?.kind !== 'defRef') return `\`${one.at}\` no longer reads a definition`;
+    if (origin?.kind !== 'defRef') return say('intent.no-longer-a-definition', { at: one.at });
     if ('formula' in one.holds) {
-      return `\`${one.at}\` would take a formula, and a cell that reads a definition takes a value in its place`;
+      return say('intent.definition-takes-a-value', { at: one.at });
     }
 
     const taken = detachment(origin, one.holds.value, read);
-    if (taken === null) return `\`${one.at}\` has no reference to write over`;
+    if (taken === null) return say('intent.no-reference-to-write-over', { at: one.at });
     if (file !== null && file !== taken.file) {
-      return `these cells are written across ${beside(file)} and ${beside(taken.file)}, and this editor writes one file at a time`;
+      return say('intent.across-two-files', { one: beside(file), other: beside(taken.file) });
     }
 
     file = taken.file;
     ops.push(taken.op);
   }
 
-  return file === null ? 'there is nothing here to detach' : { file, ops };
+  return file === null ? say('intent.nothing-to-detach') : { file, ops };
 }
 
 /**
@@ -199,10 +200,10 @@ interface Landed {
 }
 
 /** The addresses nothing writes yet, as `cells:` entries; the `cells:` key itself can only be written once (ADR-032). */
-function entries(sheet: CompiledSheet, fresh: readonly Entry[], read: Reading): Landed | string {
+function entries(sheet: CompiledSheet, fresh: readonly Entry[], read: Reading): Landed | Saying {
   const found = located(sheet.node, read);
-  if (found.kind === 'refused') return `these cells cannot be written: ${found.why}`;
-  if (found.node.kind !== 'map') return 'these cells cannot be written: the sheet is not a mapping';
+  if (found.kind === 'refused') return say('intent.these-cannot-be-written', { why: found.why });
+  if (found.node.kind !== 'map') return say('intent.sheet-not-a-mapping');
 
   const away = keptElsewhere(found.node, KEY.cells, sheet.name);
   if (away !== null) return away;
@@ -225,12 +226,14 @@ function entries(sheet: CompiledSheet, fresh: readonly Entry[], read: Reading): 
 }
 
 /** What a cell holds as it would apply where it is going: a formula moves with it (ADR-031). */
-export function taking(cell: CompiledCell, by: Offset): Holds | string {
-  if (cell.rich !== null) return `\`${cell.at}\` holds rich text, which this editor does not paste`;
+export function taking(cell: CompiledCell, by: Offset): Holds | Saying {
+  if (cell.rich !== null) return say('intent.rich-not-pasted', { at: cell.at });
   if (cell.formula === null) return { value: cell.value };
 
   const done = moved(cell.formula, by);
-  return done.ok ? { formula: done.formula } : `\`${cell.at}\` holds a formula that ${done.why}`;
+  return done.ok
+    ? { formula: done.formula }
+    : say('intent.formula-cannot-move', { at: cell.at, why: done.why });
 }
 
 /** What a cell holds, written into the entry that is already there; what it wears is left alone. */

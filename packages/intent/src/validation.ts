@@ -1,4 +1,5 @@
 import { type Op, renderScalar } from '@yxl-vscode/cst';
+import type { Saying } from '@yxl-vscode/diag';
 import { KEY, type ScalarValue } from '@yxl-vscode/spec';
 import { type Rect, rangeOf, type SheetName } from '@yxl-vscode/units';
 import { nothingChanges } from '@yxl-vscode/verify';
@@ -11,6 +12,7 @@ import {
   refused,
   writtenSheet,
 } from './direct';
+import { say } from './text';
 
 /** A validation as a gesture asks for it: the choices a range takes, or `null` to take one off. */
 export interface Validating {
@@ -47,13 +49,13 @@ function putting(
   choices: readonly ScalarValue[],
   rect: Rect,
   holds: Anchored,
-): { ops: readonly Op[] } | { why: string } {
-  if (choices.length === 0) return { why: 'a list needs a choice to offer' };
+): { ops: readonly Op[] } | { why: Saying } {
+  if (choices.length === 0) return { why: say('intent.list-needs-a-choice') };
 
   const over = holds.touched[0]?.rect;
   if (over !== undefined) {
     return {
-      why: `\`${rangeOf(over)}\` already has a validation, and a cell takes one at a time`,
+      why: say('intent.already-validated', { range: rangeOf(over) }),
     };
   }
 

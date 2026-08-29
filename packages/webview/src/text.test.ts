@@ -2,6 +2,7 @@
 
 import { afterEach, describe, expect, it } from 'vitest';
 import { cell, drawing, sheet as drawnSheet, showingOf } from './harness';
+import { refusal } from './panels';
 import { toolbar } from './toolbar';
 import { chrome, spanned } from './worded';
 
@@ -66,5 +67,20 @@ describe('the panel in the reader’s own language', () => {
     document.documentElement.lang = 'ja';
     expect(chrome('view.insert-before', { many: 2, axis: 'column' })).toBe('2 列を左に挿入');
     expect(chrome('view.insert-after', { many: 1, axis: 'row' })).toBe('1 行を下に挿入');
+  });
+});
+
+describe('what the host said, worded in the panel', () => {
+  it('reaches the panel already worded, since the host owns those books', () => {
+    document.documentElement.lang = 'ja';
+    const refused = {
+      kind: 'refused' as const,
+      why: 'N3 はこの範囲の唯一の数式が書かれている場所です',
+      about: null,
+      canOverride: false,
+      choices: [],
+    };
+
+    expect(refusal(refused, {} as never).querySelector('.why')?.textContent).toBe(refused.why);
   });
 });

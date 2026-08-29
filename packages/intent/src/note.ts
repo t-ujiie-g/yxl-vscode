@@ -1,4 +1,5 @@
 import { entryOf, type Node, type Op, type Path, renderScalar } from '@yxl-vscode/cst';
+import type { Saying } from '@yxl-vscode/diag';
 import { KEY } from '@yxl-vscode/spec';
 import type { A1Addr, SheetName } from '@yxl-vscode/units';
 import { nothingChanges } from '@yxl-vscode/verify';
@@ -10,6 +11,7 @@ import {
   refused,
   writtenSheet,
 } from './direct';
+import { say } from './text';
 
 /** A note on a cell as a gesture asks for it: what it says, or `null` to take it off. */
 export interface Noting {
@@ -49,17 +51,17 @@ interface Where {
   readonly sheet: Path;
 }
 
-function writing(want: Noting, where: Where): { ops: readonly Op[] } | { why: string } {
+function writing(want: Noting, where: Where): { ops: readonly Op[] } | { why: Saying } {
   const { comments, already, under } = where;
 
   if (want.text === null) {
-    if (already === null) return { why: `\`${want.at}\` has no note to take off` };
+    if (already === null) return { why: say('intent.no-note-to-take-off', { at: want.at }) };
 
     const alone = comments?.kind === 'map' && comments.entries.length === 1;
     return { ops: [{ op: 'remove', path: alone ? under : [...under, want.at] }] };
   }
 
-  if (want.text === '') return { why: 'a note needs something to say' };
+  if (want.text === '') return { why: say('intent.note-needs-something') };
 
   if (already === null) {
     return {
@@ -80,7 +82,7 @@ function writing(want: Noting, where: Where): { ops: readonly Op[] } | { why: st
     return { ops: [{ op: 'set', path: [...under, want.at], value: want.text }] };
   }
   if (entryOf(already, KEY.text) === undefined) {
-    return { why: `the note on \`${want.at}\` is not written as text` };
+    return { why: say('intent.note-not-text', { at: want.at }) };
   }
 
   return { ops: [{ op: 'set', path: [...under, want.at, KEY.text], value: want.text }] };

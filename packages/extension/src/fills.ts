@@ -1,6 +1,7 @@
 import { setFilled } from '@yxl-vscode/intent';
 import type { Filled } from '@yxl-vscode/webview/protocol';
 import { type Asking, asked } from './asked';
+import { say } from './text';
 import { type Port, rectIn, type Spec } from './write';
 
 /**
@@ -16,8 +17,7 @@ const FILL: Asking<Filled> = {
   about: (filled) => ({ ...filled, kind: 'fill' }),
   answers: (spec, filled, sheet, read) =>
     setFilled(spec, { sheet, rect: rectIn(filled), axis: filled.axis }, read),
-  nothing: (filled) =>
-    `nothing on the first ${filled.axis === 'row' ? 'row' : 'column'} of this is written, so there is nothing to fill`,
-  why: () => 'a spec can hold this as one range or as a cell each, so it is worth saying which',
-  done: (_filled, taken) => `${taken.what.replace(/^W/, 'w')}: done.`,
+  nothing: (filled) => say('host.nothing-to-fill', { axis: filled.axis }),
+  why: () => say('host.one-range-or-each'),
+  done: (_filled, taken) => say('host.fill-done', { what: taken.what }),
 };

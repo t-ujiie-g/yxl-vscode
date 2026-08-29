@@ -4,7 +4,7 @@ import { type Ctx, checked } from '@yxl-vscode/verify';
 import { describe, expect, it } from 'vitest';
 import { clearCell, clearRange } from './clear';
 import { type Intent, reading, type Text } from './direct';
-import { files, ROOT } from './harness';
+import { english, files, ROOT } from './harness';
 
 const SALES = 'sheets:\n  - name: Sales\n';
 
@@ -16,7 +16,7 @@ function emptied(source: string, at: string): Intent {
 /** The gesture taken all the way through the checker, which is the only way in. */
 function after(source: string, at: string): string {
   const intent = emptied(source, at);
-  if (intent.kind === 'refused') throw new Error(`refused: ${intent.why}`);
+  if (intent.kind === 'refused') throw new Error(`refused: ${english(intent.why)}`);
   if (intent.kind !== 'edit') throw new Error('a file was written, not a spec');
 
   const { includes } = files({ [ROOT]: source });
@@ -88,7 +88,7 @@ describe('what emptying will not do', () => {
     const spec = `${SALES}    cells:\n      A1: 1\n    formulas:\n      - at: B1:B2\n        formula: "A1"\n`;
     const intent = emptied(spec, 'B2');
 
-    expect(intent.kind === 'refused' && intent.why).toContain('filled by the range');
+    expect(intent.kind === 'refused' && english(intent.why)).toContain('filled by the range');
   });
 
   it('takes `cells:` out with the only cell it held, which cannot be left empty', () => {
@@ -125,7 +125,7 @@ describe('a rectangle emptied as one edit', () => {
   ) => {
     const intent = rectangle(source, rect);
     if (intent.kind !== 'edit')
-      throw new Error(intent.kind === 'refused' ? intent.why : 'not a spec edit');
+      throw new Error(intent.kind === 'refused' ? english(intent.why) : 'not a spec edit');
 
     const { includes } = files({ [ROOT]: source });
     const done = checked(source, intent.patch, intent.expects, {
@@ -170,7 +170,7 @@ describe('a rectangle emptied as one edit', () => {
     const spec = `${SALES}    cells:\n      A1: 1\n      A2: 2\n    formulas:\n      - at: B1:B2\n        formula: "A1"\n`;
     const intent = rectangle(spec, { top: 1, left: 1, bottom: 2, right: 2 });
 
-    expect(intent.kind === 'refused' && intent.why).toBe(
+    expect(intent.kind === 'refused' && english(intent.why)).toBe(
       '2 of the 4 cells here cannot be emptied, so none were: 2 are filled by a range',
     );
   });
@@ -205,7 +205,7 @@ describe('a rectangle emptied as one edit', () => {
 
   it('refuses a rectangle with nothing in it, rather than writing nothing', () => {
     const intent = rectangle(GRID, { top: 8, left: 8, bottom: 9, right: 9 });
-    expect(intent.kind === 'refused' && intent.why).toContain('nothing in this range');
+    expect(intent.kind === 'refused' && english(intent.why)).toContain('nothing in this range');
   });
 
   it('reads the file once, however many cells the rectangle holds', () => {

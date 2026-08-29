@@ -1,11 +1,16 @@
 /** The fixtures a write's tests are built on: a spec as text, and what a gesture needs of it. */
 import { type CompiledGrid, compile } from '@yxl-vscode/compile';
-import { parse } from '@yxl-vscode/cst';
+import { WORDS as cst, parse } from '@yxl-vscode/cst';
+import { type Saying, reading as wording } from '@yxl-vscode/diag';
 import { type IncludeReader, load } from '@yxl-vscode/loader';
 import type { SpecDoc } from '@yxl-vscode/spec';
 import { type FilePath, filePath } from '@yxl-vscode/units';
 import { type Checked, type Ctx, checked } from '@yxl-vscode/verify';
 import { type Intent, type Reading, reading, type Text } from './direct';
+import { WORDS } from './text';
+
+/** What the core said, in English, which is the language a test reads its own assertions in. */
+export const english: (saying: Saying) => string = wording('en', cst, WORDS);
 
 /** The spec these tests edit, which is the file a one-file spec is written in. */
 export const ROOT = filePath('spec.yxl.yaml') ?? ('' as FilePath);
@@ -45,16 +50,18 @@ export function checking(of: Written, intent: Intent & { kind: 'edit' }): Checke
 
 /** The file as it stands after the intent, or `refused:` and why — for a test that asserts on both. */
 export function tried(of: Written, intent: Intent): string {
-  if (intent.kind === 'refused') return `refused: ${intent.why}`;
+  if (intent.kind === 'refused') return `refused: ${english(intent.why)}`;
   if (intent.kind !== 'edit') throw new Error('a file was not written');
 
   const done = checking(of, intent);
-  return done.ok === false ? `refused: ${done.diagnostics[0]?.message ?? 'a surprise'}` : done.text;
+  return done.ok === false
+    ? `refused: ${english(done.diagnostics[0]?.message ?? 'a surprise')}`
+    : done.text;
 }
 
 /** The same where the test is not about a refusal: the file, or a throw naming what stood in the way. */
 export function wrote(of: Written, intent: Intent): string {
-  if (intent.kind === 'refused') throw new Error(`refused: ${intent.why}`);
+  if (intent.kind === 'refused') throw new Error(`refused: ${english(intent.why)}`);
   if (intent.kind !== 'edit') throw new Error('a file was not written');
 
   const done = checking(of, intent);

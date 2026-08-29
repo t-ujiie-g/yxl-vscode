@@ -3,12 +3,12 @@ import type { A1Addr, SheetName } from '@yxl-vscode/units';
 import { type Ctx, checked } from '@yxl-vscode/verify';
 import { describe, expect, it } from 'vitest';
 import { excepting, type Intent, keyed, reading, setFormula, setValue } from './direct';
-import { files, ROOT } from './harness';
+import { english, files, ROOT } from './harness';
 
 /** A spec of one or more files, read the way the extension reads one. */
 
 function edited(sources: Record<string, string>, intent: Intent): string {
-  if (intent.kind === 'refused') throw new Error(`refused: ${intent.why}`);
+  if (intent.kind === 'refused') throw new Error(`refused: ${english(intent.why)}`);
   if (intent.kind !== 'edit') throw new Error('a file was written, not a spec');
 
   const { includes } = files(sources);
@@ -74,7 +74,7 @@ describe('what typing into a cell will not do', () => {
   function why(sources: Record<string, string>, address: string): string {
     const { grid, read } = files(sources);
     const intent = setValue(grid, at(address), 'x', read);
-    return intent.kind === 'refused' ? intent.why : '';
+    return intent.kind === 'refused' ? english(intent.why) : '';
   }
 
   it('refuses a value that came from a definition, and says which', () => {
@@ -88,7 +88,7 @@ describe('what typing into a cell will not do', () => {
     const { grid, read } = files(sources);
     const intent = setValue(grid, at('A1'), 'x', read);
 
-    expect(intent.kind === 'refused' && intent.why).toContain('sales.csv');
+    expect(intent.kind === 'refused' && english(intent.why)).toContain('sales.csv');
   });
 
   it('refuses a cell a `formulas:` range fills, naming the range that fills it', () => {
@@ -159,7 +159,7 @@ describe('typing a formula into a cell', () => {
     const { grid, read } = files(sources);
     const intent = setValue(grid, at('B1'), 5, read);
 
-    expect(intent.kind === 'refused' && intent.why).toContain('holds a formula');
+    expect(intent.kind === 'refused' && english(intent.why)).toContain('holds a formula');
   });
 
   it('refuses it even where a cached result sits beside the formula', () => {
@@ -171,7 +171,7 @@ describe('typing a formula into a cell', () => {
     const { grid, read } = files(sources);
     const intent = setValue(grid, at('B1'), 5, read);
 
-    expect(intent.kind === 'refused' && intent.why).toContain('holds a formula');
+    expect(intent.kind === 'refused' && english(intent.why)).toContain('holds a formula');
   });
 
   it('writes into a formula the spec folded across lines, keeping the fold', () => {
@@ -192,7 +192,7 @@ describe('typing a formula into a cell', () => {
     const { grid, read } = files(sources);
     const intent = setFormula(grid, at('A1'), 'SUM(B1:B2)', read);
 
-    expect(intent.kind === 'refused' && intent.why).toContain('holds no formula');
+    expect(intent.kind === 'refused' && english(intent.why)).toContain('holds no formula');
   });
 });
 
@@ -230,15 +230,19 @@ describe('the files an edit reads', () => {
 
 describe('what an answer for one group of a rectangle says', () => {
   it('names the group in the words the refusal counted it in', () => {
-    expect(excepting('range', 2)).toBe('Write the 2 that are filled by a range as overrides');
+    expect(english(excepting('range', 2))).toBe(
+      'Write the 2 that are filled by a range as overrides',
+    );
   });
 
   it('says one of them singly, since a count of one improves on nothing', () => {
-    expect(excepting('parameter', 1)).toBe('Write the one that reads a parameter as an override');
+    expect(english(excepting('parameter', 1))).toBe(
+      'Write the one that reads a parameter as an override',
+    );
   });
 
   it('says what a cell reading a definition becomes, which is not an override', () => {
-    expect([excepting('definition', 1), excepting('definition', 3)]).toEqual([
+    expect([english(excepting('definition', 1)), english(excepting('definition', 3))]).toEqual([
       'Write the one that reads a definition as a value of its own',
       'Write the 3 that read a definition as values of their own',
     ]);

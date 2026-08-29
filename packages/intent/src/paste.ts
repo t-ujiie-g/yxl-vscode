@@ -1,5 +1,6 @@
 import { type CompiledGrid, type CompiledSheet, cellAt, sheetOf } from '@yxl-vscode/compile';
 import { entryOf, type Op, renderScalar } from '@yxl-vscode/cst';
+import { sentence } from '@yxl-vscode/diag';
 import { KEY, type ScalarValue } from '@yxl-vscode/spec';
 import {
   type A1Addr,
@@ -23,6 +24,7 @@ import {
   type Stood,
 } from './direct';
 import { type Entry, landed, taking } from './landing';
+import { say } from './text';
 import { meaning } from './typed';
 import type { Projection } from './writes';
 
@@ -54,16 +56,16 @@ export function pasteRange(
   const grid = spec.grid;
   const from = sheetOf(grid, where.from.sheet);
   const to = sheetOf(grid, where.to.sheet);
-  if (from === null) return refused(`there is no sheet named \`${where.from.sheet}\``);
-  if (to === null) return refused(`there is no sheet named \`${where.to.sheet}\``);
+  if (from === null) return refused(say('intent.no-such-sheet', { sheet: where.from.sheet }));
+  if (to === null) return refused(say('intent.no-such-sheet', { sheet: where.to.sheet }));
 
   const corner = cellOf(where.to.at);
   const by = { cols: corner.col - where.from.rect.left, rows: corner.row - where.from.rect.top };
   const still = where.from.sheet === where.to.sheet && by.cols === 0 && by.rows === 0;
-  if (still) return refused('these cells are already here');
+  if (still) return refused(say('intent.cells-already-here'));
 
   if (where.cut && where.from.sheet === where.to.sheet && overlaps(where.from.rect, by)) {
-    return refused('a cut cannot land on the cells it is taking, and these overlap');
+    return refused(say('intent.cut-overlaps'));
   }
 
   const going: Entry[] = [];
@@ -75,7 +77,7 @@ export function pasteRange(
       if (cell === null) continue;
 
       const holds = taking(cell, by);
-      if (typeof holds !== 'string') {
+      if (!sentence(holds)) {
         going.push({ at: addrAt({ col: col + by.cols, row: row + by.rows }), holds });
         continue;
       }
@@ -90,7 +92,7 @@ export function pasteRange(
     verb: 'pasted',
     nothing: 'nothing in this rectangle can be pasted here',
   });
-  if (typeof put === 'string') return refused(put);
+  if (sentence(put)) return refused(put);
 
   return together(grid, where, put.ops, put.cells, read);
 }
@@ -106,9 +108,7 @@ function together(
   const files = [...ops.keys()];
   const file = files[0];
   if (file === undefined || files.length > 1) {
-    return refused(
-      `this rectangle would be written across ${files.map(beside).join(' and ')}, and this editor writes one file at a time`,
-    );
+    return refused(say('intent.rect-across-files', { files: files.map(beside).join(' and ') }));
   }
 
   const put = ops.get(file) ?? [];
@@ -123,11 +123,9 @@ function together(
     put,
   );
   if (taken.kind === 'refused') return taken;
-  if (taken.kind !== 'edit') return refused('the cells this cut takes are not in a spec file');
+  if (taken.kind !== 'edit') return refused(say('intent.cut-not-in-a-spec'));
   if (taken.file !== file) {
-    return refused(
-      `this cut would take from ${beside(taken.file)} and write to ${beside(file)}, and this editor writes one file at a time`,
-    );
+    return refused(say('intent.cut-across-files', { from: beside(taken.file), to: beside(file) }));
   }
 
   return {
@@ -161,8 +159,8 @@ export function pasteText(
 ): Intent {
   const grid = spec.grid;
   const to = sheetOf(grid, where.sheet);
-  if (to === null) return refused(`there is no sheet named \`${where.sheet}\``);
-  if (rows.length === 0) return refused('there is nothing on the clipboard to put down');
+  if (to === null) return refused(say('intent.no-such-sheet', { sheet: where.sheet }));
+  if (rows.length === 0) return refused(say('intent.nothing-on-clipboard'));
 
   const corner = cellOf(where.at);
   const going: Entry[] = [];
@@ -180,14 +178,12 @@ export function pasteText(
     verb: 'pasted',
     nothing: 'nothing in this rectangle can be pasted here',
   });
-  if (typeof put === 'string') return refused(put);
+  if (sentence(put)) return refused(put);
 
   const written = [...put.ops.keys()];
   const file = written[0];
   if (file === undefined || written.length > 1) {
-    return refused(
-      `this rectangle would be written across ${written.map(beside).join(' and ')}, and this editor writes one file at a time`,
-    );
+    return refused(say('intent.rect-across-files', { files: written.map(beside).join(' and ') }));
   }
 
   return {
@@ -226,12 +222,12 @@ function block(
   read: Reading,
 ): Intent {
   if (!couldBlock(grid, where, rows)) {
-    return refused('a `data:` block can only go where nothing writes those cells yet');
+    return refused(say('intent.data-needs-empty-cells'));
   }
 
   const found = located(to.node, read);
   if (found.kind === 'refused') return found;
-  if (found.node.kind !== 'map') return refused('this sheet is not a mapping');
+  if (found.node.kind !== 'map') return refused(say('intent.not-a-mapping'));
 
   const body = [
     `at: ${where.at}`,

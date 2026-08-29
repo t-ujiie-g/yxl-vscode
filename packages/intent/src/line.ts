@@ -22,7 +22,8 @@ import {
 import { spelled } from './bands';
 import { type Found, type Intent, located, type Projection, type Reading, refused } from './direct';
 import type { Candidate } from './resolve';
-import { along, blocks, lineSaid, shifting } from './shift';
+import { along, blocks, shifting } from './shift';
+import { say } from './text';
 
 /**
  * A row or a column inserted, or taken away: every construct the line reaches
@@ -31,8 +32,8 @@ import { along, blocks, lineSaid, shifting } from './shift';
  */
 export function drawLine(spec: Projection, line: Line, read: Reading): Intent {
   const sheet = sheetOf(spec.grid, line.sheet);
-  if (sheet === null) return refused(`there is no sheet named \`${line.sheet}\``);
-  if (line.at < 1) return refused(`there is no ${line.axis} ${line.at}`);
+  if (sheet === null) return refused(say('intent.no-such-sheet', { sheet: line.sheet }));
+  if (line.at < 1) return refused(say('intent.no-such-band', { axis: line.axis, at: line.at }));
 
   const stopped = shifting(sheet, line).stops[0];
   if (stopped !== undefined) return refused(stopped);
@@ -72,7 +73,13 @@ export function setLine(spec: Projection, line: Line, read: Reading): readonly C
   return [
     {
       id: 'line',
-      what: `${said(line)}, moving ${counted(moves.length, keys)}`,
+      keys,
+      what: say(line.by < 0 ? 'intent.take-lines-away' : 'intent.put-lines-in', {
+        ...reaching(line),
+        many: line.by,
+        things: moves.length,
+        keys,
+      }),
       moves: intent.kind === 'edit' ? [...intent.expects.cells].map(named) : [],
       alone: moves.length <= MANY,
       intent,
@@ -81,21 +88,6 @@ export function setLine(spec: Projection, line: Line, read: Reading): readonly C
 }
 
 /** What the gesture is, as the reader asked for it. */
-function said(line: Line): string {
-  const many = Math.abs(line.by);
-  const what = many === 1 ? line.axis : `${many} ${line.axis}s`;
-
-  return line.by < 0 ? `Take ${lineSaid(line)} away` : `Put ${what} in above ${lineSaid(line)}`;
-}
-
-/** What it costs, in the lines of YAML it would touch and the cell keys among them. */
-function counted(all: number, keys: number): string {
-  const things = `${all} thing${all === 1 ? '' : 's'}`;
-  if (keys === 0) return things;
-
-  return `${things}, ${keys === all ? 'all' : keys} of them \`cells:\` keys`;
-}
-
 /** One qualified address back into the sheet and cell it names. */
 function named(one: string): FullAddr {
   const [sheet = '', at = ''] = one.split('!');
@@ -242,9 +234,9 @@ function writing(sheet: CompiledSheet, line: Line, read: Reading): Writing | Int
 
   const files = [...ops.keys()];
   const file = files[0];
-  if (file === undefined) return refused(`nothing here moves when ${lineSaid(line)} is drawn`);
+  if (file === undefined) return refused(say('intent.nothing-moves', reaching(line)));
   if (files.length > 1) {
-    return refused(`${lineSaid(line)} reaches more than one file, which this cannot write at once`);
+    return refused(say('intent.band-across-files', reaching(line)));
   }
 
   return { kind: 'writing', file, ops: ops.get(file) ?? [], moves };
@@ -329,4 +321,9 @@ function opened(rect: Rect, line: Line, path: Path): readonly Op[] {
         : ({ op: 'insert', path: [...values, row], index: first, value: null } as const),
     ),
   ).flat();
+}
+
+/** The run of rows or columns a line draws, as a refusal names it. */
+function reaching(line: Line): { axis: string; at: number; last: number } {
+  return { axis: line.axis, at: line.at, last: line.by < 0 ? line.at - line.by - 1 : line.at };
 }

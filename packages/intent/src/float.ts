@@ -23,6 +23,7 @@ import {
   writtenSheet,
 } from './direct';
 import type { Candidate } from './resolve';
+import { say } from './text';
 
 /** A chart a gesture asked for over a rectangle, in the shape the reader picked. */
 export interface Charting {
@@ -59,7 +60,7 @@ export function chartsOver(
 
   return CHART_SHAPES.map((type) => ({
     id: `chart:${type}`,
-    what: `A ${type} chart`,
+    what: say('intent.a-chart', { type }),
     moves: [],
     alone: false,
     intent: chartOver(spec, { ...where, type }, read),
@@ -78,9 +79,7 @@ export function chartOver(spec: Projection, where: Charting, read: Reading): Int
   const plot = plotted(found.sheet, where.rect);
   if (plot === null) {
     const wide = rangeOf(where.rect);
-    return refused(
-      `\`${wide}\` is one column, and a chart plots a column against the labels beside it`,
-    );
+    return refused(say('intent.one-column-chart', { at: wide }));
   }
 
   const at = addrAt({ col: where.rect.right + GAP, row: where.rect.top });
@@ -216,9 +215,7 @@ export function moveFloat(where: Anchoring, read: Reading): Intent {
 
   const written = entryOf(found.node, KEY.at)?.value ?? null;
   if (written !== null && parameterised(written)) {
-    return refused(
-      'this floats where a parameter says, and moving it would write over the parameter',
-    );
+    return refused(say('intent.floats-from-a-parameter'));
   }
 
   const ops: Op[] = [{ op: 'set', path: [...found.path, KEY.at], value: String(where.at) }];
@@ -316,7 +313,7 @@ function put(found: Entry, key: string, value: string | number): Op {
 function floating(node: NodeId, read: Reading): Found {
   const found = located(node, read);
   if (found.kind === 'refused') return found;
-  if (found.node.kind !== 'map') return refused('this is not written as something that floats');
+  if (found.node.kind !== 'map') return refused(say('intent.not-a-float'));
 
   return found;
 }

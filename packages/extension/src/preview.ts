@@ -33,7 +33,6 @@ import type {
   Validated,
   Worn,
 } from '@yxl-vscode/webview/protocol';
-import { reader } from '@yxl-vscode/webview/words';
 import * as vscode from 'vscode';
 import { moved, resized } from './anchors';
 import { chart } from './charts';
@@ -65,6 +64,7 @@ import { summed } from './summing';
 import { table } from './tables';
 import { goBack } from './undo';
 import { validate } from './validations';
+import { reader } from './words';
 import {
   emptied,
   empty,
@@ -667,7 +667,7 @@ export class Preview {
       },
       refuse: (why, offer) => this.refuse(why, offer),
       said: (what) => {
-        this.send({ kind: 'said', text: what });
+        this.send({ kind: 'said', text: this.worded(what) });
       },
       kept: (step) => {
         if (step !== null) {
@@ -686,11 +686,16 @@ export class Preview {
   private refuse(why: Saying, offer: Offer | null): void {
     this.send({
       kind: 'refused',
-      why,
+      why: this.plainly(why),
       about: offer?.about ?? null,
       canOverride: offer?.canOverride ?? false,
-      choices: offer?.choices ?? [],
+      choices: (offer?.choices ?? []).map((one) => ({ ...one, what: this.plainly(one.what) })),
     });
+  }
+
+  /** A sentence as the panel shows it: worded here, without the backticks a spec's own words wear. */
+  private plainly(saying: Saying): string {
+    return this.worded(saying).replace(/`/g, '');
   }
 
   private close(): void {

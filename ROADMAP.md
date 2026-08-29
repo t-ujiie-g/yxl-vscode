@@ -1975,8 +1975,10 @@ reach.
       preview says about `print:` and `protect:` — 140 sentences, in the panel's
       own book (`webview/src/text.ts`), worded by `chrome()` off `<html lang>`.
 - [ ] Every refusal and every diagnostic, which is the long tail and the reason
-      the decision comes first: `loader` and `compile` (94 sites behind
-      `reject`), then `intent`'s 122 refusals, then `verify` and `normalize`.
+      the decision comes first. **Done: every refusal** — `intent`'s 122 and the
+      host's own, with the answers they offer. **Left: the diagnostics** —
+      `loader` and `compile`, 94 sites behind `reject`, and `units`' formula
+      prose that a refusal still quotes verbatim.
 - [x] The language follows VS Code's own (`vscode.env.language`); no setting of
       our own until somebody asks for one. The host sets `<html lang>` from it,
       and the view reads it from there.
@@ -3594,6 +3596,39 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-29 — Every refusal, in the reader's own language
+
+Phase 19's long tail, minus the diagnostics: everything this editor says when it
+will not do what was asked, and every answer it offers instead.
+
+- **`intent`'s 122 refusals**, and the host's own 40 — the sentences under
+  *Leave it as it is*, the answers in the question above them, and the line the
+  panel says after a gesture worked.
+- **An argument may be data now, and a sentence may quote a sentence.** A
+  rectangle's refusal counts what stood in the way *by kind* — `2 cells are
+  filled by a range, 1 reads a parameter` — and Japanese counts with a unit
+  after the noun. Neither language can be assembled from the other's fragments,
+  so `Args` carries any JSON value and a sentence is handed a `worded` for an
+  argument that is a message. ADR-051 is amended with both.
+- **A message is worded by the side that owns its book.** The view cannot import
+  the host's book, so the host words a refusal, its answers and its `said:` line
+  before sending, and the view words what it draws from a drawing. That put the
+  backtick stripping back where it was, at one place on the host.
+- **Two prose sniffs went**, which is what a pass like this is for: the line
+  offer read its own English (`what.includes('`cells:` keys')`) to decide
+  whether to add a hint — it carries the count now — and two `done` messages
+  lower-cased a candidate's first letter to embed it. That is grammar, and it
+  belongs in the sentence.
+- **The language test earned its keep twice more**: `${said} (${chord})` and
+  `${name}: ${values}` are composition rather than prose, and the group's
+  argument shapes made the old stub break. It compares the two sentences' source
+  now, which is what a copied line actually looks like.
+- **What is still English**: `loader` and `compile`'s diagnostics, and `units`'
+  formula prose, which a refusal quotes verbatim through the `string` half of
+  `Saying`.
+- 2427 → 2430 tests. Comment shape: export 887 blocks / 1965 lines / avg 2.2,
+  private 579 / 579 / avg 1.0, inline 135 / 215 / avg 1.6; 0 over the limit.
 
 ### 2026-08-29 — The panel in the reader's own language
 

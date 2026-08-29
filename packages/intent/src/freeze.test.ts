@@ -1,7 +1,7 @@
 import { type A1Addr, parseA1Addr, type SheetName } from '@yxl-vscode/units';
 import { describe, expect, it } from 'vitest';
 import { setFreeze } from './freeze';
-import { files, wrote } from './harness';
+import { english, files, wrote } from './harness';
 
 const SALES = 'sheets:\n  - name: Sales\n';
 const CELLS = '    cells:\n      A1: 1\n';
@@ -32,7 +32,9 @@ describe('a sheet that freezes nothing yet', () => {
 
   it('has nothing to take off', () => {
     const intent = asked(`${SALES}${CELLS}`, null);
-    expect(intent.kind === 'refused' && intent.why).toContain('freezes nothing to take off');
+    expect(intent.kind === 'refused' && english(intent.why)).toContain(
+      'freezes nothing to take off',
+    );
   });
 });
 
@@ -51,17 +53,17 @@ describe('a sheet already frozen', () => {
 describe('a freeze that cannot be written', () => {
   it('is refused at A1, which would freeze nothing (`docs/spec.md` §2)', () => {
     const intent = asked(`${SALES}${CELLS}`, 'A1');
-    expect(intent.kind === 'refused' && intent.why).toContain('freezes nothing');
+    expect(intent.kind === 'refused' && english(intent.why)).toContain('freezes nothing');
   });
 
   it('is refused on a sheet that is split, since the two cannot be combined', () => {
     const split = `${SALES}${CELLS}    split: { x: 120, y: 60 }\n`;
     const intent = asked(split, 'B2');
-    expect(intent.kind === 'refused' && intent.why).toContain('cannot have both');
+    expect(intent.kind === 'refused' && english(intent.why)).toContain('cannot have both');
   });
 
   it('is refused where no sheet is named that', () => {
     const intent = asked(`${SALES}${CELLS}`, 'B2', 'Nowhere');
-    expect(intent.kind === 'refused' && intent.why).toContain('there is no sheet named');
+    expect(intent.kind === 'refused' && english(intent.why)).toContain('there is no sheet named');
   });
 });

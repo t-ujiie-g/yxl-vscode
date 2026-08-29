@@ -20,6 +20,7 @@ import {
   standing,
   stood,
 } from './direct';
+import { say } from './text';
 
 /**
  * Emptying a cell: the entry is taken out and what it *wears* stays, since a
@@ -76,7 +77,7 @@ export function clearRange(
   adding: readonly Op[] = [],
 ): Intent {
   const sheet = sheetOf(grid, where.sheet);
-  if (sheet === null) return refused(`there is no sheet named \`${where.sheet}\``);
+  if (sheet === null) return refused(say('intent.no-such-sheet', { sheet: where.sheet }));
 
   const ops = new Map<FilePath, Op[]>();
   const cells = new Set<string>();
@@ -104,15 +105,13 @@ export function clearRange(
     return refused(standing(cells.size, held, 'emptied'));
   }
   if (cells.size === 0) {
-    return refused('nothing in this range holds anything to empty');
+    return refused(say('intent.nothing-to-empty'));
   }
 
   const files = [...ops.keys()];
   const file = files[0];
   if (file === undefined || files.length > 1) {
-    return refused(
-      `this range is written across ${files.map(beside).join(' and ')}, and this editor empties one file at a time`,
-    );
+    return refused(say('intent.range-across-files', { files: files.map(beside).join(' and ') }));
   }
 
   return {

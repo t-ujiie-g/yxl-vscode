@@ -2,6 +2,7 @@ import { finds } from '@yxl-vscode/compile';
 import { reading, replaceIn } from '@yxl-vscode/intent';
 import type { A1Addr } from '@yxl-vscode/units';
 import type { Replaced } from '@yxl-vscode/webview/protocol';
+import { say } from './text';
 import { applied, ONLY, type Port, type Spec, sheetNamed, theseOnly } from './write';
 
 /**
@@ -40,8 +41,8 @@ export async function replace(
   if (!done) return;
 
   const many = intent.kind === 'edit' ? intent.expects.cells.size : 0;
-  port.said(`${many} cell${many === 1 ? '' : 's'} replaced.`);
+  port.said(say('host.cells-replaced', { many }));
 }
 
 /** The answer a refused replacement offers: the ones it can write, named as the refusal counted them. */
-const REPLACED = 'Replace the ones that can be';
+const REPLACED = say('host.replace-the-ones');

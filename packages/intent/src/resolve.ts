@@ -11,6 +11,7 @@ import {
   sheetOf,
 } from '@yxl-vscode/compile';
 import { entryOf, holds, type Node, type Op, type Path, renderScalar } from '@yxl-vscode/cst';
+import type { Saying } from '@yxl-vscode/diag';
 import { KEY, REF_KEY, type ScalarValue } from '@yxl-vscode/spec';
 import {
   type A1Addr,
@@ -35,6 +36,7 @@ import {
   type Text,
 } from './direct';
 import { blocks } from './shift';
+import { say } from './text';
 import { meaning } from './typed';
 
 /**
@@ -44,10 +46,11 @@ import { meaning } from './typed';
  */
 export interface Candidate {
   readonly id: string;
-  readonly what: string;
+  readonly what: Saying;
   readonly moves: readonly FullAddr[];
   readonly alone: boolean;
   readonly intent: Intent;
+  readonly keys?: number;
 }
 
 /** Every way of making an edit the direct path refused — the resolution table, a row per origin. */
@@ -109,7 +112,7 @@ function parameter(
   return [
     {
       id: 'parameter',
-      what: `Change the parameter \`${name}\`, which every cell reading it follows`,
+      what: say('intent.change-the-parameter', { name }),
       moves,
       alone: false,
       intent: {
@@ -143,7 +146,7 @@ function definition(
     const moves = reaches(grid, origin.def);
     offered.push({
       id: 'definition',
-      what: `Change \`${String(def.path[def.path.length - 1])}\`, which every cell reading it follows`,
+      what: say('intent.change-the-definition', { name: String(def.path[def.path.length - 1]) }),
       moves,
       alone: false,
       intent: {
@@ -162,7 +165,7 @@ function definition(
   if (holder !== null) {
     offered.push({
       id: 'detach',
-      what: `Write \`${where.at}\` as a value of its own, leaving the definition alone`,
+      what: say('intent.write-as-its-own-value', { at: where.at }),
       moves: [{ sheet: where.sheet, at: where.at }],
       alone: false,
       intent: {
@@ -245,7 +248,7 @@ function ontoBlock(
 
   return {
     id: 'ontoBlock',
-    what: `Add a row to the table at \`${anchor}\``,
+    what: say('intent.add-a-table-row', { anchor }),
     moves: [{ sheet: where.sheet, at: where.at }],
     alone: false,
     intent: {
@@ -289,7 +292,7 @@ function newCell(
 
   return {
     id: 'newCell',
-    what: `Write \`${where.at}\` as a new cell`,
+    what: say('intent.write-as-a-new-cell', { at: where.at }),
     moves: [{ sheet: where.sheet, at: where.at }],
     alone: !nextToData(sheet, where.at),
     intent: {
@@ -323,7 +326,7 @@ function external(
   return [
     {
       id: 'dataFile',
-      what: `Write it into \`${beside(origin.file)}\`, where the value comes from`,
+      what: say('intent.write-into-the-file', { file: beside(origin.file) }),
       moves: [{ sheet: where.sheet, at: where.at }],
       alone: false,
       intent: {
@@ -376,11 +379,13 @@ function wholeRange(
 ): Candidate {
   const moves = reaches(grid, origin.node);
   const away = origin.offset[0] !== 0 || origin.offset[1] !== 0;
-  const there = away ? `, which reads \`=${formula}\` there` : '';
 
   return {
     id: 'rangeFormula',
-    what: `Change the formula of the range at \`${origin.anchor}\`${there}`,
+    what: say('intent.change-the-range-formula', {
+      anchor: origin.anchor,
+      formula: away ? formula : '',
+    }),
     moves,
     alone: false,
     intent: {
@@ -442,7 +447,7 @@ function split(
 
   return {
     id: 'splitRange',
-    what: `Split the range at \`${fill.anchor}\` so \`${where.at}\` holds its own formula`,
+    what: say('intent.split-the-range', { anchor: fill.anchor, at: where.at }),
     moves: [{ sheet: where.sheet, at: where.at }],
     alone: false,
     intent: {

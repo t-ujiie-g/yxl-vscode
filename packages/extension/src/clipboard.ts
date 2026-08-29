@@ -13,6 +13,7 @@ import {
 import { applyPatch, rewrites } from '@yxl-vscode/patch';
 import { type A1Addr, addrAt, type FilePath, type SheetName, sheetName } from '@yxl-vscode/units';
 import type { Choice, Pasted, PastedAt, PastedText } from '@yxl-vscode/webview/protocol';
+import { say } from './text';
 import {
   applied,
   excepted,
@@ -57,7 +58,7 @@ export async function paste(
   const done = await applied(spec, intent, port, { anyway: false, from: null, about: null });
   if (done && intent.kind === 'edit') {
     const cells = intent.expects.cells.size;
-    port.said(`${cells} cell${cells === 1 ? '' : 's'} ${pasted.cut ? 'moved' : 'pasted'}.`);
+    port.said(say(pasted.cut ? 'host.cells-moved' : 'host.cells-pasted', { many: cells }));
   }
 }
 
@@ -196,7 +197,7 @@ async function land(
   const done = await applied(spec, intent, port, { anyway: false, from: null, about: null });
   if (done && intent.kind === 'edit') {
     const cells = intent.expects.cells.size;
-    port.said(`${cells} cell${cells === 1 ? '' : 's'} pasted.`);
+    port.said(say('host.cells-pasted', { many: cells }));
   }
 }
 
