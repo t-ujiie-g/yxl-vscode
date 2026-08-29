@@ -1,8 +1,9 @@
-import { type Span, span } from '@yxl-vscode/diag';
+import { type Saying, type Span, span } from '@yxl-vscode/diag';
 import type { DataRow, ScalarValue } from '@yxl-vscode/spec';
+import { say } from './text';
 
 /** A table read, or the reason it would not read; `null` in a row is no cell at all (`docs/spec.md` §9). */
-export type Table = { readonly rows: readonly DataRow[] } | { readonly problem: string };
+export type Table = { readonly rows: readonly DataRow[] } | { readonly problem: Saying };
 
 const NUMBER = /^[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?$/;
 const BOOLEAN = /^(?:true|false)$/;
@@ -47,7 +48,7 @@ interface Field {
 }
 
 /** The one pass both readings are made of, so a field's value and its bytes cannot disagree. */
-function scanCsv(source: string): { rows: Field[][]; problem: string | null } {
+function scanCsv(source: string): { rows: Field[][]; problem: Saying | null } {
   const rows: Field[][] = [];
   let row: Field[] = [];
   let field = '';
@@ -99,7 +100,7 @@ function scanCsv(source: string): { rows: Field[][]; problem: string | null } {
     }
   }
 
-  if (quoting) return { rows: [], problem: 'the CSV ends inside a quoted field' };
+  if (quoting) return { rows: [], problem: say('compile.csv-unclosed-quote') };
   if (started) {
     endField(source.length);
     rows.push(row);
@@ -117,10 +118,10 @@ export function readJson(source: string, columns: readonly string[] | null): Tab
   try {
     document = JSON.parse(source);
   } catch (failure) {
-    return { problem: `invalid JSON: ${(failure as Error).message}` };
+    return { problem: say('compile.invalid-json', { why: (failure as Error).message }) };
   }
 
-  if (!Array.isArray(document)) return { problem: 'a JSON table must be an array of rows' };
+  if (!Array.isArray(document)) return { problem: say('compile.json-must-be-an-array') };
 
   const rows: DataRow[] = [];
   for (const [index, item] of document.entries()) {
@@ -136,29 +137,24 @@ function jsonRow(
   item: unknown,
   columns: readonly string[] | null,
   at: number,
-): { readonly fields: DataRow } | { readonly problem: string } {
+): { readonly fields: DataRow } | { readonly problem: Saying } {
   if (Array.isArray(item)) {
     if (columns !== null) {
-      return { problem: `\`columns\` names the fields of objects, but row ${at} is an array` };
+      return { problem: say('compile.row-is-an-array', { at }) };
     }
     return fieldsOf(item, at);
   }
 
   if (item === null || typeof item !== 'object') {
-    return { problem: `row ${at} of a JSON table must be an array or an object` };
+    return { problem: say('compile.row-must-be-a-row', { at }) };
   }
 
-  if (columns === null) {
-    const why = 'object key order is not dependable';
-    return {
-      problem: `row ${at} is an object, so \`columns\` must name the fields to take (${why})`,
-    };
-  }
+  if (columns === null) return { problem: say('compile.row-needs-columns', { at }) };
 
   const held = item as Record<string, unknown>;
   const taken: unknown[] = [];
   for (const name of columns) {
-    if (!(name in held)) return { problem: `row ${at} has no field \`${name}\`` };
+    if (!(name in held)) return { problem: say('compile.row-has-no-field', { at, name }) };
     taken.push(held[name]);
   }
   return fieldsOf(taken, at);
@@ -167,7 +163,7 @@ function jsonRow(
 function fieldsOf(
   values: readonly unknown[],
   at: number,
-): { readonly fields: DataRow } | { readonly problem: string } {
+): { readonly fields: DataRow } | { readonly problem: Saying } {
   const fields: ScalarValue[] = [];
 
   for (const value of values) {
@@ -179,10 +175,7 @@ function fieldsOf(
       fields.push(value);
       continue;
     }
-    const kinds = 'a string, a number, a boolean, or null';
-    return {
-      problem: `row ${at} has a field that is an array or an object; a cell holds ${kinds}`,
-    };
+    return { problem: say('compile.field-is-not-a-value', { at }) };
   }
 
   return { fields };

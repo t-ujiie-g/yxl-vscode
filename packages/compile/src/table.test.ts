@@ -1,15 +1,19 @@
+import { reading } from '@yxl-vscode/diag';
 import type { DataRow } from '@yxl-vscode/spec';
 import { describe, expect, it } from 'vitest';
 import { asCsvField, fieldAt, readCsv, readJson, type Table } from './table';
+import { WORDS } from './text';
+
+const english = reading('en', WORDS);
 
 function rows(table: Table): readonly DataRow[] {
-  if ('problem' in table) throw new Error(table.problem);
+  if ('problem' in table) throw new Error(english(table.problem));
   return table.rows;
 }
 
 function problem(table: Table): string {
   if (!('problem' in table)) throw new Error('it read');
-  return table.problem;
+  return english(table.problem);
 }
 
 describe('a CSV', () => {

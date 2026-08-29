@@ -1,4 +1,5 @@
 import type { Entry, Node, Path } from '@yxl-vscode/cst';
+import type { Saying } from '@yxl-vscode/diag';
 import {
   type DataBlock,
   type DataRow,
@@ -10,6 +11,7 @@ import { CODE } from './codes';
 import { type Ctx, identify, keyOf, reject, type Site } from './ctx';
 import { expectText, findEntry, openEntries, openSeq, readEach, rejectUnknownKey } from './read';
 import { ADDRESS, PATH, readAs } from './template';
+import { entryOf, say, under } from './text';
 
 /** A sheet's `data:` sequence: one anchored table per entry. */
 export function readDataBlocks(ctx: Ctx, node: Node, path: Path): DataBlock[] {
@@ -17,7 +19,7 @@ export function readDataBlocks(ctx: Ctx, node: Node, path: Path): DataBlock[] {
 }
 
 function readDataBlock(site: Site): DataBlock | null {
-  const what = 'a `data` entry';
+  const what = entryOf('data');
   const opened = openEntries(site.ctx, site.node, site.path, what);
   if (opened === null) return null;
 
@@ -26,10 +28,10 @@ function readDataBlock(site: Site): DataBlock | null {
 
   const anchor = findEntry(entries, 'at');
   if (anchor === undefined) {
-    reject(here, CODE.missingKey, `${what} needs an \`at\``, opened.node.span);
+    reject(here, CODE.missingKey, say('loader.needs', { what, key: 'at' }), opened.node.span);
     return null;
   }
-  const at = readAs(here, anchor.value, `${what} \`at\``, ADDRESS);
+  const at = readAs(here, anchor.value, under(what, 'at'), ADDRESS);
   if (at === null) return null;
 
   const source = readSource(here, entries, opened.node, what);
@@ -43,14 +45,14 @@ function readSource(
   ctx: Ctx,
   entries: readonly Entry[],
   node: Node,
-  what: string,
+  what: Saying,
 ): DataSource | null {
   let source: DataSource | null = null;
   let columns: readonly string[] | null = null;
 
   for (const entry of entries) {
     const key = keyOf(entry);
-    const at = `${what} \`${key}\``;
+    const at = under(what, key);
     switch (key) {
       case 'at':
         break;
@@ -81,13 +83,13 @@ function readSource(
   }
 
   if (source === null) {
-    reject(ctx, CODE.missingKey, `${what} needs \`values\`, \`csv\`, or \`json\``, node.span);
+    reject(ctx, CODE.missingKey, say('loader.data-needs-a-source', { what }), node.span);
     return null;
   }
 
   if (columns === null) return source;
   if (source.kind !== 'json') {
-    const message = `${what} names \`columns\`, which only an array of JSON objects has`;
+    const message = say('loader.columns-needs-json', { what });
     reject(ctx, CODE.conflictingKeys, message, node.span);
     return source;
   }
@@ -97,25 +99,25 @@ function readSource(
 function pickSource(ctx: Ctx, taken: DataSource | null, entry: Entry, source: DataSource) {
   if (taken === null) return source;
 
-  const message = `a \`data\` entry takes its rows from one place; \`${keyOf(entry)}\` is a second`;
+  const message = say('loader.rows-from-one-place', { key: keyOf(entry) });
   reject(ctx, CODE.conflictingKeys, message, entry.span);
   return taken;
 }
 
-function readColumnNames(ctx: Ctx, node: Node, what: string): readonly string[] | null {
+function readColumnNames(ctx: Ctx, node: Node, what: Saying): readonly string[] | null {
   const opened = openSeq(ctx, node, [], what);
   if (opened === null) return null;
 
   const names: string[] = [];
   for (const item of opened.node.items) {
-    const name = expectText(opened.ctx, item, `a name in ${what}`);
+    const name = expectText(opened.ctx, item, say('loader.a-name-in', { what }));
     if (name !== null) names.push(name);
   }
   return names;
 }
 
 function readRows(ctx: Ctx, node: Node): readonly DataRow[] {
-  const opened = openSeq(ctx, node, [], 'a `data` entry `values`');
+  const opened = openSeq(ctx, node, [], under(entryOf('data'), 'values'));
   if (opened === null) return [];
 
   const rows: DataRow[] = [];
@@ -126,7 +128,7 @@ function readRows(ctx: Ctx, node: Node): readonly DataRow[] {
 }
 
 /** One row of fields; `null` is a blank left for something else to fill, so it is a value here. */
-function readRow(ctx: Ctx, node: Node, what: string): DataRow {
+function readRow(ctx: Ctx, node: Node, what: Saying): DataRow {
   const opened = openSeq(ctx, node, [], what);
   if (opened === null) return [];
 
@@ -136,7 +138,7 @@ function readRow(ctx: Ctx, node: Node, what: string): DataRow {
       fields.push(item.value);
       continue;
     }
-    const message = `field ${index + 1} of ${what} must be text, a number, a boolean, or null`;
+    const message = say('loader.field-must-be-a-value', { what, index: index + 1 });
     reject(opened.ctx, CODE.notAValue, message, item.span);
     // Dropping the field would move every field after it one column left.
     fields.push(null);

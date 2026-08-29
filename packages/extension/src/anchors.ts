@@ -3,6 +3,7 @@ import { moveFloat, reading, sizeFloat } from '@yxl-vscode/intent';
 import { addrAt, type NodeId, type SheetName } from '@yxl-vscode/units';
 import type { MovedFloat, SizedFloat } from '@yxl-vscode/webview/protocol';
 import type { PictureReader } from './pictures';
+import { say } from './text';
 import { applied, type Port, type Spec, sheetNamed } from './write';
 
 /**
@@ -16,7 +17,7 @@ export async function moved(spec: Spec, asked: MovedFloat, port: Port): Promise<
   const intent = moveFloat({ node: asked.node as NodeId, at }, reading(port.text));
 
   const done = await applied(spec, intent, port, { anyway: false, from: 'moveFloat', about: null });
-  if (done) port.said(`It floats from ${at} now.`);
+  if (done) port.said(say('host.floats-from', { at }));
 }
 
 /**
@@ -38,7 +39,13 @@ export async function resized(
   const intent = sizeFloat(where, reading(port.text));
 
   const done = await applied(spec, intent, port, { anyway: false, from: 'sizeFloat', about: null });
-  if (done) port.said(`It takes ${Math.round(asked.width)} by ${Math.round(asked.height)} now.`);
+  if (done)
+    port.said(
+      say('host.takes-size', {
+        width: Math.round(asked.width),
+        height: Math.round(asked.height),
+      }),
+    );
 }
 
 /** How big the file behind an image is, which is what a drag on one is a factor of. */

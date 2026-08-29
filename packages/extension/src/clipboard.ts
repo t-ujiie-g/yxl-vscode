@@ -39,7 +39,7 @@ export async function paste(
 ): Promise<void> {
   const where = pasting(pasted);
   if (where === null) {
-    port.refuse(`\`${pasted.from.sheet}\` is not a name a sheet can have`, null);
+    port.refuse(say('host.not-a-sheet-name', { name: pasted.from.sheet }), null);
     return;
   }
 
@@ -71,7 +71,7 @@ export async function pastedWith(
 ): Promise<void> {
   const doing = choice === ONLY ? 'skip' : excepted(choice);
   if (doing === null) {
-    port.refuse('that answer is no longer one of the ways this edit could be made', null);
+    port.refuse(say('host.answer-is-gone'), null);
     return;
   }
 
@@ -131,7 +131,7 @@ export async function pasteFrom(
   const where = { sheet, at: addrAt({ col: asked.col, row: asked.row }) };
   const rows = tabular(asked.text);
   if (rows.length === 0) {
-    port.refuse('there is nothing on the clipboard to put down', null);
+    port.refuse(say('host.nothing-on-clipboard'), null);
     return;
   }
 
@@ -153,7 +153,7 @@ export async function pasteFrom(
 
   if (taken === undefined) {
     if (choice !== undefined) {
-      port.refuse('that answer is no longer one of the ways this edit could be made', null);
+      port.refuse(say('host.answer-is-gone'), null);
       return;
     }
 

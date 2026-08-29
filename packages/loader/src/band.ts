@@ -1,4 +1,5 @@
 import type { Node, Path } from '@yxl-vscode/cst';
+import type { Saying } from '@yxl-vscode/diag';
 import {
   BAND_KEYS,
   type ColumnBand,
@@ -23,10 +24,11 @@ import {
 } from './read';
 import { readStyleUse } from './style';
 import { COLUMN, type Kind, ROW, readTextAs } from './template';
+import { entryOf, say, under } from './text';
 
 /** A sheet's `columns:` sequence, sized in character units. */
 export function readColumnBands(ctx: Ctx, node: Node, path: Path): ColumnBand[] {
-  const what = 'a `columns` entry';
+  const what = entryOf('columns');
 
   return readEach(ctx, node, path, '`columns`', (site) => {
     const band = openEntries(site.ctx, site.node, site.path, what);
@@ -42,7 +44,7 @@ export function readColumnBands(ctx: Ctx, node: Node, path: Path): ColumnBand[] 
 
 /** The same over rows, sized in points. */
 export function readRowBands(ctx: Ctx, node: Node, path: Path): RowBand[] {
-  const what = 'a `rows` entry';
+  const what = entryOf('rows');
 
   return readEach(ctx, node, path, '`rows`', (site) => {
     const band = openEntries(site.ctx, site.node, site.path, what);
@@ -75,7 +77,7 @@ interface BandBody {
 /** Everything but the selector, which both axes share apart from the size key (`docs/spec.md` §4). */
 function readBandBody(
   band: Opened,
-  what: string,
+  what: Saying,
   sizeKey: string,
   known: ReadonlySet<string>,
 ): BandBody {
@@ -88,7 +90,7 @@ function readBandBody(
 
   for (const entry of band.entries) {
     const key = keyOf(entry);
-    const at = `${what} \`${key}\``;
+    const at = under(what, key);
     if (key === sizeKey) {
       size = expectNumber(band.ctx, entry.value, at);
       continue;
@@ -118,18 +120,23 @@ function readBandBody(
 }
 
 /** A band's `at`, which a row may write as a number. */
-function readSelector<T>(band: Opened, what: string, kind: Kind<T>): Templated<T> | null {
+function readSelector<T>(band: Opened, what: Saying, kind: Kind<T>): Templated<T> | null {
   const entry = findEntry(band.entries, 'at');
   if (entry === undefined) {
-    reject(band.ctx, CODE.missingKey, `${what} needs an \`at\``, band.node.span);
+    reject(band.ctx, CODE.missingKey, say('loader.needs', { what, key: 'at' }), band.node.span);
     return null;
   }
 
   const text = scalarText(entry.value);
   if (text === null) {
-    reject(band.ctx, CODE.notText, `${what} \`at\` must be text or a number`, entry.value.span);
+    reject(
+      band.ctx,
+      CODE.notText,
+      say('loader.at-must-be-text-or-a-number', { what }),
+      entry.value.span,
+    );
     return null;
   }
 
-  return readTextAs(band.ctx, text, entry.value.span, `${what} \`at\``, kind);
+  return readTextAs(band.ctx, text, entry.value.span, under(what, 'at'), kind);
 }

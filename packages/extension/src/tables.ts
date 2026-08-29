@@ -1,5 +1,6 @@
 import { asTable, reading } from '@yxl-vscode/intent';
 import type { Ranged } from '@yxl-vscode/webview/protocol';
+import { say } from './text';
 import { applied, type Port, rectIn, type Spec, sheetNamed } from './write';
 
 /**
@@ -15,5 +16,5 @@ export async function table(spec: Spec, ranged: Ranged, port: Port): Promise<voi
   const intent = asTable(spec, { sheet, rect }, reading(port.text));
 
   const done = await applied(spec, intent, port, { anyway: false, from: 'table', about: null });
-  if (done) port.said(`${rect.bottom - rect.top + 1} rows are one table now.`);
+  if (done) port.said(say('host.rows-one-table', { many: rect.bottom - rect.top + 1 }));
 }

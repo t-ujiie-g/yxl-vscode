@@ -1,4 +1,5 @@
 import type { Node, Path } from '@yxl-vscode/cst';
+import type { Saying } from '@yxl-vscode/diag';
 import {
   CHART_TYPES,
   type Chart,
@@ -33,10 +34,11 @@ import {
 } from './read';
 import { readFont } from './style';
 import { ADDRESS, COLOR, PATH, readAs, spelling } from './template';
+import { entryOf, say, under } from './text';
 
 /** A sheet's `charts:` entries, in the order written (`docs/spec.md` §12). */
 export function readCharts(ctx: Ctx, node: Node, path: Path): Chart[] {
-  const what = 'a `charts` entry';
+  const what = entryOf('charts');
 
   return readEach(ctx, node, path, '`charts`', (site: Site) => {
     const opened = open(site, what, MODELED_KEYS.chart);
@@ -44,7 +46,7 @@ export function readCharts(ctx: Ctx, node: Node, path: Path): Chart[] {
 
     const at = anchor(opened, what);
     const type = required(opened, 'type', what, (entry) =>
-      readAs(opened.ctx, entry, `${what} \`type\``, spelling(CHART_TYPES)),
+      readAs(opened.ctx, entry, under(what, 'type'), spelling(CHART_TYPES)),
     );
     const series = readSeries(opened, what);
     if (at === null || type === null || series === null) return null;
@@ -55,14 +57,14 @@ export function readCharts(ctx: Ctx, node: Node, path: Path): Chart[] {
       type,
       title: optionalText(opened, 'title', what),
       legend: optional(opened, 'legend', (entry) =>
-        readAs(opened.ctx, entry, `${what} \`legend\``, spelling(LEGEND_PLACES)),
+        readAs(opened.ctx, entry, under(what, 'legend'), spelling(LEGEND_PLACES)),
       ),
-      size: optional(opened, 'size', (entry) => readSize(opened.ctx, entry, `${what} \`size\``)),
+      size: optional(opened, 'size', (entry) => readSize(opened.ctx, entry, under(what, 'size'))),
       xAxis: optional(opened, 'x_axis', (entry) =>
-        readAxis(opened.ctx, entry, `${what} \`x_axis\``),
+        readAxis(opened.ctx, entry, under(what, 'x_axis')),
       ),
       yAxis: optional(opened, 'y_axis', (entry) =>
-        readAxis(opened.ctx, entry, `${what} \`y_axis\``),
+        readAxis(opened.ctx, entry, under(what, 'y_axis')),
       ),
       series,
     };
@@ -70,14 +72,19 @@ export function readCharts(ctx: Ctx, node: Node, path: Path): Chart[] {
 }
 
 /** A chart's `series:`, which must hold at least one; a range is kept as written (`docs/spec.md` §12). */
-function readSeries(opened: Opened, what: string): ChartSeries[] | null {
+function readSeries(opened: Opened, what: Saying): ChartSeries[] | null {
   const found = findEntry(opened.entries, 'series');
   if (found === undefined) {
-    reject(opened.ctx, CODE.missingKey, `${what} needs a \`series\``, opened.node.span);
+    reject(
+      opened.ctx,
+      CODE.missingKey,
+      say('loader.needs', { what, key: 'series' }),
+      opened.node.span,
+    );
     return null;
   }
 
-  const one = 'a `series` entry';
+  const one = entryOf('series');
   const read = readEach(opened.ctx, found.value, [...opened.path, 'series'], one, (site) => {
     const here = open(site, one, MODELED_KEYS.chartSeries);
     if (here === null) return null;
@@ -90,7 +97,7 @@ function readSeries(opened: Opened, what: string): ChartSeries[] | null {
     const name = optionalText(here, 'name', one);
     const nameFrom = optionalText(here, 'name_from', one);
     if (name !== null && nameFrom !== null) {
-      const why = `${one} names itself twice: \`name\` and \`name_from\``;
+      const why = say('loader.names-itself-twice', { what: one });
       reject(here.ctx, CODE.conflictingKeys, why, here.node.span);
       return null;
     }
@@ -105,14 +112,14 @@ function readSeries(opened: Opened, what: string): ChartSeries[] | null {
   });
 
   if (read.length === 0) {
-    reject(opened.ctx, CODE.missingKey, `${what} needs at least one series`, found.span);
+    reject(opened.ctx, CODE.missingKey, say('loader.needs-a-series', { what }), found.span);
     return null;
   }
   return read;
 }
 
 /** An `x_axis:` or `y_axis:` mapping (`docs/spec.md` §12). */
-function readAxis(ctx: Ctx, node: Node, what: string): ChartAxis | null {
+function readAxis(ctx: Ctx, node: Node, what: Saying): ChartAxis | null {
   const opened = open({ ctx, node, path: [] }, what, MODELED_KEYS.chartAxis);
   if (opened === null) return null;
 
@@ -125,7 +132,7 @@ function readAxis(ctx: Ctx, node: Node, what: string): ChartAxis | null {
 
 /** A sheet's `images:` entries, in the order written (`docs/spec.md` §13). */
 export function readImages(ctx: Ctx, node: Node, path: Path): Image[] {
-  const what = 'an `images` entry';
+  const what = entryOf('images');
 
   return readEach(ctx, node, path, '`images`', (site: Site) => {
     const opened = open(site, what, MODELED_KEYS.image);
@@ -133,7 +140,7 @@ export function readImages(ctx: Ctx, node: Node, path: Path): Image[] {
 
     const at = anchor(opened, what);
     const path = required(opened, 'file', what, (entry) =>
-      readAs(opened.ctx, entry, `${what} \`file\``, PATH),
+      readAs(opened.ctx, entry, under(what, 'file'), PATH),
     );
     if (at === null || path === null) return null;
 
@@ -143,10 +150,10 @@ export function readImages(ctx: Ctx, node: Node, path: Path): Image[] {
       path,
       alt: optionalText(opened, 'alt', what),
       scale: optional(opened, 'scale', (entry) =>
-        readScale(opened.ctx, entry, `${what} \`scale\``),
+        readScale(opened.ctx, entry, under(what, 'scale')),
       ),
       offset: optional(opened, 'offset', (entry) =>
-        readOffset(opened.ctx, entry, `${what} \`offset\``),
+        readOffset(opened.ctx, entry, under(what, 'offset')),
       ),
       positioning: positioned(opened, what),
     };
@@ -154,7 +161,7 @@ export function readImages(ctx: Ctx, node: Node, path: Path): Image[] {
 }
 
 /** A `scale:` written as one factor over both directions, or as one each (`docs/spec.md` §13). */
-function readScale(ctx: Ctx, node: Node, what: string): Scale | null {
+function readScale(ctx: Ctx, node: Node, what: Saying): Scale | null {
   if (node.kind === 'scalar') {
     const both = expectNumber(ctx, node, what);
     return both === null ? null : { x: both, y: both };
@@ -164,12 +171,12 @@ function readScale(ctx: Ctx, node: Node, what: string): Scale | null {
 }
 
 /** An `offset:` or a two-axis `scale:`; both ends are required (`docs/spec.md` §13). */
-function readOffset(ctx: Ctx, node: Node, what: string): PixelOffset | null {
+function readOffset(ctx: Ctx, node: Node, what: Saying): PixelOffset | null {
   return readPair(ctx, node, what, ['x', 'y'], MODELED_KEYS.point);
 }
 
 /** A `size:` mapping, in whole pixels; both ends are required (`docs/spec.md` §12). */
-function readSize(ctx: Ctx, node: Node, what: string): Size | null {
+function readSize(ctx: Ctx, node: Node, what: Saying): Size | null {
   const pair = readPair(ctx, node, what, ['width', 'height'], MODELED_KEYS.size);
   return pair === null ? null : { width: pair.x, height: pair.y };
 }
@@ -177,7 +184,7 @@ function readSize(ctx: Ctx, node: Node, what: string): Size | null {
 function readPair(
   ctx: Ctx,
   node: Node,
-  what: string,
+  what: Saying,
   keys: readonly [string, string],
   known: ReadonlySet<string>,
 ): { x: number; y: number } | null {
@@ -185,7 +192,7 @@ function readPair(
   if (opened === null) return null;
 
   const read = (key: string): number | null =>
-    required(opened, key, what, (entry) => expectNumber(opened.ctx, entry, `${what} \`${key}\``));
+    required(opened, key, what, (entry) => expectNumber(opened.ctx, entry, under(what, key)));
 
   const x = read(keys[0]);
   const y = read(keys[1]);
@@ -194,7 +201,7 @@ function readPair(
 
 /** A sheet's `shapes:` entries, in the order written (`docs/spec.md` §18). */
 export function readShapes(ctx: Ctx, node: Node, path: Path): Shape[] {
-  const what = 'a `shapes` entry';
+  const what = entryOf('shapes');
 
   return readEach(ctx, node, path, '`shapes`', (site: Site) => {
     const opened = open(site, what, MODELED_KEYS.shape);
@@ -202,7 +209,7 @@ export function readShapes(ctx: Ctx, node: Node, path: Path): Shape[] {
 
     const at = anchor(opened, what);
     const kind = required(opened, 'kind', what, (entry) =>
-      readAs(opened.ctx, entry, `${what} \`kind\``, spelling(SHAPE_KINDS)),
+      readAs(opened.ctx, entry, under(what, 'kind'), spelling(SHAPE_KINDS)),
     );
     if (at === null || kind === null) return null;
 
@@ -211,11 +218,11 @@ export function readShapes(ctx: Ctx, node: Node, path: Path): Shape[] {
       at,
       kind,
       text: readShapeText(opened, what),
-      size: optional(opened, 'size', (entry) => readSize(opened.ctx, entry, `${what} \`size\``)),
+      size: optional(opened, 'size', (entry) => readSize(opened.ctx, entry, under(what, 'size'))),
       fill: optional(opened, 'fill', (entry) =>
-        readAs(opened.ctx, entry, `${what} \`fill\``, COLOR),
+        readAs(opened.ctx, entry, under(what, 'fill'), COLOR),
       ),
-      line: optional(opened, 'line', (entry) => readLine(opened.ctx, entry, `${what} \`line\``)),
+      line: optional(opened, 'line', (entry) => readLine(opened.ctx, entry, under(what, 'line'))),
       alt: optionalText(opened, 'alt', what),
       positioning: positioned(opened, what),
     };
@@ -223,11 +230,11 @@ export function readShapes(ctx: Ctx, node: Node, path: Path): Shape[] {
 }
 
 /** A shape's `text:`: one string, or a sequence whose lines each carry a font (`docs/spec.md` §18). */
-function readShapeText(opened: Opened, what: string): ShapeText[] {
+function readShapeText(opened: Opened, what: Saying): ShapeText[] {
   const found = findEntry(opened.entries, 'text');
   if (found === undefined) return [];
 
-  const where = `${what} \`text\``;
+  const where = under(what, 'text');
   if (found.value.kind !== 'seq') {
     const line = expectText(opened.ctx, found.value, where);
     return line === null ? [] : [{ text: line, font: null }];
@@ -245,30 +252,30 @@ function readShapeText(opened: Opened, what: string): ShapeText[] {
   return lines;
 }
 
-function plainLine(ctx: Ctx, node: Node, where: string): ShapeText | null {
+function plainLine(ctx: Ctx, node: Node, where: Saying): ShapeText | null {
   const line = expectText(ctx, node, where);
   return line === null ? null : { text: line, font: null };
 }
 
-function readShapeLine(ctx: Ctx, node: Node, where: string): ShapeText | null {
+function readShapeLine(ctx: Ctx, node: Node, where: Saying): ShapeText | null {
   const here = open({ ctx, node, path: [] }, where, MODELED_KEYS.shapeText);
   if (here === null) return null;
 
   const text = required(here, 'text', where, (entry) =>
-    expectText(here.ctx, entry, `${where} \`text\``),
+    expectText(here.ctx, entry, under(where, 'text')),
   );
   if (text === null) return null;
 
   return {
     text,
     font: optional(here, 'font', (entry) =>
-      readFont(here.ctx, entry, `${where} \`font\``, new Set()),
+      readFont(here.ctx, entry, under(where, 'font'), new Set()),
     ),
   };
 }
 
 /** A shape's `line:`: a bare hex colour, or the colour with a width in points (`docs/spec.md` §18). */
-function readLine(ctx: Ctx, node: Node, what: string): ShapeLine | null {
+function readLine(ctx: Ctx, node: Node, what: Saying): ShapeLine | null {
   if (node.kind !== 'map') {
     const color = readAs(ctx, node, what, COLOR);
     return color === null ? null : { color, width: null };
@@ -278,7 +285,7 @@ function readLine(ctx: Ctx, node: Node, what: string): ShapeLine | null {
   if (opened === null) return null;
 
   const color = required(opened, 'color', what, (entry) =>
-    readAs(opened.ctx, entry, `${what} \`color\``, COLOR),
+    readAs(opened.ctx, entry, under(what, 'color'), COLOR),
   );
   if (color === null) return null;
 
@@ -289,14 +296,14 @@ function readLine(ctx: Ctx, node: Node, what: string): ShapeLine | null {
 }
 
 /** The `at` every float needs: the cell its top-left corner floats over. */
-function anchor(opened: Opened, what: string): Chart['at'] | null {
+function anchor(opened: Opened, what: Saying): Chart['at'] | null {
   return required(opened, 'at', what, (entry) =>
-    readAs(opened.ctx, entry, `${what} \`at\``, ADDRESS),
+    readAs(opened.ctx, entry, under(what, 'at'), ADDRESS),
   );
 }
 
-function positioned(opened: Opened, what: string): Image['positioning'] {
+function positioned(opened: Opened, what: Saying): Image['positioning'] {
   return optional(opened, 'positioning', (entry) =>
-    readAs(opened.ctx, entry, `${what} \`positioning\``, spelling(POSITIONINGS)),
+    readAs(opened.ctx, entry, under(what, 'positioning'), spelling(POSITIONINGS)),
   );
 }

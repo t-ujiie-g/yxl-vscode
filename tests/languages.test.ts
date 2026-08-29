@@ -1,17 +1,22 @@
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { WORDS as compile } from '@yxl-vscode/compile';
 import { WORDS as cst } from '@yxl-vscode/cst';
 import type { Book, Language } from '@yxl-vscode/diag';
 import { WORDS as intent } from '@yxl-vscode/intent';
+import { WORDS as loader } from '@yxl-vscode/loader';
 import { WORDS as patch } from '@yxl-vscode/patch';
+import { WORDS as units } from '@yxl-vscode/units';
 import { WORDS as view } from '@yxl-vscode/webview/text';
 import { describe, expect, it } from 'vitest';
 import { WORDS as host } from 'yxl-vscode/text';
+import { REPO_ROOT } from './corpus';
 
 /**
  * Every book of sentences this editor holds, which is the list the languages
  * are held to. A package that starts saying things belongs here (ADR-051).
  */
-const BOOKS: Record<string, Book> = { cst, compile, patch, view, intent, host };
+const BOOKS: Record<string, Book> = { units, cst, loader, compile, patch, view, intent, host };
 
 /**
  * One sentence as it is written, rather than as it reads: an argument may be
@@ -43,3 +48,28 @@ describe('the languages this editor reads in', () => {
     }
   });
 });
+
+describe('what is left in English, and is meant to be', () => {
+  it('builds no sentence where a thing goes wrong, which is what the books replaced', () => {
+    const said =
+      /\b(port\.said|port\.refuse|this\.refuse|refused)\((['`])|reject\([^,]+, [^,]+, ['`]/;
+    const sources = readdirSync(join(REPO_ROOT, 'packages'), { withFileTypes: true })
+      .filter((one) => one.isDirectory())
+      .flatMap((one) => walked(join(REPO_ROOT, 'packages', one.name, 'src')));
+
+    const prose = sources.filter((path) => said.test(readFileSync(path, 'utf8')));
+
+    expect(prose.map((path) => path.slice(REPO_ROOT.length + 1))).toEqual([]);
+  });
+});
+
+/** Every source of a package, tests aside. */
+function walked(from: string): string[] {
+  if (!existsSync(from)) return [];
+
+  return readdirSync(from, { withFileTypes: true }).flatMap((one) => {
+    const path = join(from, one.name);
+    if (one.isDirectory()) return walked(path);
+    return one.name.endsWith('.ts') && !one.name.endsWith('.test.ts') ? [path] : [];
+  });
+}

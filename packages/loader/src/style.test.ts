@@ -1,8 +1,12 @@
 import { parse } from '@yxl-vscode/cst';
+import { reading } from '@yxl-vscode/diag';
 import type { Style } from '@yxl-vscode/spec';
 import { describe, expect, it } from 'vitest';
 import { CODE } from './codes';
 import { load } from './load';
+import { WORDS } from './text';
+
+const english = reading('en', WORDS);
 
 function loaded(declaration: string) {
   const source = `sheets: []\ndefs:\n  styles:\n    look: ${declaration}\n`;
@@ -64,7 +68,9 @@ describe('a style', () => {
   it('reports a key it does not know, naming the ones it does', () => {
     const [diagnostic] = loaded('{ fnot: { bold: true } }').diagnostics;
     expect(diagnostic?.code).toBe(CODE.unknownKey);
-    expect(diagnostic?.message).toContain('expected extends, font, fill, border, align');
+    expect(english(diagnostic?.message ?? '')).toContain(
+      'expected extends, font, fill, border, align',
+    );
   });
 });
 

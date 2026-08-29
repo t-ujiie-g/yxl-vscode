@@ -1974,19 +1974,22 @@ reach.
       the grid, the formula bar, the inspector's facet names, the sentences a
       preview says about `print:` and `protect:` — 140 sentences, in the panel's
       own book (`webview/src/text.ts`), worded by `chrome()` off `<html lang>`.
-- [ ] Every refusal and every diagnostic, which is the long tail and the reason
-      the decision comes first. **Done: every refusal** — `intent`'s 122 and the
-      host's own, with the answers they offer — and **`compile`'s diagnostics**,
-      22 sentences over 42 sites. **Left**: `loader`'s, where the construct a
-      message is about (`what`) is threaded as prose through 76 signatures and
-      composed at 124 sites, and `units`' formula and table prose, which a
-      refusal and a diagnostic still quote verbatim.
+- [x] Every refusal and every diagnostic, which is the long tail and the reason
+      the decision comes first: `intent`'s 122 refusals and the host's own,
+      `compile`'s 30 diagnostics, `loader`'s 55, and `units`' 5. The construct a
+      diagnostic is about is a message of its own now, built up a key at a time
+      (`under`), so a path reads in the reader's language rather than English
+      with Japanese around it. `tests/languages.test.ts` fails on a sentence
+      built where a thing goes wrong.
 - [x] The language follows VS Code's own (`vscode.env.language`); no setting of
       our own until somebody asks for one. The host sets `<html lang>` from it,
       and the view reads it from there.
-- [ ] **What stays English, and is said so**: the schema's key names, the
+- [x] **What stays English, and is said so**: the schema's key names, the
       `docs/spec.md` references, and the compiler's own output, which is yxl's
-      to translate rather than ours to paraphrase.
+      to translate rather than ours to paraphrase — said in ADR-051 and in the
+      README. A thrown `Error`'s own text keeps the `string` half of `Saying`
+      alive: it is not scaffolding any more but the channel for prose from
+      outside this editor.
 
 ### Phase 20 — Shipped
 The manifest is `private: true` at version `0.0.0`, so nothing can publish it by
@@ -3598,6 +3601,35 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-29 — Nothing this editor says is written in English any more
+
+Phase 19, closed. Every sentence this editor says for itself is a code and its
+parts, and reads in the reader's own language.
+
+- **`loader`'s 55 diagnostics**, which were the hard half. The construct a
+  message is about was threaded through 76 signatures as English prose (`a
+  \`charts\` entry`, `cell \`A1\``) and extended at 124 sites (`${what} \`at\``).
+  It is a **message** now, and `under(what, key)` is how a path grows — so
+  `a \`charts\` entry \`at\` must be text` and
+  `\`charts\` のエントリの \`at\`は文字列である必要があります` are the same message,
+  read twice.
+- **`units`' five**, which a refusal quoted verbatim: a reference that would
+  move off the sheet, a bracket that never closes. And `compile`'s table
+  problems, which a diagnostic quoted the same way. Both are nested messages
+  now, and neither language borrows the other's word order.
+- **The host's last twenty lines** — *`Sales` added.*, *3 rows in order.*,
+  *Went to Sheet1!A1.* — which were the ones a reader sees when a gesture
+  *works*.
+- **A test that says it is finished.** `tests/languages.test.ts` reads every
+  source for a sentence built where a thing goes wrong — a `port.said('…')`, a
+  `refuse('…')`, a `reject(…, '…')` — and fails on it. It fails on the sources
+  as they were before this change, and passes on them now.
+- **The `string` half of `Saying` stays**, and ADR-051 is amended to say why: a
+  thrown `Error`'s own text is prose from outside this editor, and there is no
+  book to look it up in. It is no longer scaffolding.
+- 2431 → 2433 tests. Comment shape: export 896 blocks / 1974 lines / avg 2.2,
+  private 581 / 581 / avg 1.0, inline 135 / 215 / avg 1.6; 0 over the limit.
 
 ### 2026-08-29 — What the compiler could not draw, in the reader's own language
 

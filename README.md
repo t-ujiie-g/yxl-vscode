@@ -116,6 +116,14 @@ a squiggle rather than a surprise at build time.
 
 [yaml]: https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml
 
+## Language
+
+The panel, the menus, the refusals and the diagnostics read in VS Code's own
+display language, in English or Japanese. What stays English wherever you read:
+the schema's key names, a format code, a font name, a chart's type, and the
+`yxl` compiler's own output — all of them the spec's own words rather than this
+editor's.
+
 ## What it is for
 
 Reading a spec in a grid is worth having, and it is not the point. The point is

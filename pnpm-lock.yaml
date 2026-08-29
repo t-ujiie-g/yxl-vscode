@@ -200,7 +200,11 @@ importers:
         specifier: workspace:*
         version: link:../units
 
-  packages/units: {}
+  packages/units:
+    dependencies:
+      '@yxl-vscode/diag':
+        specifier: workspace:*
+        version: link:../diag
 
   packages/verify:
     dependencies:
@@ -240,6 +244,9 @@ importers:
       '@yxl-vscode/evaluate':
         specifier: workspace:*
         version: link:../evaluate
+      '@yxl-vscode/loader':
+        specifier: workspace:*
+        version: link:../loader
       '@yxl-vscode/patch':
         specifier: workspace:*
         version: link:../patch

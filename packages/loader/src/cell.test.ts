@@ -1,8 +1,12 @@
 import { parse } from '@yxl-vscode/cst';
+import { reading } from '@yxl-vscode/diag';
 import type { Cell } from '@yxl-vscode/spec';
 import { describe, expect, it } from 'vitest';
 import { CODE } from './codes';
 import { load } from './load';
+import { WORDS } from './text';
+
+const english = reading('en', WORDS);
 
 function cells(body: string): readonly Cell[] {
   const source = `sheets:\n  - name: Sales\n    cells:\n${body}`;
@@ -122,7 +126,9 @@ describe('a cell written as a mapping', () => {
       parse('sheets:\n  - name: S\n    cells:\n      A1: { valeu: 1 }\n', { file: 'f' }),
     ).diagnostics;
     expect(diagnostic?.code).toBe(CODE.unknownKey);
-    expect(diagnostic?.message).toContain('expected value, formula, rich, type, format, style');
+    expect(english(diagnostic?.message ?? '')).toContain(
+      'expected value, formula, rich, type, format, style',
+    );
   });
 });
 

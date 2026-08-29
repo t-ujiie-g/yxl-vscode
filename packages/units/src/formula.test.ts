@@ -1,11 +1,15 @@
+import { reading } from '@yxl-vscode/diag';
 import { describe, expect, it } from 'vitest';
 import { type Line, moved, type Offset, renamed, shifted } from './formula';
 import type { SheetName } from './name';
+import { WORDS } from './text';
+
+const english = reading('en', WORDS);
 
 /** The formula as it applies `by` away, or the reason it does not apply there. */
 function to(formula: string, by: Offset): string {
   const done = moved(formula, by);
-  return done.ok ? done.formula : `refused: ${done.why}`;
+  return done.ok ? done.formula : `refused: ${english(done.why)}`;
 }
 
 const DOWN = { cols: 0, rows: 1 };
@@ -133,7 +137,7 @@ const SALES = 'Sales' as SheetName;
 /** The formula as it reads once that line is drawn in `Sales`, or why it cannot be. */
 function once(formula: string, of: Partial<Line> = {}, sheet = SALES): string {
   const done = shifted(formula, sheet, { sheet: SALES, axis: 'row', at: 5, by: 1, ...of });
-  return done.ok ? done.formula : `refused: ${done.why}`;
+  return done.ok ? done.formula : `refused: ${english(done.why)}`;
 }
 
 describe('a formula once a row is inserted', () => {
@@ -209,7 +213,7 @@ describe('a structured reference, which names a table rather than a cell', () =>
 describe('a formula once a sheet is renamed', () => {
   const to = (formula: string, from = 'Sales', name = 'Revenue') => {
     const done = renamed(formula, from as SheetName, name as SheetName);
-    return done.ok ? done.formula : `refused: ${done.why}`;
+    return done.ok ? done.formula : `refused: ${english(done.why)}`;
   };
 
   it('names the sheet its new name, and leaves the address alone', () => {

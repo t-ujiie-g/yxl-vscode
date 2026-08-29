@@ -1,9 +1,11 @@
 import type { Entry, Node, Path } from '@yxl-vscode/cst';
+import type { Saying } from '@yxl-vscode/diag';
 import { type Link, type LinkTarget, MODELED_KEYS } from '@yxl-vscode/spec';
 import { CODE } from './codes';
 import { type Ctx, identify, keyOf, reject } from './ctx';
 import { expectText, findEntry, openEntries, rejectUnknownKey } from './read';
 import { ADDRESS, readTextAs } from './template';
+import { about, entryOf, say, under } from './text';
 
 /** A sheet's `links:` mapping: one link per addressed cell (`docs/spec.md` §10). */
 export function readLinks(ctx: Ctx, node: Node, path: Path): Link[] {
@@ -20,10 +22,10 @@ export function readLinks(ctx: Ctx, node: Node, path: Path): Link[] {
 
 function readLink(ctx: Ctx, entry: Entry, path: Path): Link | null {
   const key = keyOf(entry);
-  const at = readTextAs(ctx, key, entry.key.span, 'a `links` key', ADDRESS);
+  const at = readTextAs(ctx, key, entry.key.span, entryOf('links'), ADDRESS);
   if (at === null) return null;
 
-  const what = `link \`${key}\``;
+  const what = about('link', String(key));
   const site = identify(ctx, [...path, key], entry.span);
 
   if (entry.value.kind !== 'map') {
@@ -39,7 +41,7 @@ function readLink(ctx: Ctx, entry: Entry, path: Path): Link | null {
 function expanded(
   ctx: Ctx,
   node: Node,
-  what: string,
+  what: Saying,
 ): { target: LinkTarget; tip: string | null } | null {
   const opened = openEntries(ctx, node, [], what);
   if (opened === null) return null;
@@ -54,20 +56,20 @@ function expanded(
   const out = findEntry(opened.entries, 'url');
   const inside = findEntry(opened.entries, 'to');
   if (out !== undefined && inside !== undefined) {
-    reject(here, CODE.conflictingKeys, `${what} cannot go to a \`url\` and a \`to\``, node.span);
+    reject(here, CODE.conflictingKeys, say('loader.link-two-targets', { what }), node.span);
     return null;
   }
 
   const written = out ?? inside;
   if (written === undefined) {
-    reject(here, CODE.missingKey, `${what} needs a \`url\` or a \`to\``, opened.node.span);
+    reject(here, CODE.missingKey, say('loader.link-needs-a-target', { what }), opened.node.span);
     return null;
   }
 
   const kind = out === undefined ? 'to' : 'url';
-  const text = expectText(here, written.value, `${what} \`${kind}\``);
+  const text = expectText(here, written.value, under(what, kind));
   const said = findEntry(opened.entries, 'tip');
-  const tip = said === undefined ? null : expectText(here, said.value, `${what} \`tip\``);
+  const tip = said === undefined ? null : expectText(here, said.value, under(what, 'tip'));
 
   return text === null ? null : { target: { kind, text }, tip };
 }

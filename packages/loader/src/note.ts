@@ -1,9 +1,11 @@
 import type { Entry, Node, Path } from '@yxl-vscode/cst';
+import type { Saying } from '@yxl-vscode/diag';
 import { MODELED_KEYS, type Note } from '@yxl-vscode/spec';
 import { CODE } from './codes';
 import { type Ctx, identify, keyOf, reject } from './ctx';
 import { expectText, findEntry, openEntries, rejectUnknownKey } from './read';
 import { ADDRESS, readTextAs } from './template';
+import { about, entryOf, say, under } from './text';
 
 /** A sheet's `comments:` mapping: one note per addressed cell (`docs/spec.md` §10). */
 export function readNotes(ctx: Ctx, node: Node, path: Path): Note[] {
@@ -20,10 +22,10 @@ export function readNotes(ctx: Ctx, node: Node, path: Path): Note[] {
 
 function readNote(ctx: Ctx, entry: Entry, path: Path): Note | null {
   const key = keyOf(entry);
-  const at = readTextAs(ctx, key, entry.key.span, 'a `comments` key', ADDRESS);
+  const at = readTextAs(ctx, key, entry.key.span, entryOf('comments'), ADDRESS);
   if (at === null) return null;
 
-  const what = `note \`${key}\``;
+  const what = about('note', String(key));
   const site = identify(ctx, [...path, key], entry.span);
 
   if (entry.value.kind !== 'map') {
@@ -39,7 +41,7 @@ function readNote(ctx: Ctx, entry: Entry, path: Path): Note | null {
 function expanded(
   ctx: Ctx,
   node: Node,
-  what: string,
+  what: Saying,
 ): { text: string; author: string | null } | null {
   const opened = openEntries(ctx, node, [], what);
   if (opened === null) return null;
@@ -53,13 +55,13 @@ function expanded(
 
   const written = findEntry(opened.entries, 'text');
   if (written === undefined) {
-    reject(here, CODE.missingKey, `${what} needs a \`text\``, opened.node.span);
+    reject(here, CODE.missingKey, say('loader.needs', { what, key: 'text' }), opened.node.span);
     return null;
   }
 
-  const text = expectText(here, written.value, `${what} \`text\``);
+  const text = expectText(here, written.value, under(what, 'text'));
   const named = findEntry(opened.entries, 'author');
-  const author = named === undefined ? null : expectText(here, named.value, `${what} \`author\``);
+  const author = named === undefined ? null : expectText(here, named.value, under(what, 'author'));
 
   return text === null ? null : { text, author };
 }

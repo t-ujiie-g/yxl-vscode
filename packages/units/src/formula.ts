@@ -1,6 +1,8 @@
+import type { Saying } from '@yxl-vscode/diag';
 import type { Axis } from './band';
 import { columnIndex, columnLabel } from './grid';
 import type { SheetName } from './name';
+import { say } from './text';
 
 /** How far something moves, in columns and rows; negative goes left and up. */
 export interface Offset {
@@ -11,7 +13,7 @@ export interface Offset {
 /** A formula moved, or the reason it could not be. */
 export type Moved =
   | { readonly ok: true; readonly formula: string }
-  | { readonly ok: false; readonly why: string };
+  | { readonly ok: false; readonly why: Saying };
 
 /**
  * A formula as it applies `by` columns and rows away: relative references move,
@@ -40,7 +42,7 @@ function calling(from: SheetName, to: SheetName): Rule {
     cell: (text) => text,
     column: (text) => text,
     row: (text) => text,
-    why: (word) => `\`${word}\` could not be written again`,
+    why: (word) => say('units.could-not-be-written', { word }),
     named: (name) => (name === from ? sheetSpelled(to) : name),
   };
 }
@@ -53,7 +55,7 @@ export function names(formula: string, sheet: SheetName): boolean {
     cell: (text) => text,
     column: (text) => text,
     row: (text) => text,
-    why: (word) => `\`${word}\` could not be read`,
+    why: (word) => say('units.could-not-be-read', { word }),
     named: (name) => {
       if (name === sheet) found = true;
       return name;
@@ -99,7 +101,7 @@ function walked(formula: string, rule: Rule): Moved {
 
     if (char === '"' || char === "'") {
       const end = quoted(formula, at, char);
-      if (end === null) return { ok: false, why: `there is a \`${char}\` here that never closes` };
+      if (end === null) return { ok: false, why: say('units.unclosed', { char }) };
 
       const text = formula.slice(at, end);
       const quotes = char === "'" && formula[end] === '!';
@@ -111,7 +113,7 @@ function walked(formula: string, rule: Rule): Moved {
 
     if (char === '[') {
       const end = bracketed(formula, at);
-      if (end === null) return { ok: false, why: 'there is a `[` here that never closes' };
+      if (end === null) return { ok: false, why: say('units.unclosed', { char: '[' }) };
 
       out.push(formula.slice(at, end));
       at = end;
@@ -152,7 +154,7 @@ interface Rule {
   readonly cell: (text: string, of: string | null) => string | null;
   readonly column: (text: string, of: string | null) => string | null;
   readonly row: (text: string, of: string | null) => string | null;
-  readonly why: (word: string) => string;
+  readonly why: (word: string) => Saying;
   /** How the sheet a reference names is written, where a rule rewrites that instead. */
   readonly named?: (name: string) => string;
 }
@@ -163,7 +165,7 @@ function sliding(by: Offset): Rule {
     cell: (text) => movedCell(text, by),
     column: (text) => movedColumn(text, by.cols),
     row: (text) => movedRow(text, by.rows),
-    why: (word) => `\`${word}\` would move off the sheet`,
+    why: (word) => say('units.would-move-off', { word }),
   };
 }
 
@@ -206,8 +208,8 @@ function past(of: SheetName, line: Line): Rule {
     row: (text, named) => ends(text, 'row', named),
     why: (word) =>
       by < 0
-        ? `\`${word}\` names a ${axis} this would take away`
-        : `\`${word}\` would move off the sheet`,
+        ? say('units.names-a-band-taken-away', { word, axis })
+        : say('units.would-move-off', { word }),
   };
 }
 

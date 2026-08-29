@@ -41,6 +41,22 @@ export type Says = {
   'host.cells-moved': { many: number };
   'host.cells-replaced': { many: number };
   'host.now-an-override': { at: string };
+  'host.floats-from': { at: string };
+  'host.takes-size': { width: number; height: number };
+  'host.image-floats': { path: string; at: string };
+  'host.opened': { url: string };
+  'host.went-to': { at: string };
+  'host.run-now-reads': { index: number; at: string; text: string };
+  'host.sheet-added': { name: string };
+  'host.sheet-renamed': { was: string; name: string };
+  'host.sheet-taken-out': { name: string };
+  'host.sheet-moved': { name: string };
+  'host.sheet-set': { name: string };
+  'host.rows-in-order': { many: number };
+  'host.rows-one-table': { many: number };
+  'host.still-loading': Nothing;
+  'host.nothing-on-clipboard': Nothing;
+  'host.file-unreadable': { file: string };
 };
 
 export const say = speaking<Says>();
@@ -98,6 +114,22 @@ const en: Words<Says> = {
   'host.cells-moved': ({ many }) => `${many} cell${many === 1 ? '' : 's'} moved.`,
   'host.cells-replaced': ({ many }) => `${many} cell${many === 1 ? '' : 's'} replaced.`,
   'host.now-an-override': ({ at }) => `${at} is now written as an override.`,
+  'host.floats-from': ({ at }) => `It floats from ${at} now.`,
+  'host.takes-size': ({ width, height }) => `It takes ${width} by ${height} now.`,
+  'host.image-floats': ({ path, at }) => `\`${path}\` floats from ${at}.`,
+  'host.opened': ({ url }) => `Opened ${url}.`,
+  'host.went-to': ({ at }) => `Went to ${at}.`,
+  'host.run-now-reads': ({ index, at, text }) => `Run ${index} of ${at} now reads ${text}.`,
+  'host.sheet-added': ({ name }) => `\`${name}\` added.`,
+  'host.sheet-renamed': ({ was, name }) => `\`${was}\` is \`${name}\` now.`,
+  'host.sheet-taken-out': ({ name }) => `\`${name}\` taken out.`,
+  'host.sheet-moved': ({ name }) => `\`${name}\` moved.`,
+  'host.sheet-set': ({ name }) => `\`${name}\` set.`,
+  'host.rows-in-order': ({ many }) => `${many} rows in order.`,
+  'host.rows-one-table': ({ many }) => `${many} rows are one table now.`,
+  'host.still-loading': () => 'this spec has not finished loading',
+  'host.nothing-on-clipboard': () => 'there is nothing on the clipboard to put down',
+  'host.file-unreadable': ({ file }) => `${file} could not be read`,
 };
 
 const ja: Words<Says> = {
@@ -153,6 +185,23 @@ const ja: Words<Says> = {
   'host.cells-moved': ({ many }) => `${many} セルを移動しました。`,
   'host.cells-replaced': ({ many }) => `${many} セルを置換しました。`,
   'host.now-an-override': ({ at }) => `${at} をオーバーライドとして書きました。`,
+  'host.floats-from': ({ at }) => `${at} から浮くようになりました。`,
+  'host.takes-size': ({ width, height }) => `大きさを ${width} × ${height} にしました。`,
+  'host.image-floats': ({ path, at }) => `\`${path}\` が ${at} から浮いています。`,
+  'host.opened': ({ url }) => `${url} を開きました。`,
+  'host.went-to': ({ at }) => `${at} へ移動しました。`,
+  'host.run-now-reads': ({ index, at, text }) =>
+    `${at} の ${index} 番目の部分を ${text} にしました。`,
+  'host.sheet-added': ({ name }) => `\`${name}\` を追加しました。`,
+  'host.sheet-renamed': ({ was, name }) => `\`${was}\` を \`${name}\` にしました。`,
+  'host.sheet-taken-out': ({ name }) => `\`${name}\` を取り出しました。`,
+  'host.sheet-moved': ({ name }) => `\`${name}\` を移動しました。`,
+  'host.sheet-set': ({ name }) => `\`${name}\` を設定しました。`,
+  'host.rows-in-order': ({ many }) => `${many} 行を並べ替えました。`,
+  'host.rows-one-table': ({ many }) => `${many} 行を 1 つのテーブルにしました。`,
+  'host.still-loading': () => 'この spec はまだ読み込み中です',
+  'host.nothing-on-clipboard': () => 'クリップボードに貼り付けるものがありません',
+  'host.file-unreadable': ({ file }) => `${file} を読めませんでした`,
 };
 
 /** This package's sentences in every language, for the edge that words them. */

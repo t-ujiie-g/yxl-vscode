@@ -1,5 +1,5 @@
 import type { Entry, Node, Path } from '@yxl-vscode/cst';
-import { type Diagnostic, error, type Span } from '@yxl-vscode/diag';
+import { type Diagnostic, error, type Saying, type Span } from '@yxl-vscode/diag';
 import type { SpecNode } from '@yxl-vscode/spec';
 import type { FilePath } from '@yxl-vscode/units';
 import type { Code } from './codes';
@@ -37,7 +37,7 @@ export interface Site<T extends Node = Node> {
   readonly path: Path;
 }
 
-export function reject(ctx: Ctx, code: Code, message: string, at: Span): void {
+export function reject(ctx: Ctx, code: Code, message: Saying, at: Span): void {
   ctx.diagnostics.push(error(code, message, { file: ctx.file, span: at }));
 }
 
