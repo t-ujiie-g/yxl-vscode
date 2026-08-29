@@ -1,6 +1,6 @@
 import type { A1Addr, SheetName } from '@yxl-vscode/units';
 import { describe, expect, it } from 'vitest';
-import { files, tried } from './harness';
+import { english, files, tried } from './harness';
 import { setRun } from './rich';
 
 /** The run retyped, through the checker — the file as it stands after it, or why not. */
@@ -42,10 +42,10 @@ describe('a run of a rich cell', () => {
 
     const { doc, grid, read } = files(RICH);
     const where = { sheet: 'Other' as SheetName, at: 'A1' as A1Addr, index: 0, text: 'x' };
-    expect(setRun({ doc, grid }, where, read)).toEqual({
-      kind: 'refused',
-      why: 'there is no sheet named `Other`',
-    });
+    const intent = setRun({ doc, grid }, where, read);
+    expect(intent.kind === 'refused' && english(intent.why)).toBe(
+      'there is no sheet named `Other`',
+    );
   });
 
   it('refuses a run that reads a parameter, which typing over would take away', () => {

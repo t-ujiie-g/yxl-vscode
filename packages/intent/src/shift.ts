@@ -5,6 +5,7 @@ import {
   cellAt,
   REACH,
 } from '@yxl-vscode/compile';
+import type { Saying } from '@yxl-vscode/diag';
 import {
   type A1Addr,
   cellOf,
@@ -14,6 +15,7 @@ import {
   shifted,
   spanSaid,
 } from '@yxl-vscode/units';
+import { say } from './text';
 
 /** What a line does to one construct: it moves whole, it takes the line in, or it goes with it. */
 export type Does = 'shifts' | 'grows' | 'shrinks' | 'goes';
@@ -33,13 +35,13 @@ export interface Moving {
  */
 export interface Shift {
   readonly moves: readonly Moving[];
-  readonly stops: readonly string[];
+  readonly stops: readonly Saying[];
 }
 
 /** Everything a line drawn in this sheet would move, counted before any of it is written. */
 export function shifting(sheet: CompiledSheet, line: Line): Shift {
   const moves: Moving[] = [];
-  const stops: string[] = [];
+  const stops: Saying[] = [];
   const of = along(line);
 
   for (const at of addressesIn(sheet, REACH)) {
@@ -63,7 +65,7 @@ export function shifting(sheet: CompiledSheet, line: Line): Shift {
     const does = of.over(block.rect);
     if (does === null) continue;
     if ((does === 'grows' || does === 'shrinks') && block.file !== null) {
-      stops.push(`the rows here come from \`${block.file}\`, which this cannot open a gap in`);
+      stops.push(say('intent.rows-from-file', { file: block.file }));
       continue;
     }
 
@@ -94,11 +96,13 @@ export function shifting(sheet: CompiledSheet, line: Line): Shift {
 }
 
 /** Whether a cell's formula could be written again where the line leaves it, and why not. */
-function keeps(sheet: CompiledSheet, cell: CompiledCell, line: Line): string | null {
+function keeps(sheet: CompiledSheet, cell: CompiledCell, line: Line): Saying | null {
   if (cell.formula === null) return null;
 
   const done = shifted(cell.formula, sheet.name, line);
-  return done.ok ? null : `\`${cell.at}\` holds \`=${cell.formula}\`, and ${done.why}`;
+  return done.ok
+    ? null
+    : say('intent.formula-would-break', { at: cell.at, formula: cell.formula, why: done.why });
 }
 
 /** One `data:` block, as the cells it laid down say where it reaches. */

@@ -1,5 +1,6 @@
 import { type CompiledSheet, cellAt, sheetOf } from '@yxl-vscode/compile';
 import { type Node, nodeAt, type Op } from '@yxl-vscode/cst';
+import { type Saying, sentence } from '@yxl-vscode/diag';
 import { KEY } from '@yxl-vscode/spec';
 import {
   type A1Addr,
@@ -18,6 +19,7 @@ import {
   type Reading,
   refused,
 } from './direct';
+import { say } from './text';
 
 /** A rectangle of `cells:` entries a reader asked to keep as a table instead. */
 export interface Tabling {
@@ -32,13 +34,13 @@ export interface Tabling {
  */
 export function asTable(spec: Projection, where: Tabling, read: Reading): Intent {
   const sheet = sheetOf(spec.grid, where.sheet);
-  if (sheet === null) return refused(`there is no sheet named \`${where.sheet}\``);
+  if (sheet === null) return refused(say('intent.no-such-sheet', { sheet: where.sheet }));
   if (where.rect.bottom - where.rect.top < 1) {
-    return refused('a table is more than one row, so there is nothing here to anchor');
+    return refused(say('intent.table-needs-more-rows'));
   }
 
   const held = taken(sheet, where.rect, read);
-  if (typeof held === 'string') return refused(held);
+  if (sentence(held)) return refused(held);
 
   const file = held.file;
   const rows = held.rows.map((row) => `  - [${row.join(', ')}]`).join('\n');
@@ -85,7 +87,7 @@ interface Taken {
 }
 
 /** Every cell of the rectangle as the file writes it, or why one of them cannot go into a table. */
-function taken(sheet: CompiledSheet, rect: Rect, read: Reading): Taken | string {
+function taken(sheet: CompiledSheet, rect: Rect, read: Reading): Taken | Saying {
   const rows: string[][] = [];
   const entries: (string | number)[][] = [];
   const moves: A1Addr[] = [];
@@ -104,19 +106,19 @@ function taken(sheet: CompiledSheet, rect: Rect, read: Reading): Taken | string 
 
       const from = cell.provenance.value;
       if (from.kind !== 'literal') {
-        return `\`${at}\` is not written as a cell of its own, so a table cannot take it over`;
+        return say('intent.not-a-cell-of-its-own', { at });
       }
 
       const found = located(from.node, read);
       if (found.kind === 'refused') return found.why;
       if (found.node.kind !== 'scalar') {
-        return `\`${at}\` says more than a value, which a table has nowhere to keep`;
+        return say('intent.more-than-a-value', { at });
       }
 
       const source = read.text(found.file);
-      if (source === null) return `\`${found.file}\` could not be read`;
+      if (source === null) return say('intent.file-unreadable', { file: found.file });
       if (file !== null && file !== found.file) {
-        return 'these cells are written in more than one file, which this cannot gather at once';
+        return say('intent.gather-across-files');
       }
 
       file = found.file;

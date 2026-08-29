@@ -1,9 +1,11 @@
 import { type CompiledGrid, type CompiledSheet, cellAt, sheetOf } from '@yxl-vscode/compile';
 import { nodeAt, type Op, renderScalar, type Value } from '@yxl-vscode/cst';
+import type { Message } from '@yxl-vscode/diag';
 import { KEY, type Templated } from '@yxl-vscode/spec';
 import { type A1Addr, type QualifiedAddr, qualified, type SheetName } from '@yxl-vscode/units';
 import { itemOf } from './anchored';
 import { type Intent, type Projection, type Reading, refused } from './direct';
+import { say } from './text';
 
 /** What an override says about one cell, beside where it says it. */
 export interface Says {
@@ -57,16 +59,16 @@ export function overrides(
 ): Intent {
   const { doc, grid } = spec;
   const sheet = sheetOf(grid, where);
-  if (sheet === null) return refused(`there is no sheet named \`${where}\``);
-  if (these.length === 0) return refused('there is nothing here to except');
+  if (sheet === null) return refused(say('intent.no-such-sheet', { sheet: where }));
+  if (these.length === 0) return refused(say('intent.nothing-to-except'));
 
   const file = doc.file;
   const tree = read.parsed(file);
-  if (tree === null) return refused(`\`${file}\` could not be read`);
+  if (tree === null) return refused(say('intent.file-unreadable', { file }));
 
   const root = tree.root;
   if (root === null || root.kind !== 'map') {
-    return refused('this spec has no document to write an override into');
+    return refused(say('intent.no-document-for-override'));
   }
 
   const written: string[] = [];
@@ -112,10 +114,10 @@ function writing(written: readonly string[], held: boolean, at: number): Op[] {
 }
 
 /** Which of the two rules stood in the way, said as the reader would ask it. */
-function whyNot(sheet: CompiledSheet, where: { sheet: SheetName; at: A1Addr }): string {
+function whyNot(sheet: CompiledSheet, where: { sheet: SheetName; at: A1Addr }): Message {
   return sheet.fills.some((fill) => fill.anchor === where.at)
-    ? `\`${where.at}\` is where a range keeps its one formula, and an override here would take it from every cell the range fills — split the range instead`
-    : `\`${where.at}\` is not written by anything, so there is nothing here to make an exception to`;
+    ? say('intent.range-keeps-its-formula', { at: where.at })
+    : say('intent.nothing-writes-it', { at: where.at });
 }
 
 /** The override as a spec writes one: `at:` first, then what it says. */

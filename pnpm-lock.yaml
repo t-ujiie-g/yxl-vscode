@@ -133,6 +133,9 @@ importers:
       '@yxl-vscode/cst':
         specifier: workspace:*
         version: link:../cst
+      '@yxl-vscode/diag':
+        specifier: workspace:*
+        version: link:../diag
       '@yxl-vscode/loader':
         specifier: workspace:*
         version: link:../loader

@@ -1,7 +1,7 @@
 import type { Axis } from '@yxl-vscode/spec';
 import type { SheetName } from '@yxl-vscode/units';
 import { describe, expect, it } from 'vitest';
-import { files, wrote } from './harness';
+import { english, files, wrote } from './harness';
 import { setHidden } from './hidden';
 import type { Candidate } from './resolve';
 
@@ -33,7 +33,7 @@ describe('columns nothing hides yet', () => {
 
   it('are hidden by a band of their own, without asking', () => {
     const answers = offered(BARE, 2, 4, true);
-    expect(answers.map((one) => [one.id, one.alone, one.what])).toEqual([
+    expect(answers.map((one) => [one.id, one.alone, english(one.what)])).toEqual([
       ['ofItsOwn', true, 'Hide `B-D`'],
     ]);
 
@@ -87,8 +87,8 @@ describe('columns a wider band hides', () => {
   it('are a question: the whole band, or the run alone', () => {
     const answers = offered(WIDE, 2, 4, false);
     expect(answers.map((one) => one.id)).toEqual(['band', 'apart']);
-    expect(answers[0]?.what).toBe('Show the band over `A-F`, which is 6 columns');
-    expect(answers[1]?.what).toBe('Split it so `B-D` alone is shown');
+    expect(english(answers[0]?.what ?? '')).toBe('Show the band over `A-F`, which is 6 columns');
+    expect(english(answers[1]?.what ?? '')).toBe('Split it so `B-D` alone is shown');
   });
 
   it('are shown alone by the split, with the rest left hidden', () => {
@@ -112,7 +112,7 @@ describe('rows', () => {
     const [answer] = offered(spec, 3, 3, true, 'row');
     if (answer === undefined) throw new Error('nothing was offered');
 
-    expect(answer.what).toBe('Hide `3`');
+    expect(english(answer.what)).toBe('Hide `3`');
     expect(taken(spec, answer)).toContain('    rows:\n      - at: 3\n        hidden: true\n');
   });
 });

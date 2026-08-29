@@ -32,6 +32,7 @@ import {
 } from '@yxl-vscode/units';
 import { type Change, checked, checkedText } from '@yxl-vscode/verify';
 import type { About, Choice, Ranged, Typed } from '@yxl-vscode/webview/protocol';
+import { say } from './text';
 
 /**
  * What the write needs of the world outside it, injected so it is testable
@@ -42,7 +43,7 @@ export interface Port {
   readonly text: (file: FilePath) => string | null;
   readonly put: (file: FilePath, text: string) => void | Promise<void>;
   readonly refuse: (why: Saying, offer: Offer | null) => void;
-  readonly said: (what: string) => void;
+  readonly said: (what: Saying) => void;
   readonly kept: (step: Step | null) => void;
   readonly left: (file: FilePath) => string | null;
 }
@@ -54,8 +55,11 @@ export interface Port {
 export interface Offer {
   readonly about: About | null;
   readonly canOverride: boolean;
-  readonly choices: readonly Choice[];
+  readonly choices: readonly Offered[];
 }
+
+/** One choice before it is worded: the panel's own `Choice`, with the sentence still a message. */
+export type Offered = Omit<Choice, 'what'> & { readonly what: Saying };
 
 /** One spec open in the editor: the files it was read from, and the projection they came to. */
 export interface Spec {
@@ -133,7 +137,7 @@ export async function empty(spec: Spec, ranged: Ranged, port: Port, only = false
   const done = await applied(spec, intent, port, ASKED);
   if (done && intent.kind === 'edit') {
     const cells = intent.expects.cells.size;
-    port.said(`${cells} cell${cells === 1 ? '' : 's'} emptied.`);
+    port.said(say('host.cells-emptied', { many: cells }));
   }
 }
 
@@ -143,9 +147,9 @@ export async function empty(spec: Spec, ranged: Ranged, port: Port, only = false
  */
 export function theseOnly(
   about: About,
-  what: string,
+  what: Saying,
   cells: ReadonlySet<string> | null,
-  apart: readonly Choice[] = [],
+  apart: readonly Offered[] = [],
 ): Offer | null {
   const named = cells === null ? [] : [...cells];
   const choices =
@@ -161,8 +165,8 @@ export function perOrigin(
   skipped: ReadonlySet<string>,
   trying: (by: Stood) => Intent,
   doing: string,
-): Choice[] {
-  const apart: Choice[] = [];
+): Offered[] {
+  const apart: Offered[] = [];
 
   for (const by of EXCEPTED) {
     const one = trying(by);
@@ -172,10 +176,12 @@ export function perOrigin(
     if (many <= 0) continue;
 
     const named = [...one.expects.cells];
-    const rest = skipped.size === 0 ? '' : `, and ${doing} the rest`;
     apart.push({
       id: `${EXCEPT}${by}`,
-      what: `${excepting(by, many)}${rest}`,
+      what:
+        skipped.size === 0
+          ? excepting(by, many)
+          : say('host.and-the-rest', { what: excepting(by, many), doing }),
       moves: named.length,
       sample: named.slice(0, 3),
     });
@@ -198,8 +204,8 @@ export function excepted(choice: string): Stood | null {
 
 /** The answer that leaves what could not be done, named the same on both sides. */
 export const ONLY = 'only';
-const EMPTIED = 'Empty the ones that can be';
-export const PASTED = 'Paste into the ones that can take it';
+const EMPTIED = say('host.empty-the-ones');
+export const PASTED = say('host.paste-the-ones');
 
 /** That answer, taken. Worked out again rather than remembered: the file may have moved. */
 export async function emptied(
@@ -251,7 +257,7 @@ export async function resolve(
     from: taken.id,
     about: about(typed),
   });
-  if (done) port.said(`${taken.what.replace(/^C/, 'c')}: ${taken.moves.length} cells changed.`);
+  if (done) port.said(say('host.cells-changed', { what: taken.what, many: taken.moves.length }));
 }
 
 /** The message an edit came in as, which is what the reader sends back to confirm it (ADR-048). */
@@ -276,7 +282,7 @@ function resolving(spec: Spec, read: Reading): Resolving {
 }
 
 /** A candidate as the view shows one: what it does, and what it would move. */
-export function shown(candidate: Candidate): Choice {
+export function shown(candidate: Candidate): Offered {
   return {
     id: candidate.id,
     what: candidate.what,
@@ -305,7 +311,7 @@ export async function writeOverride(
     from: null,
     about: about(typed),
   });
-  if (done) port.said(`${sheet}!${at} is now written as an override.`);
+  if (done) port.said(say('host.now-an-override', { at: `${sheet}!${at}` }));
 }
 
 /** The rectangle a gesture named, which is everything it carries but the sheet. */
@@ -316,7 +322,7 @@ export function rectIn(ranged: Ranged): Rect {
 /** The sheet a gesture named, or `null` once the reader has been told it is not a name. */
 export function sheetNamed(said: string, port: Port): SheetName | null {
   const read = sheetName(said);
-  if (read === null) port.refuse(`\`${said}\` is not a name a sheet can have`, null);
+  if (read === null) port.refuse(say('host.not-a-sheet-name', { name: said }), null);
 
   return read;
 }

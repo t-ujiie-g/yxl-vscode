@@ -1,5 +1,6 @@
 import type { CompiledBand, CompiledSheet } from '@yxl-vscode/compile';
 import { entryOf, holds, type Node, nodeAt, type Op } from '@yxl-vscode/cst';
+import type { Saying } from '@yxl-vscode/diag';
 import { type Axis, BAND_KEYS, KEY } from '@yxl-vscode/spec';
 import { columnLabel } from '@yxl-vscode/units';
 import { itemOf } from './anchored';
@@ -48,7 +49,7 @@ export function bandOfItsOwn(
 /** An answer as the reader is offered it; a size moves no cell, so it claims none. */
 export function answer(
   id: string,
-  what: string,
+  what: Saying,
   found: Found & { kind: 'found' },
   ops: readonly Op[],
 ): Candidate {
@@ -194,9 +195,9 @@ export interface Says {
 
 /** How one ask reads in each of the three answers a band has. */
 export interface Words {
-  readonly own: (span: Span) => string;
-  readonly band: (over: Span, many: number) => string;
-  readonly apart: (span: Span) => string;
+  readonly own: (span: Span) => Saying;
+  readonly band: (over: Span, many: number) => Saying;
+  readonly apart: (span: Span) => Saying;
 }
 
 /**

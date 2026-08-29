@@ -1,6 +1,6 @@
 import type { A1Addr, SheetName } from '@yxl-vscode/units';
 import { describe, expect, it } from 'vitest';
-import { files, tried } from './harness';
+import { english, files, tried } from './harness';
 import { setNote } from './note';
 
 /** The note set, through the checker — the file, or why not. */
@@ -67,6 +67,8 @@ describe('a note on a cell', () => {
     const where = { sheet: 'Other' as SheetName, at: 'A1' as A1Addr, text: 'hello' };
     const intent = setNote({ doc, grid }, where, read);
 
-    expect(intent).toEqual({ kind: 'refused', why: 'there is no sheet named `Other`' });
+    expect(intent.kind === 'refused' && english(intent.why)).toBe(
+      'there is no sheet named `Other`',
+    );
   });
 });

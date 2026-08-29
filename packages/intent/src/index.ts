@@ -61,5 +61,6 @@ export { type Sorting, setSorted } from './sort';
 export { type Projection, setStyle } from './style';
 export { asTable, type Tabling } from './table';
 export { tabular } from './tabular';
+export { WORDS } from './text';
 export { type Meaning, meaning } from './typed';
 export { setValidation, type Validating } from './validation';

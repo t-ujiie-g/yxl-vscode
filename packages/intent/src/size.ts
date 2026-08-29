@@ -5,6 +5,7 @@ import type { SheetName } from '@yxl-vscode/units';
 import { answer, bandOfItsOwn, type Span, spelled, splitBand } from './bands';
 import { located, type Reading } from './direct';
 import type { Candidate } from './resolve';
+import { say } from './text';
 import type { Projection } from './writes';
 
 /**
@@ -78,8 +79,8 @@ function ofItsOwn(sheet: CompiledSheet, dragged: Dragged, read: Reading): Candid
   const many = dragged.last - dragged.first + 1;
   const what =
     many === 1
-      ? `Write a ${dragged.axis} of its own`
-      : `Write one ${dragged.axis} band over \`${spelled(spanOf(dragged))}\``;
+      ? say('intent.band-of-its-own', { axis: dragged.axis })
+      : say('intent.one-band-over', { span: spelled(spanOf(dragged)), axis: dragged.axis });
 
   return answer('ofItsOwn', what, written.found, [written.op]);
 }
@@ -96,10 +97,15 @@ function theBand(band: CompiledBand, dragged: Dragged, read: Reading): Candidate
 
   const key = BAND_KEYS[dragged.axis].size;
   const many = band.last - band.first + 1;
+  const over = spelled({ axis: dragged.axis, first: band.first, last: band.last });
   const what =
     many === 1
-      ? `Change the band over \`${spelled({ axis: dragged.axis, first: band.first, last: band.last })}\``
-      : `Change the band over \`${spelled({ axis: dragged.axis, first: band.first, last: band.last })}\`, which is ${many} ${dragged.axis}s`;
+      ? say('intent.change-the-band', { span: over })
+      : say('intent.which-is-many', {
+          said: say('intent.change-the-band', { span: over }),
+          many,
+          axis: dragged.axis,
+        });
 
   const op: Op = holds(found.node, key)
     ? { op: 'set', path: [...found.path, key], value: dragged.size }
@@ -115,5 +121,10 @@ function apart(band: CompiledBand, dragged: Dragged, read: Reading): Candidate |
   const split = splitBand(band, span, size, read);
   if (split === null) return null;
 
-  return answer('apart', `Split it so \`${spelled(span)}\` stands alone`, split.found, split.ops);
+  return answer(
+    'apart',
+    say('intent.split-so-alone', { span: spelled(span) }),
+    split.found,
+    split.ops,
+  );
 }

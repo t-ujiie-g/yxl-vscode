@@ -4,9 +4,9 @@ import { type IncludeReader, load } from '@yxl-vscode/loader';
 import { did, type History, nothing } from '@yxl-vscode/patch';
 import { type FilePath, filePath } from '@yxl-vscode/units';
 import type { Choice, Typed } from '@yxl-vscode/webview/protocol';
-import { reader } from '@yxl-vscode/webview/words';
 import { describe, expect, it } from 'vitest';
 import { goBack } from './undo';
+import { reader } from './words';
 import { type Port, resolve, type Spec, write } from './write';
 
 const ROOT = filePath('/specs/report.yxl.yaml') ?? ('' as FilePath);
@@ -40,10 +40,10 @@ function editor(sources: Record<string, string>) {
     refuse: (why, offer) => {
       refusals.push(english(why));
       offers.push(offer?.canOverride === true && offer.about?.kind === 'edit' ? offer.about : null);
-      answers.push([...(offer?.choices ?? [])]);
+      answers.push(offer?.choices?.map((one) => ({ ...one, what: english(one.what) })) ?? []);
     },
     said: (what) => {
-      told.push(what);
+      told.push(english(what));
     },
     kept: (step) => {
       if (step === null) {

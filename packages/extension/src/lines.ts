@@ -1,6 +1,7 @@
 import { setLine } from '@yxl-vscode/intent';
 import type { Lined } from '@yxl-vscode/webview/protocol';
 import { type Asking, asked, many } from './asked';
+import { say } from './text';
 import type { Port, Spec } from './write';
 
 /**
@@ -15,16 +16,16 @@ export function line(spec: Spec, lined: Lined, port: Port, choice?: string): Pro
 const LINE: Asking<Lined> = {
   about: (lined) => ({ ...lined, kind: 'line' }),
   answers: (spec, lined, sheet, read) => setLine(spec, { ...lined, sheet }, read),
-  nothing: (lined) => `nothing here moves when ${run(lined)} is drawn`,
-  why: (_lined, answers) => {
-    const what = answers[0]?.what ?? '';
-    const keys = what.includes('`cells:` keys');
-
-    return `this moves more than a handful of things, so it is worth seeing first: ${what}${
-      keys ? ' — a `data:` table keeps its addresses in one place, and moves in one line' : ''
-    }`;
-  },
-  done: (lined) => `${run(lined)} ${lined.by < 0 ? 'taken away' : 'put in'}.`,
+  nothing: (lined) => say('host.nothing-moves', { span: run(lined) }),
+  why: (_lined, answers) =>
+    say('host.moves-a-lot', {
+      what: answers[0]?.what ?? '',
+      keys: answers[0]?.keys ?? 0,
+    }),
+  done: (lined) =>
+    lined.by < 0
+      ? say('host.lines-taken-away', { span: run(lined) })
+      : say('host.lines-put-in', { span: run(lined) }),
 };
 
 /** The run the gesture named, as the reader is told about it. */

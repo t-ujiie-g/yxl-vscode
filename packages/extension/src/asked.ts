@@ -1,8 +1,10 @@
+import type { Saying } from '@yxl-vscode/diag';
 import type { Candidate, Reading } from '@yxl-vscode/intent';
 import { reading } from '@yxl-vscode/intent';
 import type { Axis } from '@yxl-vscode/spec';
 import { type SheetName, spanSaid } from '@yxl-vscode/units';
 import type { About } from '@yxl-vscode/webview/protocol';
+import { say } from './text';
 import { ANYWAY, applied, type Port, type Spec, sheetNamed, shown } from './write';
 
 /**
@@ -13,9 +15,9 @@ import { ANYWAY, applied, type Port, type Spec, sheetNamed, shown } from './writ
 export interface Asking<T> {
   readonly about: (one: T) => About;
   readonly answers: (spec: Spec, one: T, sheet: SheetName, read: Reading) => readonly Candidate[];
-  readonly nothing: (one: T) => string;
-  readonly why: (one: T, answers: readonly Candidate[]) => string;
-  readonly done: (one: T, taken: Candidate) => string;
+  readonly nothing: (one: T) => Saying;
+  readonly why: (one: T, answers: readonly Candidate[]) => Saying;
+  readonly done: (one: T, taken: Candidate) => Saying;
 }
 
 /**
@@ -49,7 +51,7 @@ export async function asked<T extends { readonly sheet: string }>(
 
   if (taken === undefined || (wanted === undefined && !anyway && taken.alone !== true)) {
     if (choice !== undefined) {
-      port.refuse('that answer is no longer one of the ways this edit could be made', null);
+      port.refuse(say('host.answer-is-gone'), null);
       return;
     }
 

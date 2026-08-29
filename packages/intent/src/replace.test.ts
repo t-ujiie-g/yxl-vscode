@@ -1,7 +1,7 @@
 import { finds } from '@yxl-vscode/compile';
 import type { A1Addr, SheetName } from '@yxl-vscode/units';
 import { describe, expect, it } from 'vitest';
-import { files, tried } from './harness';
+import { english, files, tried } from './harness';
 import { replaceIn } from './replace';
 
 const SHEET = 'S' as SheetName;
@@ -94,15 +94,11 @@ describe('what a find turned up, replaced', () => {
   it('refuses a search for nothing, and a sheet that is not there', () => {
     const { doc, grid, read } = files(`${SPEC}      A1: one\n`);
     const nothing = { sheet: SHEET, at: ['A1' as A1Addr], looking: '', becomes: 'x' };
-    expect(replaceIn({ doc, grid }, nothing, read)).toEqual({
-      kind: 'refused',
-      why: 'there is nothing to look for',
-    });
+    const none = replaceIn({ doc, grid }, nothing, read);
+    expect(none.kind === 'refused' && english(none.why)).toBe('there is nothing to look for');
 
     const elsewhere = { sheet: 'Other' as SheetName, at: [], looking: 'one', becomes: 'x' };
-    expect(replaceIn({ doc, grid }, elsewhere, read)).toEqual({
-      kind: 'refused',
-      why: 'there is no sheet named `Other`',
-    });
+    const other = replaceIn({ doc, grid }, elsewhere, read);
+    expect(other.kind === 'refused' && english(other.why)).toBe('there is no sheet named `Other`');
   });
 });

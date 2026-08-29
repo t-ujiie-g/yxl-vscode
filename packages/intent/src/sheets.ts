@@ -22,6 +22,7 @@ import {
   refused,
   writtenSheet,
 } from './direct';
+import { say } from './text';
 
 /** A sheet a reader asked for, by the name it is to have. */
 export interface Adding {
@@ -38,13 +39,13 @@ export function addSheet(spec: Projection, adding: Adding, read: Reading): Inten
   const name = sheetName(adding.name);
   if (why !== null || name === null) return refused(why ?? 'a sheet needs a name');
   if (spec.grid.sheets.some((one) => one.name === name)) {
-    return refused(`there is already a sheet named \`${name}\``);
+    return refused(say('intent.already-a-sheet-named', { name }));
   }
 
   const first = spec.doc.sheets[0];
   const found = first === undefined ? null : located(first.id, read);
   if (found === null || found.kind === 'refused') {
-    return refused('this spec has no `sheets:` to put one in');
+    return refused(say('intent.no-sheets-key'));
   }
 
   const list = found.path.slice(0, -1);
@@ -77,20 +78,23 @@ export interface Deleting {
  */
 export function deleteSheet(spec: Projection, where: Deleting, read: Reading): Intent {
   const sheet = spec.doc.sheets.find((one) => nameOf(one) === where.sheet);
-  if (sheet === undefined) return refused(`there is no sheet named \`${where.sheet}\``);
+  if (sheet === undefined) return refused(say('intent.no-such-sheet', { sheet: where.sheet }));
 
   const rest = spec.doc.sheets.filter((one) => one !== sheet);
-  if (rest.length === 0) return refused('a workbook needs a sheet, and this is the only one');
+  if (rest.length === 0) return refused(say('intent.workbook-needs-a-sheet'));
   if (!spec.grid.sheets.some((one) => one.name !== where.sheet && shows(one))) {
-    return refused('a workbook needs a sheet that shows, and this is the only one');
+    return refused(say('intent.workbook-needs-a-shown-sheet'));
   }
 
   const held = [...cellsNaming(spec, where.sheet)];
   if (held.length > 0) {
     const shown = held.slice(0, 3).join(', ');
-    const more = held.length > 3 ? `, and ${held.length - 3} more` : '';
     return refused(
-      `\`${where.sheet}\` is named by ${shown}${more}, which would be left with \`#REF!\``,
+      say('intent.named-by-cells', {
+        sheet: where.sheet,
+        shown,
+        rest: Math.max(held.length - 3, 0),
+      }),
     );
   }
 
@@ -100,13 +104,13 @@ export function deleteSheet(spec: Projection, where: Deleting, read: Reading): I
   };
 
   const found = located(sheet.id, read);
-  if (found.kind === 'refused') return refused('this sheet has no place in the file to take out');
+  if (found.kind === 'refused') return refused(say('intent.no-place-to-take-out'));
   put(found.path, found.file);
 
   const on = spec.doc.overrides.filter((one) => onSheet(one.at, where.sheet));
   for (const one of on) {
     const at = located(one.id, read);
-    if (at.kind === 'refused') return refused('an override on this sheet has no place in the file');
+    if (at.kind === 'refused') return refused(say('intent.override-no-place'));
 
     put(on.length === spec.doc.overrides.length ? at.path.slice(0, -1) : at.path, at.file);
   }
@@ -114,9 +118,7 @@ export function deleteSheet(spec: Projection, where: Deleting, read: Reading): I
   const files = [...ops.keys()];
   const file = files[0];
   if (file === undefined || files.length > 1) {
-    return refused(
-      `\`${where.sheet}\` is written across more than one file, which this cannot take out at once`,
-    );
+    return refused(say('intent.take-out-across-files', { sheet: where.sheet }));
   }
 
   return {
@@ -148,16 +150,16 @@ export interface Ordering {
  */
 export function moveSheet(spec: Projection, where: Ordering, read: Reading): Intent {
   const at = spec.doc.sheets.findIndex((one) => nameOf(one) === where.sheet);
-  if (at < 0) return refused(`there is no sheet named \`${where.sheet}\``);
+  if (at < 0) return refused(say('intent.no-such-sheet', { sheet: where.sheet }));
 
   const many = spec.doc.sheets.length;
-  if (where.to < 0 || where.to >= many) return refused('a sheet cannot go there');
-  if (where.to === at) return refused(`\`${where.sheet}\` is already there`);
+  if (where.to < 0 || where.to >= many) return refused(say('intent.sheet-cannot-go-there'));
+  if (where.to === at) return refused(say('intent.already-there', { sheet: where.sheet }));
 
   const sheet = spec.doc.sheets[at];
   const found = sheet === undefined ? null : located(sheet.id, read);
   if (found === null || found.kind === 'refused') {
-    return refused('this sheet has no place in the file to move');
+    return refused(say('intent.no-place-to-move'));
   }
 
   const rest = [...Array(many).keys()].filter((one) => one !== at);
@@ -167,7 +169,7 @@ export function moveSheet(spec: Projection, where: Ordering, read: Reading): Int
   const tree = read.parsed(found.file);
   const root = tree?.root ?? null;
   const said = root === null ? null : reordered(read.text(found.file) ?? '', root, list, order);
-  if (said === null) return refused('the sheets are not written as a list this can reorder');
+  if (said === null) return refused(say('intent.not-a-list-to-reorder'));
 
   const ops: readonly Op[] = [{ op: 'write', path: list, source: said }];
 
@@ -193,13 +195,13 @@ export function setTab(spec: Projection, tabbed: Tabbed, read: Reading): Intent 
 
   const sheet = found.sheet;
   if (sheet.visibility === 'very_hidden') {
-    return refused(`\`${tabbed.sheet}\` is \`very_hidden\`, which only Excel's VBA undoes`);
+    return refused(say('intent.very-hidden', { sheet: tabbed.sheet }));
   }
 
   const shown = tabbed.visibility;
-  if (shown === 'very_hidden') return refused('`very_hidden` is not written by this editor');
+  if (shown === 'very_hidden') return refused(say('intent.very-hidden-not-written'));
   if (shown === 'hidden' && !spec.grid.sheets.some((one) => one !== sheet && shows(one))) {
-    return refused('a workbook needs a sheet that shows, and this is the only one');
+    return refused(say('intent.workbook-needs-a-shown-sheet'));
   }
 
   const ops: Op[] = [];
@@ -212,7 +214,7 @@ export function setTab(spec: Projection, tabbed: Tabbed, read: Reading): Intent 
   if (tabbed.gridlines !== undefined) {
     ops.push(...keyed(found.path, KEY.gridlines, tabbed.gridlines ? null : false, found.node));
   }
-  if (ops.length === 0) return refused('nothing about this sheet would change');
+  if (ops.length === 0) return refused(say('intent.nothing-would-change'));
 
   return { kind: 'edit', file: found.file, patch: { ops }, expects: nothingChanges };
 }

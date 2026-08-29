@@ -1,6 +1,7 @@
 import { KEY } from '@yxl-vscode/spec';
 import { type A1Addr, cellOf, type SheetName } from '@yxl-vscode/units';
 import { type Intent, keyed, type Reading, refused, writtenSheet } from './direct';
+import { say } from './text';
 import type { Projection } from './writes';
 
 /** A sheet's panes as a gesture asks for them: the cell to freeze at, or `null` to take the freeze off. */
@@ -20,17 +21,15 @@ export function setFreeze(spec: Projection, frozen: Frozen, read: Reading): Inte
 
   const at = frozen.at;
   if (at !== null && cellOf(at).row === 1 && cellOf(at).col === 1) {
-    return refused('`A1` freezes nothing — freeze at the first cell that is to scroll');
+    return refused(say('intent.a1-freezes-nothing'));
   }
 
   if (found.sheet.split !== null) {
-    return refused(
-      `\`${frozen.sheet}\` is split, and a sheet cannot have both a \`split\` and a \`freeze\``,
-    );
+    return refused(say('intent.split-and-freeze', { sheet: frozen.sheet }));
   }
 
   const ops = keyed(found.path, KEY.freeze, at, found.node);
-  if (ops.length === 0) return refused(`\`${frozen.sheet}\` freezes nothing to take off`);
+  if (ops.length === 0) return refused(say('intent.nothing-frozen', { sheet: frozen.sheet }));
 
   return {
     kind: 'edit',

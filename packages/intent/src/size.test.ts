@@ -1,7 +1,7 @@
 import type { Axis } from '@yxl-vscode/spec';
 import type { SheetName } from '@yxl-vscode/units';
 import { describe, expect, it } from 'vitest';
-import { files, wrote } from './harness';
+import { english, files, wrote } from './harness';
 import type { Candidate } from './resolve';
 import { setSize } from './size';
 
@@ -94,7 +94,7 @@ describe('a column a band over several sizes', () => {
 
   it('says how many the band answer would take with it', () => {
     const [answer] = offered(SPAN, 5, 20);
-    expect(answer?.what).toBe('Change the band over `D-F`, which is 3 columns');
+    expect(english(answer?.what ?? '')).toBe('Change the band over `D-F`, which is 3 columns');
   });
 
   it('changes every column of the band where that is the answer taken', () => {
@@ -164,7 +164,7 @@ describe('a run of columns dragged by one of their edges', () => {
     if (answer === undefined) throw new Error('nothing was offered');
 
     expect([answer.id, answer.alone]).toEqual(['ofItsOwn', true]);
-    expect(answer.what).toBe('Write one column band over `B-D`');
+    expect(english(answer.what)).toBe('Write one column band over `B-D`');
     expect(taken(spec, answer)).toContain('    columns:\n      - at: B-D\n        width: 20\n');
   });
 
@@ -182,7 +182,7 @@ describe('a run of columns dragged by one of their edges', () => {
     const answers = offered(spec, 2, 20, 'column', 4);
 
     expect(answers.map((one) => one.id)).toEqual(['band', 'apart']);
-    expect(answers[1]?.what).toBe('Split it so `B-D` stands alone');
+    expect(english(answers[1]?.what ?? '')).toBe('Split it so `B-D` stands alone');
 
     const [, split] = answers;
     if (split === undefined) throw new Error('nothing to split');

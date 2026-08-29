@@ -1,7 +1,7 @@
 import type { A1Addr, SheetName } from '@yxl-vscode/units';
 import { type Ctx, checked } from '@yxl-vscode/verify';
 import { describe, expect, it } from 'vitest';
-import { files, ROOT } from './harness';
+import { english, files, ROOT } from './harness';
 import { type Candidate, candidates } from './resolve';
 
 const SPEC = `sheets:
@@ -44,7 +44,7 @@ function offered(
 /** The chosen candidate, taken all the way to the file it would leave behind. */
 function taken(source: string, candidate: Candidate): string {
   const { intent } = candidate;
-  if (intent.kind === 'refused') throw new Error(`refused: ${intent.why}`);
+  if (intent.kind === 'refused') throw new Error(`refused: ${english(intent.why)}`);
   if (intent.kind !== 'edit') throw new Error('a file was written, not a spec');
 
   const { includes } = files({ [ROOT]: source });
@@ -62,7 +62,7 @@ describe('what a cell filled by a range can be edited into', () => {
 
     expect(rest).toEqual([]);
     expect(candidate?.id).toBe('rangeFormula');
-    expect(candidate?.what).toContain('C1');
+    expect(english(candidate?.what ?? '')).toContain('C1');
   });
 
   it('names every cell the range fills, which is what makes the choice informed', () => {
@@ -84,7 +84,7 @@ describe('what a cell filled by a range can be edited into', () => {
     const [candidate] = offered(DOWN, 'C2', '=B2*0.1');
 
     expect(candidate?.id).toBe('rangeFormula');
-    expect(candidate?.what).toContain('`=B1*0.1` there');
+    expect(english(candidate?.what ?? '')).toContain('`=B1*0.1` there');
   });
 
   it('writes the typed formula shifted back to the anchor', () => {
@@ -184,7 +184,7 @@ describe('a cell nothing has written yet', () => {
     const table = `sheets:\n  - name: Sales\n    data:\n      - at: A2\n        values:\n          - [APAC, 1]\n          - [EMEA, 2]\n`;
     const answers = offered(table, 'A4', 'LATAM');
 
-    expect(answers.map((one) => [one.id, one.what])).toEqual([
+    expect(answers.map((one) => [one.id, english(one.what)])).toEqual([
       ['newCell', 'Write `A4` as a new cell'],
       ['ontoBlock', 'Add a row to the table at `A2`'],
     ]);
@@ -247,7 +247,7 @@ sheets:
   it('counts what changing the definition would move, which is the point of asking', () => {
     const [change] = offered(SHARED, 'B1', '0.1');
 
-    expect(change?.what).toContain('tax_rate');
+    expect(english(change?.what ?? '')).toContain('tax_rate');
     expect(change?.moves).toEqual([
       { sheet: 'Sales', at: 'B1' },
       { sheet: 'Sales', at: 'B2' },
@@ -303,7 +303,7 @@ sheets:
 
     expect(rest).toEqual([]);
     expect(change?.id).toBe('parameter');
-    expect(change?.what).toContain('region');
+    expect(english(change?.what ?? '')).toContain('region');
     expect(change?.moves).toEqual([
       { sheet: 'Sales', at: 'A1' },
       { sheet: 'Sales', at: 'A2' },
@@ -361,7 +361,7 @@ describe('a cell whose value is a field of a CSV', () => {
 
     expect(rest).toEqual([]);
     expect(write?.id).toBe('dataFile');
-    expect(write?.what).toContain('rows.csv');
+    expect(english(write?.what ?? '')).toContain('rows.csv');
     expect(write?.moves).toEqual([{ sheet: 'Sales', at: 'A2' }]);
   });
 

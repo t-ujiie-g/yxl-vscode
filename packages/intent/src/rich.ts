@@ -1,8 +1,10 @@
 import { cellAt, namesParam, sheetOf } from '@yxl-vscode/compile';
 import { entryOf, type Node, type Path } from '@yxl-vscode/cst';
+import type { Saying } from '@yxl-vscode/diag';
 import { KEY } from '@yxl-vscode/spec';
 import { type A1Addr, qualified, type SheetName } from '@yxl-vscode/units';
 import { type Intent, literalPath, type Projection, type Reading, refused } from './direct';
+import { say } from './text';
 
 /** One run of a `rich:` cell as a gesture asks for it: which run, and what it should say. */
 export interface Running {
@@ -19,23 +21,30 @@ export interface Running {
  */
 export function setRun(spec: Projection, where: Running, read: Reading): Intent {
   const sheet = sheetOf(spec.grid, where.sheet);
-  if (sheet === null) return refused(`there is no sheet named \`${where.sheet}\``);
+  if (sheet === null) return refused(say('intent.no-such-sheet', { sheet: where.sheet }));
 
   const cell = cellAt(sheet, where.at);
-  if (cell === null || cell.rich === null) return refused(`\`${where.at}\` holds no rich text`);
-  if (where.text === '') return refused('a run needs something to say');
+  if (cell === null || cell.rich === null)
+    return refused(say('intent.no-rich-text', { at: where.at }));
+  if (where.text === '') return refused(say('intent.run-needs-something'));
 
   const found = literalPath(cell.provenance.value, sheet, where.at, read);
   if (found.kind === 'refused') return found;
 
   const runs = entryOf(found.node, KEY.rich)?.value ?? null;
   if (runs === null || runs.kind !== 'seq') {
-    return refused(`\`${where.at}\` is not written as rich text here`);
+    return refused(say('intent.not-written-as-rich', { at: where.at }));
   }
 
   const run = runs.items[where.index];
   if (run === undefined) {
-    return refused(`\`${where.at}\` has ${runs.items.length} runs, and no run ${where.index + 1}`);
+    return refused(
+      say('intent.no-such-run', {
+        at: where.at,
+        runs: runs.items.length,
+        index: where.index + 1,
+      }),
+    );
   }
 
   const said = written(run, where);
@@ -58,13 +67,13 @@ export function setRun(spec: Projection, where: Running, read: Reading): Intent 
 }
 
 /** Where a run's text sits under the run: nowhere for a bare string, `text:` for one that wears a font. */
-function written(run: Node, want: Running): { into: Path } | { why: string } {
+function written(run: Node, want: Running): { into: Path } | { why: Saying } {
   const said = run.kind === 'scalar' ? run : (entryOf(run, KEY.text)?.value ?? null);
   if (said === null || said.kind !== 'scalar') {
-    return { why: `run ${want.index + 1} of \`${want.at}\` is not written as text` };
+    return { why: say('intent.run-not-text', { at: want.at, index: want.index + 1 }) };
   }
   if (typeof said.value === 'string' && namesParam(said.value)) {
-    return { why: `run ${want.index + 1} of \`${want.at}\` reads a parameter` };
+    return { why: say('intent.run-reads-a-parameter', { at: want.at, index: want.index + 1 }) };
   }
 
   return { into: run.kind === 'scalar' ? [] : [KEY.text] };

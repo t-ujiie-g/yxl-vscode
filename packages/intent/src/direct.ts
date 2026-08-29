@@ -19,6 +19,7 @@ import {
   renderScalar,
   type Value,
 } from '@yxl-vscode/cst';
+import type { Message, Saying } from '@yxl-vscode/diag';
 import { pathOf } from '@yxl-vscode/loader';
 import type { Patch } from '@yxl-vscode/patch';
 import {
@@ -38,6 +39,7 @@ import {
   type SheetName,
 } from '@yxl-vscode/units';
 import type { Expects } from '@yxl-vscode/verify';
+import { type HeldKey, say } from './text';
 import { meaning } from './typed';
 
 /** What a write needs of the spec: the tree it edits, and what that tree draws. */
@@ -64,7 +66,7 @@ export type Intent =
       readonly text: string;
       readonly expects: Expects;
     }
-  | { readonly kind: 'refused'; readonly why: string };
+  | { readonly kind: 'refused'; readonly why: Saying };
 
 /** The text of a file the spec was read from, as it stands. */
 export type Text = (file: FilePath) => string | null;
@@ -110,7 +112,7 @@ export function setValue(
   read: Reading,
 ): Intent {
   const sheet = sheetOf(grid, where.sheet);
-  if (sheet === null) return refused(`there is no sheet named \`${where.sheet}\``);
+  if (sheet === null) return refused(say('intent.no-such-sheet', { sheet: where.sheet }));
 
   const cell = cellAt(sheet, where.at);
   if (cell === null) return refused(nothingWrites(sheet, where.at, read));
@@ -149,18 +151,18 @@ export function setFormula(
   read: Reading,
 ): Intent {
   const sheet = sheetOf(grid, where.sheet);
-  if (sheet === null) return refused(`there is no sheet named \`${where.sheet}\``);
+  if (sheet === null) return refused(say('intent.no-such-sheet', { sheet: where.sheet }));
 
   const cell = cellAt(sheet, where.at);
-  if (cell === null) return refused(`nothing writes \`${where.at}\` yet`);
-  if (cell.formula === null) return refused(`\`${where.at}\` holds no formula to change`);
+  if (cell === null) return refused(say('intent.nothing-writes-yet', { at: where.at }));
+  if (cell.formula === null) return refused(say('intent.no-formula-to-change', { at: where.at }));
 
   const written = literalPath(cell.provenance.value, sheet, where.at, read);
   if (written.kind === 'refused') return written;
 
   const at = written.node;
   if (at.kind !== 'map' || !holds(at, 'formula')) {
-    return refused(`\`${where.at}\` is written as a value, not as a formula`);
+    return refused(say('intent.written-as-a-value', { at: where.at }));
   }
 
   return {
@@ -177,7 +179,7 @@ export function setFormula(
  */
 export type Found =
   | { kind: 'found'; file: FilePath; path: Path; node: Node; add: boolean }
-  | { kind: 'refused'; why: string };
+  | { kind: 'refused'; why: Saying };
 
 /** Where a value is written, for the origins one node can be edited through. */
 function valuePath(origin: FacetOrigin, sheet: CompiledSheet, at: A1Addr, read: Reading): Found {
@@ -198,12 +200,12 @@ function valuePath(origin: FacetOrigin, sheet: CompiledSheet, at: A1Addr, read: 
 
   // A `value:` beside a `formula:` is Excel's cached result (`docs/spec.md` §3).
   if (holds(written.node, 'formula')) {
-    return refused(`\`${at}\` holds a formula — type a formula to change it, starting with \`=\``);
+    return refused(say('intent.holds-a-formula', { at }));
   }
 
   // A cell cannot be `rich` and hold a value too (`docs/spec.md` §3).
   if (holds(written.node, KEY.rich)) {
-    return refused(`\`${at}\` holds rich text — edit it a run at a time in the bar over the grid`);
+    return refused(say('intent.holds-rich-text', { at }));
   }
 
   if (holds(written.node, 'value')) return { ...written, path: [...written.path, 'value'] };
@@ -224,21 +226,21 @@ export function literalPath(
       return located(origin.node, read);
 
     case 'defRef':
-      return refused(
-        `\`${at}\` reads a definition, which other cells read too — changing it here would change them as well`,
-      );
+      return refused(say('intent.reads-a-definition', { at }));
 
     case 'param':
-      return refused(`\`${at}\` reads the parameter \`${origin.params[0] ?? ''}\``);
+      return refused(say('intent.reads-a-parameter', { at, name: origin.params[0] ?? '' }));
 
     case 'external':
-      return refused(`\`${at}\` reads row ${origin.row + 1} of \`${beside(origin.file)}\``);
+      return refused(
+        say('intent.reads-a-row', { at, row: origin.row + 1, file: beside(origin.file) }),
+      );
 
     case 'formulaRange':
       return refused(
         origin.anchor === at
-          ? `\`${at}\` is where this range's one formula is written, and changing it changes every cell the range fills`
-          : `\`${at}\` is filled by the range anchored at \`${origin.anchor}\`, which writes one formula for every cell it covers`,
+          ? say('intent.is-the-anchor', { at })
+          : say('intent.is-filled-by', { at, anchor: origin.anchor }),
       );
 
     case 'inline':
@@ -246,11 +248,11 @@ export function literalPath(
 
     case 'empty':
       return origin.node === null
-        ? refused(`nothing writes \`${at}\` yet`)
+        ? refused(say('intent.nothing-writes-yet', { at }))
         : located(origin.node, read);
 
     default:
-      return refused(`\`${at}\` on \`${sheet.name}\` holds nothing to change yet`);
+      return refused(say('intent.nothing-to-change-yet', { at, sheet: sheet.name }));
   }
 }
 
@@ -286,24 +288,24 @@ export function entryOp(path: Path, cells: boolean, at: A1Addr, holds: Holds): O
 /** The node an id names, read out of the file it lives in. */
 export function located(id: NodeId, read: Reading): Found {
   const where = pathOf(id);
-  if (where === null) return refused('this cell has no place in the file to edit');
+  if (where === null) return refused(say('intent.no-place-in-the-file'));
 
   const tree = read.parsed(where.file);
-  if (tree === null) return refused(`\`${where.file}\` could not be read`);
+  if (tree === null) return refused(say('intent.file-unreadable', { file: where.file }));
 
   const node = tree.root === null ? null : nodeAt(tree.root, where.path);
   if (node === null)
-    return refused(`nothing is at \`${where.path.join('.')}\` in \`${where.file}\``);
+    return refused(say('intent.nothing-at-path', { path: where.path.join('.'), file: where.file }));
 
   return { kind: 'found', file: where.file, path: where.path, node, add: false };
 }
 
 /** Why an address holds nothing to write: the sheet keeps its cells elsewhere, or nothing writes it yet. */
-function nothingWrites(sheet: CompiledSheet, at: A1Addr, read: Reading): string {
+function nothingWrites(sheet: CompiledSheet, at: A1Addr, read: Reading): Saying {
   const found = located(sheet.node, read);
   const away = found.kind === 'found' ? keptElsewhere(found.node, KEY.cells, sheet.name) : null;
 
-  return away ?? `nothing writes \`${at}\` yet`;
+  return away ?? say('intent.nothing-writes-yet', { at });
 }
 
 /**
@@ -311,27 +313,27 @@ function nothingWrites(sheet: CompiledSheet, at: A1Addr, read: Reading): string 
  * `$include` stands for the whole node it replaces, so what belongs under the
  * key is another file's to edit (`docs/spec.md` §8).
  */
-export function keptElsewhere(node: Node, key: string, sheet: SheetName): string | null {
+export function keptElsewhere(node: Node, key: string, sheet: SheetName): Message | null {
   const written = entryOf(node, key)?.value ?? null;
   if (written === null || !holds(written, INCLUDE_KEY)) return null;
 
-  return `\`${sheet}\` keeps its ${HELD[key] ?? `\`${key}\``} in another file`;
+  return say('intent.kept-in-another-file', { sheet, what: HELD[key] ?? key });
 }
 
-/** What a sheet keeps under each key, in the reader's word for it rather than the schema's. */
-const HELD: Record<string, string> = {
+/** Which of a sheet's keys a refusal names, since the sentence has its own word for each. */
+const HELD: Record<string, HeldKey> = {
   [KEY.cells]: 'cells',
-  [KEY.comments]: 'notes',
+  [KEY.comments]: 'comments',
   [KEY.links]: 'links',
   [KEY.validations]: 'validations',
   [KEY.tables]: 'tables',
   [KEY.charts]: 'charts',
   [KEY.images]: 'images',
-  [KEY.data]: 'data blocks',
-  [KEY.formulas]: 'formula ranges',
+  [KEY.data]: 'data',
+  [KEY.formulas]: 'formulas',
   [KEY.merges]: 'merges',
-  [BAND_KEYS.column.at]: 'column bands',
-  [BAND_KEYS.row.at]: 'row bands',
+  [BAND_KEYS.column.at]: 'columns',
+  [BAND_KEYS.row.at]: 'rows',
 };
 
 /** The sheet's own mapping in the file, with the compiled sheet it projects to. */
@@ -344,7 +346,7 @@ export type WrittenSheet =
       add: boolean;
       sheet: CompiledSheet;
     }
-  | { kind: 'refused'; why: string };
+  | { kind: 'refused'; why: Saying };
 
 /**
  * Where a sheet is written, which is where every key a gesture puts under a
@@ -353,11 +355,12 @@ export type WrittenSheet =
  */
 export function writtenSheet(spec: Projection, name: SheetName, read: Reading): WrittenSheet {
   const sheet = sheetOf(spec.grid, name);
-  if (sheet === null) return refused(`there is no sheet named \`${name}\``);
+  if (sheet === null) return refused(say('intent.no-such-sheet', { sheet: name }));
 
   const found = located(sheet.node, read);
   if (found.kind === 'refused') return found;
-  if (found.node.kind !== 'map') return refused(`\`${name}\` is not written as a sheet`);
+  if (found.node.kind !== 'map')
+    return refused(say('intent.not-written-as-a-sheet', { sheet: name }));
 
   return { ...found, sheet };
 }
@@ -368,7 +371,7 @@ export function writtenSheet(spec: Projection, name: SheetName, read: Reading): 
  */
 export interface Held {
   readonly at: A1Addr;
-  readonly why: string;
+  readonly why: Saying;
   readonly by: Stood;
 }
 
@@ -405,56 +408,22 @@ export function stood(origin: FacetOrigin): Stood {
  * Why a rectangle was not done: how many of how many, and what stood in the way
  * grouped and counted. `doing` is the verb in the past — `emptied`, `pasted`.
  */
-export function standing(done: number, held: readonly Held[], doing: string): string {
-  const total = done + held.length;
+export function standing(done: number, held: readonly Held[], doing: string): Message {
   const sole = held.length === 1 ? held[0] : undefined;
-  const what = sole === undefined ? grouped(held) : sole.why;
+  if (sole !== undefined) {
+    return say('intent.one-cannot', { total: done + 1, why: sole.why, doing });
+  }
 
-  return `${held.length} of the ${total} cells here cannot be ${doing}, so none were: ${what}`;
+  return say('intent.some-cannot', {
+    done,
+    held: held.map((one) => ({ at: String(one.at), by: one.by })),
+    doing,
+  });
 }
-
-/** What stood in the way of several, counted by kind: one cell's own reason does not scale to five hundred. */
-function grouped(held: readonly Held[]): string {
-  const kinds = [...new Set(held.map((one) => one.by))];
-
-  return kinds
-    .map((by) => {
-      const many = held.filter((one) => one.by === by);
-      return many.length === 1 ? `\`${many[0]?.at}\` ${THE[by]}` : `${many.length} ${THEY[by]}`;
-    })
-    .join(', ');
-}
-
-/** What one such cell is, and what several of them are; the same list, said singly and in a crowd. */
-const THE: Record<Stood, string> = {
-  range: 'is filled by a range',
-  definition: 'reads a definition',
-  parameter: 'reads a parameter',
-  file: 'is read from a file beside the spec',
-  data: 'is a field of a `data:` block',
-  formula: 'holds a formula that cannot be moved here',
-  rich: 'holds rich text',
-  other: 'cannot be written',
-};
-
-const THEY: Record<Stood, string> = {
-  range: 'are filled by a range',
-  definition: 'read a definition',
-  parameter: 'read a parameter',
-  file: 'are read from a file beside the spec',
-  data: 'are fields of a `data:` block',
-  formula: 'hold formulas that cannot be moved here',
-  rich: 'hold rich text',
-  other: 'cannot be written',
-};
 
 /** What an answer that excepts one group of a rectangle would do, in the same words the refusal counted them in. */
-export function excepting(by: Stood, many: number): string {
-  const which = many === 1 ? `the one that ${THE[by]}` : `the ${many} that ${THEY[by]}`;
-  const as = by === 'definition' ? 'a value of its own' : 'an override';
-  const plural = by === 'definition' ? 'values of their own' : 'overrides';
-
-  return `Write ${which} as ${many === 1 ? as : plural}`;
+export function excepting(by: Stood, many: number): Message {
+  return say('intent.write-as-override', { by, many });
 }
 
 /** A file as a reader would name it, which is not the whole way there. */
@@ -463,7 +432,7 @@ export function beside(file: string): string {
 }
 
 /** An edit that will not happen, and the sentence a reader can act on (ADR-001). */
-export function refused(why: string): Intent & { kind: 'refused' } {
+export function refused(why: Saying): Intent & { kind: 'refused' } {
   return { kind: 'refused', why };
 }
 

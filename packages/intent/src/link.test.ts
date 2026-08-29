@@ -1,7 +1,7 @@
 import type { LinkTarget } from '@yxl-vscode/spec';
 import type { A1Addr, SheetName } from '@yxl-vscode/units';
 import { describe, expect, it } from 'vitest';
-import { files, tried } from './harness';
+import { english, files, tried } from './harness';
 import { setLink } from './link';
 
 /** The link set, through the checker — the file, or why not. */
@@ -81,9 +81,9 @@ describe('a link on a cell', () => {
 
     const { doc, grid, read } = files(SHEET);
     const where = { sheet: 'Other' as SheetName, at: 'A1' as A1Addr, target: url('x') };
-    expect(setLink({ doc, grid }, where, read)).toEqual({
-      kind: 'refused',
-      why: 'there is no sheet named `Other`',
-    });
+    const intent = setLink({ doc, grid }, where, read);
+    expect(intent.kind === 'refused' && english(intent.why)).toBe(
+      'there is no sheet named `Other`',
+    );
   });
 });

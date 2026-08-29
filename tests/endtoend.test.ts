@@ -7,8 +7,8 @@ import { asTable, drawLine, reading, setMerged, setSorted, setStyle } from '@yxl
 import { load } from '@yxl-vscode/loader';
 import { type A1Addr, type FilePath, filePath, type SheetName } from '@yxl-vscode/units';
 import type { Typed } from '@yxl-vscode/webview/protocol';
-import { reader } from '@yxl-vscode/webview/words';
 import { describe, expect, it } from 'vitest';
+import { reader } from 'yxl-vscode/words';
 import {
   applied,
   type Port,

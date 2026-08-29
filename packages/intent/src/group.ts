@@ -4,6 +4,7 @@ import type { SheetName } from '@yxl-vscode/units';
 import { type Says, type Span, setBandKey, spelled } from './bands';
 import type { Reading } from './direct';
 import type { Candidate } from './resolve';
+import { say } from './text';
 import type { Projection } from './writes';
 
 /** Columns or rows a reader asked to group, or to take out of the outline (`docs/spec.md` §4). */
@@ -37,8 +38,8 @@ export function setGroup(
   const bands = grouping.axis === 'column' ? sheet.columns : sheet.rows;
   const said = (one: Span) =>
     level === 0
-      ? `Take \`${spelled(one)}\` out of the outline`
-      : `Group \`${spelled(one)}\` at level ${level}`;
+      ? say('intent.take-out-of-outline', { span: spelled(one) })
+      : say('intent.group-at-level', { span: spelled(one), level });
 
   const says: Says = {
     key: KEY.group,
@@ -50,8 +51,8 @@ export function setGroup(
       band: (over, many) =>
         many === span.last - span.first + 1
           ? said(over)
-          : `${said(over)}, which is ${many} ${span.axis}s`,
-      apart: (one) => `Split it so \`${spelled(one)}\` alone is out`,
+          : say('intent.which-is-many', { said: said(over), many, axis: span.axis }),
+      apart: (one) => say('intent.split-so-out', { span: spelled(one) }),
     },
   };
 

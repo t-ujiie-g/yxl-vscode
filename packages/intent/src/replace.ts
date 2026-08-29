@@ -1,4 +1,5 @@
 import { cellAt, sheetOf } from '@yxl-vscode/compile';
+import { sentence } from '@yxl-vscode/diag';
 import type { A1Addr, SheetName } from '@yxl-vscode/units';
 import {
   beside,
@@ -11,6 +12,7 @@ import {
 } from './direct';
 import { type Entry, landed } from './landing';
 import type { Standing } from './paste';
+import { say } from './text';
 
 /** A replacement as a gesture asks for it: what was looked for, what goes there, and where it was found. */
 export interface Replacing {
@@ -32,8 +34,8 @@ export function replaceIn(
   doing: Standing = 'refuse',
 ): Intent {
   const sheet = sheetOf(spec.grid, where.sheet);
-  if (sheet === null) return refused(`there is no sheet named \`${where.sheet}\``);
-  if (where.looking === '') return refused('there is nothing to look for');
+  if (sheet === null) return refused(say('intent.no-such-sheet', { sheet: where.sheet }));
+  if (where.looking === '') return refused(say('intent.nothing-to-look-for'));
 
   const going: Entry[] = [];
   const held: Held[] = [];
@@ -58,7 +60,7 @@ export function replaceIn(
   }
 
   if (going.length === 0 && held.length === 0) {
-    return refused(`nothing on \`${where.sheet}\` holds that any more`);
+    return refused(say('intent.nothing-holds-that', { sheet: where.sheet }));
   }
 
   const put = landed(spec, sheet, where.sheet, going, read, {
@@ -67,14 +69,12 @@ export function replaceIn(
     verb: 'replaced',
     nothing: 'none of what was found can be written here',
   });
-  if (typeof put === 'string') return refused(put);
+  if (sentence(put)) return refused(put);
 
   const files = [...put.ops.keys()];
   const file = files[0];
   if (file === undefined || files.length > 1) {
-    return refused(
-      `what was found is written across ${files.map(beside).join(' and ')}, and this editor writes one file at a time`,
-    );
+    return refused(say('intent.found-across-files', { files: files.map(beside).join(' and ') }));
   }
 
   return {

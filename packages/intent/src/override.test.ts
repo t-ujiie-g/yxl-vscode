@@ -2,11 +2,11 @@ import type { A1Addr, SheetName } from '@yxl-vscode/units';
 import { type Ctx, checked } from '@yxl-vscode/verify';
 import { describe, expect, it } from 'vitest';
 import type { Intent } from './direct';
-import { files, ROOT } from './harness';
+import { english, files, ROOT } from './harness';
 import { overridable, override, type Says } from './override';
 
 function written(sources: Record<string, string>, intent: Intent): string {
-  if (intent.kind === 'refused') throw new Error(`refused: ${intent.why}`);
+  if (intent.kind === 'refused') throw new Error(`refused: ${english(intent.why)}`);
   if (intent.kind !== 'edit') throw new Error('a file was written, not a spec');
 
   const { includes } = files(sources);
@@ -89,21 +89,23 @@ describe('what an override will not do', () => {
     const spec = `${SALES}    cells:\n      A1: APAC\noverrides:\n  - at: Sales!A1\n    value: EMEA\n`;
     const intent = overriding({ [ROOT]: spec }, 'A1', { value: 'APAC' });
 
-    expect(intent.kind === 'refused' && intent.why).toContain('already overridden');
+    expect(intent.kind === 'refused' && english(intent.why)).toContain('already overridden');
   });
 
   it('refuses the top-left of a filled range, where the one formula is stored', () => {
     const spec = `${SALES}    cells:\n      A1: 1\n      A2: 2\n    formulas:\n      - at: B1:B2\n        formula: "A1"\n`;
     const intent = overriding({ [ROOT]: spec }, 'B1', { value: 99 });
 
-    expect(intent.kind === 'refused' && intent.why).toContain('split the range instead');
+    expect(intent.kind === 'refused' && english(intent.why)).toContain('split the range instead');
   });
 
   it('refuses an address nothing writes, which has nothing to make an exception to', () => {
     const sources = { [ROOT]: `${SALES}    cells:\n      A1: APAC\n` };
     const intent = overriding(sources, 'Z9', { value: 1 });
 
-    expect(intent.kind === 'refused' && intent.why).toContain('nothing here to make an exception');
+    expect(intent.kind === 'refused' && english(intent.why)).toContain(
+      'nothing here to make an exception',
+    );
   });
 
   it('refuses a sheet that is not there', () => {
@@ -116,7 +118,7 @@ describe('what an override will not do', () => {
       read,
     );
 
-    expect(intent.kind === 'refused' && intent.why).toContain('no sheet named');
+    expect(intent.kind === 'refused' && english(intent.why)).toContain('no sheet named');
   });
 });
 

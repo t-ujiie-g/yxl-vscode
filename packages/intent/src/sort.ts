@@ -4,6 +4,7 @@ import type { ScalarValue } from '@yxl-vscode/spec';
 import { addrAt, qualified, type Rect, type SheetName } from '@yxl-vscode/units';
 import { type Intent, located, type Projection, type Reading, refused } from './direct';
 import { blocks } from './shift';
+import { say } from './text';
 
 /** Rows of one `data:` block to be put in order, by the column the selection starts in. */
 export interface Sorting {
@@ -19,9 +20,9 @@ export interface Sorting {
  */
 export function setSorted(spec: Projection, where: Sorting, read: Reading): Intent {
   const sheet = sheetOf(spec.grid, where.sheet);
-  if (sheet === null) return refused(`there is no sheet named \`${where.sheet}\``);
+  if (sheet === null) return refused(say('intent.no-such-sheet', { sheet: where.sheet }));
   if (where.rect.bottom - where.rect.top < 1) {
-    return refused('a sort is more than one row, so there is nothing here to put in order');
+    return refused(say('intent.sort-needs-more-rows'));
   }
 
   const block = blocks(sheet).find(
@@ -33,14 +34,14 @@ export function setSorted(spec: Projection, where: Sorting, read: Reading): Inte
       where.rect.left <= one.rect.right,
   );
   if (block === undefined) {
-    return refused('these rows are not a table written here, so there is no order to put them in');
+    return refused(say('intent.not-a-table-here'));
   }
 
   const found = located(block.node, read);
   if (found.kind === 'refused') return found;
 
   const source = read.text(found.file);
-  if (source === null) return refused(`\`${found.file}\` could not be read`);
+  if (source === null) return refused(say('intent.file-unreadable', { file: found.file }));
 
   const first = where.rect.top - block.rect.top;
   const rows: { at: number; by: ScalarValue; source: string }[] = [];
@@ -49,10 +50,10 @@ export function setSorted(spec: Projection, where: Sorting, read: Reading): Inte
     const at = row - block.rect.top;
     const item = nodeAt(found.node, ['values', at]);
     if (item === undefined || item === null) {
-      return refused(`row ${row} is not written in this table, so it has nothing to move`);
+      return refused(say('intent.row-not-in-table', { row }));
     }
     if (item.kind !== 'seq' || !item.flow) {
-      return refused('rows written a line at a time are not put in order yet');
+      return refused(say('intent.rows-a-line-at-a-time'));
     }
 
     rows.push({
@@ -78,7 +79,7 @@ export function setSorted(spec: Projection, where: Sorting, read: Reading): Inte
     ops.push({ op: 'write', path: [...found.path, 'values', to], source: row.source });
   }
 
-  if (ops.length === 0) return refused('these rows are in that order already');
+  if (ops.length === 0) return refused(say('intent.already-in-that-order'));
 
   return { kind: 'edit', file: found.file, patch: { ops }, expects: { cells, beyond: 'ask' } };
 }

@@ -3,6 +3,7 @@ export { error } from './diagnostic';
 export type { Span } from './span';
 export { span, union } from './span';
 export type {
+  Arg,
   Args,
   Book,
   Language,
@@ -13,4 +14,4 @@ export type {
   Speech,
   Words,
 } from './words';
-export { reading, speaking } from './words';
+export { reading, sentence, speaking } from './words';

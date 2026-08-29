@@ -1,6 +1,7 @@
 import { setGroup } from '@yxl-vscode/intent';
 import type { Grouped } from '@yxl-vscode/webview/protocol';
 import { type Asking, asked, many } from './asked';
+import { say } from './text';
 import type { Port, Spec } from './write';
 
 /**
@@ -16,10 +17,11 @@ const GROUP: Asking<Grouped> = {
   answers: (spec, grouped, sheet, read) => setGroup(spec, { ...grouped, sheet }, read),
   nothing: (grouped) =>
     grouped.level === 0
-      ? `nothing groups ${many(grouped)}`
-      : `nothing here can group ${many(grouped)}`,
-  why: (grouped) =>
-    `${many(grouped)} take that from a band over more than them, so there is more than one way to change it`,
+      ? say('host.nothing-groups', { span: many(grouped) })
+      : say('host.cannot-group', { span: many(grouped) }),
+  why: (grouped) => say('host.band-over-more', { span: many(grouped) }),
   done: (grouped) =>
-    `${many(grouped)} ${grouped.level === 0 ? 'taken out of the outline' : 'grouped'}.`,
+    grouped.level === 0
+      ? say('host.ungrouped-done', { span: many(grouped) })
+      : say('host.grouped-done', { span: many(grouped) }),
 };

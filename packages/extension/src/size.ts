@@ -1,6 +1,7 @@
 import { setSize } from '@yxl-vscode/intent';
 import type { Resized } from '@yxl-vscode/webview/protocol';
 import { type Asking, asked, many } from './asked';
+import { say } from './text';
 import type { Port, Spec } from './write';
 
 /**
@@ -14,8 +15,7 @@ export function resize(spec: Spec, resized: Resized, port: Port, choice?: string
 const SIZE: Asking<Resized> = {
   about: (resized) => ({ ...resized, kind: 'resize' }),
   answers: (spec, resized, sheet, read) => setSize(spec, { ...resized, sheet }, read),
-  nothing: (resized) => `nothing here can say how wide ${many(resized)} is`,
-  why: (resized) =>
-    `${many(resized)} takes its size from a band over more than that, so there is more than one way to change it`,
-  done: (resized) => `${many(resized)} resized.`.replace(/^./, (one) => one.toUpperCase()),
+  nothing: (resized) => say('host.no-width-here', { span: many(resized) }),
+  why: (resized) => say('host.size-from-a-band', { span: many(resized) }),
+  done: (resized) => say('host.resized', { span: many(resized) }),
 };

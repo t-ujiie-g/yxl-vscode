@@ -1,6 +1,7 @@
 import { setHidden } from '@yxl-vscode/intent';
 import type { Hidden } from '@yxl-vscode/webview/protocol';
 import { type Asking, asked, many } from './asked';
+import { say } from './text';
 import type { Port, Spec } from './write';
 
 /**
@@ -15,8 +16,12 @@ const HIDE: Asking<Hidden> = {
   about: (hidden) => ({ ...hidden, kind: 'hide' }),
   answers: (spec, hidden, sheet, read) => setHidden(spec, { ...hidden, sheet }, read),
   nothing: (hidden) =>
-    hidden.hidden ? `nothing here can hide ${many(hidden)}` : `nothing hides ${many(hidden)}`,
-  why: (hidden) =>
-    `${many(hidden)} take that from a band over more than them, so there is more than one way to change it`,
-  done: (hidden) => `${many(hidden)} ${hidden.hidden ? 'hidden' : 'shown again'}.`,
+    hidden.hidden
+      ? say('host.cannot-hide', { span: many(hidden) })
+      : say('host.nothing-hides', { span: many(hidden) }),
+  why: (hidden) => say('host.band-over-more', { span: many(hidden) }),
+  done: (hidden) =>
+    hidden.hidden
+      ? say('host.hidden-done', { span: many(hidden) })
+      : say('host.shown-done', { span: many(hidden) }),
 };

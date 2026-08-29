@@ -1,6 +1,6 @@
 import type { Rect, SheetName } from '@yxl-vscode/units';
 import { describe, expect, it } from 'vitest';
-import { files, tried } from './harness';
+import { english, files, tried } from './harness';
 import { tableOver } from './region';
 
 /** The table set, through the checker — the file, or why not. */
@@ -96,9 +96,9 @@ describe('a region a table is refused over', () => {
   it('refuses a sheet that is not there', () => {
     const { doc, grid, read } = files(SHEET);
     const where = { sheet: 'Other' as SheetName, rect: OVER, on: true };
-    expect(tableOver({ doc, grid }, where, read)).toEqual({
-      kind: 'refused',
-      why: 'there is no sheet named `Other`',
-    });
+    const intent = tableOver({ doc, grid }, where, read);
+    expect(intent.kind === 'refused' && english(intent.why)).toBe(
+      'there is no sheet named `Other`',
+    );
   });
 });

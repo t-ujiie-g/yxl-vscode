@@ -1,9 +1,10 @@
+import type { Saying } from '@yxl-vscode/diag';
 import type { A1Addr, Rect, SheetName } from '@yxl-vscode/units';
 import { describe, expect, it } from 'vitest';
 import { setValue } from './direct';
 import { setFilled } from './fill';
 import { chartOver, imageAt } from './float';
-import { files } from './harness';
+import { english, files } from './harness';
 import { setLink } from './link';
 import { setMerged } from './merge';
 import { setNote } from './note';
@@ -24,8 +25,8 @@ function keeping(key: string, held: string, rest = ''): Record<string, string> {
 }
 
 /** What a gesture came to, as a reader is told it. */
-function why(intent: { kind: string; why?: string }): string {
-  return intent.kind === 'refused' ? (intent.why ?? '') : `it wrote a file: ${intent.kind}`;
+function why(intent: { kind: string; why?: Saying }): string {
+  return intent.kind === 'refused' ? english(intent.why ?? '') : `it wrote a file: ${intent.kind}`;
 }
 
 const CELLS = 'A1: Region\nB1: 2400000\nA2: APAC\nB2: 1\n';
