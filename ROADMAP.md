@@ -1976,9 +1976,11 @@ reach.
       own book (`webview/src/text.ts`), worded by `chrome()` off `<html lang>`.
 - [ ] Every refusal and every diagnostic, which is the long tail and the reason
       the decision comes first. **Done: every refusal** — `intent`'s 122 and the
-      host's own, with the answers they offer. **Left: the diagnostics** —
-      `loader` and `compile`, 94 sites behind `reject`, and `units`' formula
-      prose that a refusal still quotes verbatim.
+      host's own, with the answers they offer — and **`compile`'s diagnostics**,
+      22 sentences over 42 sites. **Left**: `loader`'s, where the construct a
+      message is about (`what`) is threaded as prose through 76 signatures and
+      composed at 124 sites, and `units`' formula and table prose, which a
+      refusal and a diagnostic still quote verbatim.
 - [x] The language follows VS Code's own (`vscode.env.language`); no setting of
       our own until somebody asks for one. The host sets `<html lang>` from it,
       and the view reads it from there.
@@ -3596,6 +3598,28 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-29 — What the compiler could not draw, in the reader's own language
+
+Phase 19's last line, first half.
+
+- **`compile`'s 22 sentences**, over its 42 sites: an address that is not one, a
+  range that is not one, a `$ref` to nothing, a parameter that is not declared,
+  a `data:` file nothing can read. These are the diagnostics that reach a *cell*
+  — the ones a reader meets on the grid rather than in a list.
+- **The books both edges read grew by one**, which is all a new book costs now:
+  `compile`'s goes into the view's reader as well as the host's, since a cell's
+  diagnostic is worded where it is drawn.
+- **`compile.bad-table` reads differently in the two languages** for a reason
+  worth writing down: Japanese puts the file after the problem rather than
+  before it. The problem itself is still English — it comes from `units`, which
+  has no book yet.
+- **What is left**: `loader`'s diagnostics. The construct a message is about is
+  threaded through 76 signatures as prose (`a \`charts\` entry`, `cell \`A1\``)
+  and composed at 124 sites, so it is a pass of its own rather than a tail of
+  this one.
+- 2430 → 2431 tests. Comment shape: export 889 blocks / 1967 lines / avg 2.2,
+  private 579 / 579 / avg 1.0, inline 135 / 215 / avg 1.6; 0 over the limit.
 
 ### 2026-08-29 — Every refusal, in the reader's own language
 

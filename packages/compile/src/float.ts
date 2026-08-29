@@ -29,6 +29,7 @@ import type {
   CompiledSparkline,
 } from './grid';
 import { flatten, settled } from './style';
+import { say } from './text';
 
 /** One `charts:` entry, its anchor read; what it plots stays the spec's own words (ADR-029). */
 export function chart(ctx: Ctx, one: Chart): CompiledChart | null {
@@ -48,7 +49,7 @@ export function chart(ctx: Ctx, one: Chart): CompiledChart | null {
       const spelled = each.nameFrom === null ? null : text(ctx, each.nameFrom, each);
       const from = spelled === null ? null : parseQualifiedCell(spelled);
       if (spelled !== null && from === null) {
-        reject(ctx, CODE.badAddress, `\`${spelled}\` is not a cell reference`, each);
+        reject(ctx, CODE.badAddress, say('compile.not-a-cell-reference', { spelled }), each);
       }
 
       return {
@@ -172,7 +173,7 @@ export function sparklines(ctx: Ctx, group: SparklineGroup): CompiledSparkline[]
     const spelled = text(ctx, one.data, group);
     const read = parseQualifiedRange(spelled);
     if (read === null) {
-      reject(ctx, CODE.badRange, `\`${spelled}\` is not a range`, group);
+      reject(ctx, CODE.badRange, say('compile.not-a-range', { spelled }), group);
       return [];
     }
 

@@ -16,6 +16,7 @@ import { type Color, type NodeId, parseColor, type StyleName } from '@yxl-vscode
 import { spelling } from './cell';
 import { CODE } from './codes';
 import { type Ctx, reject, text } from './ctx';
+import { say } from './text';
 
 /** How a look reaches a cell — which construct applies it, which is a different edit from which one holds it. */
 export type StyleSource = 'column' | 'row' | 'cell' | 'override' | 'conditional';
@@ -97,13 +98,13 @@ function fromName(
 ): StyleLayer[] {
   if (chain.includes(name)) {
     const loop = [...chain, name].join(' → ');
-    reject(ctx, CODE.styleCycle, `a style extends its way back round: ${loop}`, node);
+    reject(ctx, CODE.styleCycle, say('compile.style-cycle', { cycle: loop }), node);
     return [];
   }
 
   const def = ctx.styles.get(name);
   if (def === undefined) {
-    reject(ctx, CODE.unknownStyle, `no style is declared as \`${name}\``, node);
+    reject(ctx, CODE.unknownStyle, say('compile.no-such-style', { name }), node);
     return [];
   }
 
@@ -155,7 +156,8 @@ export function flatten(ctx: Ctx, style: Style, node: SpecNode): StyleSays {
 
     const spelled = text(ctx, of, node);
     const read = parseColor(spelled);
-    if (read === null) reject(ctx, CODE.badColour, `\`${spelled}\` is not a hex colour`, node);
+    if (read === null)
+      reject(ctx, CODE.badColour, say('compile.not-a-hex-colour', { spelled }), node);
     return read ?? undefined;
   }
 

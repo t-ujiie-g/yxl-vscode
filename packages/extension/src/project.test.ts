@@ -5,6 +5,9 @@ import { filePath } from '@yxl-vscode/units';
 import type { DrawnSheet } from '@yxl-vscode/webview/protocol';
 import { describe, expect, it } from 'vitest';
 import { drawRun, project, redraw, type Windows } from './project';
+import { reader } from './words';
+
+const english = reader('en');
 
 const FILE = '/specs/report.yxl.yaml';
 
@@ -292,7 +295,7 @@ describe('a drawn spec', () => {
     const source = `${SALES}    cells:\n      A1: { $ref: nosuch }\n      B1: fine\n`;
     const sheet = drawn(source);
 
-    expect(sheet.problems).toEqual([
+    expect(sheet.problems.map((one) => ({ ...one, message: english(one.message) }))).toEqual([
       { row: 1, col: 1, message: 'no value is declared as `nosuch`' },
     ]);
   });

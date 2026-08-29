@@ -5,13 +5,14 @@ import { address, spelling } from './cell';
 import { CODE } from './codes';
 import { type Ctx, reject, text } from './ctx';
 import type { CompiledPrint } from './grid';
+import { say } from './text';
 
 /** One `print:` setup, its area and its breaks read (`docs/spec.md` §5). */
 export function printing(ctx: Ctx, one: Print): CompiledPrint {
   const spelled = one.area === null ? null : text(ctx, one.area, one);
   const read = spelled === null ? null : parseA1Range(spelled);
   if (spelled !== null && read === null) {
-    reject(ctx, CODE.badRange, `\`${spelled}\` is not a range`, one);
+    reject(ctx, CODE.badRange, say('compile.not-a-range', { spelled }), one);
   }
 
   return {

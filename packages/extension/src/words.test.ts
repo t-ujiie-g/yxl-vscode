@@ -19,6 +19,13 @@ describe('what the host words', () => {
     expect(reader('ja')(said)).toBe('`N3` の範囲の数式を変更する: 400 セルを変更しました。');
   });
 
+  it('reads a diagnostic the compiler raised, where the reader is Japanese', () => {
+    const problem = { id: 'compile.no-such-value', args: { name: 'nosuch' } };
+
+    expect(reader('en')(problem)).toBe('no value is declared as `nosuch`');
+    expect(reader('ja')(problem)).toBe('`nosuch` という名前の値は宣言されていません');
+  });
+
   it('reads every book this editor holds, whichever package said it', () => {
     expect(reader('ja')({ id: 'cst.key-exists', args: { key: 'A1' } })).toBe(
       '`A1` はすでにあります',

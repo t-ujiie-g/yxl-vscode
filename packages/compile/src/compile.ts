@@ -15,6 +15,7 @@ import { type Ctx, context, type DataReader, reject, type Setting, text } from '
 import type { CompiledCell, CompiledGrid, CompiledSheet, DeclaredStyle } from './grid';
 import { compileSheet, type Drafted } from './sheet';
 import { layersOf, resolve, type StyleLayer } from './style';
+import { say } from './text';
 
 /**
  * The grid a spec projects to: pure and computed forward only (ADR-001). `read`
@@ -136,7 +137,7 @@ function applyOverride(ctx: Ctx, override: Override, drafts: readonly Drafted[])
 
   const draft = drafts.find((one) => one.sheet.name === read.sheet);
   if (draft === undefined) {
-    reject(ctx, CODE.unknownSheet, `no sheet is named \`${read.sheet}\``, override);
+    reject(ctx, CODE.unknownSheet, say('compile.no-such-sheet', { name: read.sheet }), override);
     return;
   }
 
@@ -153,6 +154,6 @@ function overrideAddr(ctx: Ctx, override: Override): QualifiedAddr | null {
   const spelled = text(ctx, override.at.text, override);
   const read = parseQualifiedAddr(spelled);
   if (read === null)
-    reject(ctx, CODE.badAddress, `\`${spelled}\` is not a sheet and a cell`, override);
+    reject(ctx, CODE.badAddress, say('compile.not-a-sheet-and-a-cell', { spelled }), override);
   return read;
 }
