@@ -547,6 +547,15 @@ export interface Edged {
   readonly extend: boolean;
 }
 
+/**
+ * What the host put on the clipboard for a rectangle the view could not copy
+ * itself, so the view knows whose a paste of it would be (ADR-035).
+ */
+export interface Copied {
+  readonly kind: 'copied';
+  readonly text: string;
+}
+
 /** Where a link inside the workbook goes, for the view to take the reader (`docs/spec.md` §10). */
 export interface WentTo {
   readonly kind: 'goTo';
@@ -562,6 +571,7 @@ export interface Focus {
 
 /** Everything the host sends the view. */
 export type ToView =
+  | Copied
   | Drawing
   | Edged
   | Fitting
@@ -616,6 +626,7 @@ export type FromView =
       readonly cols: number;
       readonly extend: boolean;
     }
+  | ({ readonly kind: 'copyOut' } & Ranged)
   | ({ readonly kind: 'sum' } & Ranged)
   | ({ readonly kind: 'override'; readonly reason: string } & Typed)
   | {

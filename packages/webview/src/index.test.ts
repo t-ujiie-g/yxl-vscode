@@ -109,6 +109,36 @@ describe('a `Cmd`+arrow', () => {
   });
 });
 
+describe('copying a rectangle out', () => {
+  it('asks the host for one that reaches past what is drawn, and keeps what it wrote', () => {
+    // The view has a window (ADR-019) and the host has the sheet; two flavours
+    // can only go on the clipboard inside the gesture, so the host writes values.
+    const { into, sent, told } = view();
+
+    at(into, 1, 1)?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    at(into, 2, 2)?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, shiftKey: true }));
+    told({ kind: 'edged', sheet: 'Sales', row: 900, col: 2, extend: true });
+
+    // The key comes from a cell the grid holds; what is copied is the selection.
+    press(into, 1, 1, 'c');
+
+    expect(sent.filter((one) => one.kind === 'copyOut').at(-1)).toMatchObject({
+      kind: 'copyOut',
+      sheet: 'Sales',
+      top: 1,
+      left: 1,
+      bottom: 900,
+      right: 2,
+    });
+
+    told({ kind: 'copied', text: 'APAC\t1' });
+    at(into, 1, 1)?.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'v', metaKey: true, bubbles: true }),
+    );
+    expect(sent.filter((one) => one.kind === 'pasteAt').at(-1)).toMatchObject({ ours: 'APAC\t1' });
+  });
+});
+
 describe('a view with nothing in it yet', () => {
   it('says it is ready before anything else, since the host holds the drawing', () => {
     const { sent } = view();

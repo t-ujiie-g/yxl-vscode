@@ -1814,6 +1814,21 @@ below, and one is the answer panel becoming a thing you have to answer.
       reads the drawn window too, but a window is wider than almost every sheet,
       so it is wrong only where a sheet runs past the *columns* drawn. The same
       call answers it the day that matters.
+- [x] **A copy that reaches past the window** — the line above's own
+      consequence, found the same afternoon by the reader who asked for it. A
+      selection could not run past the drawn window before, so *this reaches past
+      what the preview has drawn* was a sentence nobody met; with
+      `Cmd`+`Shift`+arrow reaching the sheet, it is what a reader gets for
+      selecting a column and copying it.
+      **The host writes that one, as values.** Two flavours can only go on the
+      clipboard inside the gesture (ADR-035), and a round trip is not inside one
+      — so the view keeps the look for a rectangle it has drawn and asks the host
+      for one it has not. What comes back is the text the host wrote, which is
+      what tells a later paste whose it is.
+      **And the keyboard after a long jump.** The drawing that answers a window
+      the view asked for put focus back only where the page happened to still
+      have it; the view asked for that window, so the reader is in the grid, and
+      the first key after the jump now reaches a cell rather than the page.
 - [ ] **A column width Excel agrees with** *(lower priority — the reader said
       so)*. Two errors, one arithmetic and one font. `PER_CHARACTER = 7` turns
       pixels into Excel's unit but drops the 5px of padding Excel's own formula
@@ -3433,6 +3448,29 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-29 — A copy that reaches past the window, and the key after a jump
+Two from one reader session, and the first is this morning's own consequence.
+
+- **Copying a big selection said no.** *This reaches past what the preview has
+  drawn* was a sentence almost nobody met, because a selection could not run past
+  the drawn window — until `Cmd`+`Shift`+arrow started reaching the sheet's edge.
+  Then it became what a reader gets for selecting a column of four hundred rows
+  and pressing `Cmd`+`C`.
+- **The host writes that one, as values.** Two flavours can only go on the
+  clipboard inside the gesture (ADR-035) and a round trip is not inside one, so
+  the split is by what the view has: a rectangle it has drawn keeps its look, one
+  it has not is written by the host through `vscode.env.clipboard`. The text
+  comes back to the view, because that is what tells a later paste whose it is.
+  The sentence under the grid says which it was rather than saying no.
+- **The first key after a long jump reached nothing.** The drawing that answers a
+  window the view asked for put the keyboard back only where the page happened
+  to still have it. The view *asked* for that window — the reader is in the grid
+  by construction — so it puts it back on the selected cell. That is why
+  `Cmd`+`Shift`+`→` after a `Cmd`+`Shift`+`↓` did nothing the first time and
+  worked the second.
+- 2373 → 2379 tests. Comment shape: export 843 blocks / 1878 lines / avg 2.2,
+  private 563 / 563 / avg 1.0, inline 131 / 207 / avg 1.6; 0 over the limit.
 
 ### 2026-08-29 — The keyboard, put back where the question took it from
 A reader said copying had stopped working. It had, and so had every other key:
