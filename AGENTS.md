@@ -161,7 +161,7 @@ pnpm build            # the extension actually bundles
 | Run it on yxl's cookbook | **F5** with *Run the preview on yxl's own examples* |
 
 F5 builds both bundles and opens an Extension Development Host; in that window,
-open a `*.yxl.yaml` and run **yxl: Open Preview to the Side**. Without VS Code's
+open a `*.yxl.yaml` and run **yxl: Open the Grid Beside the Spec**. Without VS Code's
 debugger — from a terminal, say — the same thing is
 `code --extensionDevelopmentPath=packages/extension <a folder of specs>`.
 

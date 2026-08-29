@@ -88,4 +88,18 @@ describe('where `End` lands', () => {
   it('is A1 where the sheet writes nothing at all', () => {
     expect(edge('      A1: one\n', 'A1', SHEET)).toBe('A1');
   });
+
+  it('counts a `formulas:` range all the way to its end, since those cells hold one', () => {
+    // The drawing looks only fifty rows past what is written (`extent`); the
+    // corner a reader is sent to is the sheet's own, which is B500.
+    const spec = '      A1: 1\n    formulas:\n      - at: B1:B500\n        formula: "A1*2"\n';
+    const { doc } = load(
+      parse(`sheets:\n  - name: S\n    cells:\n${spec}`, { file: 'spec.yxl.yaml' }),
+    );
+    if (doc === null) throw new Error('did not load');
+
+    const one = compile(doc).sheets[0];
+    if (one === undefined) throw new Error('compiled no sheet');
+    expect(edgeFrom(one, extent(one), 'A1' as A1Addr, SHEET)).toBe('B500');
+  });
 });

@@ -1,4 +1,4 @@
-import { finds, reaches } from '@yxl-vscode/compile';
+import { type CompiledSheet, finds, reaches } from '@yxl-vscode/compile';
 import { type Engine, univerEngine } from '@yxl-vscode/evaluate';
 import type { Tabbed } from '@yxl-vscode/intent';
 import { did, type History, nothing } from '@yxl-vscode/patch';
@@ -27,6 +27,7 @@ import type {
   SizedFloat,
   Sorted,
   Tabled,
+  ToView,
   Typed,
   Validated,
   Worn,
@@ -76,6 +77,9 @@ import {
 
 /** The extensions the picker offers, which are the ones Excel decodes (`docs/spec.md` §13). */
 const PICTURES = ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'tif', 'tiff', 'ico', 'svg', 'emf', 'wmf'];
+
+/** What VS Code calls this panel, which its own `when` clauses name too (`activeWebviewPanelId`). */
+export const PANEL = 'yxl.preview';
 
 /** Long enough that typing does not redraw on every keystroke, short enough to feel live. */
 const SETTLE = 150;
@@ -218,7 +222,7 @@ export class Preview {
     this.panel =
       panel ??
       vscode.window.createWebviewPanel(
-        'yxl.preview',
+        PANEL,
         `Preview ${document.uri.path.split('/').at(-1) ?? ''}`,
         { viewColumn: vscode.ViewColumn.Beside, preserveFocus: true },
         {
@@ -298,18 +302,18 @@ export class Preview {
     const own = editor.document.uri.toString() === this.document.uri.toString();
     const inStep = own ? this.document.version === this.read : !editor.document.isDirty;
     if (!inStep) {
-      void this.panel.webview.postMessage({ kind: 'highlighted', says: '', cells: [] });
+      this.send({ kind: 'highlighted', says: '', cells: [] });
       return;
     }
 
     const at = editor.document.offsetAt(editor.selection.active);
     const node = nodeUnder(this.nodes, editor.document.uri.fsPath, at);
     if (node === null) {
-      void this.panel.webview.postMessage({ kind: 'highlighted', says: '', cells: [] });
+      this.send({ kind: 'highlighted', says: '', cells: [] });
       return;
     }
 
-    void this.panel.webview.postMessage({
+    this.send({
       kind: 'highlighted',
       says: this.nodes.get(node)?.what ?? 'the cursor',
       cells: reaches(grid, node).map((one) => ({ sheet: one.sheet, ...cellOf(one.at) })),
@@ -339,7 +343,7 @@ export class Preview {
     this.nodes = drawn.nodes;
     this.sources = sources;
 
-    void this.panel.webview.postMessage(drawing);
+    this.send(drawing);
     this.problems.set(
       this.document.uri,
       diagnostics
@@ -361,32 +365,32 @@ export class Preview {
 
   /** Every cell of a sheet holding what the reader is looking for, whether it is drawn or not. */
   private searched(name: string, text: string): void {
-    const sheet = this.drawn?.grid?.sheets.find((one) => one.name === name);
+    const sheet = this.sheet(name);
     const cells = sheet === undefined ? [] : finds(sheet, text).map((at) => cellOf(at));
 
-    void this.panel.webview.postMessage({ kind: 'found', sheet: name, text, cells });
+    this.send({ kind: 'found', sheet: name, text, cells });
   }
 
   /** What the rectangle a reader has selected comes to, said under the grid (ADR-014). */
   private summing(ranged: Ranged): void {
-    const sheet = this.drawn?.grid?.sheets.find((one) => one.name === ranged.sheet);
+    const sheet = this.sheet(ranged.sheet);
     if (sheet === undefined) return;
 
     const rect = { top: ranged.top, left: ranged.left, bottom: ranged.bottom, right: ranged.right };
     const comes = summed(sheet, rect, this.drawn?.evaluation ?? null);
 
-    void this.panel.webview.postMessage({ kind: 'summed', sheet: ranged.sheet, ...comes });
+    this.send({ kind: 'summed', sheet: ranged.sheet, ...comes });
   }
 
   /** A rectangle onto the clipboard as values, for a copy the view could not make (ADR-035). */
   private async copying(ranged: Ranged): Promise<void> {
-    const sheet = this.drawn?.grid?.sheets.find((one) => one.name === ranged.sheet);
+    const sheet = this.sheet(ranged.sheet);
     if (sheet === undefined) return;
 
     const text = asText(sheet, rectIn(ranged), this.drawn?.evaluation ?? null);
     await vscode.env.clipboard.writeText(text);
 
-    void this.panel.webview.postMessage({ kind: 'copied', text });
+    this.send({ kind: 'copied', text });
     this.port().said(
       `${rangeOf(rectIn(ranged))} copied as values: the look is only known for what is drawn.`,
     );
@@ -394,13 +398,13 @@ export class Preview {
 
   /** Where a `Cmd`+arrow lands, over every cell rather than the drawn window (ADR-019). */
   private edging(asked: Edging): void {
-    const sheet = this.drawn?.grid?.sheets.find((one) => one.name === asked.sheet);
+    const sheet = this.sheet(asked.sheet);
     if (sheet === undefined) return;
 
     const at = edgeFrom(sheet, extent(sheet), addrAt({ col: asked.col, row: asked.row }), asked.to);
     const { col, row } = cellOf(at);
 
-    void this.panel.webview.postMessage({
+    this.send({
       kind: 'edged',
       sheet: asked.sheet,
       row,
@@ -411,18 +415,28 @@ export class Preview {
 
   /** Every cell of a run, for the view to measure a fit against (ADR-043). */
   private measuring(name: string, axis: Axis, at: number): void {
-    const sheet = this.drawn?.grid?.sheets.find((one) => one.name === name);
+    const sheet = this.sheet(name);
     if (sheet === undefined) return;
 
     const cells = drawRun(sheet, axis, at, this.drawn?.evaluation ?? null);
-    void this.panel.webview.postMessage({ kind: 'fitting', sheet: name, axis, at, cells });
+    this.send({ kind: 'fitting', sheet: name, axis, at, cells });
+  }
+
+  /** The sheet a question is about, of the drawing the host holds. */
+  private sheet(name: string): CompiledSheet | undefined {
+    return this.drawn?.grid?.sheets.find((one) => one.name === name);
+  }
+
+  /** An answer on its way to the view, which is the only thing this panel says to it. */
+  private send(message: ToView): void {
+    this.send(message);
   }
 
   /** What the host holds, sent again: a webview that has reloaded has nothing of its own. */
   private shown(): void {
     const drawing = this.drawn?.drawing;
     if (drawing === undefined) this.redraw();
-    else void this.panel.webview.postMessage(drawing);
+    else this.send(drawing);
   }
 
   /** What the view asked for. */
@@ -518,15 +532,15 @@ export class Preview {
 
     const drawing = redraw(drawn, this.params, this.windows, measureBeside);
     this.drawn = { ...drawn, drawing };
-    void this.panel.webview.postMessage(drawing);
+    this.send(drawing);
   }
 
   /** Where each facet of one cell came from, for the cell that asked. */
   private inspected(name: string, row: number, col: number): void {
-    const sheet = this.drawn?.grid?.sheets.find((one) => one.name === name);
+    const sheet = this.sheet(name);
     if (sheet === undefined) return;
 
-    void this.panel.webview.postMessage({
+    this.send({
       kind: 'inspected',
       sheet: name,
       row,
@@ -554,7 +568,7 @@ export class Preview {
       return;
     }
 
-    void this.panel.webview.postMessage({
+    this.send({
       kind: 'goTo',
       sheet: went.sheet,
       row: went.row,
@@ -616,7 +630,7 @@ export class Preview {
     await vscode.commands.executeCommand(redo ? 'redo' : 'undo');
 
     this.panel.reveal(beside, false);
-    void this.panel.webview.postMessage({ kind: 'focus' });
+    this.send({ kind: 'focus' });
   }
 
   /** Work that may fail, with the failure said: a rejected promise from a message handler goes nowhere. */
@@ -644,7 +658,7 @@ export class Preview {
       },
       refuse: (why, offer) => this.refuse(why, offer),
       said: (what) => {
-        void this.panel.webview.postMessage({ kind: 'said', text: what });
+        this.send({ kind: 'said', text: what });
       },
       kept: (step) => {
         if (step !== null) {
@@ -661,7 +675,7 @@ export class Preview {
 
   /** Why an edit did not happen, said in the preview where the reader is looking. */
   private refuse(why: string, offer: Offer | null): void {
-    void this.panel.webview.postMessage({
+    this.send({
       kind: 'refused',
       why: why.replace(/`/g, ''),
       about: offer?.about ?? null,
