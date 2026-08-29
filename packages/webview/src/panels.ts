@@ -1,6 +1,15 @@
 import { columnLabel, nextSheetName, painted, type SheetName } from '@yxl-vscode/units';
 import { says } from './menus';
-import type { Choice, Drawing, Editable, Refused, Source, Summed, Uncomputed } from './protocol';
+import type {
+  Choice,
+  Drawing,
+  Editable,
+  Refused,
+  Source,
+  Summed,
+  Typed,
+  Uncomputed,
+} from './protocol';
 import type { Asks, Reached, Showing } from './showing';
 
 /** The parameters as boxes to turn (`docs/spec.md` §7); emptying one gives the default back. */
@@ -74,27 +83,61 @@ export function uncomputed(said: Uncomputed): string {
 
 /**
  * Why an edit did not happen, and the ways it could still be made: the answers
- * it has (ADR-001), then `overrides:` (ADR-007) — all offered, none taken.
+ * it has (ADR-001), then `overrides:` (ADR-007) — all offered, none taken, and
+ * the keyboard kept until one is.
  */
 export function refusal(refused: Refused, asks: Asks): HTMLElement {
-  const said = document.createElement('p');
-  said.className = 'refused';
-  said.append(refused.why);
+  const over = document.createElement('div');
+  over.className = 'over';
+  over.setAttribute('data-why', refused.why);
+
+  const asking = document.createElement('div');
+  asking.className = 'refused';
+  asking.setAttribute('role', 'dialog');
+  asking.setAttribute('aria-modal', 'true');
+
+  const why = document.createElement('p');
+  why.className = 'why';
+  why.textContent = refused.why;
+  asking.append(why);
 
   const about = refused.about;
-  if (about === null) return said;
+  if (about !== null) {
+    for (const choice of refused.choices) {
+      const pick = document.createElement('button');
+      pick.type = 'button';
+      pick.className = 'choice';
+      const says = moved(choice);
+      pick.textContent = says === '' ? choice.what : `${choice.what} — ${says}`;
+      pick.addEventListener('click', () => asks.answer(about, choice.id));
+      asking.append(pick);
+    }
 
-  for (const choice of refused.choices) {
-    const pick = document.createElement('button');
-    pick.type = 'button';
-    pick.className = 'choice';
-    const says = moved(choice);
-    pick.textContent = says === '' ? choice.what : `${choice.what} — ${says}`;
-    pick.addEventListener('click', () => asks.answer(about, choice.id));
-    said.append(' ', pick);
+    if (about.kind === 'edit' && refused.canOverride) asking.append(overriding(about, asks));
   }
 
-  if (about.kind !== 'edit' || !refused.canOverride) return said;
+  const leave = document.createElement('button');
+  leave.type = 'button';
+  leave.className = 'cancel';
+  leave.textContent = 'Leave it as it is';
+  leave.addEventListener('click', () => asks.stopAsking());
+  asking.append(leave);
+
+  over.addEventListener('keydown', (event) => {
+    event.stopPropagation();
+    if (event.key === 'Escape') asks.stopAsking();
+    if (event.key === 'Tab') stepping(event, asking);
+  });
+  over.addEventListener('mousedown', (event) => event.stopPropagation());
+
+  over.append(asking);
+  return over;
+}
+
+/** The exception a refused edit offers, and the reason that goes in the file beside it (ADR-007). */
+function overriding(about: Typed, asks: Asks): HTMLElement {
+  const row = document.createElement('p');
+  row.className = 'anyway';
 
   const why = document.createElement('input');
   why.type = 'text';
@@ -110,8 +153,25 @@ export function refusal(refused: Refused, asks: Asks): HTMLElement {
     if (event.key === 'Enter') asks.overrideWith(about, why.value);
   });
 
-  said.append(' ', why, ' ', go);
-  return said;
+  row.append(why, go);
+  return row;
+}
+
+/** `Tab` around the question rather than out of it, which is half of what makes it one. */
+function stepping(event: KeyboardEvent, asking: HTMLElement): void {
+  const inside = [...asking.querySelectorAll<HTMLElement>('button, input')];
+  const first = inside[0];
+  const last = inside.at(-1);
+  if (first === undefined || last === undefined) return;
+
+  const on = document.activeElement;
+  if (event.shiftKey && (on === first || !asking.contains(on))) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && on === last) {
+    event.preventDefault();
+    first.focus();
+  }
 }
 
 /** What a choice would move, as a count a reader can act on and a few names; nothing where it moves no cell. */

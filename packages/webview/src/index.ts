@@ -543,6 +543,10 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
 
       goToCell(cellOf(at));
     },
+    stopAsking: () => {
+      refused = null;
+      restated();
+    },
     stopLooking: () => {
       looking = null;
       redraw();
@@ -551,10 +555,13 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
     // back with the answer taken, and the host reads its own `kind` (ADR-048).
     answer: (asked, choice) => {
       send({ ...asked, choice });
+      restated();
     },
     overrideWith: (typed, reason) => {
       // `kind` last, or a spread message carrying its own `kind` is that message.
       host.postMessage({ ...typed, reason, kind: 'override' });
+      refused = null;
+      restated();
     },
   };
 
@@ -589,6 +596,9 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
 
     if (sent.kind === 'drawing') {
       host.setState?.({ file: sent.file });
+      // The answers were worked out against the text as it was; a spec that has
+      // changed since is not the one the question was about.
+      refused = null;
       const was = drawing?.sheets[sheet];
       if (drawing?.file !== sent.file) {
         sheet = 0;

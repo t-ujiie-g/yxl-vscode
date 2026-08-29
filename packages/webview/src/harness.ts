@@ -33,6 +33,7 @@ export function asks(): Asks {
     goOn: vi.fn(),
     goTo: vi.fn(),
     stopLooking: vi.fn(),
+    stopAsking: vi.fn(),
     wear: vi.fn(),
     freeze: vi.fn(),
     filter: vi.fn(),
@@ -153,6 +154,9 @@ export function showingOf(of: Partial<Showing> = {}): Showing {
 
 export function shown(of: Partial<Showing> = {}, on: Asks = asks()): HTMLElement {
   const into = document.createElement('div');
+  // In the page: an element outside it takes no focus, and half of what a
+  // question is, is that it has the keyboard.
+  document.body.append(into);
   draw(into, showingOf(of), on);
   return into;
 }

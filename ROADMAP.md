@@ -1755,13 +1755,34 @@ below, and one is the answer panel becoming a thing you have to answer.
       panel is handed to a `Preview` that starts as any other does. A state
       with no file in it, or a spec that has been moved since, closes the panel
       rather than showing an empty grid.
-- [ ] **The answers to a refused edit, as something you have to answer.** They
-      are a panel under the grid today, and the grid behind it still takes
-      keystrokes — so a reader cannot tell whether their edit happened. A
-      `<dialog>` opened with `showModal()` keeps the keyboard until an answer is
-      taken or `Esc` cancels. What must survive the move: the count and the
-      sample cells each answer carries (§8 Q14), the *apply it anyway* offer,
-      and the override box with its reason.
+- [x] **The answers to a refused edit, as something you have to answer.** They
+      were a panel under the grid, and the grid behind it still took keystrokes —
+      so a reader could not tell whether their edit had happened. It is a
+      question over the panel now: the first answer takes the keyboard, `Tab`
+      goes round the answers rather than out of them, `Esc` and *Leave it as it
+      is* take it back, and a click on the ground behind it is absorbed rather
+      than being an accidental dismissal of a question about the reader's own
+      edit. Everything it carried came with it — each answer's count and sample
+      cells (§8 Q14), the exception, and the reason that goes in the file beside
+      it.
+      **Two rules the move needed.** An answer taken closes it *at once* rather
+      than waiting for the host's reply, since the reader has answered and the
+      question is over; and a **drawing closes it**, because the answers were
+      worked out against the text as it was, and a spec that has changed since is
+      not the one the question was about. A redraw with the same question open
+      leaves it alone, or it would take back the keyboard and the half-typed
+      reason.
+      **Not `<dialog>`.** `showModal()` is the right element and gives inertness
+      for nothing — and **jsdom 30 does not implement it** (measured, not
+      recalled), so the shipped path would have been the one no test runs. The
+      focus trap is ours, and every rule above has a test.
+      **The one thing a test here cannot see is a colour.** *Leave it as it is*
+      first went out as a control with a ground of its own and a foreground
+      borrowed from the description text — grey on grey, and a reader said so.
+      It is the editor's own button pair now, falling back to the primary pair
+      where a theme declares no secondary one, so the two always come from the
+      same place. jsdom does not resolve `var()`, so no test here can tell: this
+      one was found by looking, which is the only way it could have been.
 - [ ] **A command a reader can find.** *Open Preview to the Side* names neither
       yxl nor a grid, and it is a text button in the editor's title bar. A name
       that says what it opens, an icon beside it, and the same command in the
@@ -3390,6 +3411,40 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-29 — A refusal is a question now
+Phase 17's second line. The answers to a refused edit were a panel under the
+grid, and the grid behind it still took keystrokes — so the one thing a reader
+needed to know, *did my edit happen*, was the one thing the panel did not say.
+
+- **It takes the panel until it is answered.** The first answer has the keyboard
+  when it opens, `Tab` goes round the answers rather than out of them, `Esc` and
+  *Leave it as it is* take it back, and the ground behind it absorbs a click
+  rather than dismissing a question about the reader's own edit. What it carried
+  came with it: each answer's count and sample cells (§8 Q14), the exception,
+  and the reason that goes in the file beside it.
+- **An answer taken closes it at once**, rather than waiting on the host — the
+  reader has answered, and the host's reply is a new drawing or a new question.
+- **A drawing closes it too**, which is the rule that was not there before: the
+  answers were worked out against the text as it was, so a spec changed since is
+  not the one the question was about. The reader can still edit the YAML while
+  the question is up — the trap is the panel's, not VS Code's.
+- **A redraw with the same question open leaves it alone**, or it would take back
+  the keyboard and the half-typed reason.
+- **Not `<dialog>`**, though `showModal()` is the right element and would give
+  the trap for nothing: **jsdom 30 does not implement it** — measured before
+  choosing, not recalled — so the shipped path would have been the one no test
+  runs. Ours is `role="dialog"`, `aria-modal`, and a focus trap of about a dozen
+  lines, and every rule above has a test.
+- **A colour is the one thing none of them can see.** *Leave it as it is* went
+  out as a control with a ground of its own and a foreground taken from the
+  description text: grey on grey, which a reader read back to us from a
+  screenshot. It takes the editor's own button pair now, falling back to the
+  primary pair where a theme declares no secondary one, so the two always come
+  from one place. jsdom does not resolve `var()` — measured — so no suite here
+  could have caught it, and the honest note is that looking is what did.
+- 2357 → 2362 tests. Comment shape: export 836 blocks / 1856 lines / avg 2.2,
+  private 559 / 559 / avg 1.0, inline 127 / 199 / avg 1.6; 0 over the limit.
 
 ### 2026-08-29 — A preview that comes back when its tab does
 Phase 17's first line, and the defect a reader photographed: two previews open
