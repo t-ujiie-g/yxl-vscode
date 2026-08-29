@@ -1970,9 +1970,10 @@ reach.
       it; `Saying = string | Message` carries the rest until they follow.
 - [x] `package.nls.json` for the manifest — the commands and the setting —
       which is VS Code's own mechanism and needs no decision.
-- [ ] The view's chrome: the toolbar's tooltips, the menus, the headings under
+- [x] The view's chrome: the toolbar's tooltips, the menus, the headings under
       the grid, the formula bar, the inspector's facet names, the sentences a
-      preview says about `print:` and `protect:`.
+      preview says about `print:` and `protect:` — 140 sentences, in the panel's
+      own book (`webview/src/text.ts`), worded by `chrome()` off `<html lang>`.
 - [ ] Every refusal and every diagnostic, which is the long tail and the reason
       the decision comes first: `loader` and `compile` (94 sites behind
       `reject`), then `intent`'s 122 refusals, then `verify` and `normalize`.
@@ -3593,6 +3594,35 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-29 — The panel in the reader's own language
+
+Phase 19's third line: everything the panel says for itself.
+
+- **140 sentences**, in the panel's own book beside the ids that name them, and
+  a `chrome()` that words one where it is drawn. The toolbar's tooltips, the
+  right-click menus on cells, headings and tabs, the formula and find bars, the
+  inspector's headings and its *this cell cannot be typed into*, the tab bar,
+  and what a chart says on hover.
+- **Grammar is a sentence's own business**, which is why a sentence is a
+  function. English counts a run of bands (*Hide these 3 columns*, *Hide this
+  row*) and puts the side after the noun (*Insert 2 columns left*); Japanese
+  counts with a unit and puts the side before the verb (`3 列を非表示`,
+  `2 列を左に挿入`). Neither language is assembled from the other's pieces.
+- **`spanSaid` stayed where it was.** The view says a run of rows or columns
+  itself now (`spanned`), because a message cannot nest a message: an argument
+  is a value, not prose in a language nobody has picked yet. The host's uses of
+  it are refusals, and go with the refusals.
+- **What is not translated, deliberately**: the key names of the schema, a
+  format code, a font name, `Sheet!A1`, and the type of a chart — all of them
+  the spec's own words (ADR-011). A validation list's *example* is translated,
+  since it is a hint rather than a value.
+- **Two sentences were not sentences**: `${said} (${chord})` and
+  `${name}: ${values}` read the same in both languages, which
+  `tests/languages.test.ts` calls a copied line. They are composition, not
+  prose, and are back in the code that composes them.
+- 2423 → 2427 tests. Comment shape: export 878 blocks / 1952 lines / avg 2.2,
+  private 572 / 572 / avg 1.0, inline 135 / 215 / avg 1.6; 0 over the limit.
 
 ### 2026-08-29 — A message is a code and its parts
 

@@ -1,4 +1,5 @@
 import type { Asks, Showing } from './showing';
+import { chrome } from './worded';
 
 /**
  * A control that opens a panel under it, which is how every spreadsheet holds a
@@ -223,7 +224,7 @@ export function swatches(
 
   const custom = document.createElement('label');
   custom.className = 'entry custom';
-  custom.append('Custom\u2026');
+  custom.append(chrome('view.custom-colour'));
 
   const pick = document.createElement('input');
   pick.type = 'color';

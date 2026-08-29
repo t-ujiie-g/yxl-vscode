@@ -1,5 +1,6 @@
 import { chosen } from './menus';
 import { type Asks, over, type Showing, wornBy } from './showing';
+import { chrome } from './worded';
 
 /** A list rather than the machine's fonts: a face a spec names is one Excel goes looking for. */
 const FACES: readonly string[] = [
@@ -26,11 +27,11 @@ export function faces(showing: Showing, asks: Asks): HTMLElement {
 
   return chosen({
     name: 'face',
-    said: 'Font',
+    said: chrome('view.font'),
     now: now ?? '',
     disabled: showing.selected === null,
     options: [
-      { value: '', text: 'Default' },
+      { value: '', text: chrome('view.default-font') },
       ...held(FACES, now).map((one) => ({ value: one, text: one })),
     ],
     take: (value) => asks.wear({ 'font.name': value === '' ? null : value }, where),
@@ -44,7 +45,7 @@ export function sizes(showing: Showing, asks: Asks): HTMLElement {
 
   return chosen({
     name: 'size',
-    said: 'Font size',
+    said: chrome('view.font-size'),
     now: now === null ? '' : String(now),
     disabled: showing.selected === null,
     options: [

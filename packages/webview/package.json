@@ -9,6 +9,7 @@
     ".": "./src/index.ts",
     "./fields": "./src/fields.ts",
     "./protocol": "./src/protocol.ts",
+    "./text": "./src/text.ts",
     "./words": "./src/words.ts"
   },
   "dependencies": {

@@ -29,6 +29,7 @@ import {
 import { grid, headed, pinned } from './table';
 import { toolbar } from './toolbar';
 import { across, down, pixelsOf, type Where, wanted } from './window';
+import { chrome } from './worded';
 
 /**
  * The whole view, rebuilt outright whenever the host sends a new drawing
@@ -49,7 +50,7 @@ export function draw(into: HTMLElement, showing: Showing, asks: Asks): void {
   into.replaceChildren();
 
   if (drawing.sheets.length === 0) {
-    into.append(note('This spec has no sheets to draw.'));
+    into.append(note(chrome('view.no-sheets-to-draw')));
     return;
   }
 
@@ -295,7 +296,7 @@ function splitSaid(split: { readonly x: number; readonly y: number }): string {
     split.y > 0 ? `${split.y}pt from the top` : '',
   ].filter((one) => one !== '');
 
-  return `This sheet is split ${where.join(' and ')}. The preview draws the splitter where it sits; it does not scroll the panes apart, and the bar does not move.`;
+  return chrome('view.split-where', { where: where.join(' and ') });
 }
 
 /** The splitter, drawn where it sits: the panes do not scroll apart, and the bar does not move. */

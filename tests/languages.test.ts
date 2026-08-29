@@ -1,13 +1,14 @@
 import { WORDS as cst } from '@yxl-vscode/cst';
 import type { Book, Language } from '@yxl-vscode/diag';
 import { WORDS as patch } from '@yxl-vscode/patch';
+import { WORDS as view } from '@yxl-vscode/webview/text';
 import { describe, expect, it } from 'vitest';
 
 /**
  * Every book of sentences this editor holds, which is the list the languages
  * are held to. A package that starts saying things belongs here (ADR-051).
  */
-const BOOKS: Record<string, Book> = { cst, patch };
+const BOOKS: Record<string, Book> = { cst, patch, view };
 
 /** One sentence read with its own argument names in place of arguments, which is enough to tell two languages apart. */
 function read(book: Book, language: Language, id: string): string {

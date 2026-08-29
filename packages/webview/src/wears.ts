@@ -2,6 +2,7 @@ import type { Asking } from './cell';
 import { HELD } from './keys';
 import type { DrawnLink, DrawnNote, DrawnSheet, DrawnTable, DrawnValidation } from './protocol';
 import type { Asked } from './showing';
+import { chrome } from './worded';
 
 /** Whether this cell is one of the header cells a sheet's filter hangs off (`docs/spec.md` §10). */
 export function filters(sheet: DrawnSheet, row: number, col: number): boolean {
@@ -37,7 +38,9 @@ export function banding(table: DrawnTable, row: number, col: number): string[] {
 
 /** A table as its header reads on hover: what formulas call it, since nothing else says so. */
 export function tableSaid(table: DrawnTable): string {
-  return table.name === null ? 'This row heads a table' : `This row heads the table ${table.name}`;
+  return table.name === null
+    ? chrome('view.heads-a-table')
+    : chrome('view.heads-the-table', { name: table.name });
 }
 
 /** The corner Excel puts on a cell that carries a note. */
@@ -63,10 +66,15 @@ export function asking(
   link: DrawnLink | null,
 ): Asking {
   if (what === 'note') {
-    return { className: 'noting', value: note?.text ?? '', rows: 3, placeholder: 'a note' };
+    return {
+      className: 'noting',
+      value: note?.text ?? '',
+      rows: 3,
+      placeholder: chrome('view.a-note'),
+    };
   }
   if (what === 'list') {
-    return { className: 'linking', value: '', rows: 1, placeholder: 'Draft, Sent, Paid' };
+    return { className: 'linking', value: '', rows: 1, placeholder: chrome('view.a-list') };
   }
 
   const holds = link?.kind === what ? link.target : '';
@@ -104,7 +112,9 @@ export function dropdown(): HTMLElement {
   return mark;
 }
 
-export const FILTERED = 'This column has a filter; the preview does not filter by it';
+export function filtered(): string {
+  return chrome('view.column-is-filtered');
+}
 
 /** What a cell says on hover, drawn beside the cell and fixed to the page: a cell clips what is inside it. */
 export function tells(cell: HTMLTableCellElement, lines: readonly string[]): void {

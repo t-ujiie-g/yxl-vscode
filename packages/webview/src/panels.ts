@@ -11,7 +11,8 @@ import type {
   Uncomputed,
 } from './protocol';
 import type { Asks, Reached, Showing } from './showing';
-import { plainly, worded } from './worded';
+import type { Says } from './text';
+import { chrome, plainly, worded } from './worded';
 
 /** The parameters as boxes to turn (`docs/spec.md` §7); emptying one gives the default back. */
 export function parameters(drawing: Drawing, asks: Asks): HTMLElement {
@@ -21,7 +22,8 @@ export function parameters(drawing: Drawing, asks: Asks): HTMLElement {
 
   const heading = document.createElement('summary');
   const changed = drawing.params.filter((param) => param.set).length;
-  heading.textContent = changed === 0 ? 'Parameters' : `Parameters (${changed} set)`;
+  heading.textContent =
+    changed === 0 ? chrome('view.parameters') : chrome('view.parameters-set', { set: changed });
   panel.append(heading);
 
   const form = document.createElement('div');
@@ -55,9 +57,12 @@ export function comesTo(summed: Summed): HTMLElement | null {
   said.className = 'comes';
   if (summed.held === 0) return null;
 
-  const parts = [`Count ${summed.held}`];
+  const parts = [chrome('view.count', { held: round(summed.held) })];
   if (summed.numbers > 0) {
-    parts.unshift(`Sum ${round(summed.sum)}`, `Average ${round(summed.sum / summed.numbers)}`);
+    parts.unshift(
+      chrome('view.sum', { sum: round(summed.sum) }),
+      chrome('view.average', { average: round(summed.sum / summed.numbers) }),
+    );
   }
 
   said.textContent = parts.join('   ');
@@ -72,14 +77,13 @@ function round(value: number): string {
 
 /** Why some cells show a formula rather than what it comes to, said once under the grid. */
 export function uncomputed(said: Uncomputed): string {
-  if (said.kind === 'tooMany') {
-    return `Nothing is computed here: this workbook holds more than ${said.limit} formulas, and computing some of them would make every total over the rest wrong.`;
-  }
+  if (said.kind === 'tooMany') return chrome('view.too-many-formulas', { limit: said.limit });
 
   const shown = said.names.slice(0, 3).join(', ');
-  const rest = said.names.length > 3 ? `, and ${said.names.length - 3} more` : '';
+  const rest =
+    said.names.length > 3 ? chrome('view.and-more', { rest: said.names.length - 3 }) : '';
 
-  return `Not computed here: ${shown}${rest} — this preview does not model tables or workbook-defined names, so formulas that use them show as formulas.`;
+  return chrome('view.not-computed', { names: `${shown}${rest}` });
 }
 
 /**
@@ -121,7 +125,7 @@ export function refusal(refused: Refused, asks: Asks): HTMLElement {
   const leave = document.createElement('button');
   leave.type = 'button';
   leave.className = 'cancel';
-  leave.textContent = 'Leave it as it is';
+  leave.textContent = chrome('view.leave-it-as-it-is');
   leave.addEventListener('click', () => asks.stopAsking());
   asking.append(leave);
 
@@ -149,7 +153,7 @@ function overriding(about: Typed, asks: Asks): HTMLElement {
   const go = document.createElement('button');
   go.type = 'button';
   go.className = 'go';
-  go.textContent = 'Write it as an override';
+  go.textContent = chrome('view.write-as-override');
   go.addEventListener('click', () => asks.overrideWith(about, why.value));
   why.addEventListener('keydown', (event) => {
     if (event.key === 'Enter') asks.overrideWith(about, why.value);
@@ -191,17 +195,15 @@ function moved(choice: Choice): string {
 export function locked(editable: Exclude<Editable, 'direct'>): HTMLElement {
   const said = document.createElement('p');
   said.className = 'locked';
-  said.textContent = LOCKED[editable];
+  said.textContent = chrome(LOCKED[editable]);
 
   return said;
 }
 
-const LOCKED: Record<Exclude<Editable, 'direct'>, string> = {
-  external:
-    'This cell cannot be typed into: its value comes from a file beside the spec. Type into it anyway to be offered an override.',
-  mediated:
-    'This cell cannot be typed into: more than one thing could change to make that edit. Type into it anyway to be offered an override.',
-  rich: 'This cell holds rich text. Pick a run in the bar over the grid to retype it; a run keeps the font it wears.',
+const LOCKED: Record<Exclude<Editable, 'direct'>, keyof Says> = {
+  external: 'view.locked-external',
+  mediated: 'view.locked-mediated',
+  rich: 'view.locked-rich',
 };
 
 /** What the cursor is reaching, said above the grid so the highlight is explained. */
@@ -212,8 +214,8 @@ export function reaching(reached: Reached): HTMLElement {
   const count = reached.cells.size;
   said.textContent =
     count === 0
-      ? `${reached.says} reaches no cell the grid holds`
-      : `${reached.says} reaches ${count} cell${count === 1 ? '' : 's'}`;
+      ? chrome('view.reaches-nothing', { what: reached.says })
+      : chrome('view.reaches-cells', { what: reached.says, count });
 
   return said;
 }
@@ -225,18 +227,19 @@ export function inspector(showing: Showing, asks: Asks): HTMLElement {
 
   const at = showing.selected;
   const heading = document.createElement('h2');
-  heading.textContent = at === null ? 'Nothing selected' : `${columnLabel(at.col)}${at.row}`;
+  heading.textContent =
+    at === null ? chrome('view.nothing-selected') : `${columnLabel(at.col)}${at.row}`;
   panel.append(heading);
 
   const editable = showing.editable;
   if (editable !== null && editable !== 'direct') panel.append(locked(editable));
 
-  if (showing.sources?.length === 0) panel.append(note('Nothing writes this cell.'));
+  if (showing.sources?.length === 0) panel.append(note(chrome('view.nothing-writes-this-cell')));
   else if (showing.sources !== null) panel.append(sourceList(showing.sources, asks));
 
   const carried = showing.carried ?? [];
   if (carried.length > 0) {
-    panel.append(note('This sheet also holds, undrawn:'), sourceList(carried, asks));
+    panel.append(note(chrome('view.also-holds-undrawn')), sourceList(carried, asks));
   }
 
   return panel;
@@ -295,8 +298,8 @@ export function tabs(showing: Showing, asks: Asks): HTMLElement {
     says(
       tab,
       sheet.visibility === 'visible'
-        ? 'Double-click to rename, drag to reorder'
-        : `Hidden in Excel — \`${sheet.visibility}\``,
+        ? chrome('view.rename-or-reorder')
+        : chrome('view.hidden-in-excel', { visibility: sheet.visibility }),
     );
 
     tab.addEventListener('click', () => asks.showSheet(index));
@@ -314,7 +317,7 @@ export function tabs(showing: Showing, asks: Asks): HTMLElement {
   add.type = 'button';
   add.className = 'tab add';
   add.textContent = '+';
-  says(add, 'Add a sheet');
+  says(add, chrome('view.add-a-sheet'));
   // Added under the next free name at once, as both spreadsheets do — a webview
   // has no `prompt`, and renaming is the tab's own gesture.
   add.addEventListener('click', () =>

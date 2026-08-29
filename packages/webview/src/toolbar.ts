@@ -15,6 +15,8 @@ import { HELD } from './keys';
 import { ACROSS, type Bar, DOWN, framed, frozen, marked, RAGGED } from './marks';
 import { entry, opens, says, swatches } from './menus';
 import { type Asks, over, type Showing, wornBy } from './showing';
+import type { Says } from './text';
+import { chrome } from './worded';
 
 /** What a reader reaches for first: the look of the cells they have selected, and where the sheet is frozen. */
 export function toolbar(showing: Showing, asks: Asks): HTMLElement {
@@ -49,12 +51,17 @@ function panes(showing: Showing, asks: Asks): HTMLElement {
   const stays = showing.drawing.sheets[showing.sheet]?.freeze ?? null;
 
   return opens(
-    { name: 'freeze', title: 'Freeze panes', disabled: false, marks: [marked(frozen())] },
+    {
+      name: 'freeze',
+      title: chrome('view.freeze-panes'),
+      disabled: false,
+      marks: [marked(frozen())],
+    },
     showing,
     asks,
     () => {
       const panel = document.createElement('div');
-      const upTo = at === null ? 'the selected cell' : addrAt(at);
+      const upTo = at === null ? chrome('view.the-selected-cell') : addrAt(at);
       const taken = (to: typeof at) => {
         asks.openMenu(null);
         asks.freeze(to);
@@ -62,11 +69,11 @@ function panes(showing: Showing, asks: Asks): HTMLElement {
 
       panel.append(
         entry(
-          `Freeze up to ${upTo}`,
+          chrome('view.freeze-up-to', { at: upTo }),
           { disabled: at === null || (at.row === 1 && at.col === 1) },
           () => taken(at),
         ),
-        entry('No frozen panes', { disabled: stays === null }, () => taken(null)),
+        entry(chrome('view.no-frozen-panes'), { disabled: stays === null }, () => taken(null)),
       );
       return panel;
     },
@@ -84,18 +91,24 @@ interface Toggle {
   readonly key: StyleProperty;
   readonly name: string;
   readonly mark: string;
-  readonly says: string;
+  readonly says: keyof Says;
   readonly chord?: string;
 }
 
 const TOGGLES: readonly Toggle[] = [
-  { key: 'font.bold', name: 'bold', mark: 'B', says: 'Bold', chord: `${HELD}B` },
-  { key: 'font.italic', name: 'italic', mark: 'I', says: 'Italic', chord: `${HELD}I` },
-  { key: 'font.underline', name: 'underline', mark: 'U', says: 'Underline', chord: `${HELD}U` },
-  { key: 'font.strike', name: 'strike', mark: 'S', says: 'Strikethrough' },
+  { key: 'font.bold', name: 'bold', mark: 'B', says: 'view.bold', chord: `${HELD}B` },
+  { key: 'font.italic', name: 'italic', mark: 'I', says: 'view.italic', chord: `${HELD}I` },
+  {
+    key: 'font.underline',
+    name: 'underline',
+    mark: 'U',
+    says: 'view.underline',
+    chord: `${HELD}U`,
+  },
+  { key: 'font.strike', name: 'strike', mark: 'S', says: 'view.strikethrough' },
 ];
 
-const WRAP: Toggle = { key: 'align.wrap', name: 'wrap', mark: '\u21b5', says: 'Wrap text' };
+const WRAP: Toggle = { key: 'align.wrap', name: 'wrap', mark: '\u21b5', says: 'view.wrap-text' };
 
 /** One switch, showing what the selected cell wears and asking for the other of it. */
 function toggle(of: Toggle, showing: Showing, asks: Asks): HTMLElement {
@@ -105,7 +118,8 @@ function toggle(of: Toggle, showing: Showing, asks: Asks): HTMLElement {
   button.type = 'button';
   button.className = `look ${of.name}${on ? ' on' : ''}`;
   button.textContent = of.mark;
-  says(button, of.chord === undefined ? of.says : `${of.says} (${of.chord})`);
+  const said = chrome(of.says);
+  says(button, of.chord === undefined ? said : `${said} (${of.chord})`);
   button.disabled = showing.selected === null;
   button.setAttribute('aria-pressed', on ? 'true' : 'false');
   button.addEventListener('click', () => asks.wear({ [of.key]: !on } as StyleSays, over(showing)));
@@ -117,8 +131,8 @@ interface Ink {
   readonly key: 'font.color' | 'fill';
   readonly name: string;
   readonly mark: string;
-  readonly says: string;
-  readonly clears: string;
+  readonly says: keyof Says;
+  readonly clears: keyof Says;
   readonly opens: string;
 }
 
@@ -127,16 +141,16 @@ const INKS: readonly Ink[] = [
     key: 'font.color',
     name: 'ink',
     mark: 'A',
-    says: 'Text colour',
-    clears: 'Automatic text colour',
+    says: 'view.text-colour',
+    clears: 'view.automatic-text-colour',
     opens: '#000000',
   },
   {
     key: 'fill',
     name: 'fill',
     mark: '■',
-    says: 'Fill',
-    clears: 'No fill',
+    says: 'view.fill',
+    clears: 'view.no-fill',
     opens: '#ffffff',
   },
 ];
@@ -152,7 +166,7 @@ function ink(of: Ink, showing: Showing, asks: Asks): HTMLElement {
 
   const menu = {
     name: of.name,
-    title: of.says,
+    title: chrome(of.says),
     disabled: showing.selected === null,
     marks: [mark],
   };
@@ -168,7 +182,9 @@ function palette(of: Ink, now: Color | null, showing: Showing, asks: Asks): HTML
     asks.wear({ [of.key]: colour } as StyleSays, where);
   };
 
-  panel.append(entry(of.clears, { disabled: now === null, className: 'clears' }, () => wear(null)));
+  panel.append(
+    entry(chrome(of.clears), { disabled: now === null, className: 'clears' }, () => wear(null)),
+  );
   panel.append(
     ...swatches(now === null ? null : painted(now).slice(1), of.opens, (digits) =>
       wear(parseColor(digits)),
@@ -183,7 +199,7 @@ interface Pick {
   readonly key: 'align.horizontal' | 'align.vertical';
   readonly value: HAlign | VAlign;
   readonly name: string;
-  readonly says: string;
+  readonly says: keyof Says;
   readonly bars: readonly Bar[];
 }
 
@@ -192,14 +208,14 @@ const PICKS: readonly Pick[] = [
     key: 'align.horizontal',
     value: 'left',
     name: 'left',
-    says: 'Align left',
+    says: 'view.align-left',
     bars: ACROSS.map((y, row) => ({ x: 2, y, width: RAGGED[row] ?? 12 })),
   },
   {
     key: 'align.horizontal',
     value: 'center',
     name: 'centre',
-    says: 'Align centre',
+    says: 'view.align-centre',
     bars: ACROSS.map((y, row) => ({
       x: (16 - (RAGGED[row] ?? 12)) / 2,
       y,
@@ -210,28 +226,28 @@ const PICKS: readonly Pick[] = [
     key: 'align.horizontal',
     value: 'right',
     name: 'right',
-    says: 'Align right',
+    says: 'view.align-right',
     bars: ACROSS.map((y, row) => ({ x: 14 - (RAGGED[row] ?? 12), y, width: RAGGED[row] ?? 12 })),
   },
   {
     key: 'align.vertical',
     value: 'top',
     name: 'top',
-    says: 'Align top',
+    says: 'view.align-top',
     bars: DOWN.map((y) => ({ x: 3, y: y + 2, width: 10 })),
   },
   {
     key: 'align.vertical',
     value: 'middle',
     name: 'middle',
-    says: 'Align middle',
+    says: 'view.align-middle',
     bars: DOWN.map((y) => ({ x: 3, y: y + 4.2, width: 10 })),
   },
   {
     key: 'align.vertical',
     value: 'bottom',
     name: 'bottom',
-    says: 'Align bottom',
+    says: 'view.align-bottom',
     bars: DOWN.map((y) => ({ x: 3, y: y + 6.4, width: 10 })),
   },
 ];
@@ -245,7 +261,7 @@ function pick(of: Pick, showing: Showing, asks: Asks): HTMLElement {
 
   button.type = 'button';
   button.className = `look ${of.name}${on ? ' on' : ''}`;
-  says(button, of.says);
+  says(button, chrome(of.says));
   button.disabled = showing.selected === null;
   button.setAttribute('aria-pressed', on ? 'true' : 'false');
   button.append(marked(of.bars));
@@ -259,24 +275,24 @@ function pick(of: Pick, showing: Showing, asks: Asks): HTMLElement {
 /** One border a reader draws: which edges it puts the line on, or takes it off. */
 interface Edge {
   readonly name: string;
-  readonly says: string;
+  readonly says: keyof Says;
   readonly sides: readonly BorderEdgeName[];
 }
 
 const EDGES: readonly Edge[] = [
-  { name: 'all', says: 'All borders', sides: BORDER_EDGES },
-  { name: 'top', says: 'Top border', sides: ['top'] },
-  { name: 'bottom', says: 'Bottom border', sides: ['bottom'] },
-  { name: 'left', says: 'Left border', sides: ['left'] },
-  { name: 'right', says: 'Right border', sides: ['right'] },
-  { name: 'none', says: 'No borders', sides: [] },
+  { name: 'all', says: 'view.all-borders', sides: BORDER_EDGES },
+  { name: 'top', says: 'view.top-border', sides: ['top'] },
+  { name: 'bottom', says: 'view.bottom-border', sides: ['bottom'] },
+  { name: 'left', says: 'view.left-border', sides: ['left'] },
+  { name: 'right', says: 'view.right-border', sides: ['right'] },
+  { name: 'none', says: 'view.no-borders', sides: [] },
 ];
 
 /** The borders, in the one menu Sheets and Excel both keep them in: the edges, and the line they are drawn with. */
 function borders(showing: Showing, asks: Asks): HTMLElement {
   const menu = {
     name: 'borders',
-    title: 'Borders',
+    title: chrome('view.borders'),
     disabled: showing.selected === null,
     marks: [marked(framed(BORDER_EDGES))],
   };
@@ -298,7 +314,7 @@ function edge(of: Edge, showing: Showing, asks: Asks): HTMLElement {
 
   button.type = 'button';
   button.className = `look edge ${of.name}`;
-  says(button, of.says);
+  says(button, chrome(of.says));
   button.disabled = showing.selected === null;
   button.append(marked(framed(of.sides)));
   button.addEventListener('click', () => {
@@ -331,7 +347,7 @@ function lines(showing: Showing, asks: Asks): HTMLElement {
 
   const box = document.createElement('select');
   box.className = 'lines';
-  box.title = 'The line a border is drawn with';
+  box.title = chrome('view.border-line');
 
   for (const style of BORDER_STYLES) {
     const option = document.createElement('option');
