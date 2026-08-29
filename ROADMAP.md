@@ -421,9 +421,13 @@ rule that is not mechanically checked is a suggestion.
 Phases land in order. Each is releasable or explicitly marked otherwise. The
 **first release is Phase 4** — read-only, and worth shipping alone.
 
-**Phases 17–20 are the release programme**, opened on 2026-08-29 from a reader's
-own list after working in the preview (§11). They come before Phase 16, which
-stays last for the reason it was moved there.
+**The number follows the order**, so that §10 — take the first phase with an
+unchecked box — can be read off the page. **Phases 17–20 are the release
+programme**, opened on 2026-08-29 from a reader's own list after working in the
+preview (§11). *There is no Phase 16*: the deterministic refactors held that
+number while running last, which every reader had to work around, so they are
+**Phase 21** now. The gap is left rather than closed, because five entries in
+§11 and the pull requests they name say Phase 17 and are already history.
 
 ### The everyday gestures, and where they land
 
@@ -1829,6 +1833,21 @@ below, and one is the answer panel becoming a thing you have to answer.
       the view asked for put focus back only where the page happened to still
       have it; the view asked for that window, so the reader is in the grid, and
       the first key after the jump now reaches a cell rather than the page.
+- [ ] **Where the keyboard is, decided in one place.** Two of the defects above
+      were the same defect: a control took the keyboard and nothing put it back
+      (the question), and a redraw put it back only where the page happened to
+      still have it (the window jump). Both passed every test, and both were
+      found by a reader. Focus is decided in `draw`, in `restate`, in the cell's
+      own box, in the tab's rename box and in the question — five places, no two
+      of which can see each other. One rule instead: *the grid has the keyboard
+      unless something the reader opened has it*, said once and asserted once.
+- [ ] **What crosses the window's edge, pinned by tests.** The other two were
+      also one: the view holds a window (ADR-019) and every gesture that reaches
+      past it has to ask the host — which `fit`, `sum`, `edge` and now `copyOut`
+      each do, and which selecting, `End`, and the next such gesture do not.
+      A suite over *the boundary itself*: for each gesture, a sheet whose block
+      runs past the drawn window, and the answer that must not be the window's.
+      Both of these are how this phase stops producing the next one.
 - [ ] **A column width Excel agrees with** *(lower priority — the reader said
       so)*. Two errors, one arithmetic and one font. `PER_CHARACTER = 7` turns
       pixels into Excel's unit but drops the 5px of padding Excel's own formula
@@ -1904,12 +1923,14 @@ accident. This is §8 Q6's open half, and the v1.0 gate's last line.
 - [ ] **A `customEditors` contribution at `priority: option`** *(proposed)*, so
       *Open With…* offers the grid on a `*.yxl.yaml` without a command
 
-### Phase 16 — Deterministic refactors *(lowest priority)*
-Kept last on 2026-08-23, and left there when the release programme opened above
-it on 2026-08-29: this is spec hygiene rather than a spreadsheet gesture, which
-is not what the project is for (§1) — but it is model-free, it is what principle
-6 looks like when it acts rather than waits, and Phase 11's `data:` conversion is
-its first row already shipped. Everything here is detectable by analysis.
+### Phase 21 — Deterministic refactors *(lowest priority)*
+Kept last on 2026-08-23, and **numbered for that place on 2026-08-29** — this was
+Phase 16, and a phase that runs last while carrying the lowest number is one
+every reader has to work around. Why it is last: this is spec hygiene rather
+than a spreadsheet gesture, which is not what the project is for (§1) — but it
+is model-free, it is what principle 6 looks like when it acts rather than waits,
+and Phase 11's `data:` conversion is its first row already shipped. Everything
+here is detectable by analysis.
 - [ ] Identical resolved styles at N sites → extract to `defs.styles`
 - [x] Homogeneous `cells:` rectangles → `data:` with inline `values:`
       *(Phase 11, 2026-08-23, as a gesture on the rectangle)*
@@ -3449,6 +3470,27 @@ than widening it silently.
 
 ## 11. Living changelog
 
+### 2026-08-29 — The number a phase runs in, and the two seams that bit twice
+No code. A reader read §6 and asked why Phase 16 sits below Phase 20, which is
+the right question: the number is how §10 picks the next task, so a number that
+disagrees with the order is one every reader has to work around.
+
+- **The deterministic refactors are Phase 21.** They have run last since
+  2026-08-23 and kept the number 16 through it. §6's preamble now says the rule
+  once — *the number follows the order* — and says why there is no Phase 16.
+  The gap is left rather than closed: five §11 entries and the pull requests
+  they name say Phase 17, and those are history rather than plans.
+- **Two items added to Phase 17**, from the same reader's afternoon: four
+  defects that turned out to be two. *Where the keyboard is* was decided in five
+  places that cannot see each other, so a control could take it and nothing put
+  it back. *What crosses the window's edge* is asked of the host by `fit`, `sum`,
+  `edge` and `copyOut`, and by nothing else — so the next gesture that reaches
+  past the window will be the next defect unless the boundary itself is pinned.
+- Both were found by a reader on a running preview while every test passed. That
+  is the note worth keeping: the suites here are strong on values and blind to
+  where the keyboard is, which is a shape of test this project has not needed
+  until it started being used.
+
 ### 2026-08-29 — A copy that reaches past the window, and the key after a jump
 Two from one reader session, and the first is this morning's own consequence.
 
@@ -3611,7 +3653,8 @@ in one column, and the one that lost the tab came back blank.
 ### 2026-08-29 — The release programme, from a reader's own list
 Phase 15 closed this morning, and the next thing is not more schema: it is a
 reader working in the preview and writing down what stopped them. §6 gains four
-phases from that list, and they come **before** Phase 16, which stays last.
+phases from that list, and they come **before** the deterministic refactors,
+which stay last.
 
 - **Phase 17 — What a reader hit first.** Four defects with a cause named
   against each — a second preview that comes back blank (no
