@@ -1,15 +1,13 @@
 import type { StyleValues } from '@yxl-vscode/spec';
 import { shown } from './cell';
 import type { DrawnCell } from './protocol';
+import { PADDING } from './window';
 
 /** How wide a string is drawn in a font — the browser's own answer, injected so it can be stood in for. */
 export type Ruler = (text: string, font: string) => number;
 
 /** The face and size the grid draws in, which `view.css` sets and a cell's own style may replace. */
 const GRID = { size: '11pt', family: 'Calibri, Aptos, "Segoe UI", system-ui, sans-serif' };
-
-/** What a cell keeps either side of its text: `view.css`'s padding, its border, and a hair over. */
-const AROUND = 10;
 
 /** A canvas to measure against, or `null` where the view has none — jsdom and an old shell both. */
 export function ruler(): Ruler | null {
@@ -48,7 +46,7 @@ export function widest(cells: readonly DrawnCell[], rule: Ruler): number | null 
 
     const font =
       cell.rich === null ? fontOf(cell.style) : fontOf(cell.rich[0]?.style ?? cell.style);
-    wide = Math.max(wide ?? 0, rule(text, font) + AROUND);
+    wide = Math.max(wide ?? 0, rule(text, font) + PADDING);
   }
 
   return wide;

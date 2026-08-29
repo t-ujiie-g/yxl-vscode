@@ -3,6 +3,7 @@
 import { describe, expect, it } from 'vitest';
 import { cell } from './harness';
 import { ruler, widest } from './measure';
+import { PADDING } from './window';
 
 /** A ruler that counts characters, so a test asserts on what was measured rather than on a font. */
 const counting = (text: string, font: string) => text.length * (font.includes('bold') ? 2 : 1);
@@ -40,9 +41,9 @@ describe('the font a cell is measured in', () => {
 });
 
 describe('how wide a column has to be', () => {
-  it('is the widest of its cells, with what a cell keeps either side of its text', () => {
+  it('is the widest of its cells, with the five pixels a cell keeps around its text', () => {
     const cells = [cell(1, 1, { value: 'APAC' }), cell(1, 1, { value: 'EMEA and more' })];
-    expect(widest(cells, counting)).toBe(13 + 10);
+    expect(widest(cells, counting)).toBe(13 + PADDING);
   });
 
   it('measures each cell in its own font, so a bold word can be the widest', () => {
@@ -50,12 +51,12 @@ describe('how wide a column has to be', () => {
       cell(1, 1, { value: 'a longer word' }),
       cell(1, 1, { value: 'bold', style: { 'font.bold': true } }),
     ];
-    expect(widest(cells, counting)).toBe(Math.max(13, 4 * 2) + 10);
+    expect(widest(cells, counting)).toBe(Math.max(13, 4 * 2) + PADDING);
   });
 
   it('measures what the cell shows, which for a formula is the formula', () => {
     expect(widest([cell(1, 1, { formula: 'SUM(A1:A9)' })], counting)).toBe(
-      '=SUM(A1:A9)'.length + 10,
+      '=SUM(A1:A9)'.length + PADDING,
     );
   });
 
@@ -64,7 +65,7 @@ describe('how wide a column has to be', () => {
       { text: 'one ', style: {} },
       { text: 'two', style: {} },
     ];
-    expect(widest([cell(1, 1, { rich })], counting)).toBe(7 + 10);
+    expect(widest([cell(1, 1, { rich })], counting)).toBe(7 + PADDING);
   });
 
   it('is nothing at all where none of them holds anything, which leaves the column alone', () => {

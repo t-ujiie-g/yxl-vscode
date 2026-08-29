@@ -72,9 +72,10 @@ describe('a sheet larger than the window drawn of it', () => {
       Number.parseFloat(one.style.width),
     );
 
-    // Two default columns to the left of the window, six to the right of it.
-    expect(pads[0]).toBeCloseTo(2 * 59.01, 2);
-    expect(pads[1]).toBeCloseTo(6 * 59.01, 2);
+    // Two default columns to the left of the window, six to the right of it,
+    // each the 64.01px Excel's own width arithmetic gives 8.43 characters.
+    expect(pads[0]).toBeCloseTo(2 * 64.01, 2);
+    expect(pads[1]).toBeCloseTo(6 * 64.01, 2);
   });
 
   it('asks for the window the reader has scrolled to', () => {

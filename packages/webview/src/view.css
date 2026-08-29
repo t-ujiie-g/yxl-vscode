@@ -626,7 +626,9 @@ body {
   box-sizing: border-box;
   border: 0 solid #d4d4d4;
   border-width: 0 1px 1px 0;
-  padding: 1px 4px;
+  /* Two pixels either side and the gridline: the five Excel's own width
+     arithmetic keeps, so a width means the same here as it does there. */
+  padding: 1px 2px;
   overflow: hidden;
   white-space: nowrap;
   text-align: left;

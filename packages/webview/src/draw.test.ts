@@ -384,8 +384,10 @@ describe('where the paper falls', () => {
   it('outlines the print area over the cells it covers', () => {
     const into = paper({ area: { top: 2, left: 2, bottom: 3, right: 3 } });
     const box = into.querySelector<HTMLElement>('.paper .area');
-    expect(box?.style.left).toBe(`${44 + 59.01}px`);
-    expect(Math.round(Number.parseFloat(box?.style.width ?? '0'))).toBe(118);
+    // The row numbers, then one default column: 8.43 characters of seven
+    // pixels and the five a cell keeps around them, which is Excel's 64.
+    expect(Math.round(Number.parseFloat(box?.style.left ?? '0'))).toBe(Math.round(44 + 64.01));
+    expect(Math.round(Number.parseFloat(box?.style.width ?? '0'))).toBe(128);
   });
 
   it('draws a line above and left of each page break, and neither at the sheet edge', () => {
