@@ -125,6 +125,13 @@ function keyed(into: HTMLElement, event: KeyboardEvent, asks: Asks): void {
     return;
   }
 
+  // The search is closed from wherever the reader is, not only from its own
+  // box: a bar with no way out is one they have to work around.
+  if (event.key === 'Escape') {
+    asks.stopLooking();
+    return;
+  }
+
   const look = wearing(event);
   if (look !== null) {
     event.preventDefault();

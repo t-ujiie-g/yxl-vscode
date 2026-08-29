@@ -53,9 +53,9 @@ export function landed(
   sheet: SheetName,
   going: readonly Entry[],
   read: Reading,
-  refusals: readonly Held[],
-  doing: Standing,
+  how: Landing,
 ): Put | string {
+  const { doing, refusals = [] } = how;
   const ops = new Map<FilePath, Op[]>();
   const fresh: Entry[] = [];
   const cells = new Set<string>();
@@ -84,7 +84,7 @@ export function landed(
   }
 
   if (held.length > 0 && doing === 'refuse') {
-    return standing(cells.size - fresh.length, held, 'pasted');
+    return standing(cells.size - fresh.length, held, how.verb);
   }
 
   if (excepting.length > 0 && doing !== 'refuse' && doing !== 'skip') {
@@ -95,7 +95,7 @@ export function landed(
     for (const one of excepting) cells.add(qualified(sheet, one.at));
   }
 
-  if (cells.size === 0) return 'nothing in this rectangle can be pasted here';
+  if (cells.size === 0) return how.nothing;
 
   if (fresh.length > 0) {
     const made = entries(to, fresh, read);
@@ -178,6 +178,18 @@ function detached(to: CompiledSheet, these: readonly Entry[], read: Reading): La
   }
 
   return file === null ? 'there is nothing here to detach' : { file, ops };
+}
+
+/**
+ * What a gesture that lands cells calls itself: the verb a refusal counts in —
+ * *emptied*, *pasted*, *replaced* — and what it says where nothing can be done
+ * at all. `doing` is which group, if any, is being written as an exception.
+ */
+export interface Landing {
+  readonly doing: Standing;
+  readonly verb: string;
+  readonly nothing: string;
+  readonly refusals?: readonly Held[];
 }
 
 /** The ops for one file, where a paste lands in exactly one. */

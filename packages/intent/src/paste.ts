@@ -84,7 +84,12 @@ export function pasteRange(
     }
   }
 
-  const put = landed(spec, to, where.to.sheet, going, read, held, doing);
+  const put = landed(spec, to, where.to.sheet, going, read, {
+    doing,
+    refusals: held,
+    verb: 'pasted',
+    nothing: 'nothing in this rectangle can be pasted here',
+  });
   if (typeof put === 'string') return refused(put);
 
   return together(grid, where, put.ops, put.cells, read);
@@ -170,7 +175,11 @@ export function pasteText(
 
   if (shape === 'data') return block(grid, to, where, rows, read);
 
-  const put = landed(spec, to, where.sheet, going, read, [], doing);
+  const put = landed(spec, to, where.sheet, going, read, {
+    doing,
+    verb: 'pasted',
+    nothing: 'nothing in this rectangle can be pasted here',
+  });
   if (typeof put === 'string') return refused(put);
 
   const written = [...put.ops.keys()];

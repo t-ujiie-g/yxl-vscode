@@ -33,6 +33,8 @@ export function asks(): Asks {
     look: vi.fn(),
     goOn: vi.fn(),
     goTo: vi.fn(),
+    replaceWith: vi.fn(),
+    replace: vi.fn(),
     stopLooking: vi.fn(),
     stopAsking: vi.fn(),
     wear: vi.fn(),

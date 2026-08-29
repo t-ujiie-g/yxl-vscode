@@ -36,6 +36,7 @@ body {
 /* Outside the grid the panel's palette applies; inside it the sheet's does. */
 .boxes input,
 .looking .for,
+.looking .with,
 .formula input,
 .reason {
   padding: 1px 4px;
@@ -1006,11 +1007,18 @@ body {
   box-shadow: inset 0 0 0 9999px rgb(255 196 0 / 30%);
 }
 
+/* Wraps rather than overflows, as the toolbar does: the preview is often a
+   narrow panel, and a control the reader cannot see is one they do not have. */
 .looking {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.4rem;
   align-items: center;
   margin: 0 0 0.4rem;
+}
+
+.looking .close {
+  margin-left: auto;
 }
 
 .looking .for {
@@ -1020,6 +1028,26 @@ body {
 .looking .mark {
   color: var(--vscode-descriptionForeground);
   font-size: 0.9em;
+}
+
+/* What goes in the place of what was found, beside what is being looked for. */
+.looking .with {
+  width: 12rem;
+}
+
+.looking .swap {
+  border: 1px solid var(--vscode-button-border, transparent);
+  border-radius: 2px;
+  background: var(--vscode-button-secondaryBackground, var(--vscode-button-background, #3a3d41));
+  color: var(--vscode-button-secondaryForeground, var(--vscode-button-foreground, #ffffff));
+  font: inherit;
+  padding: 0.1rem 0.5rem;
+  cursor: pointer;
+}
+
+.looking .swap:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 .looking .count {

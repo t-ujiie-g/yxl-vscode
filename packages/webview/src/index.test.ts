@@ -116,6 +116,78 @@ describe('a `Cmd`+arrow', () => {
   });
 });
 
+describe('the search bar', () => {
+  it('closes from its own button, and from the grid with `Esc`', () => {
+    const { into } = view();
+
+    press(into, 1, 1, 'f');
+    expect(into.querySelector('.looking')).not.toBeNull();
+
+    into.querySelector<HTMLButtonElement>('.looking .close')?.click();
+    expect(into.querySelector('.looking')).toBeNull();
+
+    // And from a cell, where a reader who has gone back to the grid is.
+    press(into, 1, 1, 'f');
+    at(into, 1, 1)?.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }),
+    );
+    expect(into.querySelector('.looking')).toBeNull();
+  });
+});
+
+describe('replacing what a find turned up', () => {
+  it('sends the cell the reader is on, and every one of them for `Replace all`', () => {
+    const { into, sent, told } = view();
+
+    press(into, 1, 1, 'f');
+    const box = into.querySelector<HTMLInputElement>('.looking .for');
+    const with_ = into.querySelector<HTMLInputElement>('.looking .with');
+    if (box === null || with_ === null) throw new Error('no find bar to type in');
+
+    box.value = 'APAC';
+    box.dispatchEvent(new Event('input'));
+    told({ kind: 'found', sheet: 'Sales', text: 'APAC', cells: [{ row: 1, col: 1 }] });
+
+    with_.value = 'EMEA';
+    with_.dispatchEvent(new Event('input'));
+
+    // Nothing is gone to yet, so only `Replace all` can act.
+    into.querySelector<HTMLButtonElement>('.looking .swap.all')?.click();
+    expect(sent.filter((one) => one.kind === 'replace')).toEqual([
+      { kind: 'replace', sheet: 'Sales', at: null, looking: 'APAC', becomes: 'EMEA' },
+    ]);
+
+    into.querySelector<HTMLButtonElement>('.looking .step')?.click();
+    into.querySelector<HTMLButtonElement>('.looking .swap:not(.all)')?.click();
+    expect(sent.filter((one) => one.kind === 'replace').at(-1)).toEqual({
+      kind: 'replace',
+      sheet: 'Sales',
+      at: 'A1',
+      looking: 'APAC',
+      becomes: 'EMEA',
+    });
+  });
+
+  it('keeps what is being put there while the search is typed again', () => {
+    const { into, told } = view();
+
+    press(into, 1, 1, 'f');
+    const with_ = into.querySelector<HTMLInputElement>('.looking .with');
+    if (with_ === null) throw new Error('no replace box');
+
+    with_.value = 'EMEA';
+    with_.dispatchEvent(new Event('input'));
+
+    const box = into.querySelector<HTMLInputElement>('.looking .for');
+    if (box === null) throw new Error('no find box');
+    box.value = 'APAC';
+    box.dispatchEvent(new Event('input'));
+    told({ kind: 'found', sheet: 'Sales', text: 'APAC', cells: [] });
+
+    expect(into.querySelector<HTMLInputElement>('.looking .with')?.value).toBe('EMEA');
+  });
+});
+
 describe('copying a rectangle out', () => {
   it('asks the host for one that reaches past what is drawn, and keeps what it wrote', () => {
     // The view has a window (ADR-019) and the host has the sheet; two flavours

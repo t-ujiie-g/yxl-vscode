@@ -1,5 +1,5 @@
 import type { Axis } from '@yxl-vscode/spec';
-import { cellOf, parseA1Addr, type Rect } from '@yxl-vscode/units';
+import { addrAt, cellOf, parseA1Addr, type Rect } from '@yxl-vscode/units';
 import { sheetAgain } from './again';
 import { flavours, onto } from './clipboard';
 import { draw, focusCell, restate } from './draw';
@@ -522,7 +522,7 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       // already holds — the grid was drawn before the reader typed (ADR-047).
       const text = asked ?? looking?.text ?? '';
       const first = looking === null;
-      looking = { text, cells: [], at: -1 };
+      looking = { text, cells: [], at: -1, becomes: looking?.becomes ?? '' };
       host.postMessage({ kind: 'find', sheet: named(), text });
       if (!first) return;
 
@@ -530,6 +530,21 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       // the box out from under them.
       redraw();
       into.querySelector<HTMLInputElement>('.looking .for')?.focus();
+    },
+    replaceWith: (text) => {
+      if (looking !== null) looking = { ...looking, becomes: text };
+    },
+    replace: (all) => {
+      const on = looking?.cells[looking.at];
+      if (looking === null || (!all && on === undefined)) return;
+
+      send({
+        kind: 'replace',
+        sheet: named(),
+        at: all || on === undefined ? null : addrAt(on),
+        looking: looking.text,
+        becomes: looking.becomes,
+      });
     },
     goOn: (by) => {
       if (looking === null || looking.cells.length === 0) return;
