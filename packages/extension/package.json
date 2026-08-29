@@ -35,12 +35,14 @@
       {
         "command": "yxl.check",
         "title": "Check the Spec",
-        "category": "yxl"
+        "category": "yxl",
+        "icon": "$(check)"
       },
       {
         "command": "yxl.build",
         "title": "Build the Workbook",
-        "category": "yxl"
+        "category": "yxl",
+        "icon": "$(package)"
       }
     ],
     "menus": {
@@ -48,22 +50,32 @@
         {
           "command": "yxl.showPreview",
           "when": "resourceFilename =~ /\\.yxl\\.ya?ml$/",
-          "group": "navigation"
+          "group": "navigation@1"
         },
         {
           "command": "yxl.showSource",
           "when": "activeWebviewPanelId == 'yxl.preview'",
-          "group": "navigation"
+          "group": "navigation@1"
+        },
+        {
+          "command": "yxl.build",
+          "when": "resourceFilename =~ /\\.yxl\\.ya?ml$/ || activeWebviewPanelId == 'yxl.preview'",
+          "group": "navigation@2"
+        },
+        {
+          "command": "yxl.check",
+          "when": "resourceFilename =~ /\\.yxl\\.ya?ml$/ || activeWebviewPanelId == 'yxl.preview'",
+          "group": "navigation@3"
         }
       ],
       "commandPalette": [
         {
           "command": "yxl.check",
-          "when": "resourceFilename =~ /\\.yxl\\.ya?ml$/"
+          "when": "resourceFilename =~ /\\.yxl\\.ya?ml$/ || activeWebviewPanelId == 'yxl.preview'"
         },
         {
           "command": "yxl.build",
-          "when": "resourceFilename =~ /\\.yxl\\.ya?ml$/"
+          "when": "resourceFilename =~ /\\.yxl\\.ya?ml$/ || activeWebviewPanelId == 'yxl.preview'"
         },
         {
           "command": "yxl.showPreview",
