@@ -51,11 +51,15 @@ describe('the languages this editor reads in', () => {
 
 describe('what is left in English, and is meant to be', () => {
   it('builds no sentence where a thing goes wrong, which is what the books replaced', () => {
-    const said =
-      /\b(port\.said|port\.refuse|this\.refuse|refused)\((['`])|reject\([^,]+, [^,]+, ['`]/;
-    const prose = sourcesOf(join(REPO_ROOT, 'packages')).filter((path) =>
-      said.test(readFileSync(path, 'utf8')),
-    );
+    const said = [
+      /\b(port\.said|port\.refuse|this\.refuse|refused)\((['`])/,
+      /reject\([^,]+, [^,]+, ['`]/,
+      /show(?:Error|Warning|Information)Message\((['`])/,
+    ];
+    const prose = sourcesOf(join(REPO_ROOT, 'packages')).filter((path) => {
+      const source = readFileSync(path, 'utf8');
+      return said.some((one) => one.test(source));
+    });
 
     expect(prose.map((path) => path.slice(REPO_ROOT.length + 1))).toEqual([]);
   });

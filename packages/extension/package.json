@@ -23,6 +23,12 @@
   "contributes": {
     "commands": [
       {
+        "command": "yxl.newSpec",
+        "title": "%command.newSpec%",
+        "category": "yxl",
+        "icon": "$(new-file)"
+      },
+      {
         "command": "yxl.showPreview",
         "title": "%command.showPreview%",
         "category": "yxl",
@@ -48,6 +54,27 @@
       }
     ],
     "menus": {
+      "commandPalette": [
+        {
+          "command": "yxl.newSpec"
+        },
+        {
+          "command": "yxl.check",
+          "when": "resourceFilename =~ /\\.yxl\\.ya?ml$/ || activeWebviewPanelId == 'yxl.preview'"
+        },
+        {
+          "command": "yxl.build",
+          "when": "resourceFilename =~ /\\.yxl\\.ya?ml$/ || activeWebviewPanelId == 'yxl.preview'"
+        },
+        {
+          "command": "yxl.showPreview",
+          "when": "resourceFilename =~ /\\.yxl\\.ya?ml$/"
+        },
+        {
+          "command": "yxl.showSource",
+          "when": "activeWebviewPanelId == 'yxl.preview'"
+        }
+      ],
       "editor/title": [
         {
           "command": "yxl.showPreview",
@@ -70,22 +97,16 @@
           "group": "navigation@3"
         }
       ],
-      "commandPalette": [
+      "explorer/context": [
         {
-          "command": "yxl.check",
-          "when": "resourceFilename =~ /\\.yxl\\.ya?ml$/ || activeWebviewPanelId == 'yxl.preview'"
-        },
+          "command": "yxl.newSpec",
+          "when": "explorerResourceIsFolder",
+          "group": "navigation@10"
+        }
+      ],
+      "file/newFile": [
         {
-          "command": "yxl.build",
-          "when": "resourceFilename =~ /\\.yxl\\.ya?ml$/ || activeWebviewPanelId == 'yxl.preview'"
-        },
-        {
-          "command": "yxl.showPreview",
-          "when": "resourceFilename =~ /\\.yxl\\.ya?ml$/"
-        },
-        {
-          "command": "yxl.showSource",
-          "when": "activeWebviewPanelId == 'yxl.preview'"
+          "command": "yxl.newSpec"
         }
       ]
     },

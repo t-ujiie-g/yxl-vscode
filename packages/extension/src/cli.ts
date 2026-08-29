@@ -1,5 +1,7 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import type { Message } from '@yxl-vscode/diag';
+import { say } from './text';
 
 const spawn = promisify(execFile);
 
@@ -26,20 +28,24 @@ export async function run(binary: string, args: readonly string[]): Promise<Ran 
   }
 }
 
-/** The version out of `yxl version`, which answers `yxl 0.3.5`. */
+/** The version out of `yxl version`, which answers `yxl 0.3.6`. */
 export function versionOf(said: string): string | null {
   return /(\d+\.\d+\.\d+)/.exec(said)?.[1] ?? null;
 }
 
 /** What to say about a compiler that is not the targeted version; neither direction refuses anything. */
-export function versionWarning(found: string | null, target: string): string | null {
-  if (found === null) return `\`yxl version\` did not say which version it is.`;
+export function versionWarning(found: string | null, target: string): Message | null {
+  if (found === null) return say('host.version-unknown');
   if (found === target) return null;
 
-  const older = compare(found, target) < 0;
-  return older
-    ? `yxl ${found} is older than the ${target} this preview targets: a construct it understands may not exist there.`
-    : `yxl ${found} is newer than the ${target} this preview targets: what it writes still builds, but the schema may have moved.`;
+  return older(found, target)
+    ? say('host.older-compiler', { found, target })
+    : say('host.newer-compiler', { found, target });
+}
+
+/** Whether the compiler in hand came before the one a command needs. */
+export function older(found: string, than: string): boolean {
+  return compare(found, than) < 0;
 }
 
 function compare(one: string, other: string): number {

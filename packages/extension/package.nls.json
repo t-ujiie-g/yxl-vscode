@@ -1,5 +1,6 @@
 {
   "extension.description": "The VS Code preview: the panel beside the text, the filesystem, and the yxl CLI.",
+  "command.newSpec": "A yxl Spec: an Empty Workbook",
   "command.showPreview": "Open the Grid Beside the Spec",
   "command.showSource": "Go to the Spec Behind the Grid",
   "command.check": "Check the Spec",

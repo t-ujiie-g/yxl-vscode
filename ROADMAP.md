@@ -1876,7 +1876,8 @@ below, and one is the answer panel becoming a thing you have to answer.
 The two ends of a reader's day. Neither is in the editor today, and both are
 small — which is why they are one phase and not two.
 
-- [ ] **A new spec from nothing**, by running `yxl init` — *blocked on upstream*,
+- [x] **A new spec from nothing**, by running `yxl init` — **unblocked by yxl
+      0.3.6**, which the pin now names.
       [yxl#77](https://github.com/t-ujiie-g/yxl/issues/77), filed 2026-08-29.
       **Reversed on the day it was written.** The first answer was a template in
       this extension, on the reasoning that a starter is an editor affordance
@@ -1890,16 +1891,18 @@ small — which is why they are one phase and not two.
       `SUM` look helpful and are not — the reader deletes them before they can
       begin. `sheets:\n  - name: Sheet1\n` compiles and builds today, checked,
       so the command is small.
-      **What this editor then does** is run it, as it runs `build` and
-      `extract`, and degrade with a sentence where the pinned CLI has no `init`
-      (§8 Q6).
-- [ ] **Where a reader finds any of it.** The command palette is where a command
+      **What this editor does** is run it, as it runs `build`: a save dialog
+      names the file, `init --force` writes it (the dialog has already asked
+      about overwriting), and the spec opens beside its grid. A compiler older
+      than 0.3.6 is told so in a sentence of its own, rather than left to
+      complain about an unknown command.
+- [x] **Where a reader finds any of it.** The command palette is where a command
       goes to hide — said by the reader who could not find *New Spec* there.
       Whatever makes a spec belongs in **`file/newFile`** (VS Code's own *New
       File…*, and the Welcome page's list) and in the explorer's context menu on
       a folder; whatever acts on one belongs in a title bar. Written down here
       because it is a rule about every command this editor adds, not a note
-      about one of them.
+      about one of them. `tests/manifest.test.ts` holds *New Spec* to it.
 - [x] **Build where it can be clicked.** `yxl.build` already built to a sibling
       `.xlsx`, offered *Open it*, warned about a version mismatch in both
       directions, and answered a missing compiler with the install link — from
@@ -3389,6 +3392,13 @@ Japanese line copied from the English one is a failure, not a silence.
   whole of what bundling would have bought. If that proves wrong, an optional
   download is a smaller change than a bundle would have been to undo.
 
+  **A release names the yxl it was built against**, decided 2026-08-30 by the
+  reader: the pin and the extension's version move together. Raising the pin is
+  its own commit with the oracle's verdict in it (§8.9), and the release that
+  carries it says which yxl it targets — in the package's README, in
+  `CHANGELOG.md`, and in the marketplace description. The mechanics are Phase
+  20's; the rule is settled here so that the pin is never raised quietly.
+
   *The packaging half is Phase 20*, opened 2026-08-29: what is left of it is a
   publisher, an icon, the package's own README, and a `.vsix` that installs on a
   machine that has never seen this repository.
@@ -3601,6 +3611,35 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-30 — A spec from nothing, and the compiler's own words
+
+Phase 18, closed, on the day yxl 0.3.6 landed `init`.
+
+- **The pin moves to 0.3.6**, in its own commit as a toolchain bump is (§8.9).
+  `init` is a CLI command rather than a change to the format, and the evidence
+  says so: Tier 3's oracle agrees with it over the whole corpus, the schema
+  regenerates byte-identical, and the README's coverage table does not move.
+- **A new spec is `yxl init`, run from here.** A save dialog names the file,
+  `init --force` writes it — the dialog has already asked about overwriting —
+  and the spec opens beside its grid. The starter is upstream's, so a reader
+  who never installs this editor gets the same one (ADR-011).
+- **Where a reader finds it** was the other half of the phase, and the rule it
+  wrote down: whatever *makes* a spec goes in VS Code's own **New File…** and in
+  the explorer's menu on a folder, not in the palette, which is where a command
+  goes to hide. `tests/manifest.test.ts` fails if it is only in the palette.
+- **A compiler older than 0.3.6 is told so**, in a sentence of its own, rather
+  than left to complain about an unknown command.
+- **The compiler's dialogs were still English**, which Phase 19 missed because
+  the language test looked for `refuse` and `said` and not for VS Code's own
+  message boxes. Thirteen sentences — *Built book.xlsx*, *Open it*, *Could not
+  run `yxl`* — and the version warnings that `cli.ts` builds. The test looks for
+  `show…Message` now, and fails on the sources as they were an hour ago.
+- **The rule about releases and the pin** is settled in §8 Q6, as the reader
+  asked: the pin and the extension's version move together, and the release
+  that carries a bump says which yxl it targets. The mechanics are Phase 20's.
+- 2431 → 2432 tests. Comment shape: export 896 blocks / 1973 lines / avg 2.2,
+  private 592 / 592 / avg 1.0, inline 136 / 217 / avg 1.6; 0 over the limit.
 
 ### 2026-08-29 — The books, and what reads them
 
