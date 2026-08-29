@@ -15,6 +15,7 @@
   ],
   "main": "./dist/extension.cjs",
   "exports": {
+    "./starter": "./src/starter.ts",
     "./write": "./src/write.ts"
   },
   "activationEvents": [],
@@ -25,6 +26,12 @@
         "title": "Open the Grid Beside the Spec",
         "category": "yxl",
         "icon": "$(table)"
+      },
+      {
+        "command": "yxl.newSpec",
+        "title": "New Spec",
+        "category": "yxl",
+        "icon": "$(new-file)"
       },
       {
         "command": "yxl.showSource",

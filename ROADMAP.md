@@ -1871,12 +1871,21 @@ below, and one is the answer panel becoming a thing you have to answer.
 The two ends of a reader's day. Neither is in the editor today, and both are
 small — which is why they are one phase and not two.
 
-- [ ] **A new spec from nothing.** *yxl: New spec* writes a minimal valid file —
-      one sheet, a heading row, a number, a formula, a comment saying where the
-      format is documented — opens it, and opens the preview beside it. No
-      upstream command is needed: `yxl 0.3.5` has `build` and `extract` and no
-      `init`, and a template is the editor's business rather than the
-      compiler's. Asking for one would put the same file in two places.
+- [x] **A new spec from nothing.** *yxl: New Spec* writes a minimal valid file —
+      one sheet, a heading row with a look, two numbers, a formula, and a
+      comment saying where the format is documented — opens it, and opens the
+      preview beside it. No upstream command is needed: `yxl 0.3.5` has `build`
+      and `extract` and no `init`, and a template is the editor's business
+      rather than the compiler's.
+      **The template is a spec, so the compiler judges it**: the suite writes it
+      to a temporary file, `yxl build --check` says `ok`, and `yxl build` writes
+      a workbook — beside the two checks that it reads *here* with no
+      diagnostics and draws what it says. A starter that this editor accepts and
+      the compiler refuses would be the worst possible first minute.
+      **A name that is not `*.yxl.yaml` becomes one.** A save dialog appends its
+      filter's own extension, so a reader who types `budget` gets `budget.yaml`
+      — which every `when` clause here passes over, leaving them with a file
+      this editor will not open.
 - [ ] **Build where it can be clicked.** `yxl.build` already builds to a sibling
       `.xlsx`, offers *Open it*, warns about a version mismatch in both
       directions, and answers a missing compiler with the install link. It is
@@ -3481,6 +3490,27 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-29 — A spec to start from
+Phase 18's first line. Until now the only way into this editor was a spec that
+already existed.
+
+- ***yxl: New Spec*** asks where to write it, writes a minimal spec, opens it,
+  and opens the grid beside it. One sheet, a heading row with a look, two
+  numbers and a total — enough of `docs/spec.md` to edit rather than to read.
+- **The compiler judges the template.** It is a spec, so the suite asks the
+  thing that will build it: written to a temporary file, `yxl build --check`
+  says `ok` and `yxl build` writes a workbook. Two more checks say it reads here
+  with no diagnostics and draws what it says. A starter this editor accepts and
+  the compiler refuses would be the worst possible first minute.
+- **A name that is not `*.yxl.yaml` becomes one.** A save dialog appends its
+  filter's extension, so a reader who types `budget` would get `budget.yaml` —
+  a file every `when` clause in the manifest passes over.
+- **No upstream issue**, as checked when this phase opened: `yxl 0.3.5` has
+  `build` and `extract` and no `init`. A template is the editor's business, and
+  asking for one would put the same file in two places.
+- 2379 → 2384 tests. Comment shape: export 846 blocks / 1888 lines / avg 2.2,
+  private 563 / 563 / avg 1.0, inline 131 / 207 / avg 1.6; 0 over the limit.
 
 ### 2026-08-29 — A column width Excel agrees with, to the pixel it can
 Phase 17's last line, and the arithmetic half of §8 Q19.

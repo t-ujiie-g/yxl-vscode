@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { Compiler } from './commands';
 import { Preview } from './preview';
+import { STARTER, specPath } from './starter';
 
 /** The yxl this preview targets, compiled in from the one place it is pinned. */
 declare const YXL_TARGET: string;
@@ -15,6 +16,7 @@ export function activate(context: vscode.ExtensionContext): void {
       const document = specInFocus();
       if (document !== undefined) Preview.show(document, context.extensionUri);
     }),
+    vscode.commands.registerCommand('yxl.newSpec', () => void newSpec(context.extensionUri)),
     vscode.commands.registerCommand('yxl.showSource', () => Preview.showSource()),
     vscode.commands.registerCommand('yxl.check', () => {
       const document = specInFocus();
@@ -31,6 +33,29 @@ export function activate(context: vscode.ExtensionContext): void {
       deserializeWebviewPanel: (panel, state) => revive(panel, state, context.extensionUri),
     }),
   );
+}
+
+/** A spec to start from, written where the reader says and opened beside its grid. */
+async function newSpec(extension: vscode.Uri): Promise<void> {
+  const folder = vscode.workspace.workspaceFolders?.[0]?.uri;
+  const asking = {
+    title: 'A new yxl spec',
+    saveLabel: 'Create',
+    filters: { 'yxl spec': ['yaml'] },
+  };
+  const chosen = await vscode.window.showSaveDialog(
+    folder === undefined
+      ? asking
+      : { ...asking, defaultUri: vscode.Uri.joinPath(folder, 'sheet.yxl.yaml') },
+  );
+  if (chosen === undefined) return;
+
+  const where = chosen.with({ path: specPath(chosen.path) });
+  await vscode.workspace.fs.writeFile(where, new TextEncoder().encode(STARTER));
+
+  const document = await vscode.workspace.openTextDocument(where);
+  await vscode.window.showTextDocument(document, { preview: false });
+  Preview.show(document, extension);
 }
 
 /** A preview VS Code kept across a window reload, back on the spec the view saved. */
