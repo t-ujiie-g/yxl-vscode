@@ -363,6 +363,7 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       const gone = out(drawing?.sheets[sheet], rect);
       ours = gone.text;
       said = gone.said;
+      if (gone.ask) host.postMessage({ kind: 'copyOut', sheet: named(), ...rect });
       restated();
     },
     paste: (row, col) => {
@@ -633,7 +634,10 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       if (went === null) return;
 
       seen(went);
-      if (looking !== null) into.querySelector<HTMLInputElement>('.looking .for')?.focus();
+      // The view asked for this window, so the reader is in the grid: without
+      // this the first key after a long jump reaches a page with no focus.
+      if (looking === null) focused();
+      else into.querySelector<HTMLInputElement>('.looking .for')?.focus();
       return;
     }
 
@@ -684,6 +688,11 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
       return;
     }
 
+    if (sent.kind === 'copied') {
+      ours = sent.text;
+      return;
+    }
+
     if (sent.kind === 'edged') {
       if (sent.sheet === named()) goToCell({ row: sent.row, col: sent.col }, sent.extend);
       return;
@@ -720,21 +729,19 @@ if (typeof document !== 'undefined') start();
 function out(
   sheet: DrawnSheet | undefined,
   rect: Rect,
-): { readonly text: string | null; readonly said: string | null } {
-  if (sheet === undefined) return { text: null, said: null };
+): { readonly text: string | null; readonly said: string | null; readonly ask: boolean } {
+  if (sheet === undefined) return { text: null, said: null, ask: false };
 
+  // Past the drawn window the view has no cells to put on the clipboard, and
+  // the host cannot put two flavours there (ADR-035): it writes the values.
   const what = flavours(sheet, rect);
-  if (what === null) {
-    return {
-      text: null,
-      said: 'this reaches past what the preview has drawn, so only the grid has it.',
-    };
-  }
+  if (what === null) return { text: null, said: null, ask: true };
 
   return onto(what)
-    ? { text: what.text, said: null }
+    ? { text: what.text, said: null, ask: false }
     : {
         text: null,
         said: 'this preview could not reach the clipboard, so only the grid has it.',
+        ask: false,
       };
 }

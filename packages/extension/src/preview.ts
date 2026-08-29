@@ -3,7 +3,7 @@ import { type Engine, univerEngine } from '@yxl-vscode/evaluate';
 import type { Tabbed } from '@yxl-vscode/intent';
 import { did, type History, nothing } from '@yxl-vscode/patch';
 import type { Axis } from '@yxl-vscode/spec';
-import { addrAt, cellOf, filePath, parseColor, qualified } from '@yxl-vscode/units';
+import { addrAt, cellOf, filePath, parseColor, qualified, rangeOf } from '@yxl-vscode/units';
 import type {
   EditedRun,
   Filled,
@@ -33,6 +33,7 @@ import * as vscode from 'vscode';
 import { moved, resized } from './anchors';
 import { chart } from './charts';
 import { paste, pastedWith, pasteFrom, whose } from './clipboard';
+import { asText } from './copying';
 import { asOpen, put, reveal, textOf } from './documents';
 import { edgeFrom } from './edges';
 import { besideSpec } from './files';
@@ -63,6 +64,7 @@ import {
   empty,
   type Offer,
   type Port,
+  rectIn,
   resolve,
   type Spec,
   write,
@@ -365,6 +367,20 @@ export class Preview {
     void this.panel.webview.postMessage({ kind: 'summed', sheet: ranged.sheet, ...comes });
   }
 
+  /** A rectangle onto the clipboard as values, for a copy the view could not make (ADR-035). */
+  private async copying(ranged: Ranged): Promise<void> {
+    const sheet = this.drawn?.grid?.sheets.find((one) => one.name === ranged.sheet);
+    if (sheet === undefined) return;
+
+    const text = asText(sheet, rectIn(ranged), this.drawn?.evaluation ?? null);
+    await vscode.env.clipboard.writeText(text);
+
+    void this.panel.webview.postMessage({ kind: 'copied', text });
+    this.port().said(
+      `${rangeOf(rectIn(ranged))} copied as values: the look is only known for what is drawn.`,
+    );
+  }
+
   /** Where a `Cmd`+arrow lands, over every cell rather than the drawn window (ADR-019). */
   private edging(asked: {
     sheet: string;
@@ -450,6 +466,11 @@ export class Preview {
     if (asked.kind === 'pasteAt') {
       const { kind, ...where } = asked;
       this.writing((spec, port) => this.pasteHere(spec, where, port));
+      return;
+    }
+
+    if (asked.kind === 'copyOut') {
+      void this.copying(asked);
       return;
     }
 
