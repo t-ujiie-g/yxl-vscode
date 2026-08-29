@@ -1783,10 +1783,22 @@ below, and one is the answer panel becoming a thing you have to answer.
       where a theme declares no secondary one, so the two always come from the
       same place. jsdom does not resolve `var()`, so no test here can tell: this
       one was found by looking, which is the only way it could have been.
-- [ ] **A command a reader can find.** *Open Preview to the Side* names neither
-      yxl nor a grid, and it is a text button in the editor's title bar. A name
-      that says what it opens, an icon beside it, and the same command in the
-      preview's own title bar for the trip back to the text.
+- [x] **A command a reader can find.** *Open Preview to the Side* named neither
+      yxl nor a grid, and it was a text button in the editor's title bar.
+      **In**: *Open the Grid Beside the Spec*, which says what it opens — the
+      palette says `yxl` for it already, so the title does not — behind a
+      `$(table)` in the title bar. The trip back is a command of its own, *Go to
+      the Spec Behind the Grid*, in the *preview's* title bar under
+      `activeWebviewPanelId`, which puts the reader back in the editor the spec
+      is already open in rather than opening a third column.
+      **A suite for the manifest**, since no other one can see it: a command a
+      menu names and nothing declares is a button that does nothing, a title-bar
+      button with no icon is the line of text a reader could not place, and a
+      command declared and never registered is a palette entry that answers
+      nothing. `yxl.keepKey` is the deliberate exception the suite names — bound
+      and registered and *undeclared*, because a key taken from VS Code is not
+      an offer to a reader (ADR-046). Two of its four checks fail on the old
+      manifest.
 - [ ] **`Cmd`+arrow reaching the sheet's edge, not the window's.** `edge()` in
       `webview/keys.ts` walks the cells of the **drawn window** (ADR-019), so a
       column longer than the window stops where the drawing stops. The host has
@@ -3411,6 +3423,31 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-29 — A command a reader can find, and a way back
+Phase 17's third line. *Open Preview to the Side* named neither yxl nor a grid,
+and it sat in the editor's title bar as a line of text.
+
+- **Named for what it opens**: *Open the Grid Beside the Spec*. The palette says
+  `yxl` for it already — that is what `category` is — so the title does not.
+- **An icon**, `$(table)`, which is what makes a title-bar entry a button rather
+  than a word wedged between the others.
+- **A way back.** *Go to the Spec Behind the Grid* sits in the *preview's* title
+  bar, under `activeWebviewPanelId`, and puts the reader in the editor the spec
+  is already open in — a third column is not a way back. The preview a reader is
+  in is tracked by `onDidChangeViewState`, which the panel already listens to.
+- **`tests/manifest.test.ts`**, because nothing else in this repo can see what
+  the editor contributes: a command a menu names and nothing declares is a button
+  that does nothing; a title-bar button with no icon is the line of text this
+  entry is about; a command declared and never registered is a palette entry
+  that answers nothing. It reads the registrations out of `extension.ts`, which
+  is the only place they are, and names the one deliberate exception —
+  `yxl.keepKey` is bound and registered and undeclared, since a key taken from
+  VS Code is not an offer to a reader (ADR-046).
+- Two of the suite's four checks fail on the manifest as it was, which is what
+  makes them a suite rather than a description.
+- 2362 → 2366 tests. Comment shape: export 836 blocks / 1856 lines / avg 2.2,
+  private 561 / 561 / avg 1.0, inline 127 / 199 / avg 1.6; 0 over the limit.
 
 ### 2026-08-29 — A refusal is a question now
 Phase 17's second line. The answers to a refused edit were a panel under the

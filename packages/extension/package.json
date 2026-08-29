@@ -22,8 +22,15 @@
     "commands": [
       {
         "command": "yxl.showPreview",
-        "title": "Open Preview to the Side",
-        "category": "yxl"
+        "title": "Open the Grid Beside the Spec",
+        "category": "yxl",
+        "icon": "$(table)"
+      },
+      {
+        "command": "yxl.showSource",
+        "title": "Go to the Spec Behind the Grid",
+        "category": "yxl",
+        "icon": "$(go-to-file)"
       },
       {
         "command": "yxl.check",
@@ -42,6 +49,11 @@
           "command": "yxl.showPreview",
           "when": "resourceFilename =~ /\\.yxl\\.ya?ml$/",
           "group": "navigation"
+        },
+        {
+          "command": "yxl.showSource",
+          "when": "activeWebviewPanelId == 'yxl.preview'",
+          "group": "navigation"
         }
       ],
       "commandPalette": [
@@ -56,6 +68,10 @@
         {
           "command": "yxl.showPreview",
           "when": "resourceFilename =~ /\\.yxl\\.ya?ml$/"
+        },
+        {
+          "command": "yxl.showSource",
+          "when": "activeWebviewPanelId == 'yxl.preview'"
         }
       ]
     },

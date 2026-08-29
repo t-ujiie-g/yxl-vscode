@@ -153,6 +153,20 @@ export class Preview {
   /** One engine for the life of the panel: standing one up registers five hundred functions. */
   private readonly engine: Engine = univerEngine();
 
+  /** The preview a reader is in, which is the one a command about *this* preview is about. */
+  private static showing: Preview | undefined;
+
+  /** The spec behind the grid, put back in front of the reader (ADR-020). */
+  static showSource(): void {
+    const document = Preview.showing?.document;
+    if (document === undefined) return;
+
+    const open = vscode.window.visibleTextEditors.find((one) => one.document === document);
+    void vscode.window.showTextDocument(document, {
+      viewColumn: open?.viewColumn ?? vscode.ViewColumn.One,
+    });
+  }
+
   static show(document: vscode.TextDocument, extension: vscode.Uri): void {
     const already = Preview.open.get(document.uri.toString());
     if (already !== undefined) {
@@ -222,7 +236,13 @@ export class Preview {
     );
 
     this.listeners.push(this.panel.webview.onDidReceiveMessage((asked) => this.answer(asked)));
+    this.listeners.push(
+      this.panel.onDidChangeViewState(() => {
+        if (this.panel.active) Preview.showing = this;
+      }),
+    );
     this.panel.onDidDispose(() => this.close());
+    Preview.showing = this;
     this.redraw();
   }
 
@@ -600,6 +620,7 @@ export class Preview {
 
   private close(): void {
     Preview.open.delete(this.document.uri.toString());
+    if (Preview.showing === this) Preview.showing = undefined;
     clearTimeout(this.settling);
     clearTimeout(this.following);
     for (const listener of this.listeners) listener.dispose();
