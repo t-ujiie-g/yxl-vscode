@@ -116,6 +116,25 @@ describe('a `Cmd`+arrow', () => {
   });
 });
 
+describe('the search bar', () => {
+  it('closes from its own button, and from the grid with `Esc`', () => {
+    const { into } = view();
+
+    press(into, 1, 1, 'f');
+    expect(into.querySelector('.looking')).not.toBeNull();
+
+    into.querySelector<HTMLButtonElement>('.looking .close')?.click();
+    expect(into.querySelector('.looking')).toBeNull();
+
+    // And from a cell, where a reader who has gone back to the grid is.
+    press(into, 1, 1, 'f');
+    at(into, 1, 1)?.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }),
+    );
+    expect(into.querySelector('.looking')).toBeNull();
+  });
+});
+
 describe('replacing what a find turned up', () => {
   it('sends the cell the reader is on, and every one of them for `Replace all`', () => {
     const { into, sent, told } = view();

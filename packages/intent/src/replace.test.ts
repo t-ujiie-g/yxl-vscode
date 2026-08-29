@@ -61,6 +61,30 @@ describe('what a find turned up, replaced', () => {
     expect(said).toContain('range');
   });
 
+  it('counts a cell found by the value cached under its formula, rather than passing over it', () => {
+    // `finds` matches what a cell holds, which for a formula cell includes the
+    // result Excel cached there — and typing over that is writing down a guess.
+    const spec = `${SPEC}      A1: 1\n      B1: { formula: "SUM(A1:A9)", value: 4150000 }\n      C1: 4150000\n`;
+    const said = replaced(spec, '4150000', '99');
+
+    expect(said).toContain('1 of the 2 cells here cannot be replaced, so none were');
+    expect(said).toContain('the value cached under it');
+  });
+
+  it('writes the ones that can be, where the reader takes that answer', () => {
+    const spec = `${SPEC}      A1: 1\n      B1: { formula: "SUM(A1:A9)", value: 4150000 }\n      C1: 4150000\n`;
+    const { doc, grid, read } = files(spec);
+    const sheet = grid.sheets[0];
+    if (sheet === undefined) throw new Error('compiled no sheet');
+
+    const where = { sheet: SHEET, at: finds(sheet, '4150000'), looking: '4150000', becomes: '99' };
+    const intent = replaceIn({ doc, grid }, where, read, 'skip');
+
+    expect(tried(spec, intent)).toBe(
+      `${SPEC}      A1: 1\n      B1: { formula: "SUM(A1:A9)", value: 4150000 }\n      C1: 99\n`,
+    );
+  });
+
   it('says so where nothing holds it any more', () => {
     expect(replaced(`${SPEC}      A1: one\n`, 'nowhere', 'x')).toBe(
       'refused: nothing on `S` holds that any more',

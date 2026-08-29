@@ -449,6 +449,7 @@ export type About =
   | ({ readonly kind: 'tabled' } & Tabled)
   | ({ readonly kind: 'chart' } & Ranged)
   | ({ readonly kind: 'note' } & Noted)
+  | ({ readonly kind: 'replace' } & Replaced)
   | ({ readonly kind: 'link' } & Linked)
   | ({ readonly kind: 'validate' } & Validated)
   | {
@@ -648,7 +649,6 @@ export type FromView =
   | ({ readonly kind: 'editRun' } & EditedRun)
   | ({ readonly kind: 'edge' } & Edging)
   | ({ readonly kind: 'copyOut' } & Ranged)
-  | ({ readonly kind: 'replace' } & Replaced)
   | ({ readonly kind: 'sum' } & Ranged)
   | ({ readonly kind: 'override'; readonly reason: string } & Typed)
   | {

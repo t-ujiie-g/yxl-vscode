@@ -192,6 +192,15 @@ export function findBar(what: Looking, asks: Asks): HTMLElement {
   bar.append(mark, box, count, step('‹', -1, asks), step('›', 1, asks));
   bar.append(...replacing(what, asks));
 
+  const close = document.createElement('button');
+  close.type = 'button';
+  close.className = 'step close';
+  close.textContent = '✕';
+  close.title = 'Close the search (Esc)';
+  close.setAttribute('aria-label', 'Close the search');
+  close.addEventListener('click', () => asks.stopLooking());
+  bar.append(close);
+
   return bar;
 }
 

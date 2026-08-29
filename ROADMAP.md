@@ -1944,6 +1944,17 @@ small — which is why they are one phase and not two.
       body, as `finds` matches them — and the new text is read the way a
       reader's keystrokes are, so `2400000` with `24`→`25` stays a number rather
       than becoming a string of digits.
+      **A cell found by the value *cached* under its formula is counted, not
+      passed over.** Found while a reader replaced 45 cells and was told 44 were
+      written: `finds` matches what a cell holds, which for a formula cell
+      includes Excel's own answer, and typing over that is writing down a guess.
+      It refuses with the rest of its group, and *Replace the ones that can be*
+      is the answer — the same shape a paste has had since Phase 11.
+      **And a search a reader can close.** `Esc` worked only inside the box it
+      opened, so a reader who had gone back to the grid had no way out; there is
+      a `✕` on the bar and `Esc` answers from anywhere in the panel. The bar
+      wraps, as the toolbar does — with two more controls on it, *Replace all*
+      was off the edge of a narrow panel.
 
 ### Phase 19 — 日本語 and English
 Asked for on 2026-08-29 by a reader working in Japanese. The work is not
@@ -3555,8 +3566,19 @@ Phase 18's last line. `Cmd`+`F` found things and left the reader to retype them.
 - **What is replaced is what was searched**: a cell's value, or a formula's
   body, as `finds` matches them. The new text is read the way a reader's
   keystrokes are, so `2400000` with `24`→`25` stays a number.
-- 2386 → 2396 tests. Comment shape: export 850 blocks / 1907 lines / avg 2.2,
-  private 569 / 569 / avg 1.0, inline 133 / 211 / avg 1.6; 0 over the limit.
+- **A cell found by the value *cached* under its formula is counted rather than
+  passed over.** A reader replaced 45 cells and was told 44 were written, which
+  is the sort of silence this editor is supposed not to keep: `finds` matches
+  what a cell holds, and for a formula cell that includes Excel's own answer.
+  Typing over that is writing down a guess, so it refuses with its group — and
+  *Replace the ones that can be* is the answer, as it is for a paste.
+- **A search a reader can close.** `Esc` worked only inside the box that opened
+  it, so a reader who had gone back to the grid had no way out at all. There is
+  a `✕` on the bar now, and `Esc` answers from anywhere in the panel. The bar
+  wraps as the toolbar does: with two more controls on it, *Replace all* was off
+  the edge of a narrow panel — which is the whole reason the toolbar wraps.
+- 2386 → 2399 tests. Comment shape: export 850 blocks / 1907 lines / avg 2.2,
+  private 570 / 570 / avg 1.0, inline 135 / 215 / avg 1.6; 0 over the limit.
 
 ### 2026-08-29 — `Home` and `End` go the same way as the arrows
 Phase 17 left `End` reading the drawn window, on the reasoning that a window is

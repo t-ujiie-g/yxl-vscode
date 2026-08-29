@@ -1,7 +1,16 @@
 import { cellAt, sheetOf } from '@yxl-vscode/compile';
 import type { A1Addr, SheetName } from '@yxl-vscode/units';
-import { beside, holding, type Intent, type Projection, type Reading, refused } from './direct';
+import {
+  beside,
+  type Held,
+  holding,
+  type Intent,
+  type Projection,
+  type Reading,
+  refused,
+} from './direct';
 import { type Entry, landed } from './landing';
+import type { Standing } from './paste';
 
 /** A replacement as a gesture asks for it: what was looked for, what goes there, and where it was found. */
 export interface Replacing {
@@ -16,24 +25,45 @@ export interface Replacing {
  * every cell rather than one per cell, so a cell that cannot take it refuses
  * the whole and is counted with its group (§8 Q14).
  */
-export function replaceIn(spec: Projection, where: Replacing, read: Reading): Intent {
+export function replaceIn(
+  spec: Projection,
+  where: Replacing,
+  read: Reading,
+  doing: Standing = 'refuse',
+): Intent {
   const sheet = sheetOf(spec.grid, where.sheet);
   if (sheet === null) return refused(`there is no sheet named \`${where.sheet}\``);
   if (where.looking === '') return refused('there is nothing to look for');
 
   const going: Entry[] = [];
+  const held: Held[] = [];
+
   for (const at of where.at) {
     const cell = cellAt(sheet, at);
     if (cell === null) continue;
 
     const said = written(cell.value, cell.formula, where);
-    if (said !== null) going.push({ at, holds: holding(said) });
+    if (said !== null) {
+      going.push({ at, holds: holding(said) });
+      continue;
+    }
+
+    // Found by its cached result rather than by its formula: what matched is
+    // Excel's answer, and typing over it would be writing down a guess.
+    held.push({
+      at,
+      why: `\`${at}\` holds a formula, and what matched is the value cached under it`,
+      by: 'formula',
+    });
   }
 
-  if (going.length === 0) return refused(`nothing on \`${where.sheet}\` holds that any more`);
+  if (going.length === 0 && held.length === 0) {
+    return refused(`nothing on \`${where.sheet}\` holds that any more`);
+  }
 
   const put = landed(spec, sheet, where.sheet, going, read, {
-    doing: 'refuse',
+    doing,
+    refusals: held,
     verb: 'replaced',
     nothing: 'none of what was found can be written here',
   });

@@ -101,7 +101,8 @@ const WRITES = {
   moveFloat: (spec: Spec, one: MovedFloat, port: Port) => moved(spec, one, port),
   sizeFloat: (spec: Spec, one: SizedFloat, port: Port) => resized(spec, one, port, measureBeside),
   note: (spec: Spec, asked: Noted, port: Port) => note(spec, asked, port),
-  replace: (spec: Spec, asked: Replaced, port: Port) => replace(spec, asked, port),
+  replace: (spec: Spec, asked: Replaced, port: Port, choice?: string) =>
+    replace(spec, asked, port, choice),
   editRun: (spec: Spec, asked: EditedRun, port: Port) => editRun(spec, asked, port),
   link: (spec: Spec, asked: Linked, port: Port) => link(spec, asked, port),
   validate: (spec: Spec, asked: Validated, port: Port) => validate(spec, asked, port),
