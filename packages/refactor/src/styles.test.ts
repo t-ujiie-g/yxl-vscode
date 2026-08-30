@@ -6,8 +6,8 @@ import { applyPatch } from '@yxl-vscode/patch';
 import { type FilePath, filePath, type StyleName, styleName } from '@yxl-vscode/units';
 import { type Ctx, checked, nothingChanges } from '@yxl-vscode/verify';
 import { describe, expect, it } from 'vitest';
-import { type Proposal, type Proposing, proposals } from './proposal';
-import { patchFor, suggestedName, WORTH_EXTRACTING } from './styles';
+import type { Gathering, Proposing } from './proposal';
+import { gatherPatch, gatherStyles, suggestedName, WORTH_EXTRACTING } from './styles';
 import { WORDS } from './text';
 
 const ROOT = filePath('spec.yxl.yaml') ?? ('' as FilePath);
@@ -57,7 +57,7 @@ function repeating(times: number, look = BLUE): string {
 
 describe('gathering a look that is written out in full', () => {
   it('proposes one definition for a look enough places repeat', () => {
-    const found = proposals(spec(repeating(WORTH_EXTRACTING)));
+    const found = gatherStyles(spec(repeating(WORTH_EXTRACTING)));
 
     expect(found.map((one) => ({ sites: one.at.length, source: one.source }))).toEqual([
       { sites: WORTH_EXTRACTING, source: BLUE },
@@ -65,7 +65,7 @@ describe('gathering a look that is written out in full', () => {
   });
 
   it('says how many places it would gather, in the reader s own words', () => {
-    const [one] = proposals(spec(repeating(4)));
+    const [one] = gatherStyles(spec(repeating(4)));
 
     expect(english(one?.what ?? '')).toBe(
       'Gather the look written at 4 places into one `defs.styles` entry',
@@ -73,24 +73,24 @@ describe('gathering a look that is written out in full', () => {
   });
 
   it('leaves a look alone that too few places repeat', () => {
-    expect(proposals(spec(repeating(WORTH_EXTRACTING - 1)))).toEqual([]);
+    expect(gatherStyles(spec(repeating(WORTH_EXTRACTING - 1)))).toEqual([]);
   });
 
   it('leaves alone a look the cells already read from a definition', () => {
     const source = `defs:\n  styles:\n    header: { font: { bold: true } }\n${repeating(4, 'header')}`;
 
-    expect(proposals(spec(source))).toEqual([]);
+    expect(gatherStyles(spec(source))).toEqual([]);
   });
 
   it('offers a name from what the look says, rather than a number', () => {
-    const [one] = proposals(spec(repeating(3)));
+    const [one] = gatherStyles(spec(repeating(3)));
 
     expect(one?.suggested).toBe('bold-ddebf7');
   });
 
   it('names the definitions already taken, so a caller can refuse a clash', () => {
     const source = `defs:\n  styles:\n    header: { font: { italic: true } }\n${repeating(3)}`;
-    const [one] = proposals(spec(source));
+    const [one] = gatherStyles(spec(source));
 
     expect(one?.taken).toEqual([named('header')]);
   });
@@ -99,7 +99,7 @@ describe('gathering a look that is written out in full', () => {
     const source = `defs:\n  $include: theme.yaml\n${repeating(4)}`;
     const files = { [ROOT]: source, 'theme.yaml': 'styles:\n  header: { font: { bold: true } }\n' };
 
-    expect(proposals(spec(files))).toEqual([]);
+    expect(gatherStyles(spec(files))).toEqual([]);
   });
 });
 
@@ -107,8 +107,8 @@ describe('the patch a proposal makes', () => {
   /** The proposal over a spec, taken with a name, as the file it would leave behind. */
   function gathered(source: string, name = 'header'): { text: string; passes: boolean } {
     const of = spec(source);
-    const one = proposals(of)[0] as Proposal;
-    const patch = patchFor(one, named(name));
+    const one = gatherStyles(of)[0] as Gathering;
+    const patch = gatherPatch(one, named(name));
     const gate = checked(of.source, patch, nothingChanges, of.ctx);
 
     return { text: applyPatch(of.source, patch, { file: ROOT }).text, passes: gate.ok === true };

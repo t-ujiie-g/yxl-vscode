@@ -5,7 +5,7 @@ import { written } from '@yxl-vscode/normalize';
 import type { Patch } from '@yxl-vscode/patch';
 import { INCLUDE_KEY, KEY, type StyleSays } from '@yxl-vscode/spec';
 import type { FilePath, StyleName } from '@yxl-vscode/units';
-import type { Holds, Proposal, Proposing, Site } from './proposal';
+import type { Gathering, Holds, Proposing, Site } from './proposal';
 import { say } from './text';
 
 /** The trees a proposal reads, which is every file the spec is written in. */
@@ -25,7 +25,7 @@ interface Group {
  * (`ROADMAP.md` Phase 21). A look the spec keeps in a file this cannot reach
  * is left alone.
  */
-export function gatherStyles(spec: Proposing): readonly Proposal[] {
+export function gatherStyles(spec: Proposing): readonly Gathering[] {
   const root = spec.doc.file;
   const home = homeOf(root, spec.parsed);
   if (home === null) return [];
@@ -50,7 +50,8 @@ export function gatherStyles(spec: Proposing): readonly Proposal[] {
   return [...found]
     .filter(([, group]) => group.at.length >= WORTH_EXTRACTING)
     .map(([source, group], index) => ({
-      id: `styles.${index}`,
+      kind: 'gather' as const,
+      id: `gather.${index}`,
       what: say('refactor.gather-a-style', { sites: group.at.length }),
       file: root,
       at: group.at,
@@ -97,7 +98,7 @@ function homeOf(root: FilePath, trees: Trees): Holds | null {
  * The ops that gather a look under one name: the definition where the spec
  * keeps its own, and every site that wrote the look reading it instead.
  */
-export function patchFor(one: Proposal, name: StyleName): Patch {
+export function gatherPatch(one: Gathering, name: StyleName): Patch {
   // `write` rather than `set`: a look written out in full is a mapping, and only
   // putting text over it can be taken back byte for byte (ADR-026).
   const sites: Op[] = one.at.map((at) => ({ op: 'write', path: at.path, source: name }));
@@ -106,7 +107,7 @@ export function patchFor(one: Proposal, name: StyleName): Patch {
 }
 
 /** The definition itself, under whichever of the two keys the root already has. */
-function declaring(one: Proposal, name: StyleName): Op {
+function declaring(one: Gathering, name: StyleName): Op {
   const entry = `${name}: ${one.source}`;
 
   if (one.holds === 'styles') {

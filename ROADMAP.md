@@ -2058,11 +2058,14 @@ here is detectable by analysis.
 - [x] Identical resolved styles at N sites → extract to `defs.styles`
       *(2026-08-30, as `refactor`'s first analyser and the `yxl.tidy` command;
       cells only, and only where the root file holds `defs:` itself)*
+- [x] Definitions that resolve alike → one the others' readers follow
+      *(2026-08-30, found by a reader whose spec held three identical
+      `defs.styles` entries — which of them survives is theirs to choose)*
 - [x] Homogeneous `cells:` rectangles → `data:` with inline `values:`
       *(Phase 11, 2026-08-23, as a gesture on the rectangle)*
-- [ ] Columns of translated formulas → a `formulas:` range
-      *(half there: Phase 11's fill offers the range for a new column; the
-      refactor is the same answer over a column that already exists)*
+- [x] Columns of translated formulas → a `formulas:` range
+      *(2026-08-30; runs of three or more down one column, over cells holding
+      nothing but a formula, since a range carries no look)*
 - [ ] Accumulated `overrides:` sharing a pattern → a definition
 - [ ] All of the above gated on **`expectedDiff: empty`** — a refactor that
       changes one rendered cell is rejected, automatically (ADR-009)
@@ -3456,6 +3459,40 @@ file writes `defs:` itself, since a patch addresses one file and an `$include`d
 `defs:` is another file's; and the two cross-cutting rows close when the last
 analyser lands, because they say *all of the above*.
 
+### ADR-055 — A proposal says what it needs of the reader, and some need nothing
+**Accepted** 2026-08-30. Extends ADR-054 rather than superseding it.
+
+*Three analysers, three different questions.* ADR-054 assumed a refactor needs a
+name. Two of the three do not need *a name*: merging asks **which of the existing
+names survives**, and turning a column into a range asks **nothing at all** —
+the formula is already written, and the range says it where the sheet keeps its
+own. So `Proposal` is a union on `kind`, and the edge reads it: an input box for
+a name, a quick pick for a survivor, and nothing for a range.
+
+*A refactor that asks nothing still does not apply itself.* The range case is
+the one where it would have been tempting: there is no decision to take, so a
+one-click could go straight to the file. It goes through the same diff and the
+same question after it, because *never applied silently* is about the reader
+seeing what changed, not about whether they had a choice to make.
+
+*Which duplicate survives is not the editor's to pick.* Keeping the first one
+written is a rule that would be right most of the time, and wrong silently — the
+name that reads best is often not the one that happens to be first. So it is a
+quick pick over the group, and the diff shows the answer before it lands.
+
+*What the analysers refuse to touch*, in every case for the same reason — a patch
+addresses one file, and a rendered cell must not move:
+
+| Analyser | Left alone |
+|---|---|
+| gather | looks on bands; a `defs:` the root `$include`s |
+| merge | a set whose definitions another file writes |
+| range | cells holding anything besides a formula; runs with a gap in them |
+
+*The gate stays the backstop under all three*, and each analyser's suite has the
+positive and the negative: the patch passes `nothingChanges`, and a version of it
+that would move a cell is refused without anyone looking.
+
 ## 8. Open questions
 
 - **Q1 — `cells:` A1 keys and row insertion.** ✅ *Answered 2026-08-23.*
@@ -3762,6 +3799,37 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-30 — Two more refactors, and one of them came from a reader
+
+Phase 21's next row, and one the phase did not have. **yxl: Gather Repeated
+Looks into a Definition** now offers three kinds of tidy-up.
+
+- **Definitions that resolve alike become one.** This row was not on the list:
+  a reader opened a spec holding `header`, `header1` and `header2` — three
+  `defs.styles` entries saying exactly the same thing — ran the command, and was
+  told there was nothing to gather. The first analyser was right (nothing is
+  written *out in full* there) and the answer was still wrong for what they had.
+  **Which of the names survives is a quick pick**, not a rule: keeping the first
+  one written would be right most of the time and silently wrong the rest
+  (ADR-055).
+- **A column of translated formulas becomes a `formulas:` range.** Three or more
+  cells down one column, each writing the anchor's formula moved to where it
+  sits — which is `units`' `moved`, the same arithmetic Excel does to a shared
+  formula. The cells go and the range says it once.
+- **A proposal now says what it needs of the reader**, and the range case needs
+  nothing. It still goes through the diff and the question after it: *never
+  applied silently* is about seeing what changed, not about having a choice to
+  make.
+- Each analyser's suite carries the positive and the negative — the patch passes
+  `nothingChanges`, and a version that would move a cell is refused. The
+  refusals are written down rather than implied: bands, an `$include`d `defs:`,
+  cells wearing a look, and runs with a gap in them are all left alone.
+- 2463 → 2480 tests. Comment shape: 2.2 / 1.0 / 1.6, 0 over the limit —
+  unchanged.
+
+**Still open in Phase 21**: the `overrides:` analyser, and with it the two rows
+that say *all of the above*.
 
 ### 2026-08-30 — The first refactor, and the gate it proves
 

@@ -90,6 +90,7 @@ export type Says = {
   'host.open-a-spec-first': Nothing;
   'host.nothing-to-tidy': Nothing;
   'host.name-the-look': Nothing;
+  'host.keep-which-definition': Nothing;
   'host.name-is-taken': { name: string };
   'host.not-a-name': Nothing;
   'host.tidy-refused': { why: string };
@@ -186,6 +187,7 @@ const en: Words<Says> = {
   'host.open-a-spec-first': () => 'Open a `*.yxl.yaml` spec first.',
   'host.nothing-to-tidy': () => 'Nothing here is written out often enough to be worth gathering.',
   'host.name-the-look': () => 'A name for this look, as `defs.styles` will hold it',
+  'host.keep-which-definition': () => 'Which definition should the others become?',
   'host.name-is-taken': ({ name }) => `\`${name}\` already names a look here`,
   'host.not-a-name': () => 'a look needs a name',
   'host.tidy-refused': ({ why }) => `This would change the workbook, so it was not made: ${why}`,
@@ -282,6 +284,7 @@ const ja: Words<Says> = {
   'host.open-a-spec-first': () => 'まず `*.yxl.yaml` の spec を開いてください。',
   'host.nothing-to-tidy': () => 'まとめる価値があるほど繰り返し書かれている見た目はありません。',
   'host.name-the-look': () => 'この見た目に付ける名前（`defs.styles` に入ります）',
+  'host.keep-which-definition': () => '残す定義はどれにしますか？',
   'host.name-is-taken': ({ name }) => `\`${name}\` はすでに別の見た目の名前です`,
   'host.not-a-name': () => '名前が必要です',
   'host.tidy-refused': ({ why }) => `ワークブックが変わってしまうため、実行しませんでした: ${why}`,
