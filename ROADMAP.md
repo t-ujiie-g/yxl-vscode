@@ -2009,8 +2009,8 @@ reach.
       outside this editor.
 
 ### Phase 20 — Shipped
-The manifest is `private: true` at version `0.0.0`, so nothing can publish it by
-accident. This is §8 Q6's open half, and the v1.0 gate's last line.
+**Published 2026-08-30 as `t-ujiie-g.yxl-vscode` 0.1.0**, by pushing the tag.
+This was §8 Q6's open half, and the v1.0 gate's last line.
 
 - [x] A publisher, a version, and `private` off — `t-ujiie-g`, `0.1.0`
 - [x] An icon, keywords, `repository`, `bugs`, and the licence in the
@@ -2077,7 +2077,8 @@ Two phases that were here are not any more, and not because they were hard:
       README, generated from the code so it cannot lie
 - [ ] Tiers 1–4 green in CI; Tier 5 performed
 - [ ] Compatible with a frozen yxl schema (yxl's own v1.0 gate — §8 Q6)
-- [ ] Marketplace listing, and an honest description of what it is not (§2)
+- [x] Marketplace listing, and an honest description of what it is not (§2)
+      *(0.1.0, 2026-08-30)*
 
 ## 7. Architecture Decision Records (ADRs)
 
@@ -3682,6 +3683,24 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-30 — 0.1.0 is on the Marketplace
+
+`t-ujiie-g.yxl-vscode` 0.1.0, published by pushing `v0.1.0` at `main`. The
+workflow ran the way it was written to: the checks, the tag against the manifest,
+one attested `.vsix`, the Marketplace, then the GitHub release with the `.vsix`
+attached. Nobody approved anything, which was the point.
+
+- **How a release happens is written where the work is described** — `AGENTS.md`
+  §4, beside the branching rule, as three things a release needs from the person
+  cutting it (the version raised, the changelog section written and naming the
+  pinned yxl, the tag pushed at `main`) and what the workflow then does. §5's
+  "packaging is still open" paragraph was true until today and is not any more.
+  The *why* stays in ADR-052; §4 is the procedure.
+- **The v1.0 gate's last line is ticked**: a listing, with §2's *what it is not*
+  in it.
+- What is left in Phase 20 is Tier 5 and the clean-machine install — both the
+  reader's — and the proposed `customEditors` contribution.
 
 ### 2026-08-30 — A tag is the release
 
