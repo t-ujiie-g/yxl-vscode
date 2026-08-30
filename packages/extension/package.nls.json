@@ -5,5 +5,6 @@
   "command.showSource": "Go to the Spec Behind the Grid",
   "command.check": "Check the Spec",
   "command.build": "Build the Workbook",
+  "command.tidy": "Gather Repeated Looks into a Definition",
   "configuration.path": "The `yxl` compiler this extension runs. A bare name is looked up on `PATH`; an absolute path is used as given."
 }

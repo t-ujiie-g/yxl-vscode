@@ -1,0 +1,22 @@
+{
+  "name": "@yxl-vscode/refactor",
+  "version": "0.0.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "description": "Tidy-ups a spec allows, as proposals that claim to change no rendered cell.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@yxl-vscode/compile": "workspace:*",
+    "@yxl-vscode/cst": "workspace:*",
+    "@yxl-vscode/diag": "workspace:*",
+    "@yxl-vscode/loader": "workspace:*",
+    "@yxl-vscode/normalize": "workspace:*",
+    "@yxl-vscode/patch": "workspace:*",
+    "@yxl-vscode/spec": "workspace:*",
+    "@yxl-vscode/units": "workspace:*",
+    "@yxl-vscode/verify": "workspace:*"
+  }
+}

@@ -88,6 +88,14 @@ export type Says = {
   'host.how-to-install': Nothing;
   'host.refused-the-spec': Nothing;
   'host.open-a-spec-first': Nothing;
+  'host.nothing-to-tidy': Nothing;
+  'host.name-the-look': Nothing;
+  'host.name-is-taken': { name: string };
+  'host.not-a-name': Nothing;
+  'host.tidy-refused': { why: string };
+  'host.apply-the-tidy-up': { what: Saying };
+  'host.apply': Nothing;
+  'host.tidied': { name: string; sites: number };
   'host.no-init': { found: string; since: string };
   'host.version-unknown': Nothing;
   'host.older-compiler': { found: string; target: string };
@@ -176,6 +184,14 @@ const en: Words<Says> = {
   'host.how-to-install': () => 'How to install',
   'host.refused-the-spec': () => 'yxl refused the spec.',
   'host.open-a-spec-first': () => 'Open a `*.yxl.yaml` spec first.',
+  'host.nothing-to-tidy': () => 'Nothing here is written out often enough to be worth gathering.',
+  'host.name-the-look': () => 'A name for this look, as `defs.styles` will hold it',
+  'host.name-is-taken': ({ name }) => `\`${name}\` already names a look here`,
+  'host.not-a-name': () => 'a look needs a name',
+  'host.tidy-refused': ({ why }) => `This would change the workbook, so it was not made: ${why}`,
+  'host.apply-the-tidy-up': ({ what }, worded) => `${worded(what)}. Apply it?`,
+  'host.apply': () => 'Apply',
+  'host.tidied': ({ name, sites }) => `Gathered ${sites} places into \`${name}\`.`,
   'host.no-init': ({ found, since }) => `yxl ${found} has no \`init\`; it arrived in ${since}.`,
   'host.version-unknown': () => '`yxl version` did not say which version it is.',
   'host.older-compiler': ({ found, target }) =>
@@ -264,6 +280,14 @@ const ja: Words<Says> = {
   'host.how-to-install': () => 'インストール方法',
   'host.refused-the-spec': () => 'yxl がこの spec を受け付けませんでした。',
   'host.open-a-spec-first': () => 'まず `*.yxl.yaml` の spec を開いてください。',
+  'host.nothing-to-tidy': () => 'まとめる価値があるほど繰り返し書かれている見た目はありません。',
+  'host.name-the-look': () => 'この見た目に付ける名前（`defs.styles` に入ります）',
+  'host.name-is-taken': ({ name }) => `\`${name}\` はすでに別の見た目の名前です`,
+  'host.not-a-name': () => '名前が必要です',
+  'host.tidy-refused': ({ why }) => `ワークブックが変わってしまうため、実行しませんでした: ${why}`,
+  'host.apply-the-tidy-up': ({ what }, worded) => `${worded(what)}。適用しますか？`,
+  'host.apply': () => '適用',
+  'host.tidied': ({ name, sites }) => `${sites} 箇所を \`${name}\` にまとめました。`,
   'host.no-init': ({ found, since }) =>
     `yxl ${found} には \`init\` がありません（${since} からの機能です）。`,
   'host.version-unknown': () => '`yxl version` がバージョンを答えませんでした。',
