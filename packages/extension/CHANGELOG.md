@@ -4,6 +4,23 @@ Every release names the `yxl` it was built against: the schema is not frozen
 until yxl's v1.0, so the pinned compiler is part of what a version means
 (`ROADMAP.md` §8 Q6).
 
+## 0.1.1 — 2026-08-31
+
+Still targets **yxl 0.3.6**.
+
+- **New: yxl: Gather Repeated Looks into a Definition.** Reads the whole spec
+  and offers what analysis can see, never applying it silently:
+  - a look written out in full at three places or more — on cells or on the
+    `overrides:` beside them — becomes one `defs.styles` entry you name;
+  - definitions that resolve to the same look become one, and you choose which
+    of their names survives;
+  - a column of cells each translating one formula becomes the `formulas:`
+    range that fills them.
+- Every one of those **claims to change no rendered cell, and is refused
+  automatically if it would** — checked by compiling before and after and
+  comparing. The proposal is shown as a diff in VS Code's own diff editor, and
+  written only when you say so; `Cmd`+`Z` takes it back.
+
 ## 0.1.0 — 2026-08-30
 
 The first published release. Targets **yxl 0.3.6**.

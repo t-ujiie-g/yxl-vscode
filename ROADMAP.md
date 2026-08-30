@@ -3833,6 +3833,22 @@ than widening it silently.
 
 ## 11. Living changelog
 
+### 2026-08-31 — 0.1.1, ready for the tag
+
+The release the tidy-up belongs in. Everything a `v0.1.1` tag needs is in place
+and was checked rather than assumed: the tag agrees with the manifest, the
+changelog has a section the workflow can lift for the release notes, and
+`pnpm package` writes `yxl-vscode-0.1.1.vsix` (13 files, 749.62 KB).
+
+- **The package's README and `CHANGELOG.md` now carry the tidy-up**, which the
+  §8 pass deliberately left for whoever cut this release. They ship with the
+  `.vsix`, so they are true the moment the tag lands and not before.
+- **Still targets yxl 0.3.6.** The pin has not moved, and both files say so —
+  which `tests/manifest.test.ts` is what keeps honest.
+- The two gates in `release.yml` were run by hand against this tree: the
+  tag-versus-manifest check and the changelog extraction. Both pass for
+  `v0.1.1`.
+
 ### 2026-08-31 — A §8 pass over the phase just finished
 
 Three phases' worth of `refactor` landed in three days, and the pass reads what
