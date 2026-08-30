@@ -2,8 +2,18 @@ import { compile } from '@yxl-vscode/compile';
 import { type Parsed, parse } from '@yxl-vscode/cst';
 import type { Saying } from '@yxl-vscode/diag';
 import { load } from '@yxl-vscode/loader';
+import type { Patch } from '@yxl-vscode/patch';
 import { applyPatch } from '@yxl-vscode/patch';
-import { type Proposal, patchFor, proposals } from '@yxl-vscode/refactor';
+import {
+  type Gathering,
+  gatherPatch,
+  type Merging,
+  mergePatch,
+  type Proposal,
+  proposals,
+  rangePatch,
+  sites,
+} from '@yxl-vscode/refactor';
 import { type FilePath, filePath, styleName } from '@yxl-vscode/units';
 import { type Checked, checked, nothingChanges } from '@yxl-vscode/verify';
 import * as vscode from 'vscode';
@@ -19,6 +29,12 @@ const held = new Map<string, string>();
 
 /** Everything this editor can say, in the reader's own language. */
 type Words = (saying: Saying) => string;
+
+/** A proposal the reader has answered: what to write, and what to call it. */
+interface Taken {
+  readonly patch: Patch;
+  readonly label: string;
+}
 
 /** What a proposal's diff shows: held only while the diff is open on it. */
 export const proposedText: vscode.TextDocumentContentProvider = {
@@ -45,10 +61,10 @@ export async function tidy(document: vscode.TextDocument): Promise<void> {
   const one = await chosen(found, words);
   if (one === undefined) return;
 
-  const name = await asked(one, words);
-  if (name === null) return;
+  const decided = await taken(one, words);
+  if (decided === null) return;
 
-  const patch = patchFor(one, name);
+  const { patch, label } = decided;
   const gate = checked(source, patch, nothingChanges, { root, file: root, read: asOpen });
   if (gate.ok !== true) {
     void vscode.window.showWarningMessage(words(say('host.tidy-refused', { why: why(gate) })));
@@ -56,7 +72,7 @@ export async function tidy(document: vscode.TextDocument): Promise<void> {
   }
 
   const after = applyPatch(source, patch, { file: root }).text;
-  await review(document, one, name, after, words);
+  await review(document, one, label, after, words);
 }
 
 /** Which cells a refused tidy-up would have moved, which is what makes it a refusal. */
@@ -92,15 +108,35 @@ async function chosen(found: readonly Proposal[], words: Words): Promise<Proposa
   if (found.length === 1) return found[0];
 
   const picked = await vscode.window.showQuickPick(
-    found.map((one) => ({ label: words(one.what), detail: one.source, one })),
+    found.map((one) => ({ label: words(one.what), description: `${sites(one)}`, one })),
     { placeHolder: words(say('host.nothing-to-tidy')) },
   );
 
   return picked?.one;
 }
 
-/** The name the definition is to take, refused where it already means something else. */
-async function asked(one: Proposal, words: Words) {
+/** What the reader decided, or `null` where they took the question back; a range asks nothing. */
+async function taken(one: Proposal, words: Words): Promise<Taken | null> {
+  if (one.kind === 'range') return { patch: rangePatch(one), label: one.over };
+
+  const name = one.kind === 'gather' ? await named(one, words) : await kept(one, words);
+  if (name === null) return null;
+
+  const patch = one.kind === 'gather' ? gatherPatch(one, name) : mergePatch(one, name);
+  return { patch, label: name };
+}
+
+/** Which of the definitions that say the same thing is the one to leave standing. */
+async function kept(one: Merging, words: Words) {
+  const said = await vscode.window.showQuickPick([...one.names], {
+    placeHolder: words(say('host.keep-which-definition')),
+  });
+
+  return said === undefined ? null : styleName(said);
+}
+
+/** A name for a look nothing declares yet, refused where it already means something else. */
+async function named(one: Gathering, words: Words) {
   const taken = new Set<string>(one.taken);
   const said = await vscode.window.showInputBox({
     prompt: words(say('host.name-the-look')),
@@ -120,11 +156,11 @@ async function asked(one: Proposal, words: Words) {
 async function review(
   document: vscode.TextDocument,
   one: Proposal,
-  name: string,
+  label: string,
   after: string,
   words: Words,
 ): Promise<void> {
-  const key = `/${name}-${Date.now()}.yxl.yaml`;
+  const key = `/${label}-${Date.now()}.yxl.yaml`;
   held.set(key, after);
 
   try {
@@ -132,7 +168,7 @@ async function review(
       'vscode.diff',
       document.uri,
       vscode.Uri.from({ scheme: PROPOSED, path: key }),
-      `${vscode.workspace.asRelativePath(document.uri)} ↔ ${name}`,
+      `${vscode.workspace.asRelativePath(document.uri)} ↔ ${label}`,
     );
 
     const apply = words(say('host.apply'));
@@ -148,7 +184,7 @@ async function review(
 
     await put(root, after);
     void vscode.window.showInformationMessage(
-      words(say('host.tidied', { name, sites: one.at.length })),
+      words(say('host.tidied', { name: label, sites: sites(one) })),
     );
   } finally {
     held.delete(key);
