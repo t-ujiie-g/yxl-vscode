@@ -1,4 +1,4 @@
-import type { StyleLayer } from '@yxl-vscode/compile';
+import type { StyleLayer, StyleSource } from '@yxl-vscode/compile';
 import { entryOf, holds, nodeAt, type Op, type Parsed } from '@yxl-vscode/cst';
 import { pathOf } from '@yxl-vscode/loader';
 import { written } from '@yxl-vscode/normalize';
@@ -14,6 +14,9 @@ type Trees = (file: FilePath) => Parsed | null;
 /** How many places must write the same look before gathering it is worth a definition. */
 export const WORTH_EXTRACTING = 3;
 
+/** Where a look may be written out in full: a cell's own key, or an exception's (`docs/spec.md` §23). */
+const WRITTEN_AT: readonly StyleSource[] = ['cell', 'override'];
+
 /** One look and every place that writes it out in full. */
 interface Group {
   readonly gives: StyleSays;
@@ -21,9 +24,9 @@ interface Group {
 }
 
 /**
- * Looks written where they are used, at enough places to be worth a name
- * (`ROADMAP.md` Phase 21). A look the spec keeps in a file this cannot reach
- * is left alone.
+ * Looks written where they are used — on cells and on the exceptions that
+ * accumulate beside them — at enough places to be worth a name
+ * (`ROADMAP.md` Phase 21). A look another file writes is left alone.
  */
 export function gatherStyles(spec: Proposing): readonly Gathering[] {
   const root = spec.doc.file;
@@ -64,7 +67,8 @@ export function gatherStyles(spec: Proposing): readonly Gathering[] {
 
 /** The `style:` key a layer is written at, or `null` where it is not one this can gather. */
 function siteOf(layer: StyleLayer, root: FilePath, trees: Trees): Site | null {
-  if (layer.name !== null || layer.key !== KEY.style || layer.through !== 'cell') return null;
+  if (layer.name !== null || layer.key !== KEY.style) return null;
+  if (!WRITTEN_AT.includes(layer.through)) return null;
 
   const where = pathOf(layer.node);
   if (where === null || where.file !== root) return null;
