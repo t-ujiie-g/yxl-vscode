@@ -165,3 +165,59 @@ describe('a name suggested for a look', () => {
     expect(suggestedName({ 'font.bold': true, 'font.italic': true })).toBe('bold-italic');
   });
 });
+
+describe('the exceptions a spec accumulates', () => {
+  /** Three `overrides:` marking a hand-corrected row, each restating the look. */
+  const MARKED = `sheets:
+  - name: Sales
+    cells:
+      A1: { value: 1 }
+      A2: { value: 2 }
+      A3: { value: 3 }
+overrides:
+  - at: Sales!A1
+    style: { font: { italic: true }, fill: "FCE4D6" }
+    reason: "corrected by hand"
+  - at: Sales!A2
+    style: { font: { italic: true }, fill: "FCE4D6" }
+    reason: "corrected by hand"
+  - at: Sales!A3
+    style: { font: { italic: true }, fill: "FCE4D6" }
+    reason: "corrected by hand"
+`;
+
+  it('gathers a look the exceptions restate, as it does one the cells restate', () => {
+    const [one] = gatherStyles(spec(MARKED));
+
+    expect({ sites: one?.at.length, suggested: one?.suggested }).toEqual({
+      sites: 3,
+      suggested: 'italic-fce4d6',
+    });
+  });
+
+  it('writes the definition and leaves each exception its reason', () => {
+    const of = spec(MARKED);
+    const patch = gatherPatch(gatherStyles(of)[0] as Gathering, named('patched'));
+    const text = applyPatch(of.source, patch, { file: ROOT }).text;
+
+    expect([
+      text.includes('    patched: { font: { italic: true }, fill: "FCE4D6" }'),
+      text.split('style: patched').length - 1,
+      text.split('reason: "corrected by hand"').length - 1,
+    ]).toEqual([true, 3, 3]);
+  });
+
+  it('passes the gate, since an exception reading a name is the look it restated', () => {
+    const of = spec(MARKED);
+    const patch = gatherPatch(gatherStyles(of)[0] as Gathering, named('patched'));
+
+    expect(checked(of.source, patch, nothingChanges, of.ctx).ok).toBe(true);
+  });
+
+  it('counts a cell and an exception together, since one name serves both', () => {
+    const source = `${MARKED.replace('      A3: { value: 3 }', '      A3: { value: 3, style: { font: { italic: true }, fill: "FCE4D6" } }')}`;
+    const [one] = gatherStyles(spec(source));
+
+    expect(one?.at.length).toBe(4);
+  });
+});

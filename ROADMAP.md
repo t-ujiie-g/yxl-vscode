@@ -421,12 +421,12 @@ rule that is not mechanically checked is a suggestion.
 Phases land in order. Each is releasable or explicitly marked otherwise. The
 **first release is Phase 4** — read-only, and worth shipping alone.
 
-> **Where this stands (2026-08-30): Phases 0–20 have no unchecked box left**, and
-> what they came to is on the Marketplace as 0.1.0. §10's rule therefore lands on
-> **Phase 21**, which is the one phase deliberately kept last — so *進める* now
-> means the refactors, and anything else is a scope conversation before it is a
-> task. What is left besides is the v1.0 gate's last line, and it is upstream's:
-> a frozen yxl schema.
+> **Where this stands (2026-08-30): every phase is done.** Phases 0–21 have no
+> unchecked box left, and what they came to is on the Marketplace as 0.1.0.
+> §10's rule therefore lands on nothing, which is the first time that has been
+> true — **so a task now starts as a scope conversation rather than as the next
+> line on a list.** What is left is the v1.0 gate's last line, and it is not
+> ours: a frozen yxl schema (§8 Q6).
 
 **The number follows the order**, so that §10 — take the first phase with an
 unchecked box — can be read off the page. **Phases 17–20 are the release
@@ -2066,10 +2066,14 @@ here is detectable by analysis.
 - [x] Columns of translated formulas → a `formulas:` range
       *(2026-08-30; runs of three or more down one column, over cells holding
       nothing but a formula, since a range carries no look)*
-- [ ] Accumulated `overrides:` sharing a pattern → a definition
-- [ ] All of the above gated on **`expectedDiff: empty`** — a refactor that
+- [x] Accumulated `overrides:` sharing a pattern → a definition
+      *(2026-08-30; the look several exceptions restate becomes one, counted
+      together with the cells that restate it — ADR-056 on what this row was
+      read to mean)*
+- [x] All of the above gated on **`expectedDiff: empty`** — a refactor that
       changes one rendered cell is rejected, automatically (ADR-009)
-- [ ] Presented as reviewable proposals with a diff, never applied silently
+- [x] Presented as reviewable proposals with a diff, never applied silently
+      *(VS Code's own diff editor, and the write only on the answer after it)*
 
 ### Taken out (2026-08-23)
 Two phases that were here are not any more, and not because they were hard:
@@ -3493,6 +3497,35 @@ addresses one file, and a rendered cell must not move:
 positive and the negative: the patch passes `nothingChanges`, and a version of it
 that would move a cell is refused without anyone looking.
 
+### ADR-056 — What "overrides sharing a pattern" was read to mean, and what it was not
+**Accepted** 2026-08-30. Closes Phase 21's last row.
+
+*The row had two readings.* One: **the look several exceptions restate becomes a
+definition they each name** — which is what "→ a definition" says. The other:
+**accumulated exceptions become a rule again**, which is where upstream's own
+example points ("Twenty is the format telling you the rules no longer match the
+workbook — at which point the fix is the rule, not another entry here").
+
+*The first is what shipped, and it is one line of the analyser that already
+existed.* An override carries the same `CellFacets` a cell does, so its `style:`
+is written in the same shape at the same depth; gathering widened by one
+`StyleSource` rather than growing a fourth analyser. Sites are counted together
+across cells and exceptions, because one definition serves both and a reader
+choosing a name does not care which kind of construct restated it.
+
+*The second is refused, and not because it is hard.* **It cannot be a
+deterministic refactor.** Replacing twenty exceptions with a band only leaves
+every rendered cell where it was if the band reproduces all twenty exactly — at
+which point nothing was simplified, only moved. Where it *would* simplify, it
+changes cells, and `expectedDiff: empty` refuses it by design (ADR-009). So the
+gate is not an obstacle to that feature; it is the proof that the feature is a
+different kind of thing. Choosing which rule the exceptions should have been is a
+decision about what the workbook means, and it belongs to the person who owns it.
+
+*That is the boundary of this phase, said once*: everything here is a rewrite
+that provably changes nothing. A change that improves the spec by changing the
+workbook is an edit, and edits go through §4.4.
+
 ## 8. Open questions
 
 - **Q1 — `cells:` A1 keys and row insertion.** ✅ *Answered 2026-08-23.*
@@ -3799,6 +3832,34 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-30 — Phase 21 closes, and with it every phase
+
+The last row: **the look several `overrides:` restate becomes a definition they
+each name.** With it, the two rows that said *all of the above* close, and the
+plan has no unchecked phase box left for the first time.
+
+- **One line of the analyser that already existed.** An override carries the
+  same `CellFacets` a cell does, so its `style:` sits at the same depth in the
+  same shape; gathering widened by one `StyleSource` rather than growing a
+  fourth analyser. Cells and exceptions are counted together, since one
+  definition serves both.
+- **What was deliberately not built** is the other reading of that row —
+  accumulated exceptions becoming a *rule* again, which is where upstream's own
+  example points. ADR-056 says why it cannot be a deterministic refactor: where
+  it would simplify anything it changes cells, and `expectedDiff: empty` refuses
+  it by design. The gate is not in the way of that feature; it is the proof that
+  it is a different kind of thing.
+- **The gate row and the diff row are ticked**, having been true since the first
+  analyser and required of every one since.
+- §6 says where this leaves the plan: §10's rule — *the first phase with an
+  unchecked box* — now lands on nothing. A task starts as a scope conversation
+  rather than as the next line on a list.
+- 2480 → 2484 tests. Comment shape: 2.2 / 1.0 / 1.6, 0 over the limit —
+  unchanged.
+
+**The only unchecked box in this document** is the v1.0 gate's last line, and it
+is not ours: a yxl schema frozen at upstream's own v1.0 (§8 Q6).
 
 ### 2026-08-30 — Two more refactors, and one of them came from a reader
 
