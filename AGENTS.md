@@ -97,6 +97,34 @@ git push -u origin HEAD
 gh pr create --fill
 ```
 
+**A tag is the release.** Pushing `v<major>.<minor>.<patch>` publishes to the
+Marketplace with nobody in the loop — the guards are mechanical, and ADR-052 says
+why there is no approval step. What a release needs from you, in order:
+
+1. **Raise the version** in `packages/extension/package.json` — the tag must
+   equal it or the workflow refuses.
+2. **Write the `packages/extension/CHANGELOG.md` section** for that version, and
+   **name the yxl it targets** in both that file and the package's `README.md`.
+   `tests/manifest.test.ts` fails when either stops matching the pin, and
+   `release.yml` fails when the changelog has no section for the version — it is
+   the release notes.
+3. **Merge it**, then tag `main` and push the tag:
+
+```bash
+git switch main && git pull
+git tag v0.1.0 && git push origin v0.1.0
+```
+
+`release.yml` then runs the same checks a pull request runs, holds the tag
+against the manifest, builds one `.vsix` and attests it, publishes *that
+artefact* to the Marketplace, and writes the GitHub release. Re-running is safe:
+`--skip-duplicate` means a version already on the Marketplace is not an error, so
+deleting the tag and pushing it again recovers a failed run.
+
+Publishing needs `VSCE_PAT` in the `marketplace` environment, which hands it to
+`v*` tags alone. **The token is a global Azure DevOps PAT, and those are retired
+on 2026-12-01** — ADR-052 records the successor and what it costs.
+
 ### Before starting
 1. Read the relevant `ROADMAP.md` phase and any ADR you're about to touch.
 2. If the task isn't in the active phase, confirm with the user first.
@@ -156,6 +184,8 @@ pnpm build            # the extension actually bundles
 | Comment shape report (§8.6) | `node scripts/comment-shape.mjs` — every comment over the limit, longest first; `--totals` for the counts |
 | Rewrite the README's schema-coverage table (§8.5) | `COVERAGE=write pnpm test tests/coverage.test.ts` — the table is written from `spec/coverage.ts`, and the same test fails when the README is stale |
 | Build | `pnpm build` |
+| Build the `.vsix` | `pnpm package` in `packages/extension` — writes `yxl-vscode-<version>.vsix` |
+| Release it | tag `main` `v<version>` and push the tag (§4) |
 | Get the conformance oracle | install the **pinned** `yxl` release, or point `YXL_BIN` at it (`ROADMAP.md` ADR-018) |
 | Run the extension | **F5** in VS Code — *Run the preview*, which builds first |
 | Run it on yxl's cookbook | **F5** with *Run the preview on yxl's own examples* |
@@ -165,8 +195,10 @@ open a `*.yxl.yaml` and run **yxl: Open the Grid Beside the Spec**. Without VS C
 debugger — from a terminal, say — the same thing is
 `code --extensionDevelopmentPath=packages/extension <a folder of specs>`.
 
-Packaging is still open (`ROADMAP.md` §8 Q6): the manifest is `private`, so
-nothing can publish it by accident.
+**Published** as `t-ujiie-g.yxl-vscode` since 0.1.0 (2026-08-30). A `v*` tag is
+what publishes it — see §4, and ADR-052 for the shape of the workflow. Nothing
+else can: `VSCE_PAT` belongs to the `marketplace` environment under a `v*` rule,
+so no branch and no pull request can reach it.
 
 ## 6. Testing conventions
 
