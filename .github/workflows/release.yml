@@ -1,0 +1,131 @@
+name: Release
+
+# A `v*` tag publishes to the Marketplace with nobody in the loop, so the gates
+# are here: the same checks a pull request runs, the tag agreeing with the
+# manifest, and the bytes that were built being the bytes that ship (ADR-052).
+on:
+  push:
+    tags: ['v[0-9]+.[0-9]+.[0-9]+']
+
+permissions: {}
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  checks:
+    permissions:
+      contents: read
+    uses: ./.github/workflows/checks.yml
+
+  package:
+    needs: checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    outputs:
+      vsix: ${{ steps.build.outputs.vsix }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+
+      # A tag that disagrees with the manifest would publish a version number
+      # the Marketplace can never hand back.
+      - name: The tag names the version the manifest names
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          version="$(node -p "require('./packages/extension/package.json').version")"
+          if [ "$TAG" != "v${version}" ]; then
+            echo "::error::tag ${TAG} against manifest version ${version}"
+            exit 1
+          fi
+
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
+
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build the .vsix
+        id: build
+        working-directory: packages/extension
+        run: |
+          pnpm package
+          version="$(node -p "require('./package.json').version")"
+          echo "vsix=yxl-vscode-${version}.vsix" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4
+        with:
+          subject-path: packages/extension/${{ steps.build.outputs.vsix }}
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: vsix
+          path: packages/extension/${{ steps.build.outputs.vsix }}
+          if-no-files-found: error
+
+  # `--packagePath` reads the manifest out of the VSIX, so this job needs the
+  # built bytes and nothing else: no checkout, no token, only `VSCE_PAT` — which
+  # the `marketplace` environment hands out to `v*` tags alone.
+  publish:
+    needs: package
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: marketplace
+    permissions: {}
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: vsix
+
+      - name: Publish to the Marketplace
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+          VSIX: ${{ needs.package.outputs.vsix }}
+        run: npx --yes @vscode/vsce@3.9.2 publish --packagePath "$VSIX" --skip-duplicate
+
+  release:
+    needs: [package, publish]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: vsix
+
+      - name: Draw the notes from the changelog the Marketplace shows
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          version="${TAG#v}"
+          awk -v v="$version" '
+            $0 ~ "^## " v "( |$)" { found = 1; next }
+            found && /^## / { exit }
+            found { print }
+          ' packages/extension/CHANGELOG.md > notes.md
+          if [ ! -s notes.md ]; then
+            echo "::error::no ${version} section in packages/extension/CHANGELOG.md"
+            exit 1
+          fi
+
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+          VSIX: ${{ needs.package.outputs.vsix }}
+        run: gh release create "$TAG" "$VSIX" --title "$TAG" --notes-file notes.md

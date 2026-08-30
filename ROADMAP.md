@@ -2030,7 +2030,13 @@ accident. This is §8 Q6's open half, and the v1.0 gate's last line.
       a machine that has never seen this repository is the reader's to confirm**
       — it cannot be done from here.
 - [x] It collects nothing, and the README says so, in a section of its own
-- [ ] Tiers 1–4 green in CI, Tier 5 performed on a real workbook (§5)
+- [x] **A `v*` tag publishes it** — the same checks a pull request runs, the tag
+      held against the manifest, one `.vsix` built and attested, the Marketplace,
+      and then the GitHub release (ADR-052). The publisher registration and the
+      token behind it are the reader's, and so is the date on the token
+- [x] Tiers 1–4 green in CI (§5) — on every pull request, on every push to
+      `main`, and again on the tag before anything is published
+- [ ] Tier 5 performed on a real workbook (§5)
 - [ ] **A `customEditors` contribution at `priority: option`** *(proposed)*, so
       *Open With…* offers the grid on a `*.yxl.yaml` without a command
 
@@ -3326,6 +3332,50 @@ Japanese line copied from the English one is a failure, not a silence.
 *What stays English*: the schema's key names, `docs/spec.md` references, and
 `yxl`'s own output, which is the compiler's to translate (ADR-011).
 
+### ADR-052 — A tag publishes, and the gate is the workflow
+**Accepted** 2026-08-30. Closes Phase 20's release half.
+
+*A `v*` tag goes to the Marketplace with nobody in between.* There is no
+approval step, and the reason is that the person who would click it is the person
+who pushed the tag: a gate the releaser opens for themselves is ceremony, and
+ceremony is what people learn to click through. What guards a release here is
+mechanical instead, and the Marketplace's own rule — a version number, once
+published, is spent — is what the mechanics are sized against.
+
+*The checks a release runs are the checks a pull request runs, because they are
+one file.* `checks.yml` is called by both; two copies of a gate drift, and the
+copy that drifts is the one that runs rarely. Tiers 1–4 pass on the tag itself
+before anything is built, and the Tier 3 oracle is the pinned compiler, fetched
+by its published checksum.
+
+*The tag is held against the manifest.* `v0.2.0` over a manifest that says
+`0.1.0` is the one mistake with no undo, so it is a failed step rather than a
+release.
+
+*The bytes that were built are the bytes that ship.* One job packages the
+`.vsix` and attests its provenance; the publish job takes that artefact and
+`--packagePath`, which reads the manifest out of the VSIX and never looks at a
+working tree. Nothing is rebuilt between the check and the shelf.
+
+*The token can only be reached from a tag.* `VSCE_PAT` lives in the
+`marketplace` environment with a deployment rule of `v*`, not in a repository
+secret — so no branch, no pull request, and no fork can obtain it, which is the
+control that replaces the approval. The publish job holds no `GITHUB_TOKEN`
+permissions at all, and every action is pinned to a commit rather than a tag.
+
+*The Marketplace goes first, and the GitHub release follows it*, so a release on
+the tag never claims a publish that did not happen.
+
+*Authentication is a Personal Access Token, and it has a date on it.* The
+Marketplace requires an **All accessible organizations** token — which is exactly
+the global PAT Azure DevOps retires on **2026-12-01**. The successor is Microsoft
+Entra ID with workload identity federation, `vsce publish --azure-credential`,
+and it is one step's change in this workflow. It is not the starting point
+because publishing with a federated service principal has open failure reports
+against `vsce` (#976, #1023 — the latter closed as not planned), and a first
+release is a poor place to discover that. The move is due before December, not
+after.
+
 ## 8. Open questions
 
 - **Q1 — `cells:` A1 keys and row insertion.** ✅ *Answered 2026-08-23.*
@@ -3632,6 +3682,43 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-30 — A tag is the release
+
+Phase 20's second half. Pushing `v0.1.0` now runs the checks, builds one
+`.vsix`, publishes it, and writes the GitHub release — with nobody in the loop,
+which is why the gates are the ones ADR-052 lists rather than a person.
+
+- **`checks.yml` is the gate, and both callers call it.** The job that was
+  `ci.yml`'s is now a `workflow_call` workflow; `ci.yml` calls it on a pull
+  request *and* on a push to `main`, and `release.yml` calls it on the tag. Two
+  copies of a gate drift, and it is the release copy that would.
+- **`release.yml`, in four jobs**: the checks, then a `package` job that holds
+  the tag against the manifest and attests the `.vsix` it builds, then a
+  `publish` job that takes that artefact to the Marketplace, then the GitHub
+  release. The Marketplace goes before the release so a tag cannot claim a
+  publish that did not happen.
+- **The token is reachable from a tag and nowhere else.** `VSCE_PAT` sits in the
+  `marketplace` environment with a `v*` deployment rule — not a repository
+  secret — which is what stands in for the approval step nobody would read.
+  The publish job carries no `GITHUB_TOKEN` permissions, takes no checkout, and
+  publishes with `--packagePath`, which reads the manifest out of the VSIX.
+- **Every action is pinned to a commit**, at the majors already in use — a
+  version bump is its own commit (§8.9). Top-level `permissions: {}`, per-job
+  grants, `persist-credentials: false`, and the tag name reaching `run:` through
+  the environment rather than through `${{ }}`.
+- **The `.vsix` names its version.** `pnpm package` drops `--out`, so it builds
+  `yxl-vscode-0.1.0.vsix` — 13 files, 744.79 KB, unchanged in content — and the
+  file attached to a release says which release it is.
+- **The PAT has a deadline, and it is written down.** The *All accessible
+  organizations* token the Marketplace requires is the global PAT Azure DevOps
+  retires on 2026-12-01; ADR-052 records the successor and why it is not the
+  starting point.
+- **What is left in Phase 20**: the publisher registration and the token, Tier 5
+  on a real workbook, installing the `.vsix` on a machine that has never seen
+  this repository, and the proposed `customEditors` contribution. All but the
+  last are the reader's to do.
+- 2449 tests, unchanged. Comment shape: unchanged — no source changed.
 
 ### 2026-08-30 — A `.vsix`, and the listing a reader would read
 

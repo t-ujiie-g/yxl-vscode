@@ -2,61 +2,12 @@ name: CI
 
 on:
   pull_request:
+  push:
+    branches: [main]
 
-defaults:
-  run:
-    working-directory: yxl-vscode
+permissions:
+  contents: read
 
 jobs:
-  check:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          path: yxl-vscode
-
-      # The corpus tiers run against yxl's real example specs, and the Tier 3
-      # oracle is built from this checkout too (ROADMAP §5). Sibling layout,
-      # matching what a contributor has locally.
-      - uses: actions/checkout@v5
-        with:
-          repository: t-ujiie-g/yxl
-          path: yxl
-
-      # `defaults.run.working-directory` governs `run:` steps only, so an action
-      # step still resolves paths from the workspace root — which holds the two
-      # checkouts and no manifest of its own.
-      - uses: pnpm/action-setup@v6
-        with:
-          package_json_file: yxl-vscode/package.json
-
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 22
-          cache: pnpm
-          cache-dependency-path: yxl-vscode/pnpm-lock.yaml
-
-      # The Tier 3 oracle (ADR-018) is the compiler itself, taken from the
-      # release of the pinned version rather than built, so CI needs no MoonBit
-      # toolchain. `YXL_BIN` keeps it out of the working tree and off the path.
-      - name: Install the pinned yxl
-        run: |
-          version="$(node -p "require('./package.json').yxl.targetVersion")"
-          asset="yxl-${version}-linux-x86_64.tar.gz"
-          base="https://github.com/t-ujiie-g/yxl/releases/download/v${version}"
-          cd "$RUNNER_TEMP"
-          curl -fsSL -O "${base}/${asset}"
-          curl -fsSL -O "${base}/${asset}.sha256"
-          sha256sum -c "${asset}.sha256"
-          tar xzf "${asset}"
-          echo "YXL_BIN=${RUNNER_TEMP}/yxl-${version}-linux-x86_64/yxl" >> "$GITHUB_ENV"
-
-      - run: pnpm install --frozen-lockfile
-
-      - run: pnpm typecheck
-
-      - run: pnpm lint
-
-      - run: pnpm test
-
-      - run: pnpm build
+  checks:
+    uses: ./.github/workflows/checks.yml

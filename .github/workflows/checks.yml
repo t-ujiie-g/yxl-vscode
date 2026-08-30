@@ -1,0 +1,70 @@
+name: Checks
+
+# Tiers 1–4 (ROADMAP §5) and the dependency direction, as one job that a pull
+# request and a release both call, so neither can drift from the other.
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: yxl-vscode
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          path: yxl-vscode
+          persist-credentials: false
+
+      # The corpus tiers run against yxl's real example specs, and the Tier 3
+      # oracle is built from this checkout too (ROADMAP §5). Sibling layout,
+      # matching what a contributor has locally.
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          repository: t-ujiie-g/yxl
+          path: yxl
+          persist-credentials: false
+
+      # `defaults.run.working-directory` governs `run:` steps only, so an action
+      # step still resolves paths from the workspace root — which holds the two
+      # checkouts and no manifest of its own.
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
+        with:
+          package_json_file: yxl-vscode/package.json
+
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: yxl-vscode/pnpm-lock.yaml
+
+      # The Tier 3 oracle (ADR-018) is the compiler itself, taken from the
+      # release of the pinned version rather than built, so CI needs no MoonBit
+      # toolchain. `YXL_BIN` keeps it out of the working tree and off the path.
+      - name: Install the pinned yxl
+        run: |
+          version="$(node -p "require('./package.json').yxl.targetVersion")"
+          asset="yxl-${version}-linux-x86_64.tar.gz"
+          base="https://github.com/t-ujiie-g/yxl/releases/download/v${version}"
+          cd "$RUNNER_TEMP"
+          curl -fsSL -O "${base}/${asset}"
+          curl -fsSL -O "${base}/${asset}.sha256"
+          sha256sum -c "${asset}.sha256"
+          tar xzf "${asset}"
+          echo "YXL_BIN=${RUNNER_TEMP}/yxl-${version}-linux-x86_64/yxl" >> "$GITHUB_ENV"
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm typecheck
+
+      - run: pnpm lint
+
+      - run: pnpm test
+
+      - run: pnpm build

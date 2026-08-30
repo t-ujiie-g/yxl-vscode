@@ -169,7 +169,7 @@
   },
   "scripts": {
     "build": "node build.mjs",
-    "package": "node build.mjs && pnpm dlx @vscode/vsce@3.9.2 package --no-dependencies --out yxl-vscode.vsix"
+    "package": "node build.mjs && pnpm dlx @vscode/vsce@3.9.2 package --no-dependencies"
   },
   "dependencies": {
     "@yxl-vscode/compile": "workspace:*",
