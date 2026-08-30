@@ -2,18 +2,21 @@
 
 **An Excel-like editor for [`yxl`](https://github.com/t-ujiie-g/yxl) specs.**
 A VS Code extension that renders a `*.yxl.yaml` spec as a spreadsheet grid
-beside its text, and will translate grid gestures back into edits on the spec —
-not into a workbook.
+beside its text, and translates grid gestures back into edits on the spec — not
+into a workbook.
 
-> ⚠️ **Status: the preview is complete, and the first edits write back.**
-> *yxl: Open the Grid Beside the Spec* draws a spec as a grid next to the text
-> and redraws it as you type. Under it: YAML parses into a span-carrying tree, edits
-> apply as minimal byte patches that leave every untouched byte alone, a whole
-> spec — `$include`, `csv:`, and all — reads into a model of itself, and that
-> model projects to a grid where every value and every property of every look
-> says which line of which file it came from. It is checked on every commit
-> against the compiler that will build it. `ROADMAP.md` holds the design and the
-> phase plan.
+> **Status: published, and the everyday gestures write back.**
+> [**`t-ujiie-g.yxl-vscode`**][listing] 0.1.0, targeting yxl 0.3.6. *yxl: Open
+> the Grid Beside the Spec* draws a spec as a grid next to the text and redraws
+> it as you type. Under it: YAML parses into a span-carrying tree, edits apply
+> as minimal byte patches that leave every untouched byte alone, a whole spec —
+> `$include`, `csv:`, and all — reads into a model of itself, and that model
+> projects to a grid where every value and every property of every look says
+> which line of which file it came from. It is checked on every commit against
+> the compiler that will build it. `ROADMAP.md` holds the design and the phase
+> plan.
+
+[listing]: https://marketplace.visualstudio.com/items?itemName=t-ujiie-g.yxl-vscode
 
 ## What it does today
 
@@ -102,12 +105,20 @@ written from the code, so it cannot drift from it.
 
 ## Getting it
 
-Not published yet. To run it from a checkout: `pnpm install`, then **F5** in VS
-Code (*Run the preview*), which builds both bundles and opens an Extension
-Development Host; open a `*.yxl.yaml` there and press the **grid** button in its
-title bar, or run **yxl: Open the Grid Beside the Spec**. To start from nothing,
-**New File…** offers *A yxl Spec: an Empty Workbook*, and so does the right-click
-menu on a folder.
+From the Marketplace — search **yxl** in the Extensions view, or:
+
+```
+code --install-extension t-ujiie-g.yxl-vscode
+```
+
+Then open a `*.yxl.yaml` and press the **grid** button in its title bar, or run
+**yxl: Open the Grid Beside the Spec**. To start from nothing, **New File…**
+offers *A yxl Spec: an Empty Workbook*, and so does the right-click menu on a
+folder.
+
+To run it from a checkout instead: `pnpm install`, then **F5** in VS Code (*Run
+the preview*), which builds both bundles and opens an Extension Development
+Host.
 
 The **Build** and **Check** buttons beside it need the `yxl` compiler on your
 `PATH`, or `yxl.path` set to it, and so does making a new spec; the grid itself
@@ -168,9 +179,9 @@ shape the chart takes is asked rather than picked. Dragging one moves it, and
 its corner grows it — which is an edit to the construct's own `at:` and `size:`,
 or to an image's `scale:`, never to a picture.
 
-## Where it is going
+## What it is built on
 
-`yxl` made a workbook into version-controllable text. This is to make that text
+`yxl` made a workbook into version-controllable text. This makes that text
 direct-manipulable without giving up what made it text:
 
 - **Click a cell, and the YAML changes** — in the smallest diff that expresses
@@ -185,12 +196,12 @@ direct-manipulable without giving up what made it text:
   the point: an AI agent editing the YAML and a person editing the grid converge
   on the same file.
 
-Seeing where everything came from is the half that already works, and it is what
-the rest is built on.
+Seeing where everything came from is what the rest is built on.
 
-The everyday spreadsheet gestures it does **not** have yet are listed as
-plainly as the ones it does — the charts, images and sparklines a spec declares
-are drawn by nothing yet, which is [`ROADMAP.md`](./ROADMAP.md) Phase 14.
+What is left is listed as plainly as what is in: the schema's remaining corners
+are **previewed or carried** rather than editable, and the deterministic
+refactors — extracting a repeated style, turning a column of translated formulas
+into a range — are [`ROADMAP.md`](./ROADMAP.md) Phase 21.
 
 Excel still opens the result. `yxl build` still produces the `.xlsx`; this editor
 never writes one.
