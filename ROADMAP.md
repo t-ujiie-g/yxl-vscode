@@ -2036,9 +2036,9 @@ This was §8 Q6's open half, and the v1.0 gate's last line.
       token behind it are the reader's, and so is the date on the token
 - [x] Tiers 1–4 green in CI (§5) — on every pull request, on every push to
       `main`, and again on the tag before anything is published
-- [ ] Tier 5 performed on a real workbook (§5)
-- [ ] **A `customEditors` contribution at `priority: option`** *(proposed)*, so
-      *Open With…* offers the grid on a `*.yxl.yaml` without a command
+- [x] Tier 5 performed on a real workbook (§5) — by the reader, 2026-08-30
+- [x] A `customEditors` contribution was proposed here and **declined**
+      (ADR-053): a custom editor replaces the tab, and this one opens beside it
 
 ### Phase 21 — Deterministic refactors *(lowest priority)*
 Kept last on 2026-08-23, and **numbered for that place on 2026-08-29** — this was
@@ -2075,7 +2075,7 @@ Two phases that were here are not any more, and not because they were hard:
 - [ ] Schema coverage stated honestly: which of `docs/spec.md`'s 23 sections are
       editable, which are preview-only, which are opaque — as a table in the
       README, generated from the code so it cannot lie
-- [ ] Tiers 1–4 green in CI; Tier 5 performed
+- [x] Tiers 1–4 green in CI; Tier 5 performed *(2026-08-30)*
 - [ ] Compatible with a frozen yxl schema (yxl's own v1.0 gate — §8 Q6)
 - [x] Marketplace listing, and an honest description of what it is not (§2)
       *(0.1.0, 2026-08-30)*
@@ -3377,6 +3377,40 @@ against `vsce` (#976, #1023 — the latter closed as not planned), and a first
 release is a poor place to discover that. The move is due before December, not
 after.
 
+### ADR-053 — The grid is opened beside a spec, not instead of it
+**Accepted** 2026-08-30. Declines Phase 20's last proposal.
+
+*A `customEditors` contribution at `priority: option` was proposed*, so that
+*Open With…* would offer the grid on a `*.yxl.yaml` without anyone running a
+command. It is declined, and the reason is not the cost.
+
+*A custom editor replaces the tab.* Choosing one means the spec opens **as** the
+grid — the text is not beside it, it is gone, and getting it back is another
+*Open With…*. What this editor is, down to the name in its manifest, is the grid
+**beside** the spec: `ViewColumn.Beside` with the focus left in the text, because
+the spec is the thing being edited and the grid is its projection (ADR-001). The
+contribution point advertises a product this is not.
+
+*`priority` does not rescue it.* `option` was proposed rather than `default`
+precisely so that clicking a spec would still open the text — but `option` only
+governs what happens when nobody chooses. The moment a reader does choose, they
+get the replacing editor, and the setting that makes it their default for
+`*.yxl.yaml` is one they can reach from that menu.
+
+*What it would have cost, secondarily*: `CustomTextEditorProvider`, with
+`preview.ts` rebuilt around a document VS Code owns, and the panel's lifecycle,
+save and hot-exit changing hands — to reach a menu entry that a command and the
+button already in every spec's title bar reach today.
+
+*What is given up:* a reader who looks in *Open With…* first does not find the
+grid there. The title-bar button is the answer, and it is on the spec they are
+already looking at.
+
+*What would reopen it* is a different question than this one answers: not "may I
+reach the grid from this menu", but "I want the grid to be **what opens**". That
+is ADR-001's ground, and it would need its own ADR rather than a contribution
+point quietly deciding it.
+
 ## 8. Open questions
 
 - **Q1 — `cells:` A1 keys and row insertion.** ✅ *Answered 2026-08-23.*
@@ -3683,6 +3717,23 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-30 — Phase 20 is closed
+
+The two lines it was still carrying, answered rather than left open.
+
+- **Tier 5 performed** on a real workbook by the reader, which is the only way
+  that tier can be performed (§5). The v1.0 gate's verification line goes with
+  it: Tiers 1–4 are green in CI on every pull request, every push to `main`, and
+  again on the tag.
+- **The `customEditors` proposal is declined**, and ADR-053 says why: a custom
+  editor replaces the tab, and this editor opens beside it. That is not a cost
+  argument — the cost is real but secondary — it is that the contribution point
+  advertises a product this is not. What would reopen it is the other question,
+  "the grid should be what opens", which is ADR-001's ground and would need its
+  own ADR.
+
+Phase 20 has no unchecked boxes left.
 
 ### 2026-08-30 — 0.1.0 is on the Marketplace
 
