@@ -421,6 +421,13 @@ rule that is not mechanically checked is a suggestion.
 Phases land in order. Each is releasable or explicitly marked otherwise. The
 **first release is Phase 4** — read-only, and worth shipping alone.
 
+> **Where this stands (2026-08-30): Phases 0–20 have no unchecked box left**, and
+> what they came to is on the Marketplace as 0.1.0. §10's rule therefore lands on
+> **Phase 21**, which is the one phase deliberately kept last — so *進める* now
+> means the refactors, and anything else is a scope conversation before it is a
+> task. What is left besides is the v1.0 gate's last line, and it is upstream's:
+> a frozen yxl schema.
+
 **The number follows the order**, so that §10 — take the first phase with an
 unchecked box — can be read off the page. **Phases 17–20 are the release
 programme**, opened on 2026-08-29 from a reader's own list after working in the
@@ -450,7 +457,7 @@ not a date.
 | Copy, cut and paste inside the grid | ✅ — values and formulas, whose references move; looks are Phase 9 (ADR-032) |
 | Copy out into Excel or Sheets | ✅ — the whole look into Sheets; Excel takes everything but the fill (ADR-033) |
 | Paste from Excel or Sheets | ✅ for the values; the looks wait on Phase 9's normalizer (ADR-034) |
-| A box to type an address into | ✅ — in the corner today, and moving to the formula bar in **Phase 10**, since the corner is where a spreadsheet keeps *select all* |
+| A box to type an address into | ✅ — in the formula bar, where a spreadsheet keeps it; the corner is *select all* |
 | Find something in the sheet | ✅ — `Cmd`+`F`, `Cmd`+`G` through what it found |
 | Bold, italic, underline, strike | ✅ — from the toolbar, through the normalizer, with the ripple count where the look is shared |
 | Fill, text colour, borders, alignment, number format | ✅ — from the same toolbar, colour and borders in the menus a reader of Sheets expects |
@@ -2036,9 +2043,9 @@ This was §8 Q6's open half, and the v1.0 gate's last line.
       token behind it are the reader's, and so is the date on the token
 - [x] Tiers 1–4 green in CI (§5) — on every pull request, on every push to
       `main`, and again on the tag before anything is published
-- [ ] Tier 5 performed on a real workbook (§5)
-- [ ] **A `customEditors` contribution at `priority: option`** *(proposed)*, so
-      *Open With…* offers the grid on a `*.yxl.yaml` without a command
+- [x] Tier 5 performed on a real workbook (§5) — by the reader, 2026-08-30
+- [x] A `customEditors` contribution was proposed here and **declined**
+      (ADR-053): a custom editor replaces the tab, and this one opens beside it
 
 ### Phase 21 — Deterministic refactors *(lowest priority)*
 Kept last on 2026-08-23, and **numbered for that place on 2026-08-29** — this was
@@ -2072,10 +2079,12 @@ Two phases that were here are not any more, and not because they were hard:
   reuses these packages.
 
 ### v1.0 — Stability gate
-- [ ] Schema coverage stated honestly: which of `docs/spec.md`'s 23 sections are
+- [x] Schema coverage stated honestly: which of `docs/spec.md`'s 23 sections are
       editable, which are preview-only, which are opaque — as a table in the
       README, generated from the code so it cannot lie
-- [ ] Tiers 1–4 green in CI; Tier 5 performed
+      *(`spec/coverage.ts`, Phase 15; `tests/coverage.test.ts` fails when the
+      README goes stale)*
+- [x] Tiers 1–4 green in CI; Tier 5 performed *(2026-08-30)*
 - [ ] Compatible with a frozen yxl schema (yxl's own v1.0 gate — §8 Q6)
 - [x] Marketplace listing, and an honest description of what it is not (§2)
       *(0.1.0, 2026-08-30)*
@@ -3377,6 +3386,40 @@ against `vsce` (#976, #1023 — the latter closed as not planned), and a first
 release is a poor place to discover that. The move is due before December, not
 after.
 
+### ADR-053 — The grid is opened beside a spec, not instead of it
+**Accepted** 2026-08-30. Declines Phase 20's last proposal.
+
+*A `customEditors` contribution at `priority: option` was proposed*, so that
+*Open With…* would offer the grid on a `*.yxl.yaml` without anyone running a
+command. It is declined, and the reason is not the cost.
+
+*A custom editor replaces the tab.* Choosing one means the spec opens **as** the
+grid — the text is not beside it, it is gone, and getting it back is another
+*Open With…*. What this editor is, down to the name in its manifest, is the grid
+**beside** the spec: `ViewColumn.Beside` with the focus left in the text, because
+the spec is the thing being edited and the grid is its projection (ADR-001). The
+contribution point advertises a product this is not.
+
+*`priority` does not rescue it.* `option` was proposed rather than `default`
+precisely so that clicking a spec would still open the text — but `option` only
+governs what happens when nobody chooses. The moment a reader does choose, they
+get the replacing editor, and the setting that makes it their default for
+`*.yxl.yaml` is one they can reach from that menu.
+
+*What it would have cost, secondarily*: `CustomTextEditorProvider`, with
+`preview.ts` rebuilt around a document VS Code owns, and the panel's lifecycle,
+save and hot-exit changing hands — to reach a menu entry that a command and the
+button already in every spec's title bar reach today.
+
+*What is given up:* a reader who looks in *Open With…* first does not find the
+grid there. The title-bar button is the answer, and it is on the spec they are
+already looking at.
+
+*What would reopen it* is a different question than this one answers: not "may I
+reach the grid from this menu", but "I want the grid to be **what opens**". That
+is ADR-001's ground, and it would need its own ADR rather than a contribution
+point quietly deciding it.
+
 ## 8. Open questions
 
 - **Q1 — `cells:` A1 keys and row insertion.** ✅ *Answered 2026-08-23.*
@@ -3683,6 +3726,53 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-30 — The documentation catches up with the release
+
+A §8.5 pass over the prose, triggered by 0.1.0: a document that describes a thing
+that shipped last week is the one a reader trusts and should not.
+
+- **The README said "Not published yet."** It says how to install it, and the
+  checkout route is kept below that rather than instead of it.
+- **The README contradicted itself about charts.** One section drew them "where
+  they sit and at the size they take"; another said they were "drawn by nothing
+  yet, which is Phase 14" — a phase finished some time ago. The forward-looking
+  paragraph now names what is actually left, which is Phase 21.
+- **The status banner** promised "the preview is complete, and the first edits
+  write back", which undersold a release that edits with a toolbar, rows and
+  columns, merges, fills, sorting, the tab bar, notes, links, validations,
+  tables and floats. It names the published version and the yxl it targets.
+- **§6's gesture table** still had the address box "in the corner today, and
+  moving to the formula bar in Phase 10". It moved (`webview/src/boxes.ts`).
+- **The v1.0 gate's coverage line is ticked**, because Phase 15's first item
+  already recorded the same fact as done and `tests/coverage.test.ts` fails when
+  the README's table goes stale. One fact, checked in one place, was checked in
+  neither.
+- **§6 says where the project stands**, so §10 — *the first phase with an
+  unchecked box* — can still be read off the page now that the only one left is
+  the phase kept deliberately last.
+
+Checked and left alone: the package's own README, which is the listing and was
+accurate; the claim that pasting carries values and not looks, which
+`intent/paste.test.ts` confirms is still true; and `AGENTS.md`, updated with the
+release procedure the day before.
+
+### 2026-08-30 — Phase 20 is closed
+
+The two lines it was still carrying, answered rather than left open.
+
+- **Tier 5 performed** on a real workbook by the reader, which is the only way
+  that tier can be performed (§5). The v1.0 gate's verification line goes with
+  it: Tiers 1–4 are green in CI on every pull request, every push to `main`, and
+  again on the tag.
+- **The `customEditors` proposal is declined**, and ADR-053 says why: a custom
+  editor replaces the tab, and this editor opens beside it. That is not a cost
+  argument — the cost is real but secondary — it is that the contribution point
+  advertises a product this is not. What would reopen it is the other question,
+  "the grid should be what opens", which is ADR-001's ground and would need its
+  own ADR.
+
+Phase 20 has no unchecked boxes left.
 
 ### 2026-08-30 — 0.1.0 is on the Marketplace
 
