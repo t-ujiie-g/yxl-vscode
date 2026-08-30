@@ -1838,20 +1838,34 @@ below, and one is the answer panel becoming a thing you have to answer.
       the view asked for put focus back only where the page happened to still
       have it; the view asked for that window, so the reader is in the grid, and
       the first key after the jump now reaches a cell rather than the page.
-- [ ] **Where the keyboard is, decided in one place.** Two of the defects above
+- [x] **Where the keyboard is, decided in one place.** Two of the defects above
       were the same defect: a control took the keyboard and nothing put it back
       (the question), and a redraw put it back only where the page happened to
       still have it (the window jump). Both passed every test, and both were
-      found by a reader. Focus is decided in `draw`, in `restate`, in the cell's
+      found by a reader. Focus was decided in `draw`, in `restate`, in the cell's
       own box, in the tab's rename box and in the question — five places, no two
-      of which can see each other. One rule instead: *the grid has the keyboard
-      unless something the reader opened has it*, said once and asserted once.
-- [ ] **What crosses the window's edge, pinned by tests.** The other two were
+      of which could see each other.
+      **One rule now**, in `webview/src/keyboard.ts`: *the grid has the keyboard
+      unless something the reader opened has it*, gated on whether the panel may
+      have the keyboard at all — taking it from the text editor beside is not
+      the panel's to do.
+      **What counts as opened is two lists, and writing them down was the
+      finding.** A question, a rename box and a cell's own box exist *only while
+      the reader is in them*, so they take the keyboard the moment they appear
+      (the question first: it is modal, ADR-048). A find bar stays open while
+      the reader works in the grid, so it **keeps** the keyboard and never takes
+      it back — which the old code got right by accident, in a different place
+      from the rest of the rule, and only for the one handler that opened it.
+      `keyboard.test.ts` asserts the rule once, in seven cases.
+- [x] **What crosses the window's edge, pinned by tests.** The other two were
       also one: the view holds a window (ADR-019) and every gesture that reaches
-      past it has to ask the host — which `fit`, `sum`, `edge` and now `copyOut`
-      each do, and which selecting, `End`, and the next such gesture do not.
-      A suite over *the boundary itself*: for each gesture, a sheet whose block
-      runs past the drawn window, and the answer that must not be the window's.
+      past it has to ask the host — which `fit`, `sum`, `edge` and `copyOut`
+      each do, and which selecting and `End` did not until a reader said so.
+      **`extension/src/beyond.test.ts`** is that suite, over one sheet of 400
+      rows: it asserts first that the window really is smaller than the sheet —
+      without which the rest would pass on a view that was handed everything —
+      and then, for each gesture, the answer that is the sheet's rather than the
+      drawing's. A new gesture that reaches past the edge belongs in it.
       Both of these are how this phase stops producing the next one.
 - [x] **A column width Excel agrees with** *(lower priority — the reader said
       so)*. Two errors, one arithmetic and one font. `PER_CHARACTER = 7` turned
@@ -3611,6 +3625,39 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-30 — Where the keyboard is, and what crosses the window's edge
+
+Phase 17's last two lines, which are the two the phase wrote about *itself*:
+both were defects a reader found, and both were a rule that lived in more than
+one place.
+
+- **The keyboard is decided once.** It was decided in `draw`, in `restate`, in
+  the cell's box, in the tab's rename box and in the question — five places, no
+  two of which could see each other, which is how a question could take the
+  keyboard and never give it back. `webview/src/keyboard.ts` holds the rule now:
+  *the grid has the keyboard unless something the reader opened has it*, over a
+  list of what counts as opened, with the question first because it is modal
+  (ADR-048).
+- **And it is gated on whether the panel may have it at all.** A redraw while
+  the reader is typing in the YAML beside must take nothing, whatever is open
+  here.
+- **What counts as opened is two lists, and writing them down was the finding.**
+  A question, a rename box and a cell's own box exist only while the reader is
+  in them, so they take the keyboard the moment they appear. A find bar stays
+  open while the reader works in the grid, so it *keeps* the keyboard and never
+  takes it back — which the old code got right by accident, in a different place
+  from the rest of the rule and only for the one handler that opened the bar.
+  Six of `keyboard.test.ts`'s seven cases pass on the old code, because each of
+  those defects had already been fixed one at a time; the seventh does not, and
+  the point of the suite is that the rule is in one place to be read.
+- **`beyond.test.ts` pins the window's edge.** One sheet of 400 rows against a
+  window of 200: `sum`, `copyOut`, `find`, `edge` in both its forms, and `fit`,
+  each asserted to answer about the *sheet*. Its first case asserts that the
+  window really is smaller than the sheet — without which the other six would
+  pass on a view that had been handed everything.
+- 2432 → 2446 tests. Comment shape: export 899 blocks / 1980 lines / avg 2.2,
+  private 595 / 595 / avg 1.0, inline 138 / 222 / avg 1.6; 0 over the limit.
 
 ### 2026-08-30 — A spec from nothing, and the compiler's own words
 
