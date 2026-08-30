@@ -105,6 +105,9 @@ importers:
       '@yxl-vscode/patch':
         specifier: workspace:*
         version: link:../patch
+      '@yxl-vscode/refactor':
+        specifier: workspace:*
+        version: link:../refactor
       '@yxl-vscode/spec':
         specifier: workspace:*
         version: link:../spec
@@ -190,6 +193,36 @@ importers:
       '@yxl-vscode/diag':
         specifier: workspace:*
         version: link:../diag
+
+  packages/refactor:
+    dependencies:
+      '@yxl-vscode/compile':
+        specifier: workspace:*
+        version: link:../compile
+      '@yxl-vscode/cst':
+        specifier: workspace:*
+        version: link:../cst
+      '@yxl-vscode/diag':
+        specifier: workspace:*
+        version: link:../diag
+      '@yxl-vscode/loader':
+        specifier: workspace:*
+        version: link:../loader
+      '@yxl-vscode/normalize':
+        specifier: workspace:*
+        version: link:../normalize
+      '@yxl-vscode/patch':
+        specifier: workspace:*
+        version: link:../patch
+      '@yxl-vscode/spec':
+        specifier: workspace:*
+        version: link:../spec
+      '@yxl-vscode/units':
+        specifier: workspace:*
+        version: link:../units
+      '@yxl-vscode/verify':
+        specifier: workspace:*
+        version: link:../verify
 
   packages/spec:
     dependencies:

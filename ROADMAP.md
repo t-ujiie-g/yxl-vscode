@@ -2055,7 +2055,9 @@ than a spreadsheet gesture, which is not what the project is for (§1) — but i
 is model-free, it is what principle 6 looks like when it acts rather than waits,
 and Phase 11's `data:` conversion is its first row already shipped. Everything
 here is detectable by analysis.
-- [ ] Identical resolved styles at N sites → extract to `defs.styles`
+- [x] Identical resolved styles at N sites → extract to `defs.styles`
+      *(2026-08-30, as `refactor`'s first analyser and the `yxl.tidy` command;
+      cells only, and only where the root file holds `defs:` itself)*
 - [x] Homogeneous `cells:` rectangles → `data:` with inline `values:`
       *(Phase 11, 2026-08-23, as a gesture on the rectangle)*
 - [ ] Columns of translated formulas → a `formulas:` range
@@ -3420,6 +3422,40 @@ reach the grid from this menu", but "I want the grid to be **what opens**". That
 is ADR-001's ground, and it would need its own ADR rather than a contribution
 point quietly deciding it.
 
+### ADR-054 — A refactor is a proposal, and the gate is what makes it safe
+**Accepted** 2026-08-30. Phase 21's first row, and the shape the other two take.
+
+*A refactor is not a gesture, so it does not go through `intent`.* Its input is
+the whole spec rather than a click, and its output is a proposal rather than an
+edit. `refactor` is its own package, below `intent` because it needs nothing
+from it — `pathOf` is `loader`'s and `written` is `normalize`'s, so the analysis
+reaches the tree without the resolution table.
+
+*The gate is what the phase is actually about.* `verify`'s `nothingChanges` —
+`expectedDiff` empty, `beyond: 'refuse'` — already guards the writes that must
+move no cell, and a refactor is that claim at its strongest: **it is not that we
+believe the rewrite is equivalent, it is that a single moved cell fails it
+before anything is written** (ADR-009). The test that pins this is the negative
+one: gathering a look under a name the spec already gives to a different look is
+refused, and nobody had to notice by eye.
+
+*The name is the reader's, not the editor's.* A `defs.styles` entry is spec
+content, and an editor that invents `style1` has written its own vocabulary into
+someone else's file (ADR-015's neighbourhood). The core computes a *suggestion*
+from what the look says — `bold-ddebf7` rather than a number — and the edge asks,
+refusing a name already taken. `refactor` never decides one.
+
+*Nothing is applied silently.* The proposal becomes text in memory, VS Code's own
+diff editor shows it against the file, and the write happens only when the reader
+answers the question after it. The diff is the review, and it is the editor's
+real one rather than a picture of one drawn in the panel.
+
+*What this first row does not do*, and why the phase's last two boxes stay open:
+it gathers looks written on **cells**, not on bands; it works only where the root
+file writes `defs:` itself, since a patch addresses one file and an `$include`d
+`defs:` is another file's; and the two cross-cutting rows close when the last
+analyser lands, because they say *all of the above*.
+
 ## 8. Open questions
 
 - **Q1 — `cells:` A1 keys and row insertion.** ✅ *Answered 2026-08-23.*
@@ -3726,6 +3762,37 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-08-30 — The first refactor, and the gate it proves
+
+Phase 21's first row. **yxl: Gather Repeated Looks into a Definition** finds a
+look written out in full at three places or more, offers to give it a name, and
+shows the result as a diff before anything is written.
+
+- **`refactor`, a package of its own**, below `intent` in `layers.json` — its
+  input is the whole spec rather than a gesture, and it needs nothing `intent`
+  holds. ADR-054 says why, and what the other two analysers inherit from it.
+- **The gate is the point.** `verify`'s `nothingChanges` was already in use for
+  writes that must move no cell; a refactor is that claim at full strength. The
+  test that matters is the negative one: gathering a look under a name the spec
+  already gives to a *different* look is refused by the checker, before a byte
+  is written, without anyone comparing by eye.
+- **The name is asked for, never invented.** The core suggests one from what the
+  look says — `bold-ddebf7`, not `style1` — and the host asks, refusing a name
+  already taken. A `defs.styles` entry is the spec's own vocabulary.
+- **The review is VS Code's diff editor**, against a read-only document served
+  under `yxl-proposal:`. The write happens only on the answer after it, through
+  the same `WorkspaceEdit` path as every other edit, so `Cmd`+`Z` takes it back.
+- **`write` rather than `set` at each site**: a look written out in full is a
+  mapping, and only putting text over it inverts byte for byte (ADR-026). `set`
+  refuses, which is how the first run of the tests found it.
+- `KEY` gained `defs` and `styles`; they existed only inside a `keySet` before.
+- 2449 → 2463 tests. Comment shape: 2.2 / 1.0 / 1.6, 0 over the limit —
+  unchanged.
+
+**Still open in Phase 21**: looks on bands rather than cells, a `defs:` the root
+`$include`s, and the two rows that say *all of the above* — they close when the
+formula-range and `overrides:` analysers land.
 
 ### 2026-08-30 — The documentation catches up with the release
 

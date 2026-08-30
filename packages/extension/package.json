@@ -4,7 +4,7 @@
   "license": "Apache-2.0",
   "description": "%extension.description%",
   "type": "module",
-  "displayName": "yxl — the grid beside the spec",
+  "displayName": "yxl \u2014 the grid beside the spec",
   "icon": "icon.png",
   "repository": {
     "type": "git",
@@ -68,6 +68,12 @@
         "title": "%command.build%",
         "category": "yxl",
         "icon": "$(package)"
+      },
+      {
+        "command": "yxl.tidy",
+        "title": "%command.tidy%",
+        "category": "yxl",
+        "icon": "$(sparkle)"
       }
     ],
     "menus": {
@@ -90,6 +96,10 @@
         {
           "command": "yxl.showSource",
           "when": "activeWebviewPanelId == 'yxl.preview'"
+        },
+        {
+          "command": "yxl.tidy",
+          "when": "resourceFilename =~ /\\\\.yxl\\\\.ya?ml$/ || activeWebviewPanelId == 'yxl.preview'"
         }
       ],
       "editor/title": [
@@ -179,6 +189,7 @@
     "@yxl-vscode/intent": "workspace:*",
     "@yxl-vscode/loader": "workspace:*",
     "@yxl-vscode/patch": "workspace:*",
+    "@yxl-vscode/refactor": "workspace:*",
     "@yxl-vscode/spec": "workspace:*",
     "@yxl-vscode/units": "workspace:*",
     "@yxl-vscode/verify": "workspace:*",

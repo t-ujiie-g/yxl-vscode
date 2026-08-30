@@ -3,6 +3,7 @@ import * as vscode from 'vscode';
 import { Compiler } from './commands';
 import { PANEL, Preview } from './preview';
 import { say } from './text';
+import { PROPOSED, proposedText, tidy } from './tidy';
 import { reader } from './words';
 
 /** The yxl this preview targets, compiled in from the one place it is pinned. */
@@ -37,7 +38,12 @@ export function activate(context: vscode.ExtensionContext): void {
       await vscode.window.showTextDocument(document, { preview: false });
       Preview.show(document, context.extensionUri);
     }),
+    vscode.commands.registerCommand('yxl.tidy', () => {
+      const document = specInFocus();
+      if (document !== undefined) void tidy(document);
+    }),
     vscode.commands.registerCommand('yxl.keepKey', () => {}),
+    vscode.workspace.registerTextDocumentContentProvider(PROPOSED, proposedText),
     vscode.window.registerWebviewPanelSerializer(PANEL, {
       deserializeWebviewPanel: (panel, state) => revive(panel, state, context.extensionUri),
     }),
