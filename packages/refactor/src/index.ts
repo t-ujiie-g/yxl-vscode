@@ -1,4 +1,4 @@
-export { mergePatch, mergeStyles, WORTH_MERGING } from './merge';
+export { mergePatch } from './merge';
 export {
   type Gathering,
   type Holds,
@@ -11,6 +11,6 @@ export {
   type Site,
   sites,
 } from './proposal';
-export { rangeFormulas, rangePatch, WORTH_RANGING } from './ranges';
-export { gatherPatch, gatherStyles, suggestedName, WORTH_EXTRACTING } from './styles';
+export { rangePatch } from './ranges';
+export { gatherPatch } from './styles';
 export { type Says, WORDS } from './text';

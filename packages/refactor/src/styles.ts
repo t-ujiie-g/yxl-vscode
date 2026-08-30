@@ -1,11 +1,10 @@
 import type { StyleLayer, StyleSource } from '@yxl-vscode/compile';
 import { entryOf, holds, nodeAt, type Op, type Parsed } from '@yxl-vscode/cst';
 import { pathOf } from '@yxl-vscode/loader';
-import { written } from '@yxl-vscode/normalize';
 import type { Patch } from '@yxl-vscode/patch';
 import { INCLUDE_KEY, KEY, type StyleSays } from '@yxl-vscode/spec';
 import type { FilePath, StyleName } from '@yxl-vscode/units';
-import type { Gathering, Holds, Proposing, Site } from './proposal';
+import { type Gathering, type Holds, lookOf, type Proposing, type Site } from './proposal';
 import { say } from './text';
 
 /** The trees a proposal reads, which is every file the spec is written in. */
@@ -42,7 +41,7 @@ export function gatherStyles(spec: Proposing): readonly Gathering[] {
         const site = siteOf(layer, root, spec.parsed);
         if (site === null) continue;
 
-        const source = written({ kind: 'inline', gives: layer.gives });
+        const source = lookOf(layer.gives);
         const group = found.get(source) ?? { gives: layer.gives, at: [] };
         group.at.push(site);
         found.set(source, group);

@@ -25,6 +25,13 @@ what you did, with your comments, key order and quoting intact.
   anyway it lists what each answer would change — *change the range's formula*,
   which moves 40 cells, or *split the range* — with the count beside it. You
   pick; nothing is picked for you.
+- **Tidies the spec, where that provably changes nothing.** A look written out
+  in full at three places or more becomes one `defs.styles` entry you name;
+  definitions that resolve alike become one, and you pick which name survives; a
+  column of cells each translating one formula becomes the `formulas:` range
+  that fills them. Every one of them **is refused automatically if it would
+  change a single rendered cell**, and none of them is applied silently — you
+  see the diff first.
 - **Reads in English and 日本語**, following VS Code's own display language.
 
 ## What you need
@@ -45,6 +52,8 @@ against.
 - Open any `*.yxl.yaml` and press the **grid** button in the editor's title bar,
   or run **yxl: Open the Grid Beside the Spec**.
 - **Build** and **Check** sit beside it, on both the text and the grid.
+- **yxl: Gather Repeated Looks into a Definition** reads the whole spec and
+  offers what it can tidy without changing the workbook.
 
 ## What it is not
 

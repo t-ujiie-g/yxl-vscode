@@ -1,7 +1,8 @@
-import type { CompiledGrid } from '@yxl-vscode/compile';
+import type { CompiledGrid, StyleLayer } from '@yxl-vscode/compile';
 import type { Parsed, Path } from '@yxl-vscode/cst';
 import type { Saying } from '@yxl-vscode/diag';
-import type { SpecDoc } from '@yxl-vscode/spec';
+import { written } from '@yxl-vscode/normalize';
+import type { SpecDoc, StyleSays } from '@yxl-vscode/spec';
 import type { A1Range, FilePath, StyleName } from '@yxl-vscode/units';
 import { mergeStyles } from './merge';
 import { rangeFormulas } from './ranges';
@@ -73,6 +74,14 @@ export type Holds = 'styles' | 'defs' | 'nothing';
 export function sites(one: Proposal): number {
   if (one.kind === 'merge') return one.at.length + one.defs.length - 1;
   return one.at.length;
+}
+
+/**
+ * A look as a spec would write it, on one line. Two looks group together exactly
+ * when this says the same of them, and what it says is what the definition gets.
+ */
+export function lookOf(gives: StyleSays | StyleLayer['gives']): string {
+  return written({ kind: 'inline', gives });
 }
 
 /** Every tidy-up this spec allows, in the order they would be offered. */
