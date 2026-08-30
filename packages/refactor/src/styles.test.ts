@@ -1,48 +1,9 @@
-import { compile } from '@yxl-vscode/compile';
-import { parse } from '@yxl-vscode/cst';
-import { reading as wording } from '@yxl-vscode/diag';
-import { type IncludeReader, load } from '@yxl-vscode/loader';
-import { applyPatch } from '@yxl-vscode/patch';
-import { type FilePath, filePath, type StyleName, styleName } from '@yxl-vscode/units';
-import { type Ctx, checked, nothingChanges } from '@yxl-vscode/verify';
 import { describe, expect, it } from 'vitest';
-import type { Gathering, Proposing } from './proposal';
+import { english, named, ROOT, spec, taken } from './harness';
+import type { Gathering } from './proposal';
 import { gatherPatch, gatherStyles, suggestedName, WORTH_EXTRACTING } from './styles';
-import { WORDS } from './text';
-
-const ROOT = filePath('spec.yxl.yaml') ?? ('' as FilePath);
-const english = wording('en', WORDS);
-
-function named(name: string): StyleName {
-  const read = styleName(name);
-  if (read === null) throw new Error(`not a style name: ${name}`);
-  return read;
-}
 
 /** A spec as a test writes one, loaded and compiled the way the host loads it. */
-function spec(of: string | Record<string, string>): Proposing & { ctx: Ctx; source: string } {
-  const sources = typeof of === 'string' ? { [ROOT]: of } : of;
-  const read: IncludeReader = (_from, path) =>
-    sources[path] === undefined ? null : { file: filePath(path) ?? ROOT, source: sources[path] };
-
-  const trees = new Map<string, ReturnType<typeof parse>>();
-  const parsed = (file: FilePath) => {
-    if (!trees.has(file)) trees.set(file, parse(sources[file] ?? '', { file }));
-    return trees.get(file) ?? null;
-  };
-
-  const { doc } = load(parse(sources[ROOT] ?? '', { file: ROOT }), read);
-  if (doc === null) throw new Error('did not load');
-
-  return {
-    doc,
-    grid: compile(doc, { read }),
-    parsed,
-    ctx: { root: ROOT, file: ROOT, read },
-    source: sources[ROOT] ?? '',
-  };
-}
-
 const BLUE = '{ font: { bold: true }, fill: "#DDEBF7" }';
 
 /** A sheet whose `A1`..`A<n>` all write the same look out in full. */
@@ -103,17 +64,14 @@ describe('gathering a look that is written out in full', () => {
   });
 });
 
+/** The proposal over a spec, taken with a name, as the file it would leave behind. */
+function gathered(source: string, name = 'header') {
+  const of = spec(source);
+
+  return taken(of, gatherPatch(gatherStyles(of)[0] as Gathering, named(name)));
+}
+
 describe('the patch a proposal makes', () => {
-  /** The proposal over a spec, taken with a name, as the file it would leave behind. */
-  function gathered(source: string, name = 'header'): { text: string; passes: boolean } {
-    const of = spec(source);
-    const one = gatherStyles(of)[0] as Gathering;
-    const patch = gatherPatch(one, named(name));
-    const gate = checked(of.source, patch, nothingChanges, of.ctx);
-
-    return { text: applyPatch(of.source, patch, { file: ROOT }).text, passes: gate.ok === true };
-  }
-
   it('writes the definition and points every site at it', () => {
     const { text } = gathered(repeating(3));
 
@@ -196,9 +154,7 @@ overrides:
   });
 
   it('writes the definition and leaves each exception its reason', () => {
-    const of = spec(MARKED);
-    const patch = gatherPatch(gatherStyles(of)[0] as Gathering, named('patched'));
-    const text = applyPatch(of.source, patch, { file: ROOT }).text;
+    const { text } = gathered(MARKED, 'patched');
 
     expect([
       text.includes('    patched: { font: { italic: true }, fill: "FCE4D6" }'),
@@ -208,10 +164,7 @@ overrides:
   });
 
   it('passes the gate, since an exception reading a name is the look it restated', () => {
-    const of = spec(MARKED);
-    const patch = gatherPatch(gatherStyles(of)[0] as Gathering, named('patched'));
-
-    expect(checked(of.source, patch, nothingChanges, of.ctx).ok).toBe(true);
+    expect(gathered(MARKED, 'patched').passes).toBe(true);
   });
 
   it('counts a cell and an exception together, since one name serves both', () => {

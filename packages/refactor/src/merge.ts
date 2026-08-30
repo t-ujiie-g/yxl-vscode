@@ -1,10 +1,9 @@
 import type { Op } from '@yxl-vscode/cst';
 import { pathOf } from '@yxl-vscode/loader';
-import { written } from '@yxl-vscode/normalize';
 import type { Patch } from '@yxl-vscode/patch';
 import { KEY, type Sheet } from '@yxl-vscode/spec';
 import type { StyleName } from '@yxl-vscode/units';
-import type { Merging, Named, Proposing } from './proposal';
+import { lookOf, type Merging, type Named, type Proposing } from './proposal';
 import { say } from './text';
 
 /** How many definitions must say the same thing before one of them is redundant. */
@@ -17,7 +16,7 @@ export const WORTH_MERGING = 2;
 export function mergeStyles(spec: Proposing): readonly Merging[] {
   const alike = new Map<string, StyleName[]>();
   for (const one of spec.grid.styles) {
-    const look = written({ kind: 'inline', gives: one.gives });
+    const look = lookOf(one.gives);
     alike.set(look, [...(alike.get(look) ?? []), one.name]);
   }
 

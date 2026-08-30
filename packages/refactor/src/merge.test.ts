@@ -1,46 +1,7 @@
-import { compile } from '@yxl-vscode/compile';
-import { parse } from '@yxl-vscode/cst';
-import { reading as wording } from '@yxl-vscode/diag';
-import { type IncludeReader, load } from '@yxl-vscode/loader';
-import { applyPatch } from '@yxl-vscode/patch';
-import { type FilePath, filePath, type StyleName, styleName } from '@yxl-vscode/units';
-import { type Ctx, checked, nothingChanges } from '@yxl-vscode/verify';
 import { describe, expect, it } from 'vitest';
+import { english, named, ROOT, spec, taken } from './harness';
 import { mergePatch, mergeStyles } from './merge';
-import type { Merging, Proposing } from './proposal';
-import { WORDS } from './text';
-
-const ROOT = filePath('spec.yxl.yaml') ?? ('' as FilePath);
-const english = wording('en', WORDS);
-
-function named(name: string): StyleName {
-  const read = styleName(name);
-  if (read === null) throw new Error(`not a style name: ${name}`);
-  return read;
-}
-
-function spec(of: string | Record<string, string>): Proposing & { ctx: Ctx; source: string } {
-  const sources = typeof of === 'string' ? { [ROOT]: of } : of;
-  const read: IncludeReader = (_from, path) =>
-    sources[path] === undefined ? null : { file: filePath(path) ?? ROOT, source: sources[path] };
-
-  const trees = new Map<string, ReturnType<typeof parse>>();
-  const parsed = (file: FilePath) => {
-    if (!trees.has(file)) trees.set(file, parse(sources[file] ?? '', { file }));
-    return trees.get(file) ?? null;
-  };
-
-  const { doc } = load(parse(sources[ROOT] ?? '', { file: ROOT }), read);
-  if (doc === null) throw new Error('did not load');
-
-  return {
-    doc,
-    grid: compile(doc, { read }),
-    parsed,
-    ctx: { root: ROOT, file: ROOT, read },
-    source: sources[ROOT] ?? '',
-  };
-}
+import type { Merging } from './proposal';
 
 /** The shape a reader hits: three definitions saying one thing, one cell each. */
 const THREE = `defs:
@@ -103,13 +64,10 @@ describe('definitions that say the same thing', () => {
 });
 
 describe('the patch a merge makes', () => {
-  function merged(source: string, keep: string): { text: string; passes: boolean } {
+  function merged(source: string, keep: string) {
     const of = spec(source);
-    const one = mergeStyles(of)[0] as Merging;
-    const patch = mergePatch(one, named(keep));
-    const gate = checked(of.source, patch, nothingChanges, of.ctx);
 
-    return { text: applyPatch(of.source, patch, { file: ROOT }).text, passes: gate.ok === true };
+    return taken(of, mergePatch(mergeStyles(of)[0] as Merging, named(keep)));
   }
 
   it('takes away the definitions it replaces and points every reader at the one kept', () => {
@@ -137,5 +95,13 @@ describe('the patch a merge makes', () => {
       true,
       true,
     ]);
+  });
+});
+
+describe('definitions too few to be worth merging', () => {
+  it('leaves a single definition alone, however many cells read it', () => {
+    const source = `defs:\n  styles:\n    header: { font: { bold: true } }\nsheets:\n  - name: S\n    cells:\n      A1: { value: 1, style: header }\n      A2: { value: 2, style: header }\n`;
+
+    expect(mergeStyles(spec(source))).toEqual([]);
   });
 });

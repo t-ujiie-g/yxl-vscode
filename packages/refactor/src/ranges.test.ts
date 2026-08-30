@@ -1,40 +1,7 @@
-import { compile } from '@yxl-vscode/compile';
-import { parse } from '@yxl-vscode/cst';
-import { reading as wording } from '@yxl-vscode/diag';
-import { type IncludeReader, load } from '@yxl-vscode/loader';
-import { applyPatch } from '@yxl-vscode/patch';
-import { type FilePath, filePath } from '@yxl-vscode/units';
-import { type Ctx, checked, nothingChanges } from '@yxl-vscode/verify';
 import { describe, expect, it } from 'vitest';
-import type { Proposing, Ranging } from './proposal';
+import { english, spec, taken } from './harness';
+import type { Ranging } from './proposal';
 import { rangeFormulas, rangePatch, WORTH_RANGING } from './ranges';
-import { WORDS } from './text';
-
-const ROOT = filePath('spec.yxl.yaml') ?? ('' as FilePath);
-const english = wording('en', WORDS);
-
-function spec(of: string): Proposing & { ctx: Ctx; source: string } {
-  const sources: Record<string, string> = { [ROOT]: of };
-  const read: IncludeReader = (_from, path) =>
-    sources[path] === undefined ? null : { file: filePath(path) ?? ROOT, source: sources[path] };
-
-  const trees = new Map<string, ReturnType<typeof parse>>();
-  const parsed = (file: FilePath) => {
-    if (!trees.has(file)) trees.set(file, parse(sources[file] ?? '', { file }));
-    return trees.get(file) ?? null;
-  };
-
-  const { doc } = load(parse(of, { file: ROOT }), read);
-  if (doc === null) throw new Error('did not load');
-
-  return {
-    doc,
-    grid: compile(doc, { read }),
-    parsed,
-    ctx: { root: ROOT, file: ROOT, read },
-    source: of,
-  };
-}
 
 /** A column of cells each translating one formula down a row, as a person writes one. */
 function column(rows: number, from = 2): string {
@@ -99,13 +66,10 @@ describe('a column of formulas that each translate one', () => {
 });
 
 describe('the patch a range makes', () => {
-  function ranged(source: string): { text: string; passes: boolean } {
+  function ranged(source: string) {
     const of = spec(source);
-    const one = rangeFormulas(of)[0] as Ranging;
-    const patch = rangePatch(one);
-    const gate = checked(of.source, patch, nothingChanges, of.ctx);
 
-    return { text: applyPatch(of.source, patch, { file: ROOT }).text, passes: gate.ok === true };
+    return taken(of, rangePatch(rangeFormulas(of)[0] as Ranging));
   }
 
   it('writes the range and takes away every cell it replaces', () => {

@@ -3833,6 +3833,38 @@ than widening it silently.
 
 ## 11. Living changelog
 
+### 2026-08-31 — A §8 pass over the phase just finished
+
+Three phases' worth of `refactor` landed in three days, and the pass reads what
+that left behind. The findings, by the lens that found them.
+
+- **§8.2 — the harness was written three times.** Each analyser's suite carried
+  its own 22-line `spec()`; `intent` has had `harness.ts` for exactly this since
+  Phase 7. `refactor/src/harness.ts` now holds it, with `named` and `taken` —
+  the latter being the apply-and-check pair every suite was spelling out.
+- **§8.2 — `index.ts` was wide because the tests were reaching through it.**
+  `gatherStyles`, `mergeStyles`, `rangeFormulas`, `suggestedName` and the three
+  thresholds had no caller outside the package. The public surface is `proposals`,
+  the three `*Patch`, `sites`, and the types; the suites import the analysers
+  from their own modules instead.
+- **§8.4 — the entry point had no test.** Every suite exercised one analyser
+  directly, so *the composition* — three kinds offered over one spec, in order,
+  with distinct ids — was never asserted. `proposal.test.ts` does that now, and
+  covers `sites()`, whose merge arithmetic is the non-obvious one.
+- **§8.1 — one name for a look as a spec writes it.** `lookOf` says what two
+  analysers were each spelling; the string it returns is both the key a group is
+  gathered by and the body the definition gets, which is worth saying once.
+- **§8.5 — the tidy-up was in no user-facing document.** The README has it now.
+  The **package's** README and `CHANGELOG.md` do not, and deliberately: they ship
+  with a release, and 0.1.0 does not have this. They are the next release's to
+  write.
+- **Checked and left alone**: the twelve `loaded()` helpers across the loader's
+  suites are each a different one-line scaffold, and folding them together would
+  cost more than it saves (§8.3's rule, applied to tests). No file needed
+  splitting; the largest in `refactor` is 137 lines.
+- 2484 → 2493 tests. **Comment shape: 2.2 / 1.0 / 1.6, 0 over the limit** — the
+  averages have not moved across the phase (§8.8).
+
 ### 2026-08-30 — Phase 21 closes, and with it every phase
 
 The last row: **the look several `overrides:` restate becomes a definition they
