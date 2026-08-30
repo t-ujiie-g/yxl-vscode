@@ -1,0 +1,7 @@
+# The bundles are what ships, with the schema the YAML extension is pointed at;
+# the sources they were built from are not.
+src/**
+build.mjs
+tsconfig.json
+*.tsbuildinfo
+**/*.map

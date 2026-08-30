@@ -1,17 +1,34 @@
 {
   "name": "yxl-vscode",
-  "version": "0.0.0",
-  "private": true,
+  "version": "0.1.0",
   "license": "Apache-2.0",
   "description": "%extension.description%",
   "type": "module",
-  "displayName": "yxl preview",
+  "displayName": "yxl — the grid beside the spec",
+  "icon": "icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/t-ujiie-g/yxl-vscode.git"
+  },
+  "bugs": {
+    "url": "https://github.com/t-ujiie-g/yxl-vscode/issues"
+  },
+  "homepage": "https://github.com/t-ujiie-g/yxl-vscode#readme",
+  "keywords": [
+    "yxl",
+    "xlsx",
+    "excel",
+    "spreadsheet",
+    "yaml"
+  ],
   "publisher": "t-ujiie-g",
   "engines": {
     "vscode": "^1.104.0"
   },
   "categories": [
-    "Visualization"
+    "Visualization",
+    "Data Science",
+    "Other"
   ],
   "main": "./dist/extension.cjs",
   "exports": {
@@ -151,7 +168,8 @@
     ]
   },
   "scripts": {
-    "build": "node build.mjs"
+    "build": "node build.mjs",
+    "package": "node build.mjs && pnpm dlx @vscode/vsce@3.9.2 package --no-dependencies --out yxl-vscode.vsix"
   },
   "dependencies": {
     "@yxl-vscode/compile": "workspace:*",
