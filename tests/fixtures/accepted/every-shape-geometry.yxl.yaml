@@ -1,0 +1,44 @@
+# Every geometry `docs/spec.md` §18 names, which upstream's own `shapes.yxl.yaml`
+# tries five of. The twelve the Excel backend refused before yxl 0.4.0 are the
+# reason this is here: a geometry the compiler takes and this editor does not is
+# a spec a reader cannot open.
+sheets:
+  - name: Shapes
+    cells:
+      A1: The shapes sit beside this.
+    shapes:
+      - { at: C1, kind: rectangle }
+      - { at: C3, kind: rounded_rectangle }
+      - { at: C5, kind: ellipse }
+      - { at: C7, kind: triangle }
+      - { at: C9, kind: right_triangle }
+      - { at: C11, kind: diamond }
+      - { at: C13, kind: parallelogram }
+      - { at: C15, kind: trapezoid }
+      - { at: C17, kind: pentagon }
+      - { at: E1, kind: hexagon }
+      - { at: E3, kind: octagon }
+      - { at: E5, kind: decagon }
+      - { at: E7, kind: star_5 }
+      - { at: E9, kind: plus }
+      - { at: E11, kind: chevron }
+      - { at: E13, kind: cube }
+      - { at: E15, kind: can }
+      - { at: E17, kind: donut }
+      - { at: G1, kind: frame }
+      - { at: G3, kind: heart }
+      - { at: G5, kind: moon }
+      - { at: G7, kind: sun }
+      - { at: G9, kind: cloud }
+      - { at: G11, kind: pie }
+      - { at: G13, kind: line }
+      - { at: G15, kind: arrow_right }
+      - { at: G17, kind: arrow_left }
+      - { at: I1, kind: arrow_up }
+      - { at: I3, kind: arrow_down }
+      - { at: I5, kind: arrow_left_right }
+      - { at: I7, kind: arrow_up_down }
+      - { at: I9, kind: callout_rectangle, text: A word }
+      - { at: I11, kind: callout_rounded_rectangle, text: A word }
+      - { at: I13, kind: callout_ellipse, text: A word }
+      - { at: I15, kind: callout_cloud, text: A word }

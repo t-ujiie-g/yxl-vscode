@@ -40,7 +40,7 @@ The **`yxl` compiler**, on your `PATH` or named by the `yxl.path` setting. It is
 required rather than bundled: it is what builds the workbook, and you likely
 have it already.
 
-This release targets **yxl 0.3.6**. An older or a newer compiler is a warning
+This release targets **yxl 0.4.0**. An older or a newer compiler is a warning
 rather than a refusal — a spec written here is ordinary yxl — but the schema is
 not frozen until yxl's v1.0, so the pinned version is the one this was tested
 against.

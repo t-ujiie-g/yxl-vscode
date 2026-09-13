@@ -463,6 +463,7 @@ const RECTANGLE = '0,0 100,0 100,100 0,100';
 const POLYGONS: Record<string, string> = {
   rectangle: RECTANGLE,
   triangle: '50,0 100,100 0,100',
+  right_triangle: '0,0 0,100 100,100',
   diamond: regular(4),
   parallelogram: '25,0 100,0 75,100 0,100',
   trapezoid: '25,0 75,0 100,100 0,100',
@@ -473,9 +474,18 @@ const POLYGONS: Record<string, string> = {
   star_5: star(),
   plus: '35,0 65,0 65,35 100,35 100,65 65,65 65,100 35,100 35,65 0,65 0,35 35,35',
   chevron: '0,0 75,0 100,50 75,100 0,100 25,50',
+  arrow_right: '0,30 60,30 60,0 100,50 60,100 60,70 0,70',
+  arrow_left: '100,30 40,30 40,0 0,50 40,100 40,70 100,70',
+  arrow_up: '30,100 30,40 0,40 50,0 100,40 70,40 70,100',
+  arrow_down: '30,0 30,60 0,60 50,100 100,60 70,60 70,0',
+  arrow_left_right: '0,50 25,10 25,35 75,35 75,10 100,50 75,90 75,65 25,65 25,90',
+  arrow_up_down: '50,0 10,25 35,25 35,75 10,75 50,100 90,75 65,75 65,25 90,25',
+  callout_rectangle: '0,0 100,0 100,78 50,78 20,100 32,78 0,78',
 };
 
 const PATHS: Record<string, string> = {
+  rounded_rectangle:
+    'M 16,0 H 84 A 16,16 0 0 1 100,16 V 84 A 16,16 0 0 1 84,100 H 16 A 16,16 0 0 1 0,84 V 16 A 16,16 0 0 1 16,0 Z',
   ellipse: 'M 50,0 A 50,50 0 1 1 49.99,0 Z',
   cube: 'M 0,25 L 25,0 L 100,0 L 100,75 L 75,100 L 0,100 Z M 0,25 L 75,25 L 100,0 M 75,25 L 75,100',
   can: 'M 0,15 A 50,15 0 0 1 100,15 L 100,85 A 50,15 0 0 1 0,85 Z M 0,15 A 50,15 0 0 0 100,15',
@@ -489,6 +499,12 @@ const PATHS: Record<string, string> = {
     'M 25,85 A 22,22 0 0 1 22,42 A 26,26 0 0 1 70,30 A 20,20 0 0 1 82,68 A 18,18 0 0 1 75,85 Z',
   pie: 'M 50,50 L 50,0 A 50,50 0 1 1 0,50 Z',
   line: 'M 0,100 L 100,0',
+  callout_rounded_rectangle:
+    'M 14,0 H 86 A 14,14 0 0 1 100,14 V 64 A 14,14 0 0 1 86,78 H 50 L 20,100 L 32,78 H 14 A 14,14 0 0 1 0,64 V 14 A 14,14 0 0 1 14,0 Z',
+  // The tail is part of the body's own outline, so no stroke crosses the balloon.
+  callout_ellipse: 'M 0,39 A 50,39 0 1 1 41,77 L 14,100 L 21,71 A 50,39 0 0 1 0,39 Z',
+  callout_cloud:
+    'M 24,70 A 20,20 0 0 1 21,32 A 24,24 0 0 1 66,21 A 18,18 0 0 1 79,56 A 16,16 0 0 1 71,70 Z M 30,80 A 7,7 0 1 1 30.01,80 Z M 19,93 A 5,5 0 1 1 19.01,93 Z M 10,100 A 3,3 0 1 1 10.01,100 Z',
 };
 
 /** The preset geometry a shape names, drawn as an outline of it and not as DrawingML's own (ADR-029). */

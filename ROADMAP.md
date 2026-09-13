@@ -3833,6 +3833,38 @@ than widening it silently.
 
 ## 11. Living changelog
 
+### 2026-09-13 — The pin moves to yxl 0.4.0
+
+A bump that lifts refusals rather than changing the format: yxl 0.4.0 takes
+`moonbitlang/mbtexcel@0.1.10`, and three things the schema described as blocked
+became things a spec may now say. Nothing this editor already read changed
+meaning, and the oracle agrees over the whole corpus.
+
+- **Twelve shape geometries.** The backend lowercased the DrawingML `prst`
+  token, so every geometry whose token carries a capital was refused by name;
+  0.4.0's keeps the case. `SHAPE_KINDS` grows from 23 to 35 —
+  `rounded_rectangle`, `right_triangle`, the six straight arrows, the four
+  callouts — in the order `docs/spec.md` §18 lists them, and `webview` draws
+  each as an outline of its own.
+- **A guard the old list did not need.** A kind added to `SHAPE_KINDS` and
+  forgotten in `webview` draws as a rectangle and says nothing, which is the
+  fallback for a spec from a *newer* yxl doing its job in the wrong place. A
+  test now renders every kind and fails on any that comes back the same shape as
+  `rectangle`. It was checked by deleting an outline.
+- **Upstream's own example tries five of the thirty-five**, so
+  `tests/fixtures/accepted/every-shape-geometry.yxl.yaml` names them all — the
+  compiler builds it and this editor reads it whole, which is the pair ADR-018
+  asks for.
+- **A workbook's own `protect:` is a key a spec may carry now**, where 0.3.6
+  refused it for writing `<workbookProtection>` out of element order. It stays
+  opaque (ADR-011) and the coverage table does not move; what changed is that
+  `preservation.test.ts` finally sees one, in `interactive.yxl.yaml`.
+- **A pivot's `filters:` axis and a second pivot over a second source** are
+  likewise carried untouched — `pivots:` is opaque and was already.
+- The shipped copy of `docs/yxl.schema.json` was retaken, as a pin move does.
+- 2493 → 2495 tests. Comment shape: export 931 blocks / 2042 lines / avg 2.2,
+  private 619 / 619 / avg 1.0, inline 140 / 225 / avg 1.6; 0 over the limit.
+
 ### 2026-08-31 — 0.1.1, ready for the tag
 
 The release the tidy-up belongs in. Everything a `v0.1.1` tag needs is in place

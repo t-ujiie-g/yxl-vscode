@@ -98,13 +98,15 @@ export interface Image extends SpecNode {
 }
 
 /**
- * The preset geometries a shape takes; the ones whose DrawingML token carries a
- * capital are refused upstream and so are not here (`docs/spec.md` §18).
+ * The preset geometries a shape takes: a subset of DrawingML's presets, in the
+ * order `docs/spec.md` §18 lists them.
  */
 export const SHAPE_KINDS = [
   'rectangle',
+  'rounded_rectangle',
   'ellipse',
   'triangle',
+  'right_triangle',
   'diamond',
   'parallelogram',
   'trapezoid',
@@ -125,6 +127,16 @@ export const SHAPE_KINDS = [
   'cloud',
   'pie',
   'line',
+  'arrow_right',
+  'arrow_left',
+  'arrow_up',
+  'arrow_down',
+  'arrow_left_right',
+  'arrow_up_down',
+  'callout_rectangle',
+  'callout_rounded_rectangle',
+  'callout_ellipse',
+  'callout_cloud',
 ] as const;
 
 export type ShapeKind = (typeof SHAPE_KINDS)[number];

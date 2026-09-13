@@ -150,9 +150,7 @@ describe('the corpus of specs that use what this editor does not model', () => {
       carried(read(sample, sample.source), sample.path).map((one) => one.key),
     );
 
-    // `docs/spec.md` §13's sheet background, §14, §15, §20 and §21. A workbook's
-    // own `protect:` would be here too, and no example writes one: upstream
-    // refuses it, so a spec that carries it does not build.
+    // `docs/spec.md` §13's sheet background, §14, §15, §16, §20 and §21.
     expect([...new Set(keys)].sort()).toEqual([
       'active',
       'background',
@@ -160,6 +158,7 @@ describe('the corpus of specs that use what this editor does not model', () => {
       'controls',
       'pivots',
       'properties',
+      'protect',
       'slicers',
     ]);
   });

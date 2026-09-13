@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 
+import { SHAPE_KINDS } from '@yxl-vscode/spec';
 import { describe, expect, it } from 'vitest';
 import { floats } from './float';
 import { asks, sheet } from './harness';
@@ -255,6 +256,23 @@ describe('a shape', () => {
   it('draws a geometry it has no outline for as a rectangle rather than nothing', () => {
     const drawn = floats(sheet({ shapes: [shape({ kind: 'unheard-of' })] }), asks());
     expect(drawn?.querySelector('.float.shape svg > *')?.tagName).toBe('polygon');
+  });
+
+  it('has an outline of its own for every geometry the schema names', () => {
+    // The fallback above is for a spec from a newer yxl, not for a kind this
+    // editor knows and forgot to draw — which it would hide.
+    const outline = (kind: string): string | null => {
+      const drawn = floats(sheet({ shapes: [shape({ kind })] }), asks());
+      const figure = drawn?.querySelector('.float.shape svg > *');
+      return figure === null || figure === undefined
+        ? null
+        : (figure.getAttribute('points') ?? figure.getAttribute('d'));
+    };
+
+    const square = outline('rectangle');
+    const fell = SHAPE_KINDS.filter((kind) => kind !== 'rectangle' && outline(kind) === square);
+
+    expect(fell).toEqual([]);
   });
 
   it('lays each line of text over it, wearing the font that line was given', () => {
