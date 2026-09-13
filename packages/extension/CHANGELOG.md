@@ -4,6 +4,20 @@ Every release names the `yxl` it was built against: the schema is not frozen
 until yxl's v1.0, so the pinned compiler is part of what a version means
 (`ROADMAP.md` §8 Q6).
 
+## 0.1.2 — 2026-09-13
+
+Targets **yxl 0.4.0**, up from 0.3.6.
+
+- **Twelve shape geometries that yxl refused before.** `rounded_rectangle`,
+  `right_triangle`, the six straight arrows, and the four callouts — a defect in
+  the Excel backend lowercased their DrawingML token, and 0.4.0's backend keeps
+  its case. Each is drawn in the grid as the outline it names.
+- **A workbook's own `protect:` is carried through.** 0.4.0 writes it where
+  Excel accepts it, so a spec may now hold one; this editor does not model it
+  and leaves it exactly as written.
+- A pivot's `filters:` axis, and a second pivot over a second source, are
+  likewise carried untouched.
+
 ## 0.1.1 — 2026-08-31
 
 Still targets **yxl 0.3.6**.

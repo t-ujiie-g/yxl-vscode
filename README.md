@@ -6,7 +6,7 @@ beside its text, and translates grid gestures back into edits on the spec — no
 into a workbook.
 
 > **Status: published, and the everyday gestures write back.**
-> [**`t-ujiie-g.yxl-vscode`**][listing] 0.1.0, targeting yxl 0.3.6. *yxl: Open
+> [**`t-ujiie-g.yxl-vscode`**][listing] 0.1.2, targeting yxl 0.4.0. *yxl: Open
 > the Grid Beside the Spec* draws a spec as a grid next to the text and redraws
 > it as you type. Under it: YAML parses into a span-carrying tree, edits apply
 > as minimal byte patches that leave every untouched byte alone, a whole spec —
@@ -123,7 +123,7 @@ Host.
 
 The **Build** and **Check** buttons beside it need the `yxl` compiler on your
 `PATH`, or `yxl.path` set to it, and so does making a new spec; the grid itself
-needs nothing. This editor targets **yxl 0.3.6** — an older or newer compiler is
+needs nothing. This editor targets **yxl 0.4.0** — an older or newer compiler is
 a warning rather than a refusal, and a release says which one it was built
 against.
 

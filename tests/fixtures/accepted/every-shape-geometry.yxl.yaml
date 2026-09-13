@@ -1,0 +1,257 @@
+# Every geometry `docs/spec.md` §18 names, which upstream's own `shapes.yxl.yaml`
+# tries five of. The twelve the Excel backend refused before yxl 0.4.0 are the
+# reason this is here: a geometry the compiler takes and this editor does not is
+# a spec a reader cannot open.
+#
+# Each carries a size, a fill and a line, so the sheet is also what a reader
+# looks at to see the outlines — one with neither fill nor line draws nothing,
+# in Excel and here (`docs/spec.md` §18).
+sheets:
+  - name: Shapes
+    columns:
+      - { at: A-N, width: 11 }
+    shapes:
+      - at: B2
+        kind: rectangle
+        text: rectangle
+        size: { width: 110, height: 70 }
+        fill: "DCE9F5"
+        line: "1F77B4"
+
+      - at: E2
+        kind: rounded_rectangle
+        text: rounded_rectangle
+        size: { width: 110, height: 70 }
+        fill: "DCE9F5"
+        line: "1F77B4"
+
+      - at: H2
+        kind: ellipse
+        text: ellipse
+        size: { width: 110, height: 70 }
+        fill: "DCE9F5"
+        line: "1F77B4"
+
+      - at: K2
+        kind: triangle
+        text: triangle
+        size: { width: 110, height: 70 }
+        fill: "DCE9F5"
+        line: "1F77B4"
+
+      - at: N2
+        kind: right_triangle
+        text: right_triangle
+        size: { width: 110, height: 70 }
+        fill: "DCE9F5"
+        line: "1F77B4"
+
+      - at: B7
+        kind: diamond
+        text: diamond
+        size: { width: 110, height: 70 }
+        fill: "DCE9F5"
+        line: "1F77B4"
+
+      - at: E7
+        kind: parallelogram
+        text: parallelogram
+        size: { width: 110, height: 70 }
+        fill: "DCE9F5"
+        line: "1F77B4"
+
+      - at: H7
+        kind: trapezoid
+        text: trapezoid
+        size: { width: 110, height: 70 }
+        fill: "DCE9F5"
+        line: "1F77B4"
+
+      - at: K7
+        kind: pentagon
+        text: pentagon
+        size: { width: 110, height: 70 }
+        fill: "DCE9F5"
+        line: "1F77B4"
+
+      - at: N7
+        kind: hexagon
+        text: hexagon
+        size: { width: 110, height: 70 }
+        fill: "DCE9F5"
+        line: "1F77B4"
+
+      - at: B12
+        kind: octagon
+        text: octagon
+        size: { width: 110, height: 70 }
+        fill: "DCE9F5"
+        line: "1F77B4"
+
+      - at: E12
+        kind: decagon
+        text: decagon
+        size: { width: 110, height: 70 }
+        fill: "DCE9F5"
+        line: "1F77B4"
+
+      - at: H12
+        kind: star_5
+        text: star_5
+        size: { width: 110, height: 70 }
+        fill: "DCE9F5"
+        line: "1F77B4"
+
+      - at: K12
+        kind: plus
+        text: plus
+        size: { width: 110, height: 70 }
+        fill: "DCE9F5"
+        line: "1F77B4"
+
+      - at: N12
+        kind: chevron
+        text: chevron
+        size: { width: 110, height: 70 }
+        fill: "DCE9F5"
+        line: "1F77B4"
+
+      - at: B17
+        kind: cube
+        text: cube
+        size: { width: 110, height: 70 }
+        fill: "DCE9F5"
+        line: "1F77B4"
+
+      - at: E17
+        kind: can
+        text: can
+        size: { width: 110, height: 70 }
+        fill: "DCE9F5"
+        line: "1F77B4"
+
+      - at: H17
+        kind: donut
+        text: donut
+        size: { width: 110, height: 70 }
+        fill: "DCE9F5"
+        line: "1F77B4"
+
+      - at: K17
+        kind: frame
+        text: frame
+        size: { width: 110, height: 70 }
+        fill: "DCE9F5"
+        line: "1F77B4"
+
+      - at: N17
+        kind: heart
+        text: heart
+        size: { width: 110, height: 70 }
+        fill: "DCE9F5"
+        line: "1F77B4"
+
+      - at: B22
+        kind: moon
+        text: moon
+        size: { width: 110, height: 70 }
+        fill: "DCE9F5"
+        line: "1F77B4"
+
+      - at: E22
+        kind: sun
+        text: sun
+        size: { width: 110, height: 70 }
+        fill: "DCE9F5"
+        line: "1F77B4"
+
+      - at: H22
+        kind: cloud
+        text: cloud
+        size: { width: 110, height: 70 }
+        fill: "DCE9F5"
+        line: "1F77B4"
+
+      - at: K22
+        kind: pie
+        text: pie
+        size: { width: 110, height: 70 }
+        fill: "DCE9F5"
+        line: "1F77B4"
+
+      - at: N22
+        kind: line
+        text: line
+        size: { width: 110, height: 70 }
+        fill: "DCE9F5"
+        line: "1F77B4"
+
+      - at: B27
+        kind: arrow_right
+        text: arrow_right
+        size: { width: 110, height: 70 }
+        fill: "DCE9F5"
+        line: "1F77B4"
+
+      - at: E27
+        kind: arrow_left
+        text: arrow_left
+        size: { width: 110, height: 70 }
+        fill: "DCE9F5"
+        line: "1F77B4"
+
+      - at: H27
+        kind: arrow_up
+        text: arrow_up
+        size: { width: 110, height: 70 }
+        fill: "DCE9F5"
+        line: "1F77B4"
+
+      - at: K27
+        kind: arrow_down
+        text: arrow_down
+        size: { width: 110, height: 70 }
+        fill: "DCE9F5"
+        line: "1F77B4"
+
+      - at: N27
+        kind: arrow_left_right
+        text: arrow_left_right
+        size: { width: 110, height: 70 }
+        fill: "DCE9F5"
+        line: "1F77B4"
+
+      - at: B32
+        kind: arrow_up_down
+        text: arrow_up_down
+        size: { width: 110, height: 70 }
+        fill: "DCE9F5"
+        line: "1F77B4"
+
+      - at: E32
+        kind: callout_rectangle
+        text: callout_rectangle
+        size: { width: 110, height: 70 }
+        fill: "DCE9F5"
+        line: "1F77B4"
+
+      - at: H32
+        kind: callout_rounded_rectangle
+        text: callout_rounded_rectangle
+        size: { width: 110, height: 70 }
+        fill: "DCE9F5"
+        line: "1F77B4"
+
+      - at: K32
+        kind: callout_ellipse
+        text: callout_ellipse
+        size: { width: 110, height: 70 }
+        fill: "DCE9F5"
+        line: "1F77B4"
+
+      - at: N32
+        kind: callout_cloud
+        text: callout_cloud
+        size: { width: 110, height: 70 }
+        fill: "DCE9F5"
+        line: "1F77B4"
