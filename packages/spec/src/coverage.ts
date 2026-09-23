@@ -70,6 +70,11 @@ export const SHEET_KEYS: readonly Covered[] = [
   },
   { key: 'rows', standing: 'editable', says: 'the same down the side' },
   {
+    key: 'layouts',
+    standing: 'preview',
+    says: 'drawn whole — header levels, rows read by name, blocks, footers; a drawn cell takes an override',
+  },
+  {
     key: 'merges',
     standing: 'editable',
     says: 'merged and taken apart, losing no value either way',

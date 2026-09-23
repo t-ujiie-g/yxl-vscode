@@ -1,4 +1,6 @@
 import { execFile } from 'node:child_process';
+import { accessSync, constants } from 'node:fs';
+import { delimiter, dirname, isAbsolute, join } from 'node:path';
 import { promisify } from 'node:util';
 import type { Message } from '@yxl-vscode/diag';
 import { say } from './text';
@@ -57,4 +59,62 @@ function compare(one: string, other: string): number {
     if (difference !== 0) return difference;
   }
   return 0;
+}
+
+/** Where yxl publishes its installers, one per release tag. */
+const RELEASES = 'https://raw.githubusercontent.com/t-ujiie-g/yxl';
+
+/** A shell to start, and the one line it runs. */
+export interface Installation {
+  readonly shell: string;
+  readonly args: readonly string[];
+  readonly line: string;
+}
+
+/**
+ * yxl's own installer for exactly `target`, fetched from that release's tag and
+ * told the version, so what lands is what the tag says; it checks the download's
+ * checksum itself. `into` is the folder to put it in, or `null` for its default.
+ */
+export function installation(target: string, windows: boolean, into: string | null): Installation {
+  if (windows) {
+    const quoted = (text: string) => `'${text.replace(/'/g, "''")}'`;
+    const dir = into === null ? '' : `$env:YXL_INSTALL_DIR=${quoted(into)}; `;
+    const script = quoted(`${RELEASES}/v${target}/install.ps1`);
+    return {
+      shell: 'powershell.exe',
+      args: ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command'],
+      line: `$env:YXL_VERSION=${quoted(target)}; ${dir}irm ${script} | iex`,
+    };
+  }
+
+  const quoted = (text: string) => `'${text.replace(/'/g, `'\\''`)}'`;
+  const script = quoted(`${RELEASES}/v${target}/install.sh`);
+  const dir = into === null ? '' : ` YXL_INSTALL_DIR=${quoted(into)}`;
+  return {
+    shell: '/bin/sh',
+    args: ['-c'],
+    line: `(curl -fsSL ${script} || wget -qO- ${script}) | YXL_VERSION=${quoted(target)}${dir} sh`,
+  };
+}
+
+/**
+ * The folder the compiler this editor runs is in: an absolute path's own, or
+ * the first on `PATH` that holds it. `null` where there is none to find.
+ */
+export function folderOf(binary: string, path: string, windows: boolean): string | null {
+  if (isAbsolute(binary)) return dirname(binary);
+
+  const names = windows ? [binary, `${binary}.exe`, `${binary}.cmd`] : [binary];
+  for (const dir of path.split(delimiter).filter((one) => one !== '')) {
+    for (const name of names) {
+      try {
+        accessSync(join(dir, name), windows ? constants.F_OK : constants.X_OK);
+        return dir;
+      } catch {
+        // Not in this folder; the next one on the path may have it.
+      }
+    }
+  }
+  return null;
 }

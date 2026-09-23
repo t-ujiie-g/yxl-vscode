@@ -427,6 +427,11 @@ Phases land in order. Each is releasable or explicitly marked otherwise. The
 > true — **so a task now starts as a scope conversation rather than as the next
 > line on a list.** What is left is the v1.0 gate's last line, and it is not
 > ours: a frozen yxl schema (§8 Q6).
+>
+> **2026-09-23: yxl 0.5.0 opened Phase 22.** Its `layouts:` are the shape
+> upstream now writes a maintained workbook in, so drawing them was scoped with
+> the reader as the pin move's own work; what is left of them is Phase 22's
+> open rows.
 
 **The number follows the order**, so that §10 — take the first phase with an
 unchecked box — can be read off the page. **Phases 17–20 are the release
@@ -2075,6 +2080,44 @@ here is detectable by analysis.
 - [x] Presented as reviewable proposals with a diff, never applied silently
       *(VS Code's own diff editor, and the write only on the answer after it)*
 
+### Phase 22 — Layouts (yxl 0.5.0)
+Opened 2026-09-23 with the pin move to yxl 0.5.0, scoped with the reader:
+**draw layouts whole now, edit them next.** Upstream's `workbook`, `columns` and
+`subtotals` examples are written in them, so a preview that left them blank
+would have failed on the specs upstream recommends. `docs/spec.md` §25 is the
+reference; ADR-057 is how they project.
+
+- [x] Read `layouts:`, `defs.blocks`, `at: { below: … }` wherever an anchor is
+      read, a range written as a layout's name, and an override `at:` given by
+      meaning — the loader keeps them as written, the compiler places them
+- [x] Place every layout ahead of the sheets and draw it as the keys it compiles
+      to: header levels merged as §25 says, rows by position or by field name
+      from `values:`, CSV and JSON, blocks as their qualified columns,
+      `{{name}}` in a formula and a rule, footers with totals and grouped
+      `…IFS` subtotals, `merge_to`
+- [x] A layout's name reaches it from elsewhere: tables, validations,
+      conditional formats, a validation's list, a sparkline's data, and
+      everything anchored `below:` it
+- [x] A drawn cell says where it came from and refuses a value with a reason;
+      an override still excepts it. Nothing writes inside a layout's YAML,
+      whatever gesture asked (ADR-057)
+- [x] **Tier 3 for layouts**: `tests/layouts.test.ts` builds each spec with the
+      pinned yxl, extracts it flat, and compares the two grids cell by cell —
+      value, formula, fill, bold, italic, format, merges, widths, rules,
+      anchors — over upstream's three and `tests/fixtures/layouts/`, which
+      tries the corners upstream leaves untried
+- [x] The compiler checked once after each update of this extension, and an
+      older or missing one offered yxl's own installer (ADR-058)
+- [ ] A layout column dragged wider writes its own `width:` — today the write
+      guard refuses it with the rest
+- [ ] A body cell a layout reads from `values:` or a CSV written back where it
+      came from, by field name rather than position
+- [ ] `layout.column` names computed in the evaluated preview; like a
+      `defs.values` name today, a formula naming one is honestly not computed
+- [ ] **Upstream:** §25 says a group's text sorts in code-point order; yxl sorts
+      shorter text first (`b` before `aa`). This editor follows the compiler
+      (§6 of `AGENTS.md`); the report belongs in yxl
+
 ### Taken out (2026-08-23)
 Two phases that were here are not any more, and not because they were hard:
 
@@ -3526,6 +3569,54 @@ decision about what the workbook means, and it belongs to the person who owns it
 that provably changes nothing. A change that improves the spec by changing the
 workbook is an edit, and edits go through §4.4.
 
+### ADR-057 — A layout is drawn as what it compiles to, and edited only in its YAML
+**Accepted** 2026-09-23. Opens Phase 22.
+
+*The projection is upstream's own.* yxl's loader expands a layout into the
+bands, cells, formula ranges, merges and rules the hand-written keys would hold,
+and §25 promises that equivalence. So `compile` does the same: every layout is
+placed in a pass ahead of the sheets — which is what lets a chart, a table or an
+override on any sheet name it — and each is drawn at its own key's position, so
+the later key still wins. Nothing downstream learnt a new construct: the grid,
+the evaluator and the webview see cells, fills and bands.
+
+*A drawn cell's origin is `layout`, and it is `readonly`.* A body cell read by
+field name has no position in its CSV that the existing `external` answer could
+write to, and a header or a footer cell is one of many the same YAML draws.
+Rather than let an answer written for another construct guess, the direct edit
+refuses with a reason. An **override** is still offered: §25 itself says "one
+row that differs is an override", and an override's `at:` names the cell, not
+the layout.
+
+*And a backstop.* A patch whose op lands under a layout's path is refused in the
+write path, whatever intent produced it — a column dragged wider, a shift that
+would rewrite `at:`. Editing layouts is Phase 22's open rows, each to be added
+deliberately, not reached by accident.
+
+*The compiler wins over the document.* The differential test found yxl sorting a
+group's text shorter-first where §25 says code-point order. This editor follows
+the compiler, as AGENTS.md §6 requires, and the report goes upstream.
+
+### ADR-058 — yxl is installed on request, from the release this editor targets
+**Accepted** 2026-09-23. §8 Q6's "an optional download is a smaller change".
+
+*Required, still not bundled.* What changed is that the warning an older or a
+missing compiler gets now carries **Update yxl to x.y.z**. Nothing runs until the
+reader presses it: they asked for exactly that, and a script fetched from the
+network is not something an editor runs on its own.
+
+*What runs is upstream's installer, pinned.* It is fetched from the release
+**tag** rather than `main`, given `YXL_VERSION`, and checks the download against
+the checksum published beside it. It installs into the folder the current `yxl`
+is in, so the one on `PATH` is the one replaced; the folder is quoted so no
+name reaches the shell as a command. It runs as a task, in a terminal the reader
+watches, and the compiler is asked its version again afterwards — a `yxl` that
+still answers the old version means another one comes first on `PATH`, and the
+reader is told so. Where tasks cannot run, the command goes on the clipboard.
+
+*When it asks.* Once after each update of this extension — the moment a new pin
+arrives — and wherever the existing once-a-session warning finds yxl older.
+
 ## 8. Open questions
 
 - **Q1 — `cells:` A1 keys and row insertion.** ✅ *Answered 2026-08-23.*
@@ -3623,6 +3714,9 @@ workbook is an edit, and edits go through §4.4.
   *The packaging half is Phase 20*, opened 2026-08-29: what is left of it is a
   publisher, an icon, the package's own README, and a `.vsix` that installs on a
   machine that has never seen this repository.
+
+  *2026-09-23:* the optional download arrived as installing on request, from the
+  release the pin names (ADR-058). The compiler is still required, not bundled.
 - **Q7 — The JSON Schema.** ✅ **Answered: it exists**, upstream, at
   `docs/yxl.schema.json` — *generated* from `docs/spec.md` by
   `tools/spec-schema/generate.py`, which is the part that keeps it honest: the
@@ -3832,6 +3926,43 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-09-23 — The pin moves to yxl 0.5.0, and layouts are drawn
+
+yxl 0.5.0 adds `layouts:` (`docs/spec.md` §25), and upstream rewrote its
+`workbook` example in them, so the move brought ten failures — every one of them
+a layout. Scoped with the reader as drawing them whole now (Phase 22, ADR-057),
+and, at their request, offering to update yxl itself (ADR-058). 0.2.0.
+
+- **The loader reads all of §25**, keeping it as written: `layouts:`,
+  `defs.blocks`, `at: { below: … }` on every anchor the spec lets follow one, a
+  range written as a layout's name, and an override `at:` by meaning.
+- **The compiler places every layout before any sheet**, then draws each as the
+  keys it compiles to. Nothing above `compile` learnt a construct; a cell a
+  layout draws carries the origin `layout`.
+- **Checked against the compiler cell by cell.** `tests/layouts.test.ts` builds
+  with the pinned yxl, extracts flat, and compares both grids — upstream's three
+  layout specs and `tests/fixtures/layouts/`, whose corners (wildcards in a group
+  value, a listed order naming a value the data lacks, a JSON object source,
+  blocks with `fields`, `below:` twice over, overrides by `where` and by `row`)
+  upstream's own leave untried. It found yxl sorting text shorter-first where
+  §25 says code-point order; this follows the compiler, and the report is
+  Phase 22's last row. Deleting the wildcard escape was checked to fail it.
+- **A drawn cell refuses a value, and takes an override.** Nothing writes inside
+  a layout's YAML: the write path refuses any patch that would.
+- **An older or missing yxl is offered the update**, once after each update of
+  this extension and wherever the version warning fires: yxl's installer from
+  the pinned tag, into the folder the current `yxl` is in, in a terminal, and
+  the version asked again after. The line it runs was run for real, into a
+  folder whose name holds a quote and a space.
+- Two Tier 4 cases moved off `workbook.yxl.yaml`, which no longer has a `$ref`
+  cell or a positional CSV: the definition case is `styling`'s `tax_rate`, the
+  CSV case `modular`'s `sales.csv`, and a third closes the loop on a layout cell
+  through an override.
+- The shipped copy of `docs/yxl.schema.json` was retaken, and the README's
+  coverage table gains `layouts` as drawn.
+- 2495 → 2588 tests. Comment shape: export 976 blocks / 2126 lines / avg 2.2,
+  private 647 / 647 / avg 1.0, inline 141 / 226 / avg 1.6; 0 over the limit.
 
 ### 2026-09-13 — The pin moves to yxl 0.4.0
 

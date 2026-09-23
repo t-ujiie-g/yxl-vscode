@@ -1,8 +1,8 @@
 import { type CompiledGrid, type CompiledSheet, cellAt, sheetOf } from '@yxl-vscode/compile';
 import { nodeAt, type Op, renderScalar, type Value } from '@yxl-vscode/cst';
 import type { Message } from '@yxl-vscode/diag';
-import { KEY, type Templated } from '@yxl-vscode/spec';
-import { type A1Addr, type QualifiedAddr, qualified, type SheetName } from '@yxl-vscode/units';
+import { KEY, type Override } from '@yxl-vscode/spec';
+import { type A1Addr, qualified, type SheetName } from '@yxl-vscode/units';
 import { itemOf } from './anchored';
 import { type Intent, type Projection, type Reading, refused } from './direct';
 import { say } from './text';
@@ -142,6 +142,7 @@ function lines(where: { sheet: SheetName; at: A1Addr }, says: Says): string {
 }
 
 /** Where an override lands, as written; a `${param}` in it is not this cell's address until it is set. */
-function spelled(at: Templated<QualifiedAddr>): string {
-  return 'text' in at ? at.text : qualified(at.sheet, at.at);
+function spelled(at: Override['at']): string {
+  if (!('kind' in at)) return qualified(at.sheet, at.at);
+  return at.kind === 'template' ? at.text : `${at.layout}.${at.column}`;
 }

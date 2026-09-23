@@ -8,6 +8,7 @@ import {
   type DataBlock,
   type FormulaRange,
   type Image,
+  type Layout,
   type Link,
   type Merge,
   MODELED_KEYS,
@@ -31,6 +32,7 @@ import { readConditional } from './conditional';
 import { type Ctx, identify, keyOf, reject, type Site } from './ctx';
 import { readDataBlocks } from './data';
 import { readCharts, readImages, readShapes } from './float';
+import { readLayouts } from './layout';
 import { readLinks } from './link';
 import { readNotes } from './note';
 import { readPrint } from './print';
@@ -80,6 +82,7 @@ function readSheet(site: Site): Sheet | null {
   let cells: Cell[] = [];
   let formulas: FormulaRange[] = [];
   let data: DataBlock[] = [];
+  let layouts: Layout[] = [];
   let columns: ColumnBand[] = [];
   let rows: RowBand[] = [];
   let merges: Merge[] = [];
@@ -116,6 +119,9 @@ function readSheet(site: Site): Sheet | null {
         break;
       case 'data':
         data = readDataBlocks(here, entry.value, at);
+        break;
+      case 'layouts':
+        layouts = readLayouts(here, entry.value, at);
         break;
       case 'columns':
         columns = readColumnBands(here, entry.value, at);
@@ -188,6 +194,7 @@ function readSheet(site: Site): Sheet | null {
     cells,
     formulas,
     data,
+    layouts,
     columns,
     rows,
     merges,

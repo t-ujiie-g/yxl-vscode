@@ -1,0 +1,8 @@
+branch,store,channel,sales,prior,open
+東京,渋谷,直営,120,100,true
+大阪,梅田,FC,80,90,true
+東京,新宿,FC,150,140,false
+a*,x*y,直営,10,5,true
+b,"q?r",FC,20,25,true
+10,n1,直営,1,2,true
+9,n2,FC,3,4,false

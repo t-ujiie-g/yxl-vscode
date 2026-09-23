@@ -23,7 +23,6 @@ import {
   filePath,
   parseA1Range,
   parseColumnSpan,
-  parseQualifiedRange,
   parseRowSpan,
   type Rect,
   rectOf,
@@ -31,7 +30,16 @@ import {
   type SheetName,
   sheetName,
 } from '@yxl-vscode/units';
-import { address, colour, compileFacets, layer, type Spoke, spelling, spokenBy } from './cell';
+import {
+  address,
+  colour,
+  compileFacets,
+  decides,
+  layer,
+  type Spoke,
+  spelling,
+  spokenBy,
+} from './cell';
 import { CODE } from './codes';
 import { type Ctx, filled, reject, text } from './ctx';
 import { chart, image, shape, sparklines } from './float';
@@ -40,15 +48,16 @@ import type {
   CompiledBand,
   CompiledCell,
   CompiledFill,
+  CompiledLayout,
   CompiledLink,
   CompiledMerge,
   CompiledNote,
   CompiledRule,
   CompiledSheet,
   CompiledTable,
-  CompiledTest,
   CompiledValidation,
 } from './grid';
+import { anchored, covered, draw, readRange } from './layout';
 import { printing } from './print';
 import { protecting } from './protect';
 import type { FacetOrigin } from './provenance';
@@ -64,24 +73,51 @@ export interface Drafted {
 
 /** A sheet, drawn: cells placed in the order the keys were written, since the later key wins (`docs/spec.md` §2). */
 export function compileSheet(ctx: Ctx, sheet: Sheet): Drafted {
+  const name = named(ctx, sheet);
   const cells = new Map<string, CompiledCell>();
   const fills: CompiledFill[] = [];
+  const columns: CompiledBand[] = [];
+  const merges: CompiledMerge[] = [];
+  const conditional: CompiledRule[] = [];
+  const layouts: CompiledLayout[] = [];
 
   for (const key of sheet.keyOrder) {
     if (key === 'cells') placeCells(ctx, sheet, cells);
-    if (key === 'data') for (const block of sheet.data) placeData(ctx, block, cells);
+    if (key === 'data') for (const block of sheet.data) placeData(ctx, block, cells, name);
     if (key === 'formulas') for (const range of sheet.formulas) placeFill(ctx, range, fills);
+    if (key === 'columns') columns.push(...kept(sheet.columns, (band) => columnBand(ctx, band)));
+    if (key === 'merges') merges.push(...kept(sheet.merges, (one) => mergedRegion(ctx, one)));
+    if (key === 'conditional') {
+      conditional.push(...kept(sheet.conditional, (rule) => conditionalRule(ctx, rule, name)));
+    }
+    if (key !== 'layouts') continue;
+
+    for (const layout of sheet.layouts) {
+      const placed = ctx.placed.get(layout.id);
+      if (placed === undefined) continue;
+
+      const drawn = draw(ctx, placed);
+      for (const cell of drawn.cells) {
+        const under = cells.get(cell.at);
+        cells.set(cell.at, under === undefined ? cell : layer(under, cell, DRAWS));
+      }
+      fills.push(...drawn.fills);
+      columns.push(...drawn.bands);
+      merges.push(...drawn.merges);
+      conditional.push(...drawn.rules);
+      layouts.push(drawn.layout);
+    }
   }
 
   return {
     sheet: {
-      name: named(ctx, sheet),
+      name,
       node: sheet.id,
       cells,
       fills,
-      columns: sheet.columns.map((band) => columnBand(ctx, band)).filter((band) => band !== null),
+      columns,
       rows: sheet.rows.map((band) => rowBand(ctx, band)).filter((band) => band !== null),
-      merges: sheet.merges.map((one) => mergedRegion(ctx, one)).filter((one) => one !== null),
+      merges,
       freeze: sheet.freeze === null ? null : address(ctx, sheet.freeze, sheet),
       visibility: shown(ctx, sheet),
       tabColor: sheet.tabColor === null ? null : colour(ctx, sheet.tabColor, sheet),
@@ -92,17 +128,14 @@ export function compileSheet(ctx: Ctx, sheet: Sheet): Drafted {
       protect: sheet.protect === null ? null : protecting(sheet.protect),
       notes: notesOf(ctx, sheet.comments),
       links: linksOf(ctx, sheet.links),
-      validations: sheet.validations
-        .map((one) => validation(ctx, one))
-        .filter((one) => one !== null),
-      tables: sheet.tables.map((one) => table(ctx, one)).filter((one) => one !== null),
-      charts: sheet.charts.map((one) => chart(ctx, one)).filter((one) => one !== null),
-      images: sheet.images.map((one) => image(ctx, one)).filter((one) => one !== null),
-      shapes: sheet.shapes.map((one) => shape(ctx, one)).filter((one) => one !== null),
+      validations: kept(sheet.validations, (one) => validation(ctx, one, name)),
+      tables: kept(sheet.tables, (one) => table(ctx, one, name)),
+      charts: kept(sheet.charts, (one) => chart(ctx, one, name)),
+      images: kept(sheet.images, (one) => image(ctx, one, name)),
+      shapes: kept(sheet.shapes, (one) => shape(ctx, one, name)),
       sparklines: sheet.sparklines.flatMap((group) => sparklines(ctx, group)),
-      conditional: sheet.conditional
-        .map((rule) => conditionalRule(ctx, rule))
-        .filter((rule) => rule !== null),
+      conditional,
+      layouts,
       carried: sheet.opaque,
     },
     cells,
@@ -120,12 +153,25 @@ function placeCells(ctx: Ctx, sheet: Sheet, cells: Map<string, CompiledCell>): v
   }
 }
 
+/** What survived reading, in the order written; what did not was reported where it was read. */
+function kept<T, U>(written: readonly T[], read: (one: T) => U | null): U[] {
+  return written.map(read).filter((one): one is U => one !== null);
+}
+
 /** A field of a data block speaks of what the cell holds and of nothing else (`docs/spec.md` §9). */
 const HOLDS: Spoke = { holds: true, format: false, style: false };
 
+/** A layout writes a cell as the hand-written key would: what it holds, and the look laid over what was there. */
+const DRAWS: Spoke = { holds: true, format: false, style: true };
+
 /** A `data:` block's rows laid down from its anchor; a `null` field writes no cell (`docs/spec.md` §9). */
-function placeData(ctx: Ctx, block: DataBlock, cells: Map<string, CompiledCell>): void {
-  const anchor = address(ctx, block.at, block);
+function placeData(
+  ctx: Ctx,
+  block: DataBlock,
+  cells: Map<string, CompiledCell>,
+  sheet: SheetName,
+): void {
+  const anchor = anchored(ctx, block.at, block, sheet);
   if (anchor === null) return;
 
   if (block.source.kind === 'inline') {
@@ -227,11 +273,12 @@ function placeFill(ctx: Ctx, range: FormulaRange, fills: CompiledFill[]): void {
     anchor: addrAt({ col: rect.left, row: rect.top }),
     formula: text(ctx, range.formula, range),
     node: range.id,
+    layout: null,
   });
 }
 
 /** The sheet's name with its parameters filled in; what Excel would refuse is the compiler's to say (ADR-011). */
-function named(ctx: Ctx, sheet: Sheet): SheetName {
+export function named(ctx: Ctx, sheet: Sheet): SheetName {
   const spelled = text(ctx, sheet.name, sheet);
   return sheetName(spelled) ?? (spelled as SheetName);
 }
@@ -293,42 +340,20 @@ function mergedRegion(ctx: Ctx, merge: Sheet['merges'][number]): CompiledMerge |
 }
 
 /** One `conditional:` rule, its range read and its look resolved (`docs/spec.md` §10). */
-function conditionalRule(ctx: Ctx, rule: Conditional): CompiledRule | null {
-  const spelled = text(ctx, rule.at, rule);
-  const read = parseA1Range(spelled);
-  if (read === null) {
-    reject(ctx, CODE.badRange, say('compile.not-a-range', { spelled }), rule);
-    return null;
-  }
+function conditionalRule(ctx: Ctx, rule: Conditional, sheet: SheetName): CompiledRule | null {
+  const rect = covered(ctx, rule.at, rule, sheet);
+  if (rect === null) return null;
 
   const test = decides(ctx, rule);
   if (test === null) return null;
 
   return {
-    rect: rectOf(read),
+    rect,
     test,
     style: layersOf(ctx, rule, 'conditional', rule.style, rule.format),
     stopIfTrue: rule.stopIfTrue,
     node: rule.id,
   };
-}
-
-/** What decides a rule, with the colours of the three that draw their own look substituted. */
-function decides(ctx: Ctx, rule: Conditional): CompiledTest | null {
-  const test = rule.test;
-  if (test.kind === 'colorScale') {
-    const low = colour(ctx, test.low, rule);
-    const high = colour(ctx, test.high, rule);
-    const middle = test.middle === null ? null : colour(ctx, test.middle, rule);
-    return low === null || high === null ? null : { kind: 'colorScale', low, middle, high };
-  }
-
-  if (test.kind === 'dataBar') {
-    const color = colour(ctx, test.color, rule);
-    return color === null ? null : { kind: 'dataBar', color, barOnly: test.barOnly };
-  }
-
-  return test;
 }
 
 /** Each note by the address it sits on; the later of two notes on one cell is the one Excel keeps. */
@@ -351,19 +376,15 @@ function notesOf(ctx: Ctx, comments: readonly Note[]): Map<string, CompiledNote>
 }
 
 /** One `validations:` entry, its range read and its `from:` split into the sheet it names. */
-function validation(ctx: Ctx, one: Validation): CompiledValidation | null {
-  const spelled = text(ctx, one.at, one);
-  const read = parseA1Range(spelled);
-  if (read === null) {
-    reject(ctx, CODE.badRange, say('compile.not-a-range', { spelled }), one);
-    return null;
-  }
+function validation(ctx: Ctx, one: Validation, sheet: SheetName): CompiledValidation | null {
+  const rect = covered(ctx, one.at, one, sheet);
+  if (rect === null) return null;
 
   const asks = asking(ctx, one);
   if (asks === null) return null;
 
   return {
-    rect: rectOf(read),
+    rect,
     asks,
     allowBlank: one.allowBlank,
     prompt: one.prompt,
@@ -383,14 +404,8 @@ function asking(ctx: Ctx, one: Validation): CompiledAsk | null {
   const test = one.test;
   if (test.kind !== 'listFrom') return test;
 
-  const spelled = text(ctx, test.from, one);
-  const read = parseQualifiedRange(spelled);
-  if (read === null) {
-    reject(ctx, CODE.badRange, say('compile.not-a-range', { spelled }), one);
-    return null;
-  }
-
-  return { kind: 'listFrom', sheet: read.sheet, rect: rectOf(read.at) };
+  const read = readRange(ctx, text(ctx, test.from, one), one);
+  return read === null ? null : { kind: 'listFrom', ...read };
 }
 
 /** Each link by the address it sits on; the later of two links on one cell is the one Excel keeps. */
@@ -413,16 +428,12 @@ function linksOf(ctx: Ctx, links: readonly Link[]): Map<string, CompiledLink> {
 }
 
 /** One `tables:` entry, its range read; the top row of it names the columns (`docs/spec.md` §11). */
-function table(ctx: Ctx, one: Table): CompiledTable | null {
-  const spelled = text(ctx, one.at, one);
-  const read = parseA1Range(spelled);
-  if (read === null) {
-    reject(ctx, CODE.badRange, say('compile.not-a-range', { spelled }), one);
-    return null;
-  }
+function table(ctx: Ctx, one: Table, sheet: SheetName): CompiledTable | null {
+  const rect = covered(ctx, one.at, one, sheet);
+  if (rect === null) return null;
 
   return {
-    rect: rectOf(read),
+    rect,
     name: one.name === null ? null : text(ctx, one.name, one),
     style: one.style === null ? null : text(ctx, one.style, one),
     bandedRows: one.bandedRows,

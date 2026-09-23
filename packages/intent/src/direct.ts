@@ -251,6 +251,9 @@ export function literalPath(
         ? refused(say('intent.nothing-writes-yet', { at }))
         : located(origin.node, read);
 
+    case 'layout':
+      return refused(say('intent.drawn-by-a-layout', { at }));
+
     default:
       return refused(say('intent.nothing-to-change-yet', { at, sheet: sheet.name }));
   }

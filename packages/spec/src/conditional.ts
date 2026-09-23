@@ -1,4 +1,5 @@
 import type { A1Range, Color } from '@yxl-vscode/units';
+import type { Named } from './layout';
 import type { SpecNode, Templated } from './node';
 import type { StyleUse } from './style';
 import type { ScalarValue } from './value';
@@ -60,7 +61,7 @@ export type ConditionalTest =
  * Rules apply in the order written, which is Excel's priority order.
  */
 export interface Conditional extends SpecNode {
-  readonly at: Templated<A1Range>;
+  readonly at: Templated<A1Range> | Named;
   readonly test: ConditionalTest;
   readonly style: StyleUse | null;
   readonly format: string | null;

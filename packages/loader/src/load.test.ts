@@ -104,10 +104,10 @@ describe('defs', () => {
 
   it('has no definitions when the spec declares none', () => {
     const { doc } = read('sheets: []\n');
-    expect(doc?.defs).toEqual({ styles: [], values: [], formulas: [] });
+    expect(doc?.defs).toEqual({ styles: [], values: [], formulas: [], blocks: [] });
   });
 
-  it('reports a `defs` key that is not one of the three', () => {
+  it('reports a `defs` key that is not one of the four', () => {
     expect(codes('sheets: []\ndefs:\n  colours:\n    red: FF0000\n')).toEqual([CODE.unknownKey]);
   });
 

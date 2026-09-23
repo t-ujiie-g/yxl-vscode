@@ -25,6 +25,8 @@ const english = reader('en');
 /** Tier 4: the write path the UI calls, then the compiler that ships, then what the workbook holds. */
 const QUICKSTART = yxlExamples().find((one) => one.name === 'quickstart.yxl.yaml');
 const WORKBOOK = yxlExamples().find((one) => one.name === 'workbook.yxl.yaml');
+const STYLING = yxlExamples().find((one) => one.name === 'styling.yxl.yaml');
+const MODULAR = yxlExamples().find((one) => one.name === 'modular.yxl.yaml');
 
 /** A copy of the whole cookbook — an `$include`d spec reads its neighbours — and the write path over it. */
 function opened(sample: { path: string }) {
@@ -204,29 +206,25 @@ describe('the loop, closed', () => {
   });
 
   it('carries a changed definition into every cell that reads it', async () => {
-    if (!WORKBOOK) return;
-    const { dir, root, port, spec, refusals } = opened(WORKBOOK);
-    const at = typed({ sheet: 'Summary', row: 17, col: 2, text: '9999' });
+    if (!STYLING) return;
+    const { dir, root, port, spec, refusals } = opened(STYLING);
+    const at = typed({ sheet: 'Report', row: 6, col: 2, text: '0.09' });
 
-    // `B17: { $ref: target_revenue }` in `sheets/summary.yaml`, reading a
-    // definition in `defs.yaml`: the edit lands in neither the sheet's file nor
-    // the one that was opened.
+    // `B6: { value: { $ref: tax_rate } }`: the edit lands in the definition, not the cell.
     await write(spec(), at, port);
     expect(refusals).toHaveLength(1);
 
     await resolveWith(spec(), at, 'definition', port);
     expect(refusals).toHaveLength(1);
 
-    expect(readFileSync(join(dir, 'workbook', 'defs.yaml'), 'utf8')).toContain(
-      'target_revenue: 9999',
-    );
+    expect(readFileSync(root, 'utf8')).toContain('tax_rate: 0.09');
 
     // The workbook holds it as Excel does: a defined name, and a cell that
     // reads it (`docs/spec.md` §6), which is the point of the definition
     // answer — the sharing survives the edit.
     const after = built(dir, root);
-    expect(after.doc.defs.values.find((one) => one.name === 'target_revenue')?.value).toBe(9999);
-    expect(cell(after.grid, 'Summary', 'B17')?.formula).toBe('target_revenue');
+    expect(after.doc.defs.values.find((one) => one.name === 'tax_rate')?.value).toBe(0.09);
+    expect(cell(after.grid, 'Report', 'B6')?.formula).toBe('tax_rate');
   });
 
   it('carries a changed parameter default into the workbook it builds', async () => {
@@ -250,10 +248,10 @@ describe('the loop, closed', () => {
   });
 
   it('carries a value into the CSV the cell reads, and into the workbook', async () => {
-    if (!WORKBOOK) return;
-    const { dir, root, port, spec, refusals } = opened(WORKBOOK);
-    // `Masters!B2` is the second field of the first row of `stores.csv`.
-    const at = typed({ sheet: 'Masters', row: 2, col: 2, text: 'Shinjuku West' });
+    if (!MODULAR) return;
+    const { dir, root, port, spec, refusals } = opened(MODULAR);
+    // `Sales!B2` is the second field of the first row of `modular/sales.csv`.
+    const at = typed({ sheet: 'Sales', row: 2, col: 2, text: '2500000' });
 
     await write(spec(), at, port);
     expect(refusals).toHaveLength(1);
@@ -261,8 +259,25 @@ describe('the loop, closed', () => {
     await resolveWith(spec(), at, 'dataFile', port);
     expect(refusals).toHaveLength(1);
 
-    const csv = readFileSync(join(dir, 'workbook', 'masters', 'stores.csv'), 'utf8');
-    expect(csv.split('\n')[0]).toBe('S001,Shinjuku West,East');
+    const csv = readFileSync(join(dir, 'modular', 'sales.csv'), 'utf8');
+    expect(csv.split('\n')[0]).toBe('APAC,2500000');
+    expect(cell(built(dir, root).grid, 'Sales', 'B2')?.value).toBe(2500000);
+  });
+
+  it('refuses a cell a layout draws, and takes an override of it', async () => {
+    if (!WORKBOOK) return;
+    const { dir, root, port, spec, refusals } = opened(WORKBOOK);
+    // `Masters!B2` is `store_name` of the first store, which the layout reads from its CSV.
+    const at = typed({ sheet: 'Masters', row: 2, col: 2, text: 'Shinjuku West' });
+
+    await write(spec(), at, port);
+    expect(refusals).toEqual([
+      '`B2` is drawn by a layout, which is edited in the spec itself; an override can still except this one cell',
+    ]);
+
+    await writeOverride(spec(), at, 'renamed before the master caught up', port);
+    expect(refusals).toHaveLength(1);
+
     expect(cell(built(dir, root).grid, 'Masters', 'B2')?.value).toBe('Shinjuku West');
   });
 

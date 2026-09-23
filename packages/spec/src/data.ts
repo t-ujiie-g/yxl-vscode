@@ -1,10 +1,11 @@
-import type { A1Addr, FilePath } from '@yxl-vscode/units';
+import type { FilePath } from '@yxl-vscode/units';
+import type { Anchor } from './layout';
 import type { SpecNode, Templated } from './node';
 import type { ScalarValue } from './value';
 
 /** One entry of a sheet's `data:` sequence: a table anchored at `at`, carrying no formatting. */
 export interface DataBlock extends SpecNode {
-  readonly at: Templated<A1Addr>;
+  readonly at: Anchor;
   readonly source: DataSource;
 }
 

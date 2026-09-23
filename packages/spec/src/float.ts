@@ -1,4 +1,5 @@
-import type { A1Addr, Color, FilePath } from '@yxl-vscode/units';
+import type { Color, FilePath } from '@yxl-vscode/units';
+import type { Anchor } from './layout';
 import type { SpecNode, Templated } from './node';
 import type { Font } from './style';
 
@@ -62,7 +63,7 @@ export interface ChartSeries extends SpecNode {
  * the grid from the corner `at` names (`docs/spec.md` §12).
  */
 export interface Chart extends SpecNode {
-  readonly at: Templated<A1Addr>;
+  readonly at: Anchor;
   readonly type: Templated<ChartType>;
   readonly title: Templated<string> | null;
   readonly legend: Templated<LegendPlace> | null;
@@ -89,7 +90,7 @@ export interface PixelOffset {
  * times `scale` (`docs/spec.md` §13).
  */
 export interface Image extends SpecNode {
-  readonly at: Templated<A1Addr>;
+  readonly at: Anchor;
   readonly path: Templated<FilePath>;
   readonly alt: Templated<string> | null;
   readonly scale: Scale | null;
@@ -159,7 +160,7 @@ export interface ShapeText {
  * (`docs/spec.md` §18).
  */
 export interface Shape extends SpecNode {
-  readonly at: Templated<A1Addr>;
+  readonly at: Anchor;
   readonly kind: Templated<ShapeKind>;
   readonly text: readonly ShapeText[];
   readonly size: Size | null;

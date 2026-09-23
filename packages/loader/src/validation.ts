@@ -20,7 +20,7 @@ import {
   readEach,
   rejectUnknownKey,
 } from './read';
-import { RANGE, readAs, spelling } from './template';
+import { RANGE_OR_NAME, readAs, spelling } from './template';
 import { entryOf, say, under } from './text';
 
 /** A sheet's `validations:` entries, in the order written (`docs/spec.md` §10). */
@@ -48,7 +48,7 @@ export function readValidations(ctx: Ctx, node: Node, path: Path): Validation[] 
       return null;
     }
 
-    const at = readAs(opened.ctx, anchor.value, under(what, 'at'), RANGE);
+    const at = readAs(opened.ctx, anchor.value, under(what, 'at'), RANGE_OR_NAME);
     const test = readTest(opened, what);
     if (at === null || test === null) return null;
 

@@ -86,7 +86,21 @@ export interface CompiledSheet {
   readonly images: readonly CompiledImage[];
   readonly shapes: readonly CompiledShape[];
   readonly sparklines: readonly CompiledSparkline[];
+  readonly layouts: readonly CompiledLayout[];
   readonly carried: readonly Opaque[];
+}
+
+/**
+ * Where one `layouts:` entry landed: all of it, and its header, body and
+ * footer rows, `null` where it has none (`docs/spec.md` §25).
+ */
+export interface CompiledLayout {
+  readonly name: string | null;
+  readonly rect: Rect;
+  readonly header: Rect | null;
+  readonly body: Rect;
+  readonly footer: Rect | null;
+  readonly node: NodeId;
 }
 
 /**
@@ -285,12 +299,16 @@ export interface CompiledRule {
   readonly node: NodeId;
 }
 
-/** One `formulas:` range, kept as a range: `D2:D1048576` is two words, not a million cells (ADR-019). */
+/**
+ * One `formulas:` range, kept as a range: `D2:D1048576` is two words, not a
+ * million cells (ADR-019). `layout` is set where a layout column filled it.
+ */
 export interface CompiledFill {
   readonly rect: Rect;
   readonly anchor: A1Addr;
   readonly formula: string;
   readonly node: NodeId;
+  readonly layout: NodeId | null;
 }
 
 /** One run of a `rich:` cell: a piece of its text and the look that piece alone wears (`docs/spec.md` §3). */

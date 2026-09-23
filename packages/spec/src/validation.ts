@@ -1,5 +1,6 @@
 import type { A1Range } from '@yxl-vscode/units';
 import type { Comparison } from './conditional';
+import type { Named } from './layout';
 import type { SpecNode, Templated } from './node';
 import type { ScalarValue } from './value';
 
@@ -31,7 +32,7 @@ export type ErrorStyle = (typeof ERROR_STYLES)[number];
  * about it. `allowBlank` is Excel's "Ignore blank", which defaults to on.
  */
 export interface Validation extends SpecNode {
-  readonly at: Templated<A1Range>;
+  readonly at: Templated<A1Range> | Named;
   readonly test: ValidationTest;
   readonly allowBlank: boolean;
   readonly prompt: Saying | null;

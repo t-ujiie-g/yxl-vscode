@@ -3,7 +3,7 @@ import { MODELED_KEYS, type Table } from '@yxl-vscode/spec';
 import { CODE } from './codes';
 import { type Ctx, identify, keyOf, reject, type Site } from './ctx';
 import { expectText, findEntry, flag, openEntries, readEach, rejectUnknownKey } from './read';
-import { RANGE, readAs } from './template';
+import { RANGE_OR_NAME, readAs } from './template';
 import { entryOf, say, under } from './text';
 
 /** A sheet's `tables:` entries, in the order written (`docs/spec.md` §11). */
@@ -31,7 +31,7 @@ export function readTables(ctx: Ctx, node: Node, path: Path): Table[] {
       return null;
     }
 
-    const at = readAs(opened.ctx, anchor.value, under(what, 'at'), RANGE);
+    const at = readAs(opened.ctx, anchor.value, under(what, 'at'), RANGE_OR_NAME);
     if (at === null) return null;
 
     const named = findEntry(opened.entries, 'name');

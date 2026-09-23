@@ -217,6 +217,7 @@ export function moveFloat(where: Anchoring, read: Reading): Intent {
   if (written !== null && parameterised(written)) {
     return refused(say('intent.floats-from-a-parameter'));
   }
+  if (written?.kind === 'map') return refused(say('intent.floats-below-a-layout'));
 
   const ops: Op[] = [{ op: 'set', path: [...found.path, KEY.at], value: String(where.at) }];
   return { kind: 'edit', file: found.file, patch: { ops }, expects: nothingChanges };

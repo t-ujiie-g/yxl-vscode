@@ -2,6 +2,7 @@ import {
   CELL_TYPES,
   type CellFacets,
   type CellType,
+  type ColumnRule,
   type ScalarValue,
   type SpecNode,
   type Style,
@@ -10,7 +11,7 @@ import {
 import { type A1Addr, type Color, parseA1Addr, parseColor } from '@yxl-vscode/units';
 import { CODE } from './codes';
 import { type Ctx, filled, reject, text } from './ctx';
-import type { CompiledCell, CompiledRun } from './grid';
+import type { CompiledCell, CompiledRun, CompiledTest } from './grid';
 import type { FacetOrigin } from './provenance';
 import {
   DATE_FORMAT,
@@ -229,4 +230,22 @@ export function layer(under: CompiledCell, over: CompiledCell, said: Spoke): Com
       format: said.format ? over.provenance.format : under.provenance.format,
     },
   };
+}
+
+/** What decides a rule, with the colours of the three that draw their own look substituted. */
+export function decides(ctx: Ctx, rule: ColumnRule): CompiledTest | null {
+  const test = rule.test;
+  if (test.kind === 'colorScale') {
+    const low = colour(ctx, test.low, rule);
+    const high = colour(ctx, test.high, rule);
+    const middle = test.middle === null ? null : colour(ctx, test.middle, rule);
+    return low === null || high === null ? null : { kind: 'colorScale', low, middle, high };
+  }
+
+  if (test.kind === 'dataBar') {
+    const color = colour(ctx, test.color, rule);
+    return color === null ? null : { kind: 'dataBar', color, barOnly: test.barOnly };
+  }
+
+  return test;
 }

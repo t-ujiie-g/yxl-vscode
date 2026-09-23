@@ -90,6 +90,9 @@ const SALES = 'sheets:\n  - name: Sales\n';
 /** A sheet whose rows come from a `data:` block, with a blank line under it. */
 const BESIDE_DATA = `${SALES}    data:\n      - at: A1\n        values:\n          - [APAC, 1]\n          - [EMEA, 2]\n`;
 
+/** A sheet whose first two columns are a layout's, the second sized by it. */
+const LAID_OUT = `${SALES}    layouts:\n      - at: A1\n        values:\n          - [APAC, 1]\n        columns:\n          - { name: region }\n          - { name: amount, width: 12 }\n`;
+
 describe('what a reader typed, all the way to the file', () => {
   it('writes a value where the spec wrote the cell', async () => {
     const spec = { [ROOT]: `${SALES}    cells:\n      A1: APAC\n` };
@@ -97,6 +100,17 @@ describe('what a reader typed, all the way to the file', () => {
 
     await write(read, typed(), port);
     expect(files[ROOT]).toBe(`${SALES}    cells:\n      A1: EMEA\n`);
+  });
+
+  it('refuses a cell a layout draws, and offers the override', async () => {
+    const { spec: read, port, refusals, offers, files } = editor({ [ROOT]: LAID_OUT });
+
+    await write(read, typed({ row: 1, col: 2, text: '5' }), port);
+    expect(refusals).toEqual([
+      '`B1` is drawn by a layout, which is edited in the spec itself; an override can still except this one cell',
+    ]);
+    expect(offers).toEqual([{ kind: 'edit', ...typed({ row: 1, col: 2, text: '5' }) }]);
+    expect(files[ROOT]).toBe(LAID_OUT);
   });
 
   it('reads what was typed the way the spec would read it', async () => {
@@ -529,6 +543,17 @@ describe('a column or a row dragged to a size', () => {
     expect(files[ROOT]).toContain(
       '      - at: D\n        width: 12\n      - at: E\n        width: 20\n      - at: F\n        width: 12\n',
     );
+  });
+
+  it('leaves a layout column alone, since the layout is edited in the spec', async () => {
+    const spec = `${LAID_OUT}`;
+    const { spec: read, port, refusals, files } = editor({ [ROOT]: spec });
+
+    await resize(read, dragged({ first: 2, last: 2 }), port, 'band');
+    expect(refusals).toEqual([
+      'this would write inside a layout, which is edited in the spec itself; the preview draws it but does not change it',
+    ]);
+    expect(files[ROOT]).toBe(spec);
   });
 
   it('sizes every column the reader had selected, and says which', async () => {

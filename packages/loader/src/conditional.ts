@@ -1,6 +1,7 @@
-import type { Node } from '@yxl-vscode/cst';
+import type { Node, Path } from '@yxl-vscode/cst';
 import type { Saying } from '@yxl-vscode/diag';
 import {
+  type ColumnRule,
   type Comparison,
   type Conditional,
   type ConditionalTest,
@@ -22,7 +23,7 @@ import {
   rejectUnknownKey,
 } from './read';
 import { readStyleUse } from './style';
-import { COLOR, RANGE, readAs } from './template';
+import { COLOR, RANGE_OR_NAME, readAs } from './template';
 import { entryOf, under } from './text';
 
 /** A sheet's `conditional:` rules, in the order written, which is Excel's priority order. */
@@ -41,7 +42,7 @@ export function readConditional(
     const test = readTest(rule, what);
     if (at === null || test === null) return null;
 
-    const look = readLook(rule, what);
+    const look = readLook(rule, what, MODELED_KEYS.conditional);
     return {
       ...identify(rule.ctx, rule.path, rule.node.span),
       at,
@@ -57,13 +58,28 @@ function readAt(rule: Opened, what: Saying): Conditional['at'] | null {
   const found = rule.entries.find((entry) => keyOf(entry) === 'at');
   if (found === undefined) return null;
 
-  return readAs(rule.ctx, found.value, under(what, 'at'), RANGE);
+  return readAs(rule.ctx, found.value, under(what, 'at'), RANGE_OR_NAME);
+}
+
+/** A layout column's `conditional:` rules, which cover its body and so take no `at` (`docs/spec.md` §25). */
+export function readColumnRules(ctx: Ctx, node: Node, path: Path, what: Saying): ColumnRule[] {
+  return readEach(ctx, node, path, under(what, 'conditional'), (site: Site) => {
+    const rule = openEntries(site.ctx, site.node, site.path, under(what, 'conditional'));
+    if (rule === null) return null;
+
+    const test = readTest(rule, what);
+    if (test === null) return null;
+
+    const look = readLook(rule, what, MODELED_KEYS.columnRule);
+    return { ...identify(rule.ctx, rule.path, rule.node.span), test, ...look };
+  });
 }
 
 /** The look a matching cell wears, and whether a match stops the rules after it. */
 function readLook(
   rule: Opened,
   what: Saying,
+  known: ReadonlySet<string>,
 ): { style: StyleUse | null; format: string | null; stopIfTrue: boolean } {
   let style: StyleUse | null = null;
   let format: string | null = null;
@@ -75,8 +91,7 @@ function readLook(
     if (key === 'style') style = readStyleUse(rule.ctx, entry.value, at);
     if (key === 'format') format = expectText(rule.ctx, entry.value, at);
     if (key === 'stop_if_true') stopIfTrue = expectBool(rule.ctx, entry.value, at) === true;
-    if (!MODELED_KEYS.conditional.has(key))
-      rejectUnknownKey(rule.ctx, entry, what, MODELED_KEYS.conditional);
+    if (!known.has(key)) rejectUnknownKey(rule.ctx, entry, what, known);
   }
 
   return { style, format, stopIfTrue };

@@ -13,7 +13,9 @@ import { compileFacets, layer, spokenBy } from './cell';
 import { CODE } from './codes';
 import { type Ctx, context, type DataReader, reject, type Setting, text } from './ctx';
 import type { CompiledCell, CompiledGrid, CompiledSheet, DeclaredStyle } from './grid';
-import { compileSheet, type Drafted } from './sheet';
+import { byMeaning, placeAll } from './layout';
+import type { FacetOrigin } from './provenance';
+import { compileSheet, type Drafted, named } from './sheet';
 import { layersOf, resolve, type StyleLayer } from './style';
 import { say } from './text';
 
@@ -30,6 +32,11 @@ export interface Options {
 /** As above. */
 export function compile(doc: SpecDoc, options: Options = {}): CompiledGrid {
   const ctx = context(doc, options.read ?? null, options.params ?? new Map());
+  const quiet = { ...ctx, diagnostics: [] };
+  placeAll(
+    ctx,
+    doc.sheets.map((sheet) => [named(quiet, sheet), sheet] as const),
+  );
   const drafts = doc.sheets.map((sheet) => compileSheet(ctx, sheet));
 
   for (const override of doc.overrides) applyOverride(ctx, override, drafts);
@@ -72,6 +79,15 @@ export function cellAt(sheet: CompiledSheet, at: A1Addr): CompiledCell | null {
   const anchor = cellOf(fill.anchor);
   const offset = { cols: cell.col - anchor.col, rows: cell.row - anchor.row };
   const shifted = moved(fill.formula, offset);
+  const origin: FacetOrigin =
+    fill.layout === null
+      ? {
+          kind: 'formulaRange',
+          node: fill.node,
+          anchor: fill.anchor,
+          offset: [offset.cols, offset.rows],
+        }
+      : { kind: 'layout', node: fill.node, layout: fill.layout };
 
   return {
     at,
@@ -81,15 +97,7 @@ export function cellAt(sheet: CompiledSheet, at: A1Addr): CompiledCell | null {
     format: null,
     rich: null,
     style: [],
-    provenance: {
-      value: {
-        kind: 'formulaRange',
-        node: fill.node,
-        anchor: fill.anchor,
-        offset: [offset.cols, offset.rows],
-      },
-      format: null,
-    },
+    provenance: { value: origin, format: null },
   };
 }
 
@@ -147,9 +155,10 @@ function applyOverride(ctx: Ctx, override: Override, drafts: readonly Drafted[])
   draft.cells.set(read.at, under === null ? written : layer(under, written, spokenBy(override)));
 }
 
-/** Where an override lands, read now if a `${...}` stopped the loader reading it. */
+/** Where an override lands, read now if a `${...}` stopped the loader reading it or a layout places it. */
 function overrideAddr(ctx: Ctx, override: Override): QualifiedAddr | null {
   if (!('kind' in override.at)) return override.at;
+  if (override.at.kind === 'layout') return byMeaning(ctx, override.at, override);
 
   const spelled = text(ctx, override.at.text, override);
   const read = parseQualifiedAddr(spelled);

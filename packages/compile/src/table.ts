@@ -21,6 +21,27 @@ export function readCsv(source: string): Table {
 }
 
 /**
+ * A CSV whose first row names its fields, as a layout reads one: the names as
+ * written, and the rows under them read as `readCsv` reads them (`docs/spec.md` §25).
+ */
+export function readHeadedCsv(
+  source: string,
+):
+  | { readonly names: readonly string[]; readonly rows: readonly DataRow[] }
+  | { readonly problem: Saying } {
+  const scanned = scanCsv(source);
+  if (scanned.problem !== null) return { problem: scanned.problem };
+
+  const [header, ...body] = scanned.rows;
+  if (header === undefined) return { problem: say('compile.csv-has-no-header') };
+
+  return {
+    names: header.map((field) => field.text),
+    rows: body.map((row) => row.map((field) => field.value)),
+  };
+}
+
+/**
  * Where a field sits, quotes included, so a writer can replace it and no other
  * byte; `null` where the file has no such row or field.
  */
@@ -41,8 +62,9 @@ export function asCsvField(value: ScalarValue): string {
   return quoted ? `"${value.replace(/"/g, '""')}"` : value;
 }
 
-/** One field of a CSV: what it says, and where it says it. */
+/** One field of a CSV: what it says, as written and as read, and where it says it. */
 interface Field {
+  readonly text: string;
   readonly value: ScalarValue;
   readonly span: Span;
 }
@@ -58,7 +80,7 @@ function scanCsv(source: string): { rows: Field[][]; problem: Saying | null } {
   let from = 0;
 
   const endField = (at: number): void => {
-    row.push({ value: csvField(field, quoted), span: span(from, at) });
+    row.push({ text: field, value: csvField(field, quoted), span: span(from, at) });
     field = '';
     quoted = false;
     from = at + 1;
