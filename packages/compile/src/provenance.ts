@@ -30,6 +30,7 @@ export type FacetOrigin =
       readonly declared: readonly NodeId[];
     }
   | { readonly kind: 'override'; readonly node: NodeId }
+  | { readonly kind: 'layout'; readonly node: NodeId; readonly layout: NodeId }
   | { readonly kind: 'empty'; readonly node: NodeId | null };
 
 /** Where a cell's facets came from, each separately; `format` is `null` where nothing set one. */

@@ -21,6 +21,9 @@ export const CODE = {
   unreadableData: 'compile.unreadable-data',
   badTable: 'compile.bad-table',
   badSpelling: 'compile.bad-spelling',
+  badLayout: 'compile.bad-layout',
+  unknownLayout: 'compile.unknown-layout',
+  unknownColumn: 'compile.unknown-column',
 } as const;
 
 export type Code = (typeof CODE)[keyof typeof CODE];

@@ -1,6 +1,7 @@
 import type { Node, Path } from '@yxl-vscode/cst';
 import type { Span } from '@yxl-vscode/diag';
 import {
+  type BlockDef,
   type Defs,
   type FormulaDef,
   MODELED_KEYS,
@@ -12,13 +13,14 @@ import { formulaName, paramName, styleName, valueName } from '@yxl-vscode/units'
 import { withoutLeadingEquals } from './cell';
 import { CODE } from './codes';
 import { type Ctx, identify, keyOf, reject } from './ctx';
+import { readBlockDefs } from './layout';
 import { expectText, expectValue, openEntries, rejectUnknownKey } from './read';
 import { readStyle } from './style';
 import { say } from './text';
 
-export const NO_DEFS: Defs = { styles: [], values: [], formulas: [] };
+export const NO_DEFS: Defs = { styles: [], values: [], formulas: [], blocks: [] };
 
-/** The `defs:` block, three namespaces that do not see each other; a name is the key as written. */
+/** The `defs:` block, four namespaces that do not see each other; a name is the key as written. */
 export function readDefs(ctx: Ctx, node: Node, path: Path): Defs {
   const opened = openEntries(ctx, node, path, '`defs`');
   if (opened === null) return NO_DEFS;
@@ -27,6 +29,7 @@ export function readDefs(ctx: Ctx, node: Node, path: Path): Defs {
   let styles: StyleDef[] = [];
   let values: ValueDef[] = [];
   let formulas: FormulaDef[] = [];
+  let blocks: BlockDef[] = [];
 
   for (const entry of opened.entries) {
     const at = [...opened.path, keyOf(entry)];
@@ -40,12 +43,15 @@ export function readDefs(ctx: Ctx, node: Node, path: Path): Defs {
       case 'formulas':
         formulas = readFormulaDefs(here, entry.value, at);
         break;
+      case 'blocks':
+        blocks = readBlockDefs(here, entry.value, at);
+        break;
       default:
         rejectUnknownKey(here, entry, '`defs`', MODELED_KEYS.defs);
     }
   }
 
-  return { styles, values, formulas };
+  return { styles, values, formulas, blocks };
 }
 
 function readStyleDefs(ctx: Ctx, node: Node, path: Path): StyleDef[] {

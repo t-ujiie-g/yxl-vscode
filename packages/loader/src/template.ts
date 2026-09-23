@@ -1,6 +1,6 @@
 import type { Node } from '@yxl-vscode/cst';
 import type { Saying, Span } from '@yxl-vscode/diag';
-import type { Templated } from '@yxl-vscode/spec';
+import type { Named, Templated } from '@yxl-vscode/spec';
 import {
   type A1Addr,
   type A1Range,
@@ -66,6 +66,30 @@ export const RANGE: Kind<A1Range> = {
   noun: say('loader.a-range'),
   read: parseA1Range,
 };
+
+/** A range, or the name of a layout or of one of its columns, which the compiler places (`docs/spec.md` §25). */
+export const RANGE_OR_NAME: Kind<A1Range | Named> = {
+  code: CODE.badRange,
+  noun: say('loader.a-range-or-a-layout'),
+  read: (text) => parseA1Range(text) ?? (isLayoutName(text) ? { kind: 'named', text } : null),
+};
+
+/**
+ * Letters, digits and `_`, or any non-ASCII character, not starting with a
+ * digit; `dots` also admits `.` after the first (`docs/spec.md` §25).
+ */
+export function isName(text: string, dots: boolean): boolean {
+  const first = text[0];
+  if (first === undefined || /[0-9.]/.test(first)) return false;
+  return [...text].every(
+    (char) => /[A-Za-z0-9_]/.test(char) || char > '\x7f' || (dots && char === '.'),
+  );
+}
+
+/** What a layout's `name:` may be: a name with dots that Excel would not read as a cell. */
+export function isLayoutName(text: string): boolean {
+  return isName(text, true) && parseA1Addr(text.toUpperCase()) === null;
+}
 
 export const COLUMN: Kind<ColumnSpan> = {
   code: CODE.badColumn,

@@ -46,26 +46,25 @@ function readCell(ctx: Ctx, entry: Entry, path: Path): Cell | null {
   const at = readTextAs(ctx, key, entry.key.span, entryOf('cells'), ADDRESS);
   if (at === null) return null;
 
-  const what = about('cell', String(key));
-  const site = identify(ctx, [...path, key], entry.span);
+  const facets = readCellNode(ctx, entry.value, about('cell', String(key)));
+  return facets === null ? null : { ...identify(ctx, [...path, key], entry.span), at, ...facets };
+}
 
-  if (entry.value.kind !== 'map') {
-    const value = expectValue(ctx, entry.value, what);
-    if (value === null) return null;
-    return { ...site, at, value: { kind: 'literal', value }, ...NOTHING_ELSE };
+/** One cell written as §3 has it — a bare value, a `$ref`, or the expanded form — wherever it is written. */
+export function readCellNode(ctx: Ctx, node: Node, what: Saying): CellFacets | null {
+  if (node.kind !== 'map') {
+    const value = expectValue(ctx, node, what);
+    return value === null ? null : { value: { kind: 'literal', value }, ...NOTHING_ELSE };
   }
 
-  const name = refName(ctx, entry.value, what, VALUE_NAME);
-  if (name !== null) {
-    return { ...site, at, value: { kind: 'ref', name }, ...NOTHING_ELSE };
-  }
+  const name = refName(ctx, node, what, VALUE_NAME);
+  if (name !== null) return { value: { kind: 'ref', name }, ...NOTHING_ELSE };
 
-  const expanded = readExpandedCell(ctx, entry.value, what);
-  return expanded === null ? null : { ...site, at, ...expanded };
+  return readExpandedCell(ctx, node, what);
 }
 
 /** What a cell written as a bare value leaves unset. */
-const NOTHING_ELSE = {
+export const NOTHING_ELSE = {
   formula: null,
   rich: null,
   type: null,

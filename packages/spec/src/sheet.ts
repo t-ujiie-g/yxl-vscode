@@ -4,6 +4,7 @@ import type { Cell } from './cell';
 import type { Conditional } from './conditional';
 import type { DataBlock } from './data';
 import type { Chart, Image, Shape } from './float';
+import type { Layout, Named } from './layout';
 import type { Opaque, SpecNode, Templated } from './node';
 import type { Print, Protect } from './print';
 import type { SparklineGroup } from './sparkline';
@@ -29,6 +30,7 @@ export interface Sheet extends SpecNode {
   readonly cells: readonly Cell[];
   readonly formulas: readonly FormulaRange[];
   readonly data: readonly DataBlock[];
+  readonly layouts: readonly Layout[];
   readonly columns: readonly ColumnBand[];
   readonly rows: readonly RowBand[];
   readonly merges: readonly Merge[];
@@ -97,7 +99,7 @@ export interface LinkTarget {
  * Design toggles, `bandedRows` alone defaulting to on.
  */
 export interface Table extends SpecNode {
-  readonly at: Templated<A1Range>;
+  readonly at: Templated<A1Range> | Named;
   readonly name: string | null;
   readonly style: string | null;
   readonly bandedRows: boolean;

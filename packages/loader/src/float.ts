@@ -17,6 +17,7 @@ import {
   type ShapeText,
   type Size,
 } from '@yxl-vscode/spec';
+import { readAnchor } from './anchor';
 import { CODE } from './codes';
 import { type Ctx, identify, reject, type Site } from './ctx';
 import {
@@ -33,7 +34,7 @@ import {
   required,
 } from './read';
 import { readFont } from './style';
-import { ADDRESS, COLOR, PATH, readAs, spelling } from './template';
+import { COLOR, PATH, readAs, spelling } from './template';
 import { entryOf, say, under } from './text';
 
 /** A sheet's `charts:` entries, in the order written (`docs/spec.md` §12). */
@@ -295,11 +296,9 @@ function readLine(ctx: Ctx, node: Node, what: Saying): ShapeLine | null {
   };
 }
 
-/** The `at` every float needs: the cell its top-left corner floats over. */
+/** The `at` every float needs: the cell its top-left corner floats over, or a layout it follows. */
 function anchor(opened: Opened, what: Saying): Chart['at'] | null {
-  return required(opened, 'at', what, (entry) =>
-    readAs(opened.ctx, entry, under(what, 'at'), ADDRESS),
-  );
+  return required(opened, 'at', what, (entry) => readAnchor(opened.ctx, entry, under(what, 'at')));
 }
 
 function positioned(opened: Opened, what: Saying): Image['positioning'] {

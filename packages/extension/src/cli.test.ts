@@ -1,5 +1,8 @@
+import { chmodSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { delimiter, join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { older, run, versionOf, versionWarning } from './cli';
+import { folderOf, installation, older, run, versionOf, versionWarning } from './cli';
 import { reader } from './words';
 
 const english = reader('en');
@@ -58,5 +61,58 @@ describe('running the compiler', () => {
     const ran = await run('node', ['--this-flag-does-not-exist']);
     expect(ran?.ok).toBe(false);
     expect(ran?.said).not.toBe('');
+  });
+});
+
+describe('the line that installs the targeted yxl', () => {
+  it('runs the installer from that release tag, told the version and the folder', () => {
+    expect(installation('0.5.0', false, '/home/me/.local/bin')).toEqual({
+      shell: '/bin/sh',
+      args: ['-c'],
+      line: "(curl -fsSL 'https://raw.githubusercontent.com/t-ujiie-g/yxl/v0.5.0/install.sh' || wget -qO- 'https://raw.githubusercontent.com/t-ujiie-g/yxl/v0.5.0/install.sh') | YXL_VERSION='0.5.0' YXL_INSTALL_DIR='/home/me/.local/bin' sh",
+    });
+  });
+
+  it('leaves the folder to the installer where there is no yxl to replace', () => {
+    expect(installation('0.5.0', false, null).line).toMatch(/YXL_VERSION='0\.5\.0' sh$/);
+  });
+
+  it('quotes a folder so that nothing in its name reaches the shell as a command', () => {
+    expect(installation('0.5.0', false, "/tmp/it's; rm -rf ~").line).toContain(
+      "YXL_INSTALL_DIR='/tmp/it'\\''s; rm -rf ~' sh",
+    );
+    expect(installation('0.5.0', true, "C:\\it's").line).toContain(
+      "$env:YXL_INSTALL_DIR='C:\\it''s'; ",
+    );
+  });
+
+  it("runs Windows' own installer under PowerShell", () => {
+    expect(installation('0.5.0', true, null)).toEqual({
+      shell: 'powershell.exe',
+      args: ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command'],
+      line: "$env:YXL_VERSION='0.5.0'; irm 'https://raw.githubusercontent.com/t-ujiie-g/yxl/v0.5.0/install.ps1' | iex",
+    });
+  });
+});
+
+describe('the folder the compiler is in', () => {
+  it("is an absolute path's own folder", () => {
+    expect(folderOf('/opt/yxl/bin/yxl', '', false)).toBe('/opt/yxl/bin');
+  });
+
+  it('is the first folder on the path that holds an executable of that name', () => {
+    const empty = mkdtempSync(join(tmpdir(), 'yxl-path-'));
+    const holding = mkdtempSync(join(tmpdir(), 'yxl-path-'));
+    const later = mkdtempSync(join(tmpdir(), 'yxl-path-'));
+    for (const dir of [holding, later]) {
+      writeFileSync(join(dir, 'yxl'), '');
+      chmodSync(join(dir, 'yxl'), 0o755);
+    }
+
+    expect(folderOf('yxl', [empty, holding, later].join(delimiter), false)).toBe(holding);
+  });
+
+  it('is nothing where no folder on the path holds it', () => {
+    expect(folderOf('yxl', mkdtempSync(join(tmpdir(), 'yxl-path-')), false)).toBeNull();
   });
 });

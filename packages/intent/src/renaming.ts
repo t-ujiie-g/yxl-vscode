@@ -1,10 +1,9 @@
 import type { Op, Path } from '@yxl-vscode/cst';
-import { KEY, type Templated } from '@yxl-vscode/spec';
+import { KEY, type Override } from '@yxl-vscode/spec';
 import {
   type FilePath,
   type NodeId,
   parseQualifiedAddr,
-  type QualifiedAddr,
   qualified,
   renamed,
   type SheetName,
@@ -119,6 +118,6 @@ export function renameSheet(spec: Projection, where: Renaming, read: Reading): I
 }
 
 /** What an override's `at:` says, or `null` where a template stands in its place. */
-function spelled(at: Templated<QualifiedAddr>): string | null {
+function spelled(at: Override['at']): string | null {
   return typeof at === 'string' || !('kind' in at) ? qualified(at.sheet, at.at) : null;
 }

@@ -1,5 +1,6 @@
 import { type Diagnostic, error, type Saying } from '@yxl-vscode/diag';
 import type {
+  BlockDef,
   FormulaDef,
   ScalarValue,
   SpecDoc,
@@ -8,9 +9,10 @@ import type {
   Template,
   ValueDef,
 } from '@yxl-vscode/spec';
-import type { FilePath, NodeId } from '@yxl-vscode/units';
+import { type FilePath, filePath, type NodeId } from '@yxl-vscode/units';
 import { CODE, type Code } from './codes';
 import { asIs, behind, type Filled, fill, resolveParams } from './params';
+import type { Placed } from './placed';
 import { say } from './text';
 
 /**
@@ -28,8 +30,8 @@ export type DataReader = (from: FilePath, path: FilePath) => DataFile | null;
 
 /**
  * What compiling has in hand throughout: parameters resolved once, definitions
- * indexed once, the way out to a data file, and somewhere to put what it could
- * not draw.
+ * indexed once, every layout placed once (by name and by node), the way out to
+ * a data file, and somewhere to put what it could not draw.
  */
 export interface Ctx {
   readonly diagnostics: Diagnostic[];
@@ -41,6 +43,9 @@ export interface Ctx {
   readonly values: ReadonlyMap<string, ValueDef>;
   readonly formulas: ReadonlyMap<string, FormulaDef>;
   readonly styles: ReadonlyMap<string, StyleDef>;
+  readonly blocks: ReadonlyMap<string, BlockDef>;
+  readonly layouts: Map<string, Placed>;
+  readonly placed: Map<NodeId, Placed>;
 }
 
 /** Where each parameter is declared, with every parameter its default is built from. */
@@ -73,6 +78,9 @@ export function context(doc: SpecDoc, read: DataReader | null, set: Setting): Ct
     values: new Map(doc.defs.values.map((def) => [def.name, def])),
     formulas: new Map(doc.defs.formulas.map((def) => [def.name, def])),
     styles: new Map(doc.defs.styles.map((def) => [def.name, def])),
+    blocks: new Map(doc.defs.blocks.map((def) => [def.name, def])),
+    layouts: new Map(),
+    placed: new Map(),
   };
 
   for (const cycle of cycles) {
@@ -116,4 +124,23 @@ function report(ctx: Ctx, done: Filled, node: SpecNode): void {
   if (done.unclosed) {
     reject(ctx, CODE.unclosedPlaceholder, say('compile.unclosed-placeholder'), node);
   }
+}
+
+/** A data file a spec names, opened through the injected reader (ADR-004), or `null` with the reason reported. */
+export function openData(ctx: Ctx, path: Template | ScalarValue, node: SpecNode): DataFile | null {
+  const spelled = text(ctx, path, node);
+  const read = filePath(spelled);
+  if (read === null) {
+    reject(ctx, CODE.badPath, say('compile.data-needs-a-path'), node);
+    return null;
+  }
+  if (ctx.read === null) {
+    reject(ctx, CODE.noDataReader, say('compile.nothing-can-read', { path: read }), node);
+    return null;
+  }
+
+  const opened = ctx.read(ctx.from, read);
+  if (opened === null)
+    reject(ctx, CODE.unreadableData, say('compile.cannot-read', { path: read }), node);
+  return opened;
 }

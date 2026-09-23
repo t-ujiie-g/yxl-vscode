@@ -101,7 +101,14 @@ export type Says = {
   'host.version-unknown': Nothing;
   'host.older-compiler': { found: string; target: string };
   'host.newer-compiler': { found: string; target: string };
+  'host.update-yxl': { target: string };
+  'host.install-yxl': { target: string };
+  'host.yxl-installed': { found: string };
+  'host.still-another-yxl': { found: string; target: string };
+  'host.install-failed': Nothing;
+  'host.install-by-hand': Nothing;
   'host.file-unreadable': { file: string };
+  'host.inside-a-layout': Nothing;
 };
 
 export const say = speaking<Says>();
@@ -200,7 +207,17 @@ const en: Words<Says> = {
     `yxl ${found} is older than the ${target} this preview targets: a construct it understands may not exist there.`,
   'host.newer-compiler': ({ found, target }) =>
     `yxl ${found} is newer than the ${target} this preview targets: what it writes still builds, but the schema may have moved.`,
+  'host.update-yxl': ({ target }) => `Update yxl to ${target}`,
+  'host.install-yxl': ({ target }) => `Install yxl ${target}`,
+  'host.yxl-installed': ({ found }) => `yxl ${found} is installed.`,
+  'host.still-another-yxl': ({ found, target }) =>
+    `The installer finished, but \`yxl version\` still answers ${found}, not ${target}: another yxl comes first on your PATH. Remove it, or set \`yxl.path\` to the new one.`,
+  'host.install-failed': () => 'The yxl installer did not finish; the terminal says why.',
+  'host.install-by-hand': () =>
+    'Tasks cannot run here, so the install command is on the clipboard: paste it into a terminal.',
   'host.file-unreadable': ({ file }) => `${file} could not be read`,
+  'host.inside-a-layout': () =>
+    'this would write inside a layout, which is edited in the spec itself; the preview draws it but does not change it',
 };
 
 const ja: Words<Says> = {
@@ -298,7 +315,18 @@ const ja: Words<Says> = {
     `yxl ${found} はこのプレビューが対象とする ${target} より古いバージョンです。ここで扱える構文が、そちらには無いかもしれません。`,
   'host.newer-compiler': ({ found, target }) =>
     `yxl ${found} はこのプレビューが対象とする ${target} より新しいバージョンです。書いたものはビルドできますが、スキーマが動いている可能性があります。`,
+  'host.update-yxl': ({ target }) => `yxl を ${target} に更新`,
+  'host.install-yxl': ({ target }) => `yxl ${target} をインストール`,
+  'host.yxl-installed': ({ found }) => `yxl ${found} をインストールしました。`,
+  'host.still-another-yxl': ({ found, target }) =>
+    `インストーラは終了しましたが、\`yxl version\` はまだ ${target} ではなく ${found} と答えます。PATH 上で別の yxl が先に見つかっています。それを取り除くか、\`yxl.path\` に新しい方を指定してください。`,
+  'host.install-failed': () =>
+    'yxl のインストーラが完了しませんでした。理由はターミナルに表示されています。',
+  'host.install-by-hand': () =>
+    'ここではタスクを実行できないため、インストール用のコマンドをクリップボードにコピーしました。ターミナルに貼り付けて実行してください。',
   'host.file-unreadable': ({ file }) => `${file} を読めませんでした`,
+  'host.inside-a-layout': () =>
+    'この編集はレイアウトの中を書き換えます。レイアウトは spec の中で編集してください。プレビューは描画だけを行い、変更はしません',
 };
 
 /** This package's sentences in every language, for the edge that words them. */

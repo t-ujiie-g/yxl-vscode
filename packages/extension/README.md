@@ -11,7 +11,9 @@ what you did, with your comments, key order and quoting intact.
   declares; merges, bands, an outline, frozen panes, conditional formatting,
   filters, notes, links, validations and tables; and what sits *on* a sheet —
   charts, images, shapes and sparklines — drawn where they sit and at the size
-  they take.
+  they take. **Layouts** too: header levels merged where they agree, rows read
+  from a CSV by field name, blocks, and footers with their subtotals, exactly
+  as yxl builds them.
 - **Computes for display.** Some 500 Excel functions, `#DIV/0!` and the rest of
   Excel's error text included. A formula naming something this does not model is
   **not computed at all** and says so: a number that is not the workbook's number
@@ -21,7 +23,8 @@ what you did, with your comments, key order and quoting intact.
   column, hide a run, rename a sheet — and the YAML changes.
 - **Refuses the rest out loud, and offers the answers it has.** A cell whose
   value comes from a definition, a CSV, a parameter or a `formulas:` range has
-  more than one meaning or none. It says so before you type, and when you type
+  more than one meaning or none, and so does a cell a layout draws, which the
+  layout's own YAML is where to change. It says so before you type, and when you type
   anyway it lists what each answer would change — *change the range's formula*,
   which moves 40 cells, or *split the range* — with the count beside it. You
   pick; nothing is picked for you.
@@ -40,10 +43,16 @@ The **`yxl` compiler**, on your `PATH` or named by the `yxl.path` setting. It is
 required rather than bundled: it is what builds the workbook, and you likely
 have it already.
 
-This release targets **yxl 0.4.0**. An older or a newer compiler is a warning
+This release targets **yxl 0.5.0**. An older or a newer compiler is a warning
 rather than a refusal — a spec written here is ordinary yxl — but the schema is
 not frozen until yxl's v1.0, so the pinned version is the one this was tested
 against.
+
+Where the compiler is older than that, or missing, the warning offers **Update
+yxl to 0.5.0**: it runs yxl's own installer for exactly that release, in a
+terminal you can watch, into the folder your current `yxl` is in, and then asks
+the compiler its version again. It is checked once after each update of this
+extension, and nothing is installed unless you press the button.
 
 ## Getting started
 

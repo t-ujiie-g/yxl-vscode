@@ -23,6 +23,7 @@ export type Says = {
   'intent.is-the-anchor': { at: string };
   'intent.is-filled-by': { at: string; anchor: string };
   'intent.nothing-to-change-yet': { at: string; sheet: string };
+  'intent.drawn-by-a-layout': { at: string };
   'intent.no-place-in-the-file': Nothing;
   'intent.file-unreadable': { file: string };
   'intent.nothing-at-path': { path: string; file: string };
@@ -52,6 +53,7 @@ export type Says = {
   'intent.no-filter-to-take-off': { sheet: string };
   'intent.one-column-chart': { at: string };
   'intent.floats-from-a-parameter': Nothing;
+  'intent.floats-below-a-layout': Nothing;
   'intent.not-a-float': Nothing;
   'intent.a1-freezes-nothing': Nothing;
   'intent.split-and-freeze': { sheet: string };
@@ -193,6 +195,8 @@ const en: Words<Says> = {
     `\`${at}\` is filled by the range anchored at \`${anchor}\`, which writes one formula for every cell it covers`,
   'intent.nothing-to-change-yet': ({ at, sheet }) =>
     `\`${at}\` on \`${sheet}\` holds nothing to change yet`,
+  'intent.drawn-by-a-layout': ({ at }) =>
+    `\`${at}\` is drawn by a layout, which is edited in the spec itself; an override can still except this one cell`,
   'intent.no-place-in-the-file': () => 'this cell has no place in the file to edit',
   'intent.file-unreadable': ({ file }) => `\`${file}\` could not be read`,
   'intent.nothing-at-path': ({ path, file }) => `nothing is at \`${path}\` in \`${file}\``,
@@ -248,6 +252,8 @@ const en: Words<Says> = {
     `\`${at}\` is one column, and a chart plots a column against the labels beside it`,
   'intent.floats-from-a-parameter': () =>
     'this floats where a parameter says, and moving it would write over the parameter',
+  'intent.floats-below-a-layout': () =>
+    'this follows a layout (`below:`), and moving it would cut it loose from the layout',
   'intent.not-a-float': () => 'this is not written as something that floats',
   'intent.a1-freezes-nothing': () =>
     '`A1` freezes nothing — freeze at the first cell that is to scroll',
@@ -392,6 +398,8 @@ const ja: Words<Says> = {
     `\`${at}\` は \`${anchor}\` を起点とする範囲が埋めています。この範囲は覆うセルすべてに 1 つの数式を書きます`,
   'intent.nothing-to-change-yet': ({ at, sheet }) =>
     `\`${sheet}\` の \`${at}\` には、まだ変更するものがありません`,
+  'intent.drawn-by-a-layout': ({ at }) =>
+    `\`${at}\` はレイアウトが描いたセルです。レイアウトは spec の中で編集します。このセルだけをオーバーライドで例外にすることはできます`,
   'intent.no-place-in-the-file': () => 'このセルには、編集できる場所がファイル上にありません',
   'intent.file-unreadable': ({ file }) => `\`${file}\` を読めませんでした`,
   'intent.nothing-at-path': ({ path, file }) => `\`${file}\` の \`${path}\` には何もありません`,
@@ -440,6 +448,8 @@ const ja: Words<Says> = {
     `\`${at}\` は 1 列で、グラフは 1 列をその隣のラベルに対して描きます`,
   'intent.floats-from-a-parameter': () =>
     'これはパラメータが指す位置に浮いており、動かすとパラメータを上書きしてしまいます',
+  'intent.floats-below-a-layout': () =>
+    'これはレイアウトの下に続くよう（`below:`）置かれており、動かすとレイアウトから切り離されてしまいます',
   'intent.not-a-float': () => 'これは浮きものとして書かれていません',
   'intent.a1-freezes-nothing': () =>
     '`A1` では何も固定されません。スクロールさせたい最初のセルで固定してください',

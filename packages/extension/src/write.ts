@@ -19,8 +19,8 @@ import {
   setFormula,
   setValue,
 } from '@yxl-vscode/intent';
-import type { IncludeReader } from '@yxl-vscode/loader';
-import type { Step } from '@yxl-vscode/patch';
+import { type IncludeReader, pathOf } from '@yxl-vscode/loader';
+import type { Patch, Step } from '@yxl-vscode/patch';
 import type { SpecDoc } from '@yxl-vscode/spec';
 import {
   addrAt,
@@ -346,6 +346,11 @@ export async function applied(
     return false;
   }
 
+  if (intent.kind === 'edit' && intoLayout(spec.grid, intent.file, intent.patch)) {
+    port.refuse(say('host.inside-a-layout'), null);
+    return false;
+  }
+
   const source = port.text(intent.file);
   if (source === null) {
     port.refuse(say('host.file-unreadable', { file: intent.file }), null);
@@ -390,6 +395,20 @@ export async function applied(
       : null,
   );
   return true;
+}
+
+/** Whether a patch writes inside a layout, which nothing here edits yet (`docs/spec.md` §25). */
+export function intoLayout(grid: CompiledGrid, file: FilePath, patch: Patch): boolean {
+  const layouts = grid.sheets.flatMap((sheet) =>
+    sheet.layouts.flatMap((one) => {
+      const at = pathOf(one.node);
+      return at?.file === file ? [at.path] : [];
+    }),
+  );
+
+  return patch.ops.some((op) =>
+    layouts.some((path) => path.every((step, at) => op.path[at] === step)),
+  );
 }
 
 /** The cells an edit moved, named as an undo of it may name them (ADR-009). */

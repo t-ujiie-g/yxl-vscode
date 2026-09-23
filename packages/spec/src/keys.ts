@@ -61,6 +61,23 @@ export const KEY = {
   width: 'width',
 } as const;
 
+/** The keys a conditional rule reads besides where it applies. */
+const RULE_KEYS = [
+  'cell',
+  'text',
+  'formula',
+  'top',
+  'bottom',
+  'duplicate',
+  'unique',
+  'color_scale',
+  'data_bar',
+  'icon_set',
+  'style',
+  'format',
+  'stop_if_true',
+];
+
 /**
  * The keys each construct is read from; a key not here is kept verbatim and
  * marked opaque (ADR-011). The document's and the sheet's lists are short of
@@ -68,12 +85,13 @@ export const KEY = {
  */
 export const MODELED_KEYS = {
   document: keySet(['sheets', 'params', 'defs', 'overrides', 'date1904']),
-  defs: keySet(['styles', 'values', 'formulas']),
+  defs: keySet(['styles', 'values', 'formulas', 'blocks']),
   sheet: keySet([
     'name',
     'cells',
     'formulas',
     'data',
+    'layouts',
     'columns',
     'rows',
     'merges',
@@ -164,22 +182,38 @@ export const MODELED_KEYS = {
   rowBand: keySet(['at', 'style', 'format', 'height', 'hidden', 'group']),
   data: keySet(['at', 'values', 'csv', 'json', 'columns']),
   formulaRange: keySet(['at', 'formula']),
-  conditional: keySet([
+  conditional: keySet(['at', ...RULE_KEYS]),
+  columnRule: keySet(RULE_KEYS),
+  layout: keySet([
     'at',
-    'cell',
-    'text',
+    'name',
+    'rows',
+    'header_style',
+    'columns',
+    'values',
+    'csv',
+    'json',
+    'footer',
+  ]),
+  layoutColumn: keySet([
+    'name',
+    'header',
+    'field',
     'formula',
-    'top',
-    'bottom',
-    'duplicate',
-    'unique',
-    'color_scale',
-    'data_bar',
-    'icon_set',
+    'conditional',
+    'width',
     'style',
     'format',
-    'stop_if_true',
+    'hidden',
+    'group',
   ]),
+  blockPlacement: keySet(['block', 'as', 'header', 'fields']),
+  block: keySet(['columns']),
+  footerRow: keySet(['row', 'style']),
+  footerGroup: keySet(['by', 'order', 'rows']),
+  footerCell: keySet([...CELL_KEYS, 'total', 'merge_to']),
+  below: keySet(['below', 'gap']),
+  byMeaning: keySet(['layout', 'column', 'where', 'row']),
 };
 
 function keySet(names: readonly string[]): ReadonlySet<string> {

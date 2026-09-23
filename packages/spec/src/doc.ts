@@ -6,6 +6,7 @@ import type {
   ValueName,
 } from '@yxl-vscode/units';
 import type { CellFacets } from './cell';
+import type { BlockDef, ByMeaning } from './layout';
 import type { Opaque, SpecNode, Templated } from './node';
 import type { Sheet } from './sheet';
 import type { Style } from './style';
@@ -31,7 +32,7 @@ export interface SpecDoc extends SpecNode {
  * wrote the cell; the facets are independent, and `reason` is for the reader.
  */
 export interface Override extends SpecNode, CellFacets {
-  readonly at: Templated<QualifiedAddr>;
+  readonly at: Templated<QualifiedAddr> | ByMeaning;
   readonly reason: string | null;
 }
 
@@ -41,11 +42,12 @@ export interface Param extends SpecNode {
   readonly value: ScalarValue;
 }
 
-/** What `defs:` declares, in three namespaces that do not see each other (`docs/spec.md` §6). */
+/** What `defs:` declares, in four namespaces that do not see each other (`docs/spec.md` §6). */
 export interface Defs {
   readonly styles: readonly StyleDef[];
   readonly values: readonly ValueDef[];
   readonly formulas: readonly FormulaDef[];
+  readonly blocks: readonly BlockDef[];
 }
 
 /** One `defs.styles` entry; the span covers the whole entry, key included. */

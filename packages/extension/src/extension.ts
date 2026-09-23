@@ -12,6 +12,10 @@ declare const YXL_TARGET: string;
 /** What VS Code calls: a preview beside the text, not a replacement for it (ADR-020). */
 export function activate(context: vscode.ExtensionContext): void {
   const compiler = new Compiler(YXL_TARGET);
+  void compiler.checkAfterInstall(
+    context.globalState,
+    String(context.extension.packageJSON.version),
+  );
 
   context.subscriptions.push(
     compiler,

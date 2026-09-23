@@ -1,5 +1,6 @@
 import type { Node, Path } from '@yxl-vscode/cst';
 import { MODELED_KEYS, type Override } from '@yxl-vscode/spec';
+import { readByMeaning } from './anchor';
 import { holdsSomething, readFacets } from './cell';
 import { CODE } from './codes';
 import { type Ctx, identify, keyOf, reject, type Site } from './ctx';
@@ -29,7 +30,11 @@ function readOverride(site: Site): Override | null {
     );
     return null;
   }
-  const at = readAs(here, anchor.value, under(about('override', ''), 'at'), QUALIFIED);
+  const where = under(about('override', ''), 'at');
+  const at =
+    anchor.value.kind === 'map'
+      ? readByMeaning(here, anchor.value, where)
+      : readAs(here, anchor.value, where, QUALIFIED);
   if (at === null) return null;
 
   const what = about('override', String(label(at)));
@@ -53,5 +58,6 @@ function readOverride(site: Site): Override | null {
 
 /** How the override reads back in a diagnostic, before any parameter fills it in. */
 function label(at: Override['at']): string {
-  return 'kind' in at ? at.text : `${at.sheet}!${at.at}`;
+  if (!('kind' in at)) return `${at.sheet}!${at.at}`;
+  return at.kind === 'template' ? at.text : `${at.layout}.${at.column}`;
 }

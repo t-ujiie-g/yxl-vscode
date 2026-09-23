@@ -44,6 +44,26 @@ export {
   type Size,
 } from './float';
 export { CELL_HOLDS, CELL_WEARS, INCLUDE_KEY, KEY, MODELED_KEYS, REF_KEY } from './keys';
+export {
+  type Anchor,
+  type Below,
+  type BlockDef,
+  type BlockPlacement,
+  type ByMeaning,
+  type ColumnRule,
+  FOOTER_TOTALS,
+  type FooterCell,
+  type FooterEntry,
+  type FooterGroup,
+  type FooterRow,
+  type FooterTotal,
+  type GroupOrder,
+  type HeaderCell,
+  type Layout,
+  type LayoutColumn,
+  type LayoutEntry,
+  type Named,
+} from './layout';
 export type { Opaque, SpecNode, Template, Templated } from './node';
 export {
   ALLOWANCES,

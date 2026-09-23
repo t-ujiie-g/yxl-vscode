@@ -4,6 +4,25 @@ Every release names the `yxl` it was built against: the schema is not frozen
 until yxl's v1.0, so the pinned compiler is part of what a version means
 (`ROADMAP.md` §8 Q6).
 
+## 0.2.0 — 2026-09-23
+
+Targets **yxl 0.5.0**, up from 0.4.0.
+
+- **Layouts are drawn.** yxl 0.5.0's `layouts:` — columns named rather than
+  lettered — appear in the grid as yxl builds them: header levels merged where
+  neighbours agree, rows read from `values:`, a CSV or JSON by field name,
+  `defs.blocks` placed as the columns they stand for, and footers with totals
+  and grouped subtotals. A layout's name reaches it from elsewhere too: a
+  chart's or a sparkline's data, a validation's list, a table, and anything
+  anchored `below:` one.
+- **A cell a layout draws says so** rather than taking a value: the layout is
+  edited in its YAML. An override still excepts one cell, as it does anywhere.
+- **Update yxl from the warning.** When the compiler is older than the one this
+  release targets, or missing, the warning offers to run yxl's own installer for
+  exactly that version, and checks the version again afterwards. It asks once
+  after each update of this extension, and installs nothing unless you press
+  the button.
+
 ## 0.1.2 — 2026-09-13
 
 Targets **yxl 0.4.0**, up from 0.3.6.

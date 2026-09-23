@@ -15,7 +15,7 @@ import {
   type SpecNode,
   type Style,
 } from '@yxl-vscode/spec';
-import { parseQualifiedCell, parseQualifiedRange, rectOf } from '@yxl-vscode/units';
+import { parseQualifiedCell, type SheetName } from '@yxl-vscode/units';
 import { address, colour, spelling } from './cell';
 import { CODE } from './codes';
 import { type Ctx, reject, text } from './ctx';
@@ -28,12 +28,13 @@ import type {
   CompiledShapeText,
   CompiledSparkline,
 } from './grid';
+import { anchored, readRange } from './named';
 import { flatten, settled } from './style';
 import { say } from './text';
 
 /** One `charts:` entry, its anchor read; what it plots stays the spec's own words (ADR-029). */
-export function chart(ctx: Ctx, one: Chart): CompiledChart | null {
-  const at = address(ctx, one.at, one);
+export function chart(ctx: Ctx, one: Chart, sheet: SheetName): CompiledChart | null {
+  const at = anchored(ctx, one.at, one, sheet);
   const type = spelling(ctx, one.type, CHART_TYPES, one);
   if (at === null || type === null) return null;
 
@@ -75,8 +76,8 @@ function axis(ctx: Ctx, one: Chart, written: ChartAxis | null): CompiledChartAxi
 }
 
 /** One `images:` entry, its anchor read; how big the file is, is the host's to say (ADR-004). */
-export function image(ctx: Ctx, one: Image): CompiledImage | null {
-  const at = address(ctx, one.at, one);
+export function image(ctx: Ctx, one: Image, sheet: SheetName): CompiledImage | null {
+  const at = anchored(ctx, one.at, one, sheet);
   if (at === null) return null;
 
   const spelled = text(ctx, one.path, one);
@@ -95,8 +96,8 @@ export function image(ctx: Ctx, one: Image): CompiledImage | null {
 const SHAPE_SIZE = { width: 160, height: 160 };
 
 /** One `shapes:` entry, its anchor, colours and text read (`docs/spec.md` §18). */
-export function shape(ctx: Ctx, one: Shape): CompiledShape | null {
-  const at = address(ctx, one.at, one);
+export function shape(ctx: Ctx, one: Shape, sheet: SheetName): CompiledShape | null {
+  const at = anchored(ctx, one.at, one, sheet);
   const kind = spelling(ctx, one.kind, SHAPE_KINDS, one);
   if (at === null || kind === null) return null;
 
@@ -170,13 +171,7 @@ export function sparklines(ctx: Ctx, group: SparklineGroup): CompiledSparkline[]
     const at = address(ctx, one.at, group);
     if (at === null) return [];
 
-    const spelled = text(ctx, one.data, group);
-    const read = parseQualifiedRange(spelled);
-    if (read === null) {
-      reject(ctx, CODE.badRange, say('compile.not-a-range', { spelled }), group);
-      return [];
-    }
-
-    return [{ ...shared, at, data: { sheet: read.sheet, rect: rectOf(read.at) } }];
+    const data = readRange(ctx, text(ctx, one.data, group), group);
+    return data === null ? [] : [{ ...shared, at, data }];
   });
 }

@@ -7,9 +7,13 @@ import {
   styleAt,
 } from '@yxl-vscode/compile';
 import {
+  type Below,
   type Comparison,
   type ConditionalTest,
   coverageOf,
+  type FooterEntry,
+  type FooterRow,
+  type Layout,
   type Sheet,
   type SpecDoc,
   type SpecNode,
@@ -179,6 +183,8 @@ function says(origin: FacetOrigin, where: Described | undefined, from: string): 
         .join(', ')}, in \`${origin.template}\``;
     case 'override':
       return 'an override';
+    case 'layout':
+      return `drawn by ${where?.what ?? 'a layout'}`;
     default:
       return 'nothing — this cell holds no value';
   }
@@ -258,9 +264,33 @@ function inSheet(sheet: Sheet, put: (node: SpecNode, what: string) => void): voi
   for (const link of sheet.links) put(link, `the link on \`${spelled(link.at)}\``);
   for (const one of sheet.validations) put(one, `the validation over \`${spelled(one.at)}\``);
   for (const one of sheet.tables) put(one, `the table over \`${spelled(one.at)}\``);
+  for (const layout of sheet.layouts) inLayout(layout, put);
 }
 
-/** A value the loader kept as a template reads back as the text the spec wrote. */
-function spelled(value: string | { readonly text: string }): string {
-  return typeof value === 'string' ? value : value.text;
+function inLayout(layout: Layout, put: (node: SpecNode, what: string) => void): void {
+  const named =
+    layout.name === null
+      ? `the layout at \`${spelled(layout.at)}\``
+      : `the layout \`${layout.name}\``;
+  put(layout, named);
+
+  for (const entry of layout.columns) {
+    const column = entry.kind === 'column' ? entry.name : (entry.as ?? entry.block);
+    put(entry, `column \`${column}\` of ${named}`);
+    for (const cell of entry.header ?? []) if (cell !== null) put(cell, `a header of ${named}`);
+  }
+  for (const row of footerRows(layout.footer)) {
+    put(row, `a footer row of ${named}`);
+    for (const cell of row.cells) put(cell, `the footer's \`${cell.column}\` of ${named}`);
+  }
+}
+
+function footerRows(entries: readonly FooterEntry[]): FooterRow[] {
+  return entries.flatMap((one) => (one.kind === 'row' ? [one] : footerRows(one.rows)));
+}
+
+/** A value the loader kept as a template reads back as the text the spec wrote; `below:` as the layout it follows. */
+function spelled(value: string | { readonly text: string } | Below): string {
+  if (typeof value === 'string') return value;
+  return 'text' in value ? value.text : `below ${value.layout}`;
 }

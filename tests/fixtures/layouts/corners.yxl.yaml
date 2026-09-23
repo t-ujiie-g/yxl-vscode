@@ -1,0 +1,109 @@
+# The corners of `layouts:` (`docs/spec.md` §25) that upstream's own examples
+# leave untried, each compared cell by cell against what yxl builds.
+defs:
+  styles:
+    head: { font: { bold: true }, fill: "DDEBF7" }
+    sub: { font: { italic: true } }
+    tot: { font: { bold: true }, border: { top: { style: thin } } }
+    low: { font: { color: "C00000" } }
+  blocks:
+    yoy:
+      columns:
+        - { name: cy, header: 当年, format: "#,##0" }
+        - { name: py, header: 前年, format: "#,##0" }
+        - name: ratio
+          header: 比
+          format: "0.0%"
+          formula: 'IF({{py}}=0,"",{{cy}}/{{py}}-1)'
+          conditional:
+            - { cell: { less_than: 0 }, style: low }
+            - { formula: '{{cy}}<{{rate}}', style: low }
+
+sheets:
+  - name: 店舗
+    cells:
+      A1: 店舗別
+    layouts:
+      - at: A3
+        name: stores
+        header_style: head
+        csv: stores.csv
+        columns:
+          - { name: branch, header: [null, 支店], width: 10 }
+          - { name: store, header: 店舗 }
+          - { name: channel, header: [区分, 種別] }
+          - { block: yoy, as: s, header: 売上, fields: { cy: sales, py: prior } }
+          - { name: rate, field: open, header: 開店 }
+          - name: note
+            header: 注
+            formula: 'IF({{channel}}="直営","{{literal}}","")'
+        footer:
+          - by: branch
+            order: asc
+            rows:
+              - by: channel
+                order: [直営, FC, 本部]
+                rows:
+                  - row: { store: "{{branch}}/{{channel}}", s.cy: { total: sum }, s.py: { total: count } }
+              - row:
+                  branch: { value: "{{branch}} 計", merge_to: channel }
+                  s.cy: { total: sum }
+                  s.py: { total: average }
+                  s.ratio: { formula: 'IF({{s.py}}=0,"",{{s.cy}}/{{s.py}}-1)' }
+                style: sub
+          - row: { branch: 最小, s.cy: { total: min }, s.py: { total: max } }
+          - row: { branch: { value: 総計, merge_to: store, style: sub }, s.cy: { total: sum } }
+            style: tot
+      - at: { below: stores, gap: 2 }
+        name: flags
+        rows: 3
+        values:
+          - [true, 1]
+          - [false]
+        columns:
+          - { name: flag, header: 旗 }
+          - { name: n, header: 数 }
+          - { name: twice, header: 倍, formula: "{{n}}*2" }
+        footer:
+          - by: flag
+            order: desc
+            rows:
+              - row: { flag: "{{flag}}", n: { total: sum } }
+    data:
+      - at: { below: flags }
+        values:
+          - [after, the, flags]
+    validations:
+      - at: stores.store
+        list: { from: stores.branch }
+    conditional:
+      - at: flags.n
+        cell: { greater_than: 0 }
+        style: sub
+    tables:
+      - { at: flags, name: FlagTable }
+    charts:
+      - at: { below: stores, gap: 12 }
+        type: bar
+        series:
+          - { values: stores.s.cy, categories: stores.store }
+
+  - name: 注記
+    layouts:
+      - at: B2
+        json: notes.json
+        columns:
+          - { name: count, header: 件数 }
+          - { name: label, header: 名前 }
+          - { name: double, header: 二倍, formula: "{{count}}*2" }
+    cells:
+      A10: { formula: "SUM(stores.s.cy)" }
+    sparklines:
+      - { at: A12, data: stores.s.cy }
+
+overrides:
+  - at: { layout: stores, column: s.py, where: { branch: 大阪, store: 梅田 } }
+    value: 95
+    reason: 訂正
+  - at: { layout: flags, column: n, row: 1 }
+    value: 7

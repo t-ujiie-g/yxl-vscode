@@ -1,10 +1,9 @@
 import { type Op, type Path, renderScalar, reordered } from '@yxl-vscode/cst';
-import { KEY, type Templated, type Visibility } from '@yxl-vscode/spec';
+import { KEY, type Override, type Visibility } from '@yxl-vscode/spec';
 import {
   type Color,
   type FilePath,
   parseQualifiedAddr,
-  type QualifiedAddr,
   qualified,
   type SheetName,
   sheetName,
@@ -130,7 +129,7 @@ export function deleteSheet(spec: Projection, where: Deleting, read: Reading): I
 }
 
 /** Whether an override's `at:` names this sheet, where a template has not stopped it being read. */
-function onSheet(at: Templated<QualifiedAddr>, sheet: SheetName): boolean {
+function onSheet(at: Override['at'], sheet: SheetName): boolean {
   if (typeof at !== 'string' && 'kind' in at) return false;
 
   const said = typeof at === 'string' ? at : qualified(at.sheet, at.at);

@@ -7,10 +7,11 @@ import {
   MODELED_KEYS,
   type ScalarValue,
 } from '@yxl-vscode/spec';
+import { readAnchor } from './anchor';
 import { CODE } from './codes';
 import { type Ctx, identify, keyOf, reject, type Site } from './ctx';
 import { expectText, findEntry, openEntries, openSeq, readEach, rejectUnknownKey } from './read';
-import { ADDRESS, PATH, readAs } from './template';
+import { PATH, readAs } from './template';
 import { entryOf, say, under } from './text';
 
 /** A sheet's `data:` sequence: one anchored table per entry. */
@@ -31,7 +32,7 @@ function readDataBlock(site: Site): DataBlock | null {
     reject(here, CODE.missingKey, say('loader.needs', { what, key: 'at' }), opened.node.span);
     return null;
   }
-  const at = readAs(here, anchor.value, under(what, 'at'), ADDRESS);
+  const at = readAnchor(here, anchor.value, under(what, 'at'));
   if (at === null) return null;
 
   const source = readSource(here, entries, opened.node, what);
@@ -59,7 +60,7 @@ function readSource(
       case 'values':
         source = pickSource(ctx, source, entry, {
           kind: 'inline',
-          rows: readRows(ctx, entry.value),
+          rows: readRows(ctx, entry.value, what),
         });
         break;
       case 'csv': {
@@ -96,7 +97,13 @@ function readSource(
   return { ...source, columns };
 }
 
-function pickSource(ctx: Ctx, taken: DataSource | null, entry: Entry, source: DataSource) {
+/** The first place rows come from, a second reported; `data:` and a layout both take exactly one. */
+export function pickSource(
+  ctx: Ctx,
+  taken: DataSource | null,
+  entry: Entry,
+  source: DataSource | null,
+): DataSource | null {
   if (taken === null) return source;
 
   const message = say('loader.rows-from-one-place', { key: keyOf(entry) });
@@ -116,13 +123,14 @@ function readColumnNames(ctx: Ctx, node: Node, what: Saying): readonly string[] 
   return names;
 }
 
-function readRows(ctx: Ctx, node: Node): readonly DataRow[] {
-  const opened = openSeq(ctx, node, [], under(entryOf('data'), 'values'));
+/** The inline `values:` rows of `what`, a `data:` entry or a layout (`docs/spec.md` §9). */
+export function readRows(ctx: Ctx, node: Node, what: Saying): readonly DataRow[] {
+  const opened = openSeq(ctx, node, [], under(what, 'values'));
   if (opened === null) return [];
 
   const rows: DataRow[] = [];
   for (const [index, item] of opened.node.items.entries()) {
-    rows.push(readRow(opened.ctx, item, `row ${index + 1} of a \`data\` entry`));
+    rows.push(readRow(opened.ctx, item, say('loader.row-of', { what, index: index + 1 })));
   }
   return rows;
 }

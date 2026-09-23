@@ -30,6 +30,7 @@ export type Says = {
   'loader.columns-needs-json': { what: Saying };
   'loader.rows-from-one-place': { key: string };
   'loader.field-must-be-a-value': { what: Saying; index: number };
+  'loader.row-of': { what: Saying; index: number };
 
   'loader.names-itself-twice': { what: Saying };
   'loader.needs-a-series': { what: Saying };
@@ -42,6 +43,16 @@ export type Says = {
   'loader.needs-something-to-ask': { what: Saying };
   'loader.not-a-comparison': { what: Saying; kind: string };
   'loader.list-needs-choices': { what: Saying };
+
+  'loader.a-column-of': { what: Saying };
+  'loader.where-or-row': { what: Saying };
+  'loader.blocks-do-not-nest': { what: Saying };
+  'loader.field-and-formula': { what: Saying };
+  'loader.no-levels': { what: Saying };
+  'loader.levels-are-cells': { what: Saying };
+  'loader.row-or-group': { what: Saying };
+  'loader.not-a-column-name': { what: Saying; name: string };
+  'loader.not-a-layout-name': { what: Saying; name: string };
 
   'loader.scales-two-ways': { what: Saying };
   'loader.break-at-a1': { what: Saying };
@@ -58,6 +69,7 @@ export type Says = {
   'loader.a-cell-reference': Nothing;
   'loader.a-sheet-and-a-cell': Nothing;
   'loader.a-range': Nothing;
+  'loader.a-range-or-a-layout': Nothing;
   'loader.a-column': Nothing;
   'loader.a-row': Nothing;
   'loader.a-hex-colour': Nothing;
@@ -89,6 +101,7 @@ export function under(what: Saying, key: string) {
 
 /** The construct a message names, in Japanese; English uses the schema's own word. */
 const OF: Record<string, string> = {
+  block: 'ブロック',
   cell: 'セル',
   link: 'リンク',
   note: 'メモ',
@@ -141,6 +154,7 @@ const en: Words<Says> = {
     `a \`data\` entry takes its rows from one place; \`${key}\` is a second`,
   'loader.field-must-be-a-value': ({ what, index }, worded) =>
     `field ${index} of ${worded(what)} must be text, a number, a boolean, or null`,
+  'loader.row-of': ({ what, index }, worded) => `row ${index} of ${worded(what)}`,
 
   'loader.names-itself-twice': ({ what }, worded) =>
     `${worded(what)} names itself twice: \`name\` and \`name_from\``,
@@ -158,6 +172,22 @@ const en: Words<Says> = {
     `${worded(what)} \`${kind}\` is not a comparison`,
   'loader.list-needs-choices': ({ what }, worded) =>
     `${worded(what)} \`list\` needs choices or a \`from\``,
+
+  'loader.a-column-of': ({ what }, worded) => `a column of ${worded(what)}`,
+  'loader.where-or-row': ({ what }, worded) =>
+    `${worded(what)} finds its row by exactly one of \`where\` or \`row\``,
+  'loader.blocks-do-not-nest': ({ what }, worded) =>
+    `${worded(what)} places another block; blocks do not nest`,
+  'loader.field-and-formula': ({ what }, worded) =>
+    `${worded(what)} has a \`field\` and a \`formula\`; a formula column takes no data`,
+  'loader.no-levels': ({ what }, worded) => `${worded(what)} is an empty list`,
+  'loader.levels-are-cells': ({ what }, worded) => `${worded(what)} levels are cells, not lists`,
+  'loader.row-or-group': ({ what }, worded) =>
+    `an entry of ${worded(what)} is a \`row\`, or a group with \`by\``,
+  'loader.not-a-column-name': ({ what, name }, worded) =>
+    `${worded(what)} \`${name}\` must be letters, digits and \`_\`, not starting with a digit`,
+  'loader.not-a-layout-name': ({ what, name }, worded) =>
+    `${worded(what)} \`${name}\` is not a name Excel accepts: letters, digits, \`_\` and \`.\`, starting with a letter or \`_\`, and not a cell reference`,
 
   'loader.scales-two-ways': ({ what }, worded) =>
     `${worded(what)} scales two ways at once: \`scale\` and \`fit\``,
@@ -177,6 +207,7 @@ const en: Words<Says> = {
   'loader.a-cell-reference': () => 'a cell reference',
   'loader.a-sheet-and-a-cell': () => 'a sheet and a cell',
   'loader.a-range': () => 'a range',
+  'loader.a-range-or-a-layout': () => 'a range, or a named layout or one of its columns',
   'loader.a-column': () => 'a column or a range of columns',
   'loader.a-row': () => 'a row or a range of rows',
   'loader.a-hex-colour': () => 'a hex colour',
@@ -231,6 +262,7 @@ const ja: Words<Says> = {
     `\`data\` のエントリが行を取る場所は 1 つです。\`${key}\` は 2 つ目です`,
   'loader.field-must-be-a-value': ({ what, index }, worded) =>
     `${worded(what)}の ${index} 番目のフィールドは、文字列・数値・真偽値・null のいずれかである必要があります`,
+  'loader.row-of': ({ what, index }, worded) => `${worded(what)}の ${index} 行目`,
 
   'loader.names-itself-twice': ({ what }, worded) =>
     `${worded(what)}は \`name\` と \`name_from\` の 2 通りで自分を名指ししています`,
@@ -253,6 +285,23 @@ const ja: Words<Says> = {
   'loader.list-needs-choices': ({ what }, worded) =>
     `${worded(what)}の \`list\` には選択肢か \`from\` が必要です`,
 
+  'loader.a-column-of': ({ what }, worded) => `${worded(what)}の列`,
+  'loader.where-or-row': ({ what }, worded) =>
+    `${worded(what)}は \`where\` と \`row\` のどちらか一方だけで行を探します`,
+  'loader.blocks-do-not-nest': ({ what }, worded) =>
+    `${worded(what)}は別のブロックを置いています。ブロックは入れ子にできません`,
+  'loader.field-and-formula': ({ what }, worded) =>
+    `${worded(what)}には \`field\` と \`formula\` の両方があります。数式の列はデータを取りません`,
+  'loader.no-levels': ({ what }, worded) => `${worded(what)}は空のリストです`,
+  'loader.levels-are-cells': ({ what }, worded) =>
+    `${worded(what)}の段はセルであり、リストではありません`,
+  'loader.row-or-group': ({ what }, worded) =>
+    `${worded(what)}のエントリは \`row\` か、\`by\` を持つグループです`,
+  'loader.not-a-column-name': ({ what, name }, worded) =>
+    `${worded(what)}の \`${name}\` は、英数字と \`_\` で、数字以外で始まる必要があります`,
+  'loader.not-a-layout-name': ({ what, name }, worded) =>
+    `${worded(what)}の \`${name}\` は Excel が受け付ける名前ではありません（英数字・\`_\`・\`.\` で、英字か \`_\` で始まり、セル参照ではないもの）`,
+
   'loader.scales-two-ways': ({ what }, worded) =>
     `${worded(what)}は \`scale\` と \`fit\` の 2 通りで拡大率を決めています`,
   'loader.break-at-a1': ({ what }, worded) => `${worded(what)}の \`A1\` は何も改ページしません`,
@@ -271,6 +320,7 @@ const ja: Words<Says> = {
   'loader.a-cell-reference': () => 'セル参照',
   'loader.a-sheet-and-a-cell': () => 'シートとセルの組',
   'loader.a-range': () => '範囲',
+  'loader.a-range-or-a-layout': () => '範囲、または名前付きレイアウトかその列',
   'loader.a-column': () => '列または列の範囲',
   'loader.a-row': () => '行または行の範囲',
   'loader.a-hex-colour': () => '16 進の色',

@@ -23,6 +23,8 @@ export function editabilityOf(origin: FacetOrigin): Editability {
       return origin.node === null ? 'mediated' : 'direct';
     case 'external':
       return 'external';
+    case 'layout':
+      return 'readonly';
     default:
       return 'mediated';
   }
