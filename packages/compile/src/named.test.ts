@@ -25,6 +25,14 @@ describe('a named layout reached from outside', () => {
     });
   });
 
+  it('lists the defined names it makes: the table, and each column', () => {
+    expect(grid(NAMED).names.map((one) => [one.name, one.sheet, rangeOf(one.rect)])).toEqual([
+      ['stores', 'S', 'A1:B3'],
+      ['stores.store', 'S', 'A2:A3'],
+      ['stores.n', 'S', 'B2:B3'],
+    ]);
+  });
+
   it('anchors under the layout, a gap of one unless written', () => {
     const drawn = grid(NAMED).sheets[0];
     expect(drawn?.charts[0]?.at).toBe('A5');

@@ -184,7 +184,9 @@ function says(origin: FacetOrigin, where: Described | undefined, from: string): 
     case 'override':
       return 'an override';
     case 'layout':
-      return `drawn by ${where?.what ?? 'a layout'}`;
+      return origin.from === null
+        ? `drawn by ${where?.what ?? 'a layout'}`
+        : says(origin.from, undefined, from);
     default:
       return 'nothing — this cell holds no value';
   }

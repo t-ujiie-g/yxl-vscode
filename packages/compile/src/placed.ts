@@ -6,7 +6,7 @@ import type {
   LayoutColumn,
   ScalarValue,
 } from '@yxl-vscode/spec';
-import type { SheetName } from '@yxl-vscode/units';
+import type { FilePath, SheetName } from '@yxl-vscode/units';
 
 /**
  * A layout placed ahead of every sheet, which is what lets a spec name it from
@@ -19,12 +19,22 @@ export interface Placed {
   readonly columns: readonly Column[];
   readonly inputs: readonly Column[];
   readonly data: readonly DataRow[];
+  readonly read: Read;
   readonly top: number;
   readonly depth: number;
   readonly bodyFirst: number;
   readonly bodyLast: number;
   readonly footer: readonly FooterLine[];
   readonly lastRow: number;
+}
+
+/**
+ * Where the body's rows were read from: the file, `null` for `values:`, and for
+ * a CSV the field each input column took, under its header row.
+ */
+export interface Read {
+  readonly file: FilePath | null;
+  readonly picks: readonly number[] | null;
 }
 
 /** A layout column where it landed, a block's under its qualified name, with every header level above it. */

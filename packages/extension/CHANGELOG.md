@@ -4,6 +4,22 @@ Every release names the `yxl` it was built against: the schema is not frozen
 until yxl's v1.0, so the pinned compiler is part of what a version means
 (`ROADMAP.md` §8 Q6).
 
+## 0.2.1 — 2026-09-24
+
+Still targets **yxl 0.5.0**.
+
+- **Type into a layout's rows.** A cell a layout reads from `values:` takes
+  the value in its own row. One it reads from a CSV offers the file, and writes
+  the field under the header it was matched by — not the one at its position.
+- **Drag a layout column wider.** The width lands in that column's own entry.
+  A column placed from a block asks first, since its width is every
+  placement's.
+- **A layout's names compute.** `SUM(stores.cy)` and
+  `INDEX(stores.name, MATCH(…))` show their values in the preview, where before
+  a formula naming a layout was left uncomputed.
+- A layout's header, footer and formula columns still refuse a value, and still
+  take an override.
+
 ## 0.2.0 — 2026-09-23
 
 Targets **yxl 0.5.0**, up from 0.4.0.

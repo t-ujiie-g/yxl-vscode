@@ -46,6 +46,7 @@ import type { StyleLayer } from './style';
 export interface CompiledGrid {
   readonly sheets: readonly CompiledSheet[];
   readonly styles: readonly DeclaredStyle[];
+  readonly names: readonly CompiledName[];
   readonly diagnostics: readonly Diagnostic[];
 }
 
@@ -92,7 +93,8 @@ export interface CompiledSheet {
 
 /**
  * Where one `layouts:` entry landed: all of it, and its header, body and
- * footer rows, `null` where it has none (`docs/spec.md` §25).
+ * footer rows, `null` where it has none (`docs/spec.md` §25). Each column says
+ * the node its keys are written in, `shared` where that is a block's.
  */
 export interface CompiledLayout {
   readonly name: string | null;
@@ -100,7 +102,19 @@ export interface CompiledLayout {
   readonly header: Rect | null;
   readonly body: Rect;
   readonly footer: Rect | null;
+  readonly columns: readonly {
+    readonly col: number;
+    readonly node: NodeId;
+    readonly shared: boolean;
+  }[];
   readonly node: NodeId;
+}
+
+/** A workbook defined name a named layout makes, and the range it refers to (`docs/spec.md` §25). */
+export interface CompiledName {
+  readonly name: string;
+  readonly sheet: SheetName;
+  readonly rect: Rect;
 }
 
 /**

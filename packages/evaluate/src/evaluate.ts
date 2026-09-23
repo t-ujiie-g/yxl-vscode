@@ -10,6 +10,7 @@ import {
   sheetName,
 } from '@yxl-vscode/units';
 import type { Asked, Computed, Engine, Held, HeldSheet } from './engine';
+import { refersTo, spelledOut } from './names';
 
 /**
  * What a workbook's formulas came to, display only (ADR-014). `stopped` is a
@@ -36,9 +37,12 @@ export function conditionKey(rule: NodeId, sheet: SheetName, at: A1Addr): string
  */
 export function evaluate(grid: CompiledGrid, engine: Engine, limit = LIMIT): Evaluation {
   const held = new Map<SheetName, Held[]>();
-  const asked: Asked[] = [];
+  const gathered: Asked[] = [];
   const deep = new Map(grid.sheets.map((sheet) => [named(sheet), lastRow(sheet)]));
-  for (const sheet of grid.sheets) gather(sheet, held, asked, deep);
+  for (const sheet of grid.sheets) gather(sheet, held, gathered, deep);
+
+  const names = refersTo(grid.names);
+  const asked = gathered.map((one) => ({ ...one, formula: spelledOut(one.formula, names) }));
 
   if (asked.length > limit) {
     return { values: new Map(), conditions: new Map(), stopped: true, limit, unknown: [] };

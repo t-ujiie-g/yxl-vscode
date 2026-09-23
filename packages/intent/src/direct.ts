@@ -6,6 +6,7 @@ import {
   type FacetOrigin,
   REACH,
   sheetOf,
+  through,
 } from '@yxl-vscode/compile';
 import {
   entryOf,
@@ -117,7 +118,7 @@ export function setValue(
   const cell = cellAt(sheet, where.at);
   if (cell === null) return refused(nothingWrites(sheet, where.at, read));
 
-  const found = valuePath(cell.provenance.value, sheet, where.at, read);
+  const found = valuePath(through(cell.provenance.value), sheet, where.at, read);
   if (found.kind === 'refused') return found;
 
   return {

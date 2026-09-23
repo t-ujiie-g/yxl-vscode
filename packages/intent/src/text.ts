@@ -141,6 +141,8 @@ export type Says = {
   'intent.band-of-its-own': { axis: string };
   'intent.one-band-over': { span: string; axis: string };
   'intent.change-the-band': { span: string };
+  'intent.layout-width': { span: string };
+  'intent.block-width': { many: number };
   'intent.put-lines-in': {
     axis: string;
     many: number;
@@ -374,6 +376,9 @@ const en: Words<Says> = {
   'intent.band-of-its-own': ({ axis }) => `Write a ${axis} of its own`,
   'intent.one-band-over': ({ span, axis }) => `Write one ${axis} band over \`${span}\``,
   'intent.change-the-band': ({ span }) => `Change the band over \`${span}\``,
+  'intent.layout-width': ({ span }) => `Set the width of the layout's \`${span}\``,
+  'intent.block-width': ({ many }) =>
+    `Set the width in the block, which sizes ${many} column${many === 1 ? '' : 's'} wherever it is placed`,
   'intent.put-lines-in': (one) => `${lined(one, 'en')}, moving ${costing(one, 'en')}`,
   'intent.take-lines-away': (one) => `${lined(one, 'en')}, moving ${costing(one, 'en')}`,
 };
@@ -575,6 +580,9 @@ const ja: Words<Says> = {
   'intent.one-band-over': ({ span, axis }) =>
     `\`${span}\` にかかる${axis === 'column' ? '列' : '行'}の帯を 1 つ書く`,
   'intent.change-the-band': ({ span }) => `\`${span}\` にかかる帯を変更する`,
+  'intent.layout-width': ({ span }) => `レイアウトの \`${span}\` 列の幅を設定する`,
+  'intent.block-width': ({ many }) =>
+    `ブロックの幅を設定する（置かれている ${many} 列すべてが変わります）`,
   'intent.put-lines-in': (one) => `${lined(one, 'ja')}（${costing(one, 'ja')}に影響）`,
   'intent.take-lines-away': (one) => `${lined(one, 'ja')}（${costing(one, 'ja')}に影響）`,
 };

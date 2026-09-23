@@ -24,6 +24,13 @@ describe('how editable a value is', () => {
     expect(valueClass(source, 'A2')).toBe('direct');
   });
 
+  it('follows a layout body cell to the field it read, and refuses what the layout writes itself', () => {
+    const source = `${SHEET}    layouts:\n      - at: A1\n        values: [[1]]\n        columns: [{ name: a, header: A }, { name: b, formula: "{{a}}" }]\n`;
+    expect(valueClass(source, 'A2')).toBe('direct');
+    expect(valueClass(source, 'A1')).toBe('readonly');
+    expect(valueClass(source, 'B2')).toBe('readonly');
+  });
+
   it('has to ask when a definition holds it', () => {
     const source = `${SHEET}    cells:\n      A1: { $ref: rate }\ndefs:\n  values:\n    rate: 0.085\n`;
     expect(valueClass(source, 'A1')).toBe('mediated');

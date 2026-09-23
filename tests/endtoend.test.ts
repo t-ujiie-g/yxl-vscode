@@ -264,21 +264,38 @@ describe('the loop, closed', () => {
     expect(cell(built(dir, root).grid, 'Sales', 'B2')?.value).toBe(2500000);
   });
 
-  it('refuses a cell a layout draws, and takes an override of it', async () => {
+  it('carries a value into the CSV field a layout reads by name, and into the workbook', async () => {
     if (!WORKBOOK) return;
     const { dir, root, port, spec, refusals } = opened(WORKBOOK);
-    // `Masters!B2` is `store_name` of the first store, which the layout reads from its CSV.
+    // `Masters!B2` is `store_name` of the first store, read from the CSV under its header.
     const at = typed({ sheet: 'Masters', row: 2, col: 2, text: 'Shinjuku West' });
 
     await write(spec(), at, port);
-    expect(refusals).toEqual([
-      '`B2` is drawn by a layout, which is edited in the spec itself; an override can still except this one cell',
-    ]);
-
-    await writeOverride(spec(), at, 'renamed before the master caught up', port);
     expect(refusals).toHaveLength(1);
 
+    await resolveWith(spec(), at, 'dataFile', port);
+    expect(refusals).toHaveLength(1);
+
+    const csv = readFileSync(join(dir, 'workbook', 'masters', 'stores.csv'), 'utf8');
+    expect(csv.split('\n')[1]).toBe('S001,Shinjuku West,East');
     expect(cell(built(dir, root).grid, 'Masters', 'B2')?.value).toBe('Shinjuku West');
+  });
+
+  it('refuses a cell a layout column fills with its formula, and takes an override of it', async () => {
+    if (!WORKBOOK) return;
+    const { dir, root, port, spec, refusals } = opened(WORKBOOK);
+    // `Sales!C3` is the second row of `store_name`, a formula column.
+    const at = typed({ sheet: 'Sales', row: 3, col: 3, text: 'Manual' });
+
+    await write(spec(), at, port);
+    expect(refusals).toEqual([
+      '`C3` is drawn by a layout, which is edited in the spec itself; an override can still except this one cell',
+    ]);
+
+    await writeOverride(spec(), at, 'a store the master does not list yet', port);
+    expect(refusals).toHaveLength(1);
+
+    expect(cell(built(dir, root).grid, 'Sales', 'C3')?.value).toBe('Manual');
   });
 
   it('carries a look on a cell a data block fills, and leaves the value where it is', async () => {

@@ -14,7 +14,7 @@ import { CODE } from './codes';
 import { type Ctx, context, type DataReader, reject, type Setting, text } from './ctx';
 import type { CompiledCell, CompiledGrid, CompiledSheet, DeclaredStyle } from './grid';
 import { placeAll } from './layout';
-import { byMeaning } from './named';
+import { byMeaning, definedNames } from './named';
 import type { FacetOrigin } from './provenance';
 import { compileSheet, type Drafted, named } from './sheet';
 import { layersOf, resolve, type StyleLayer } from './style';
@@ -45,6 +45,7 @@ export function compile(doc: SpecDoc, options: Options = {}): CompiledGrid {
   return {
     sheets: drafts.map((draft) => draft.sheet),
     styles: declaredStyles(ctx, doc),
+    names: definedNames(ctx),
     diagnostics: ctx.diagnostics,
   };
 }
@@ -88,7 +89,7 @@ export function cellAt(sheet: CompiledSheet, at: A1Addr): CompiledCell | null {
           anchor: fill.anchor,
           offset: [offset.cols, offset.rows],
         }
-      : { kind: 'layout', node: fill.node, layout: fill.layout };
+      : { kind: 'layout', node: fill.node, layout: fill.layout, from: null };
 
   return {
     at,

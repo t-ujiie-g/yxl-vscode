@@ -54,6 +54,19 @@ describe('a layout drawn', () => {
     ).toEqual([['B2:E5', 'B2:E3']]);
   });
 
+  it("says which node each of its columns is written in, a block's shared", () => {
+    const source = `defs:\n  blocks:\n    b:\n      columns: [{ name: v }]\n${laidOut(
+      '      - at: A1\n        rows: 1\n        columns: [{ name: a }, { block: b, as: one }, { block: b, as: two }]\n',
+    )}`;
+    const [layout] = sheet(source).layouts;
+    expect(layout?.columns.map((one) => [one.col, one.shared])).toEqual([
+      [1, false],
+      [2, true],
+      [3, true],
+    ]);
+    expect(layout?.columns[1]?.node).toBe(layout?.columns[2]?.node);
+  });
+
   it('writes its cells after an earlier key, where the later key wins', () => {
     const source = `sheets:\n  - name: S\n    cells:\n      A2: before\n    layouts:\n      - at: A1\n        values: [[x], [y]]\n        columns: [{ name: a }]\n`;
     expect(holds(source, 'A2')).toBe('y');

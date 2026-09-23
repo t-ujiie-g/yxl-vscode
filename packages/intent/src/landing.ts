@@ -3,6 +3,7 @@ import {
   type CompiledSheet,
   cellAt,
   type FacetOrigin,
+  through,
 } from '@yxl-vscode/compile';
 import { holds, type Op, type Path, renderScalar, type Value } from '@yxl-vscode/cst';
 import { type Saying, sentence } from '@yxl-vscode/diag';
@@ -73,9 +74,9 @@ export function landed(
       continue;
     }
 
-    const landing = into(to, already.provenance.value, one, read);
+    const landing = into(to, through(already.provenance.value), one, read);
     if (sentence(landing)) {
-      const by = stood(already.provenance.value);
+      const by = stood(through(already.provenance.value));
       held.push({ at: one.at, why: landing, by });
       if (by === doing) excepting.push(one);
       continue;

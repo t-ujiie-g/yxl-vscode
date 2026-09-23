@@ -22,6 +22,7 @@ export type {
   CompiledImage,
   CompiledLink,
   CompiledMerge,
+  CompiledName,
   CompiledNote,
   CompiledPrint,
   CompiledProtect,
@@ -39,7 +40,7 @@ export type {
 } from './grid';
 export { type FullAddr, reaches } from './impact';
 export { namesParam } from './params';
-export type { CellProvenance, FacetOrigin } from './provenance';
+export { type CellProvenance, type DataOrigin, type FacetOrigin, through } from './provenance';
 export { resolve, type StyleKey, type StyleLayer, type StyleSource, settled } from './style';
 export { asCsvField, fieldAt } from './table';
 export { WORDS } from './text';

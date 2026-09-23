@@ -6,7 +6,7 @@ beside its text, and translates grid gestures back into edits on the spec — no
 into a workbook.
 
 > **Status: published, and the everyday gestures write back.**
-> [**`t-ujiie-g.yxl-vscode`**][listing] 0.2.0, targeting yxl 0.5.0. *yxl: Open
+> [**`t-ujiie-g.yxl-vscode`**][listing] 0.2.1, targeting yxl 0.5.0. *yxl: Open
 > the Grid Beside the Spec* draws a spec as a grid next to the text and redraws
 > it as you type. Under it: YAML parses into a span-carrying tree, edits apply
 > as minimal byte patches that leave every untouched byte alone, a whole spec —
@@ -80,7 +80,7 @@ written from the code, so it cannot drift from it.
 | `data` | **edited** | sorted, extended, and what a rectangle converts to |
 | `columns` | **edited** | width, hidden, group and a look over a whole column |
 | `rows` | **edited** | the same down the side |
-| `layouts` | drawn | drawn whole — header levels, rows read by name, blocks, footers; a drawn cell takes an override |
+| `layouts` | **edited** | drawn whole; a row typed back into `values:` or its CSV, a column dragged wider |
 | `merges` | **edited** | merged and taken apart, losing no value either way |
 | `visibility` | **edited** | hidden and shown from the tab; `very_hidden` is drawn, not offered |
 | `freeze` | **edited** | set at the selected cell, and honoured while scrolling |
