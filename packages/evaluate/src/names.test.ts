@@ -35,6 +35,8 @@ describe('a formula with its defined names spelled out', () => {
       'stores[code]',
       'A1+$B$2+Sheet1!C3',
       'stores.codes',
+      '"say ""stores"" twice"',
+      "'it''s stores'!A1",
     ]) {
       expect(spelledOut(formula, names)).toBe(formula);
     }

@@ -154,7 +154,7 @@ function drawBody(placed: Placed, cells: CompiledCell[]): void {
 /** The field a body cell was read from, counted as its source counts: a CSV under its header row. */
 function readFrom(placed: Placed, row: number, field: number): DataOrigin {
   const node = placed.layout.id;
-  const { file, picks } = placed.read;
+  const { file, picks } = placed.taken;
   if (file === null) return { kind: 'inline', node, row, col: field };
   if (picks === null) return { kind: 'external', node, file, row, col: field };
   return { kind: 'external', node, file, row: row + 1, col: picks[field] ?? field };

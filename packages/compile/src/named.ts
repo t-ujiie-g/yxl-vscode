@@ -68,7 +68,7 @@ export function definedNames(ctx: Ctx): CompiledName[] {
 
 /** A layout's table, `店舗`, or a column's body, `店舗.cy`, as the defined name it makes. */
 function namedRange(ctx: Ctx, spelled: string): { sheet: SheetName; rect: Rect } | null {
-  const found = definedNames(ctx).find((one) => one.name === spelled);
+  const found = ctx.names.get(spelled);
   return found === undefined ? null : { sheet: found.sheet, rect: found.rect };
 }
 

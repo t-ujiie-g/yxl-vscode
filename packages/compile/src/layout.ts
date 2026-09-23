@@ -4,8 +4,8 @@ import { cellOf, type SheetName } from '@yxl-vscode/units';
 import { CODE } from './codes';
 import { type Ctx, filled, openData, reject } from './ctx';
 import { lines } from './footer';
-import { anchored } from './named';
-import type { Column, FooterLine, Placed, Read } from './placed';
+import { anchored, definedNames } from './named';
+import type { Column, FooterLine, Placed, Taken } from './placed';
 import { readHeadedCsv, readJson } from './table';
 import { say } from './text';
 
@@ -14,7 +14,7 @@ const LAST_ROW = 1_048_576;
 
 /** Place every sheet's layouts in the order written, before any sheet is drawn (`docs/spec.md` §25). */
 export function placeAll(ctx: Ctx, sheets: readonly (readonly [SheetName, Sheet])[]): void {
-  const taken = new Set<string>();
+  const claimed = new Set<string>();
 
   for (const [name, sheet] of sheets) {
     for (const layout of sheet.layouts) {
@@ -25,7 +25,7 @@ export function placeAll(ctx: Ctx, sheets: readonly (readonly [SheetName, Sheet]
       if (layout.name === null) continue;
 
       const folded = layout.name.toLowerCase();
-      if (taken.has(folded)) {
+      if (claimed.has(folded)) {
         reject(
           ctx,
           CODE.badLayout,
@@ -34,10 +34,12 @@ export function placeAll(ctx: Ctx, sheets: readonly (readonly [SheetName, Sheet]
         );
         continue;
       }
-      taken.add(folded);
+      claimed.add(folded);
       ctx.layouts.set(layout.name, placed);
     }
   }
+
+  for (const one of definedNames(ctx)) ctx.names.set(one.name, one);
 }
 
 function place(ctx: Ctx, layout: Layout, sheet: SheetName): Placed | null {
@@ -73,7 +75,7 @@ function place(ctx: Ctx, layout: Layout, sheet: SheetName): Placed | null {
     columns,
     inputs,
     data,
-    read: got.read,
+    taken: got.taken,
     top: corner.row,
     depth,
     bodyFirst,
@@ -159,9 +161,9 @@ function rowsOf(
   ctx: Ctx,
   layout: Layout,
   inputs: readonly Column[],
-): { rows: DataRow[]; read: Read } | null {
+): { rows: DataRow[]; taken: Taken } | null {
   const inline = (rows: DataRow[] | null) =>
-    rows === null ? null : { rows, read: { file: null, picks: null } };
+    rows === null ? null : { rows, taken: { file: null, picks: null } };
   const source = layout.source;
   if (source === null) {
     const named = inputs.find((one) => one.spec.field !== null);
@@ -200,7 +202,7 @@ function rowsOf(
       picks.push(index);
     }
     const rows = table.rows.map((row) => picks.map((index) => row[index] ?? null));
-    return { rows, read: { file: opened.file, picks } };
+    return { rows, taken: { file: opened.file, picks } };
   }
 
   if (objectRows(opened.source)) {
@@ -209,14 +211,14 @@ function rowsOf(
       inputs.map((one) => one.field),
     );
     if ('problem' in table) return problem(table.problem);
-    return { rows: [...table.rows], read: { file: opened.file, picks: null } };
+    return { rows: [...table.rows], taken: { file: opened.file, picks: null } };
   }
 
   const table = readJson(opened.source, null);
   if ('problem' in table) return problem(table.problem);
 
   const rows = positional(ctx, layout, inputs, table.rows);
-  return rows === null ? null : { rows, read: { file: opened.file, picks: null } };
+  return rows === null ? null : { rows, taken: { file: opened.file, picks: null } };
 }
 
 function objectRows(source: string): boolean {

@@ -19,7 +19,7 @@ export interface Placed {
   readonly columns: readonly Column[];
   readonly inputs: readonly Column[];
   readonly data: readonly DataRow[];
-  readonly read: Read;
+  readonly taken: Taken;
   readonly top: number;
   readonly depth: number;
   readonly bodyFirst: number;
@@ -32,7 +32,7 @@ export interface Placed {
  * Where the body's rows were read from: the file, `null` for `values:`, and for
  * a CSV the field each input column took, under its header row.
  */
-export interface Read {
+export interface Taken {
   readonly file: FilePath | null;
   readonly picks: readonly number[] | null;
 }

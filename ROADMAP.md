@@ -3951,6 +3951,22 @@ than widening it silently.
 
 ## 11. Living changelog
 
+### 2026-09-24 — A §8 pass over the rows, widths and names
+
+In the same pull request, at the reader's request.
+
+- **§8.2 — every range lookup rebuilt every name.** `namedRange` listed all the
+  names the layouts make each time a range was read; they are built once after
+  placement, kept in the compile context, and the grid's list is that one.
+- **§8.2 — `Placed.read` read like `ctx.read`**, which is the data-file reader.
+  It is `taken` now: where the body's rows were taken from.
+- **§8.4 — the name rewrite had no case for a doubled quote**, in a string or
+  in a quoted sheet name; both are pinned.
+- Left as it is: a drag over layout and plain columns together says nothing can
+  size them — true, and changing what it says is a behaviour change, not this pass's.
+- 2605 tests. Comment shape: export 998 blocks / 2162 lines / avg 2.2, private
+  646 / 646 / avg 1.0, inline 141 / 226 / avg 1.6; 0 over the limit.
+
 ### 2026-09-24 — Phase 22 closed: a layout's rows, widths and names (0.2.1)
 
 - **Typing into a layout's body** writes where the field came from: its
