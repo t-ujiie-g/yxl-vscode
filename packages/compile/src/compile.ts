@@ -45,6 +45,7 @@ export function compile(doc: SpecDoc, options: Options = {}): CompiledGrid {
   return {
     sheets: drafts.map((draft) => draft.sheet),
     styles: declaredStyles(ctx, doc),
+    names: [...ctx.names.values()],
     diagnostics: ctx.diagnostics,
   };
 }
@@ -88,7 +89,7 @@ export function cellAt(sheet: CompiledSheet, at: A1Addr): CompiledCell | null {
           anchor: fill.anchor,
           offset: [offset.cols, offset.rows],
         }
-      : { kind: 'layout', node: fill.node, layout: fill.layout };
+      : { kind: 'layout', node: fill.node, layout: fill.layout, from: null };
 
   return {
     at,

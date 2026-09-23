@@ -118,3 +118,11 @@ describe('a workbook computed', () => {
     expect(at(spec, 'A1')).toEqual({ kind: 'value', value: 21 });
   });
 });
+
+describe('a name a layout makes', () => {
+  it('is computed as the range it refers to, on any sheet', () => {
+    const spec = `sheets:\n  - name: Masters\n    layouts:\n      - at: A1\n        name: stores\n        values: [[S1, Shinjuku], [S2, Umeda]]\n        columns: [{ name: code, header: code }, { name: name, header: name }]\n  - name: Sales\n    cells:\n      A1: S2\n      B1: { formula: "INDEX(stores.name, MATCH(A1, stores.code, 0))" }\n      C1: { formula: "ROWS(stores)" }\n`;
+    expect(at(spec, 'B1')).toEqual({ kind: 'value', value: 'Umeda' });
+    expect(at(spec, 'C1')).toEqual({ kind: 'value', value: 3 });
+  });
+});

@@ -21,6 +21,7 @@ export const KEY = {
   at: 'at',
   categories: 'categories',
   cells: 'cells',
+  columns: 'columns',
   charts: 'charts',
   comments: 'comments',
   filter: 'filter',

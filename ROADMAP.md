@@ -2108,15 +2108,16 @@ reference; ADR-057 is how they project.
       tries the corners upstream leaves untried
 - [x] The compiler checked once after each update of this extension, and an
       older or missing one offered yxl's own installer (ADR-058)
-- [ ] A layout column dragged wider writes its own `width:` — today the write
-      guard refuses it with the rest
-- [ ] A body cell a layout reads from `values:` or a CSV written back where it
-      came from, by field name rather than position
-- [ ] `layout.column` names computed in the evaluated preview; like a
-      `defs.values` name today, a formula naming one is honestly not computed
-- [ ] **Upstream:** §25 says a group's text sorts in code-point order; yxl sorts
+- [x] A layout column dragged wider writes its own `width:`; a block's column
+      asks first, since the width is every placement's *(2026-09-24, ADR-059)*
+- [x] A body cell a layout reads from `values:` or a CSV written back where it
+      came from, by field name rather than position *(2026-09-24, ADR-059)*
+- [x] `layout.column` names computed in the evaluated preview, spelled out as
+      the ranges they refer to before the engine reads the formula
+      *(2026-09-24)*
+- [x] **Upstream:** §25 says a group's text sorts in code-point order; yxl sorts
       shorter text first (`b` before `aa`). This editor follows the compiler
-      (§6 of `AGENTS.md`); the report belongs in yxl
+      (§6 of `AGENTS.md`); reported as yxl#104 *(2026-09-24)*
 
 ### Taken out (2026-08-23)
 Two phases that were here are not any more, and not because they were hard:
@@ -3617,6 +3618,29 @@ reader is told so. Where tasks cannot run, the command goes on the clipboard.
 *When it asks.* Once after each update of this extension — the moment a new pin
 arrives — and wherever the existing once-a-session warning finds yxl older.
 
+### ADR-059 — A layout is edited where one answer exists: its rows, and its widths
+**Accepted** 2026-09-24. Supersedes the "nothing writes inside a layout" half of
+ADR-057; its projection stands.
+
+*A body cell is edited as the field it read.* A drawn cell's `layout` origin
+now carries `from` — the `inline` or `external` origin its field would have had
+in a `data:` block — and `through()` hands every edit that one. So `values:` is
+written in its row, and a CSV is written by the answer that already writes one,
+at the field the layout matched by name under the header, not at the cell's
+position. The origin stays `layout`, because the `data:` machinery — sort,
+extend, shift — reads `inline` and `external` as a block's, and a layout is not
+one. JSON stays refused, as it does for `data:`.
+
+*A column's width is its own entry's.* A drag over layout columns writes
+`width:` in each column's mapping, adding one where it has none, rather than a
+sheet band that would sit beside the layout. A column placed from a block has
+its keys in `defs.blocks`, so the same drag there is a question naming how many
+columns it sizes.
+
+*The write guard admits exactly these*: a `set` of one field of `values:`, and
+a column's `width:`. Anything else inside a layout is still refused, so the next
+edit is added the same way — deliberately.
+
 ## 8. Open questions
 
 - **Q1 — `cells:` A1 keys and row insertion.** ✅ *Answered 2026-08-23.*
@@ -3926,6 +3950,39 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-09-24 — A §8 pass over the rows, widths and names
+
+In the same pull request, at the reader's request.
+
+- **§8.2 — every range lookup rebuilt every name.** `namedRange` listed all the
+  names the layouts make each time a range was read; they are built once after
+  placement, kept in the compile context, and the grid's list is that one.
+- **§8.2 — `Placed.read` read like `ctx.read`**, which is the data-file reader.
+  It is `taken` now: where the body's rows were taken from.
+- **§8.4 — the name rewrite had no case for a doubled quote**, in a string or
+  in a quoted sheet name; both are pinned.
+- Left as it is: a drag over layout and plain columns together says nothing can
+  size them — true, and changing what it says is a behaviour change, not this pass's.
+- 2605 tests. Comment shape: export 998 blocks / 2162 lines / avg 2.2, private
+  646 / 646 / avg 1.0, inline 141 / 226 / avg 1.6; 0 over the limit.
+
+### 2026-09-24 — Phase 22 closed: a layout's rows, widths and names (0.2.1)
+
+- **Typing into a layout's body** writes where the field came from: its
+  `values:` row, or — offered as the file answer — the CSV field matched by
+  name under the header. Checked through the compiler: `Masters!B2` in
+  upstream's `workbook` goes into `stores.csv`'s second line and builds.
+- **Dragging a layout column** writes its own `width:`; a block's column asks,
+  naming the columns it sizes.
+- **Layout names compute.** The grid now lists the defined names layouts make,
+  and the evaluator spells each out as its absolute range before the engine
+  reads the formula; the real engine answers `INDEX(stores.name, MATCH(…))`.
+- The write guard admits the two new paths and nothing else (ADR-059).
+- The sort-order disagreement is yxl#104; the code that follows the compiler
+  cites it.
+- 2590 → 2605 tests. Comment shape: export 998 blocks / 2162 lines / avg 2.2,
+  private 646 / 646 / avg 1.0, inline 141 / 226 / avg 1.6; 0 over the limit.
 
 ### 2026-09-24 — A §8 pass over the layouts it had just added
 

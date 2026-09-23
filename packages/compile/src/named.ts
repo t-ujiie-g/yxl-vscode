@@ -12,6 +12,7 @@ import {
 import { address } from './cell';
 import { CODE } from './codes';
 import { type Ctx, reject, text } from './ctx';
+import type { CompiledName } from './grid';
 import { edges, type Placed } from './placed';
 import { say } from './text';
 
@@ -43,27 +44,32 @@ export function anchored(ctx: Ctx, at: Anchor, node: SpecNode, sheet: SheetName)
   return addrAt({ col: edges(placed).left, row: placed.lastRow + 1 + at.gap });
 }
 
-/** A layout's table, `店舗` — its bottom header row and its body — or a column's body, `店舗.cy`. */
-function namedRange(ctx: Ctx, spelled: string): { sheet: SheetName; rect: Rect } | null {
-  for (const [name, placed] of ctx.layouts) {
+/** Every defined name the named layouts make: each one's table, and each column's body (`docs/spec.md` §25). */
+export function definedNames(ctx: Ctx): CompiledName[] {
+  return [...ctx.layouts].flatMap(([name, placed]) => {
     const { left, right } = edges(placed);
-    if (spelled === name) {
-      const top = placed.depth > 0 ? placed.bodyFirst - 1 : placed.bodyFirst;
-      return { sheet: placed.sheet, rect: { top, bottom: placed.bodyLast, left, right } };
-    }
-    if (!spelled.startsWith(`${name}.`)) continue;
-
-    const column = placed.columns.find((one) => one.name === spelled.slice(name.length + 1));
-    if (column === undefined) continue;
-    const rect = {
+    const top = placed.depth > 0 ? placed.bodyFirst - 1 : placed.bodyFirst;
+    const body = (col: number) => ({
       top: placed.bodyFirst,
       bottom: placed.bodyLast,
-      left: column.col,
-      right: column.col,
-    };
-    return { sheet: placed.sheet, rect };
-  }
-  return null;
+      left: col,
+      right: col,
+    });
+    return [
+      { name, sheet: placed.sheet, rect: { top, bottom: placed.bodyLast, left, right } },
+      ...placed.columns.map((column) => ({
+        name: `${name}.${column.name}`,
+        sheet: placed.sheet,
+        rect: body(column.col),
+      })),
+    ];
+  });
+}
+
+/** A layout's table, `店舗`, or a column's body, `店舗.cy`, as the defined name it makes. */
+function namedRange(ctx: Ctx, spelled: string): { sheet: SheetName; rect: Rect } | null {
+  const found = ctx.names.get(spelled);
+  return found === undefined ? null : { sheet: found.sheet, rect: found.rect };
 }
 
 /** A range that covers cells of `sheet`: written, or a layout on that sheet named (`docs/spec.md` §25). */

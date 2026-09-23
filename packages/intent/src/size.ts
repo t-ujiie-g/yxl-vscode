@@ -1,7 +1,7 @@
 import { type CompiledBand, type CompiledSheet, sheetOf } from '@yxl-vscode/compile';
 import { holds, type Op } from '@yxl-vscode/cst';
-import { type Axis, BAND_KEYS } from '@yxl-vscode/spec';
-import type { SheetName } from '@yxl-vscode/units';
+import { type Axis, BAND_KEYS, KEY } from '@yxl-vscode/spec';
+import type { NodeId, SheetName } from '@yxl-vscode/units';
 import { answer, bandOfItsOwn, type Span, spelled, splitBand } from './bands';
 import { located, type Reading } from './direct';
 import type { Candidate } from './resolve';
@@ -32,6 +32,9 @@ export function setSize(spec: Projection, dragged: Dragged, read: Reading): read
   }
 
   const span = spanOf(dragged);
+  const laid = dragged.axis === 'column' ? layoutColumns(spec, sheet, span) : [];
+  if (laid.length > 0) return inLayout(laid, span, dragged, read);
+
   const bands = dragged.axis === 'column' ? sheet.columns : sheet.rows;
 
   // A band already over exactly this span is the band of its own, whether or
@@ -127,4 +130,52 @@ function apart(band: CompiledBand, dragged: Dragged, read: Reading): Candidate |
     split.found,
     split.ops,
   );
+}
+
+/** A layout column in the span dragged: the node its keys are in, and how many sheet columns that node sizes. */
+interface Laid {
+  readonly node: NodeId;
+  readonly shared: boolean;
+  readonly many: number;
+}
+
+function layoutColumns(spec: Projection, sheet: CompiledSheet, span: Span): Laid[] {
+  const everywhere = spec.grid.sheets.flatMap((one) => one.layouts.flatMap((each) => each.columns));
+  return sheet.layouts
+    .flatMap((one) => one.columns)
+    .filter((one) => one.col >= span.first && one.col <= span.last)
+    .map((one) => ({
+      node: one.node,
+      shared: one.shared,
+      many: everywhere.filter((each) => each.node === one.node).length,
+    }));
+}
+
+/** Layout columns dragged: each one's own `width:`; a block's is every placement's, so it asks (ADR-059). */
+function inLayout(laid: readonly Laid[], span: Span, dragged: Dragged, read: Reading): Candidate[] {
+  if (laid.length !== span.last - span.first + 1) return [];
+
+  const nodes = [...new Set(laid.map((one) => one.node))];
+  const found = nodes.map((node) => located(node, read));
+  const first = found[0];
+  if (first === undefined || first.kind === 'refused') return [];
+
+  const ops: Op[] = [];
+  for (const one of found) {
+    if (one.kind === 'refused' || one.node.kind !== 'map' || one.file !== first.file) return [];
+    ops.push(
+      holds(one.node, KEY.width)
+        ? { op: 'set', path: [...one.path, KEY.width], value: dragged.size }
+        : { op: 'add', path: one.path, key: KEY.width, value: dragged.size, before: null },
+    );
+  }
+
+  const shared = new Map(laid.filter((one) => one.shared).map((one) => [one.node, one.many]));
+  if (shared.size === 0) {
+    const what = say('intent.layout-width', { span: spelled(span) });
+    return [{ ...answer('layout', what, first, ops), alone: true }];
+  }
+
+  const many = [...shared.values()].reduce((all, one) => all + one, 0);
+  return [answer('block', say('intent.block-width', { many }), first, ops)];
 }

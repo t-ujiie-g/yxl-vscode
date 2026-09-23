@@ -110,7 +110,7 @@ function groupValues(
   return [...order.values];
 }
 
-/** Numbers, then text — shorter first, as yxl sorts it rather than as §25 says — then the rest, a blank last. */
+/** Numbers, then text — shorter first, as yxl sorts it rather than as §25 says (yxl#104) — then the rest. */
 function compareGroups(one: ScalarValue, other: ScalarValue): number {
   if (typeof one === 'number' && typeof other === 'number') return one - other;
   if (typeof one === 'string' && typeof other === 'string') {

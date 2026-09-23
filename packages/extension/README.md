@@ -13,18 +13,21 @@ what you did, with your comments, key order and quoting intact.
   charts, images, shapes and sparklines — drawn where they sit and at the size
   they take. **Layouts** too: header levels merged where they agree, rows read
   from a CSV by field name, blocks, and footers with their subtotals, exactly
-  as yxl builds them.
+  as yxl builds them — and a layout's name computes where a formula uses it.
 - **Computes for display.** Some 500 Excel functions, `#DIV/0!` and the rest of
   Excel's error text included. A formula naming something this does not model is
   **not computed at all** and says so: a number that is not the workbook's number
   is worse than no number. Nothing computed is ever written back.
 - **Edits, where the answer is one thing.** Type into a cell, apply a look from
   the toolbar, insert and delete rows and columns, merge, fill, sort, size a
-  column, hide a run, rename a sheet — and the YAML changes.
+  column, hide a run, rename a sheet — and the YAML changes. In a layout, a row
+  typed into goes back into its `values:` or its CSV by field name, and a
+  column dragged wider writes its own `width:`.
 - **Refuses the rest out loud, and offers the answers it has.** A cell whose
   value comes from a definition, a CSV, a parameter or a `formulas:` range has
-  more than one meaning or none, and so does a cell a layout draws, which the
-  layout's own YAML is where to change. It says so before you type, and when you type
+  more than one meaning or none, and so does a layout's header, footer or
+  formula column, which the layout's own YAML is where to change. It says so
+  before you type, and when you type
   anyway it lists what each answer would change — *change the range's formula*,
   which moves 40 cells, or *split the range* — with the count beside it. You
   pick; nothing is picked for you.

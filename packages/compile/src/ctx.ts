@@ -11,6 +11,7 @@ import type {
 } from '@yxl-vscode/spec';
 import { type FilePath, filePath, type NodeId } from '@yxl-vscode/units';
 import { CODE, type Code } from './codes';
+import type { CompiledName } from './grid';
 import { asIs, behind, type Filled, fill, resolveParams } from './params';
 import type { Placed } from './placed';
 import { say } from './text';
@@ -30,8 +31,8 @@ export type DataReader = (from: FilePath, path: FilePath) => DataFile | null;
 
 /**
  * What compiling has in hand throughout: parameters resolved once, definitions
- * indexed once, every layout placed once (by name and by node), the way out to
- * a data file, and somewhere to put what it could not draw.
+ * indexed once, every layout placed once (by name and by node) with the names
+ * it makes, the way out to a data file, and somewhere to put what it could not draw.
  */
 export interface Ctx {
   readonly diagnostics: Diagnostic[];
@@ -46,6 +47,7 @@ export interface Ctx {
   readonly blocks: ReadonlyMap<string, BlockDef>;
   readonly layouts: Map<string, Placed>;
   readonly placed: Map<NodeId, Placed>;
+  readonly names: Map<string, CompiledName>;
 }
 
 /** Where each parameter is declared, with every parameter its default is built from. */
@@ -81,6 +83,7 @@ export function context(doc: SpecDoc, read: DataReader | null, set: Setting): Ct
     blocks: new Map(doc.defs.blocks.map((def) => [def.name, def])),
     layouts: new Map(),
     placed: new Map(),
+    names: new Map(),
   };
 
   for (const cycle of cycles) {

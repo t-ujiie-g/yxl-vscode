@@ -1,4 +1,4 @@
-import { type CompiledGrid, cellAt, sheetOf } from '@yxl-vscode/compile';
+import { type CompiledGrid, cellAt, sheetOf, through } from '@yxl-vscode/compile';
 import { marked, type Node, nodeAt, type Op, type Path } from '@yxl-vscode/cst';
 import { CELL_HOLDS, CELL_WEARS } from '@yxl-vscode/spec';
 import {
@@ -91,7 +91,7 @@ export function clearRange(
 
       const one = clearCell(grid, { sheet: where.sheet, at }, read);
       if (one.kind === 'refused') {
-        held.push({ at, why: one.why, by: stood(cell.provenance.value) });
+        held.push({ at, why: one.why, by: stood(through(cell.provenance.value)) });
         continue;
       }
       if (one.kind !== 'edit') continue;

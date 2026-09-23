@@ -111,15 +111,24 @@ describe('what a reader typed, all the way to the file', () => {
     expect(files[ROOT]).toBe(`${SALES}    cells:\n      A1: EMEA\n`);
   });
 
-  it('refuses a cell a layout draws, and offers the override', async () => {
-    const { spec: read, port, refusals, offers, files } = editor({ [ROOT]: LAID_OUT });
+  it('writes a value a layout reads from `values:` into its row', async () => {
+    const { spec: read, port, refusals, files } = editor({ [ROOT]: LAID_OUT });
 
     await write(read, typed({ row: 1, col: 2, text: '5' }), port);
+    expect(refusals).toEqual([]);
+    expect(files[ROOT]).toBe(LAID_OUT.replace('[APAC, 1]', '[APAC, 5]'));
+  });
+
+  it('refuses a cell a layout draws from its own keys, and offers the override', async () => {
+    const spec = LAID_OUT.replace('{ name: region }', '{ name: region, header: Region }');
+    const { spec: read, port, refusals, offers, files } = editor({ [ROOT]: spec });
+
+    await write(read, typed({ row: 1, col: 1, text: 'Area' }), port);
     expect(refusals).toEqual([
-      '`B1` is drawn by a layout, which is edited in the spec itself; an override can still except this one cell',
+      '`A1` is drawn by a layout, which is edited in the spec itself; an override can still except this one cell',
     ]);
-    expect(offers).toEqual([{ kind: 'edit', ...typed({ row: 1, col: 2, text: '5' }) }]);
-    expect(files[ROOT]).toBe(LAID_OUT);
+    expect(offers).toEqual([{ kind: 'edit', ...typed({ row: 1, col: 1, text: 'Area' }) }]);
+    expect(files[ROOT]).toBe(spec);
   });
 
   it('reads what was typed the way the spec would read it', async () => {
@@ -554,15 +563,30 @@ describe('a column or a row dragged to a size', () => {
     );
   });
 
-  it('leaves a layout column alone, since the layout is edited in the spec', async () => {
-    const spec = `${LAID_OUT}`;
-    const { spec: read, port, refusals, files } = editor({ [ROOT]: spec });
+  it("writes a layout column's own width, adding one where it has none", async () => {
+    const sized = editor({ [ROOT]: LAID_OUT });
+    await resize(sized.spec, dragged({ first: 2, last: 2 }), sized.port);
+    expect(sized.files[ROOT]).toBe(LAID_OUT.replace('width: 12', 'width: 20'));
 
-    await resize(read, dragged({ first: 2, last: 2 }), port, 'band');
-    expect(refusals).toEqual([
-      'this would write inside a layout, which is edited in the spec itself; the preview draws it but does not change it',
+    const bare = editor({ [ROOT]: LAID_OUT });
+    await resize(bare.spec, dragged({ first: 1, last: 2 }), bare.port);
+    expect(bare.refusals).toEqual([]);
+    expect(bare.files[ROOT]).toContain('{ name: region, width: 20 }');
+    expect(bare.files[ROOT]).toContain('{ name: amount, width: 20 }');
+  });
+
+  it("asks before writing a block column's width, which every placement shares", async () => {
+    const spec = `defs:\n  blocks:\n    b:\n      columns:\n        - { name: n }\n${SALES}    layouts:\n      - at: A1\n        rows: 1\n        columns:\n          - { block: b, as: one }\n          - { block: b, as: two }\n`;
+    const { spec: read, port, answers, files } = editor({ [ROOT]: spec });
+
+    await resize(read, dragged({ first: 1, last: 1 }), port);
+    expect(answers[0]?.map((one) => [one.id, one.what])).toEqual([
+      ['block', 'Set the width in the block, which sizes 2 columns wherever it is placed'],
     ]);
     expect(files[ROOT]).toBe(spec);
+
+    await resize(read, dragged({ first: 1, last: 1 }), port, 'block');
+    expect(files[ROOT]).toContain('- { name: n, width: 20 }');
   });
 
   it('sizes every column the reader had selected, and says which', async () => {
@@ -1318,9 +1342,12 @@ describe('a patch that would write inside a layout', () => {
     ops: [{ op: 'set' as const, path, value: '20' }],
   });
 
-  it('is one whose op lands anywhere under a layout', () => {
-    const width = ['sheets', 0, 'layouts', 0, 'columns', 1, 'width'];
-    expect(intoLayout(spec.grid, ROOT, set(width))).toBe(true);
+  it('is one whose op lands under a layout anywhere but a row of its data or a width', () => {
+    const layout = ['sheets', 0, 'layouts', 0];
+    expect(intoLayout(spec.grid, ROOT, set([...layout, 'at']))).toBe(true);
+    expect(intoLayout(spec.grid, ROOT, set([...layout, 'columns', 1, 'style']))).toBe(true);
+    expect(intoLayout(spec.grid, ROOT, set([...layout, 'columns', 1, 'width']))).toBe(false);
+    expect(intoLayout(spec.grid, ROOT, set([...layout, 'values', 0, 1]))).toBe(false);
   });
 
   it('is not one beside it, or in another file', () => {

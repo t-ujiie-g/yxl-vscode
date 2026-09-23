@@ -21,7 +21,7 @@ import {
 } from '@yxl-vscode/intent';
 import { type IncludeReader, pathOf } from '@yxl-vscode/loader';
 import type { Patch, Step } from '@yxl-vscode/patch';
-import type { SpecDoc } from '@yxl-vscode/spec';
+import { KEY, type SpecDoc } from '@yxl-vscode/spec';
 import {
   addrAt,
   type FilePath,
@@ -397,7 +397,10 @@ export async function applied(
   return true;
 }
 
-/** Whether a patch writes inside a layout, which nothing here edits yet (`docs/spec.md` §25). */
+/**
+ * Whether a patch writes inside a layout anywhere but the two places an edit
+ * may: its `values:` rows, and a column's `width:` (ADR-057, ADR-059).
+ */
 export function intoLayout(grid: CompiledGrid, file: FilePath, patch: Patch): boolean {
   const layouts = grid.sheets.flatMap((sheet) =>
     sheet.layouts.flatMap((one) => {
@@ -407,8 +410,18 @@ export function intoLayout(grid: CompiledGrid, file: FilePath, patch: Patch): bo
   );
 
   return patch.ops.some((op) =>
-    layouts.some((path) => path.every((step, at) => op.path[at] === step)),
+    layouts.some((path) => {
+      if (!path.every((step, at) => op.path[at] === step)) return false;
+      return !admitted(op, op.path.slice(path.length));
+    }),
   );
+}
+
+function admitted(op: Patch['ops'][number], within: readonly (string | number)[]): boolean {
+  if (within[0] === KEY.values) return op.op === 'set' && within.length === 3;
+  if (within[0] !== KEY.columns || typeof within[1] !== 'number') return false;
+  if (op.op === 'add') return within.length === 2 && op.key === KEY.width;
+  return op.op === 'set' && within.length === 3 && within[2] === KEY.width;
 }
 
 /** The cells an edit moved, named as an undo of it may name them (ADR-009). */

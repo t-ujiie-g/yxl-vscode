@@ -1,4 +1,4 @@
-import type { FacetOrigin } from './provenance';
+import { type FacetOrigin, through } from './provenance';
 import type { StyleLayer } from './style';
 
 /**
@@ -13,7 +13,8 @@ export type Editability = 'direct' | 'mediated' | 'external' | 'readonly';
  * `direct` — one place a value would go — and without one asks, since a new
  * entry and an extended `data:` rectangle are both answers.
  */
-export function editabilityOf(origin: FacetOrigin): Editability {
+export function editabilityOf(written: FacetOrigin): Editability {
+  const origin = through(written);
   switch (origin.kind) {
     case 'literal':
     case 'inline':

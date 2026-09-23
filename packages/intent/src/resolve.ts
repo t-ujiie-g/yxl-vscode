@@ -9,6 +9,7 @@ import {
   fieldAt,
   reaches,
   sheetOf,
+  through,
 } from '@yxl-vscode/compile';
 import { entryOf, holds, type Node, type Op, type Path, renderScalar } from '@yxl-vscode/cst';
 import type { Saying } from '@yxl-vscode/diag';
@@ -70,7 +71,7 @@ export function candidates(
     return [written, onto].filter((one) => one !== null);
   }
 
-  const origin = cell.provenance.value;
+  const origin = through(cell.provenance.value);
   if (origin.kind === 'defRef') return definition(spec.grid, origin, where, typed, spec.read);
   if (origin.kind === 'param') return parameter(spec, origin, typed);
   if (origin.kind === 'external') return external(origin, where, typed, spec.read.text);

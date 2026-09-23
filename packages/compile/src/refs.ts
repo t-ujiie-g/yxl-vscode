@@ -4,7 +4,7 @@ import { CODE } from './codes';
 import { type Ctx, reject } from './ctx';
 import type { CompiledCell } from './grid';
 import { colOf, type Placed } from './placed';
-import type { FacetOrigin } from './provenance';
+import type { DataOrigin, FacetOrigin } from './provenance';
 import type { StyleLayer } from './style';
 import { say } from './text';
 
@@ -63,9 +63,13 @@ export function substitute(
   return out;
 }
 
-/** A drawn cell's origin: the column, header or footer cell that wrote it, and its layout. */
-export function origin(node: SpecNode, layout: Layout): FacetOrigin {
-  return { kind: 'layout', node: node.id, layout: layout.id };
+/** A drawn cell's origin: the column, header or footer cell that wrote it, its layout, and the field it read. */
+export function origin(
+  node: SpecNode,
+  layout: Layout,
+  from: DataOrigin | null = null,
+): FacetOrigin {
+  return { kind: 'layout', node: node.id, layout: layout.id, from };
 }
 
 /** A cell holding nothing, wearing `style`. */

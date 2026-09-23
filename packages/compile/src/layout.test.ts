@@ -1,6 +1,8 @@
-import { rangeOf } from '@yxl-vscode/units';
+import { type A1Addr, rangeOf } from '@yxl-vscode/units';
 import { describe, expect, it } from 'vitest';
 import { CODE } from './codes';
+import { cellAt } from './compile';
+import type { DataReader } from './ctx';
 import { codes, files, holds, laidOut, said, sheet } from './harness';
 
 describe('a layout reading its rows', () => {
@@ -70,5 +72,30 @@ describe('a layout reading its rows', () => {
     expect(codes(laidOut('      - at: A1\n        columns: [{ name: a }]\n'))).toEqual([
       CODE.badLayout,
     ]);
+  });
+});
+
+describe('where a body cell was read from', () => {
+  const origin = (source: string, at: string, read?: DataReader) =>
+    cellAt(sheet(source, read), at as A1Addr)?.provenance.value;
+
+  it('is its row and input column of `values:`', () => {
+    const source = laidOut(
+      '      - at: B2\n        values: [[x, 1], [y, 2]]\n        columns: [{ name: k }, { name: f, formula: "1" }, { name: n }]\n',
+    );
+    expect(origin(source, 'D3')).toMatchObject({
+      kind: 'layout',
+      from: { kind: 'inline', row: 1, col: 1 },
+    });
+  });
+
+  it("is a CSV's own row and field, under its header, whatever order the columns take", () => {
+    const source = laidOut(
+      '      - at: A1\n        csv: s.csv\n        columns: [{ name: region }, { name: code }]\n',
+    );
+    const read = files({ 's.csv': 'code,name,region\nS1,Shinjuku,East\n' });
+    expect(origin(source, 'A1', read)).toMatchObject({
+      from: { kind: 'external', file: 's.csv', row: 1, col: 2 },
+    });
   });
 });

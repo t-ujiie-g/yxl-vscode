@@ -71,8 +71,8 @@ export const SHEET_KEYS: readonly Covered[] = [
   { key: 'rows', standing: 'editable', says: 'the same down the side' },
   {
     key: 'layouts',
-    standing: 'preview',
-    says: 'drawn whole — header levels, rows read by name, blocks, footers; a drawn cell takes an override',
+    standing: 'editable',
+    says: 'drawn whole; a row typed back into `values:` or its CSV, a column dragged wider',
   },
   {
     key: 'merges',

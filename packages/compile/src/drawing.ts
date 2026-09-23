@@ -12,6 +12,7 @@ import type {
   CompiledRule,
 } from './grid';
 import { type Column, edges, type Placed } from './placed';
+import type { DataOrigin } from './provenance';
 import { blankAt, origin, refs } from './refs';
 import { layersOf, type StyleLayer } from './style';
 
@@ -51,6 +52,11 @@ export function draw(ctx: Ctx, placed: Placed): Drawn {
       header: placed.depth === 0 ? null : span(placed.top, placed.bodyFirst - 1),
       body: span(placed.bodyFirst, placed.bodyLast),
       footer: placed.lastRow > placed.bodyLast ? span(placed.bodyLast + 1, placed.lastRow) : null,
+      columns: placed.columns.map((one) => ({
+        col: one.col,
+        node: one.spec.id,
+        shared: one.scope !== null,
+      })),
       node: layout.id,
     },
   };
@@ -139,9 +145,19 @@ function drawBody(placed: Placed, cells: CompiledCell[]): void {
       if (value === null || column === undefined) continue;
 
       const at = addrAt({ col: column.col, row: placed.bodyFirst + index });
-      cells.push({ ...blankAt(at, [], origin(column.spec, placed.layout)), value });
+      const from = origin(column.spec, placed.layout, readFrom(placed, index, field));
+      cells.push({ ...blankAt(at, [], from), value });
     }
   }
+}
+
+/** The field a body cell was read from, counted as its source counts: a CSV under its header row. */
+function readFrom(placed: Placed, row: number, field: number): DataOrigin {
+  const node = placed.layout.id;
+  const { file, picks } = placed.taken;
+  if (file === null) return { kind: 'inline', node, row, col: field };
+  if (picks === null) return { kind: 'external', node, file, row, col: field };
+  return { kind: 'external', node, file, row: row + 1, col: picks[field] ?? field };
 }
 
 function fillOf(ctx: Ctx, placed: Placed, column: Column): CompiledFill[] {
