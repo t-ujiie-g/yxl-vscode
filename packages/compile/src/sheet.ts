@@ -20,7 +20,6 @@ import {
   cellOf,
   columnsOf,
   type FilePath,
-  filePath,
   parseA1Range,
   parseColumnSpan,
   parseRowSpan,
@@ -41,7 +40,8 @@ import {
   spokenBy,
 } from './cell';
 import { CODE } from './codes';
-import { type Ctx, filled, reject, text } from './ctx';
+import { type Ctx, filled, openData, reject, text } from './ctx';
+import { draw } from './drawing';
 import { chart, image, shape, sparklines } from './float';
 import type {
   CompiledAsk,
@@ -57,7 +57,7 @@ import type {
   CompiledTable,
   CompiledValidation,
 } from './grid';
-import { anchored, covered, draw, readRange } from './layout';
+import { anchored, covered, readRange } from './named';
 import { printing } from './print';
 import { protecting } from './protect';
 import type { FacetOrigin } from './provenance';
@@ -195,23 +195,8 @@ function readTable(
   block: DataBlock,
   source: Exclude<DataBlock['source'], { kind: 'inline' }>,
 ): { file: FilePath; rows: readonly DataRow[] } | null {
-  const spelled = text(ctx, source.path, block);
-  const path = filePath(spelled);
-  if (path === null) {
-    reject(ctx, CODE.badPath, say('compile.data-needs-a-path'), block);
-    return null;
-  }
-
-  if (ctx.read === null) {
-    reject(ctx, CODE.noDataReader, say('compile.nothing-can-read', { path }), block);
-    return null;
-  }
-
-  const opened = ctx.read(ctx.from, path);
-  if (opened === null) {
-    reject(ctx, CODE.unreadableData, say('compile.cannot-read', { path }), block);
-    return null;
-  }
+  const opened = openData(ctx, source.path, block);
+  if (opened === null) return null;
 
   const columns = source.kind === 'json' ? source.columns : null;
   const table = source.kind === 'csv' ? readCsv(opened.source) : readJson(opened.source, columns);

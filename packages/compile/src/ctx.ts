@@ -9,10 +9,10 @@ import type {
   Template,
   ValueDef,
 } from '@yxl-vscode/spec';
-import type { FilePath, NodeId } from '@yxl-vscode/units';
+import { type FilePath, filePath, type NodeId } from '@yxl-vscode/units';
 import { CODE, type Code } from './codes';
-import type { Placed } from './layout';
 import { asIs, behind, type Filled, fill, resolveParams } from './params';
+import type { Placed } from './placed';
 import { say } from './text';
 
 /**
@@ -124,4 +124,23 @@ function report(ctx: Ctx, done: Filled, node: SpecNode): void {
   if (done.unclosed) {
     reject(ctx, CODE.unclosedPlaceholder, say('compile.unclosed-placeholder'), node);
   }
+}
+
+/** A data file a spec names, opened through the injected reader (ADR-004), or `null` with the reason reported. */
+export function openData(ctx: Ctx, path: Template | ScalarValue, node: SpecNode): DataFile | null {
+  const spelled = text(ctx, path, node);
+  const read = filePath(spelled);
+  if (read === null) {
+    reject(ctx, CODE.badPath, say('compile.data-needs-a-path'), node);
+    return null;
+  }
+  if (ctx.read === null) {
+    reject(ctx, CODE.noDataReader, say('compile.nothing-can-read', { path: read }), node);
+    return null;
+  }
+
+  const opened = ctx.read(ctx.from, read);
+  if (opened === null)
+    reject(ctx, CODE.unreadableData, say('compile.cannot-read', { path: read }), node);
+  return opened;
 }

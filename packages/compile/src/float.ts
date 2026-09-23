@@ -28,7 +28,7 @@ import type {
   CompiledShapeText,
   CompiledSparkline,
 } from './grid';
-import { anchored, readRange } from './layout';
+import { anchored, readRange } from './named';
 import { flatten, settled } from './style';
 import { say } from './text';
 

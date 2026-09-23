@@ -24,7 +24,16 @@ import { sort } from './sorts';
 import { table } from './tables';
 import { validate } from './validations';
 import { reader } from './words';
-import { emptied, empty, type Port, resolve, type Spec, write, writeOverride } from './write';
+import {
+  emptied,
+  empty,
+  intoLayout,
+  type Port,
+  resolve,
+  type Spec,
+  write,
+  writeOverride,
+} from './write';
 
 const ROOT = filePath('/specs/report.yxl.yaml') ?? ('' as FilePath);
 
@@ -1300,5 +1309,23 @@ describe('a look asked for over the grid', () => {
 
     await wear(spec, worn(), port, 'somethingElse');
     expect(refusals[0]).toContain('no longer one of the ways');
+  });
+});
+
+describe('a patch that would write inside a layout', () => {
+  const { spec } = editor({ [ROOT]: LAID_OUT });
+  const set = (path: (string | number)[]) => ({
+    ops: [{ op: 'set' as const, path, value: '20' }],
+  });
+
+  it('is one whose op lands anywhere under a layout', () => {
+    const width = ['sheets', 0, 'layouts', 0, 'columns', 1, 'width'];
+    expect(intoLayout(spec.grid, ROOT, set(width))).toBe(true);
+  });
+
+  it('is not one beside it, or in another file', () => {
+    expect(intoLayout(spec.grid, ROOT, set(['sheets', 0, 'freeze']))).toBe(false);
+    const elsewhere = filePath('/specs/other.yaml') ?? ROOT;
+    expect(intoLayout(spec.grid, elsewhere, set(['sheets', 0, 'layouts', 0, 'at']))).toBe(false);
   });
 });

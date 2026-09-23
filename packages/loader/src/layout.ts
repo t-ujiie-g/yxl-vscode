@@ -26,7 +26,7 @@ import {
 import { CODE } from './codes';
 import { readColumnRules } from './conditional';
 import { type Ctx, identify, keyOf, reject, type Site } from './ctx';
-import { readRows } from './data';
+import { pickSource, readRows } from './data';
 import {
   expectBool,
   expectNumber,
@@ -439,17 +439,4 @@ function readSource(ctx: Ctx, entry: Entry, what: Saying): DataSource | null {
   const path = readAs(ctx, entry.value, under(what, key), PATH);
   if (path === null) return null;
   return key === 'csv' ? { kind: 'csv', path } : { kind: 'json', path, columns: null };
-}
-
-function pickSource(
-  ctx: Ctx,
-  taken: DataSource | null,
-  entry: Entry,
-  source: DataSource | null,
-): DataSource | null {
-  if (taken === null) return source;
-
-  const message = say('loader.rows-from-one-place', { key: keyOf(entry) });
-  reject(ctx, CODE.conflictingKeys, message, entry.span);
-  return taken;
 }

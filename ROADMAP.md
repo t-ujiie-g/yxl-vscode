@@ -3927,6 +3927,29 @@ than widening it silently.
 
 ## 11. Living changelog
 
+### 2026-09-24 — A §8 pass over the layouts it had just added
+
+In the same pull request as the pin move, at the reader's request. The
+findings, by the lens that found them.
+
+- **§8.2 — the data file was opened twice.** `sheet.ts` and the layout code
+  each checked the path, the reader and the read; `openData` in `ctx.ts` is the
+  one place now. The loader's `pickSource` was likewise written in `data.ts` and
+  again for layouts, and is `data.ts`'s alone.
+- **§8.2 — a column found by name eight times over.** `colOf` and `edges` say
+  it once; `namedRange` had no caller outside its module and is private.
+- **§8.3 — one 1,067-line module, split where its concerns part:** the placed
+  shape (`placed.ts`), the `{{name}}` primitives (`refs.ts`), placement
+  (`layout.ts`), drawing (`drawing.ts`), the footer (`footer.ts`), and how the
+  rest of a spec reaches a layout (`named.ts`). Imports now run one way —
+  `placed` and `refs` are leaves — where the first cut left cycles through
+  `layout.ts`. The tests follow the modules, their helpers in `harness.ts`.
+- **§8.4 — `intoLayout` had no test of its own**, only the resize that reaches
+  it; it has two now. The updater's VS Code half stays on the manual check,
+  since nothing here drives the extension host.
+- 2588 → 2590 tests. Comment shape: export 991 blocks / 2141 lines / avg 2.2,
+  private 642 / 642 / avg 1.0, inline 141 / 226 / avg 1.6; 0 over the limit.
+
 ### 2026-09-23 — The pin moves to yxl 0.5.0, and layouts are drawn
 
 yxl 0.5.0 adds `layouts:` (`docs/spec.md` §25), and upstream rewrote its

@@ -97,7 +97,13 @@ function readSource(
   return { ...source, columns };
 }
 
-function pickSource(ctx: Ctx, taken: DataSource | null, entry: Entry, source: DataSource) {
+/** The first place rows come from, a second reported; `data:` and a layout both take exactly one. */
+export function pickSource(
+  ctx: Ctx,
+  taken: DataSource | null,
+  entry: Entry,
+  source: DataSource | null,
+): DataSource | null {
   if (taken === null) return source;
 
   const message = say('loader.rows-from-one-place', { key: keyOf(entry) });
