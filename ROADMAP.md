@@ -2117,7 +2117,8 @@ reference; ADR-057 is how they project.
       *(2026-09-24)*
 - [x] **Upstream:** §25 says a group's text sorts in code-point order; yxl sorts
       shorter text first (`b` before `aa`). This editor follows the compiler
-      (§6 of `AGENTS.md`); reported as yxl#104 *(2026-09-24)*
+      (§6 of `AGENTS.md`); reported as yxl#104 *(2026-09-24)*, fixed in yxl
+      0.5.1 and followed here with the pin *(2026-09-24)*
 
 ### Taken out (2026-08-23)
 Two phases that were here are not any more, and not because they were hard:
@@ -3951,6 +3952,25 @@ than widening it silently.
 
 ## 11. Living changelog
 
+### 2026-09-24 — The pin moves to yxl 0.5.1
+
+yxl 0.5.1 is one fix, the one this editor reported: yxl#104. A footer group's
+`order: asc` and `desc` sort text by code point, as `docs/spec.md` §25 always
+said, where 0.5.0 put shorter text first and compared UTF-16 code units. The
+schema did not move; the shipped copy is byte for byte the same.
+
+- The preview had followed the compiler (ADR-057), so it moves with it: text by
+  code point, iterated as code points — `<` on strings would put U+10000 before
+  U+E000, which is the second half of what yxl fixed.
+- `tests/fixtures/layouts/stores.csv` gains the values the two orders disagree
+  on — a prefix, U+E000, U+10000 — so the differential test holds the order to
+  the compiler itself; the 0.5.0 sort fails it against 0.5.1.
+- No 0.5.0 behaviour is kept for an older compiler: the pin is one version
+  (§8 Q6), and an older yxl is already a warning with the update beside it.
+- Released as 0.2.2, with #191. 2612 → 2613 tests. A test count is read from
+  CI, or locally with `../yxl` on the pinned tag: `tests/corpus.ts` counts
+  whatever sits in `../yxl/examples`.
+
 ### 2026-09-24 — Column widths on a sheet with a column group (#191, 0.2.2)
 
 Found by the reader in 0.2.1. The grid is `table-layout: fixed`, which takes
@@ -3987,7 +4007,9 @@ text then no longer met the columns drawn.
   collapsed over its last column: the control went on the run's last column,
   which was not drawn. The bracket now runs from the first drawn line of a run
   to the last, as Sheets draws it.
-- 2605 → 2625 tests.
+- 2605 → 2612 tests, as CI counts them. *(Corrected 2026-09-24: this entry said
+  2625, a local count that took in example specs from a yxl branch then checked
+  out next door.)*
 
 ### 2026-09-24 — A §8 pass over the rows, widths and names
 

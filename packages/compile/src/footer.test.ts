@@ -35,13 +35,26 @@ describe('a footer', () => {
     expect(drawn.layouts[0]?.footer && rangeOf(drawn.layouts[0].footer)).toBe('A4:C10');
   });
 
-  it('escapes the wildcards in a group value, and orders shorter text first as yxl does', () => {
+  it('escapes the wildcards in a group value', () => {
     const source = laidOut(
       '      - at: A1\n        values: [["a*", 1], [b, 2]]\n        columns: [{ name: k }, { name: n }]\n        footer:\n          - by: k\n            order: asc\n            rows: [{ row: { n: { total: min } } }]\n',
     );
     expect([holds(source, 'B3'), holds(source, 'B4')]).toEqual([
-      'MINIFS(B1:B2,A1:A2,"=b")',
       'MINIFS(B1:B2,A1:A2,"=a~*")',
+      'MINIFS(B1:B2,A1:A2,"=b")',
+    ]);
+  });
+
+  it('orders text by code point, whatever its length or its UTF-16 spelling (yxl#104)', () => {
+    const source = laidOut(
+      '      - at: A1\n        values: [["\\U00010000"], [b], ["\\uE000"], [aa], [a]]\n        columns: [{ name: k }]\n        footer:\n          - by: k\n            order: asc\n            rows: [{ row: { k: "{{k}}" } }]\n',
+    );
+    expect([6, 7, 8, 9, 10].map((row) => holds(source, `A${row}`))).toEqual([
+      'a',
+      'aa',
+      'b',
+      '\uE000',
+      '\u{10000}',
     ]);
   });
 

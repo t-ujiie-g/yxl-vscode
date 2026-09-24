@@ -110,14 +110,24 @@ function groupValues(
   return [...order.values];
 }
 
-/** Numbers, then text — shorter first, as yxl sorts it rather than as §25 says (yxl#104) — then the rest. */
+/** Numbers, then text in code-point order, then the rest, a blank last (`docs/spec.md` §25). */
 function compareGroups(one: ScalarValue, other: ScalarValue): number {
   if (typeof one === 'number' && typeof other === 'number') return one - other;
-  if (typeof one === 'string' && typeof other === 'string') {
-    if (one.length !== other.length) return one.length - other.length;
-    return one < other ? -1 : one > other ? 1 : 0;
-  }
+  if (typeof one === 'string' && typeof other === 'string') return byCodePoint(one, other);
   return rank(one) - rank(other);
+}
+
+/** Text by code point, where `<` compares UTF-16 code units and puts U+10000 before U+E000. */
+function byCodePoint(one: string, other: string): number {
+  const theirs = other[Symbol.iterator]();
+  for (const mine of one) {
+    const next = theirs.next();
+    if (next.done === true) return 1;
+
+    const order = (mine.codePointAt(0) ?? 0) - (next.value.codePointAt(0) ?? 0);
+    if (order !== 0) return order;
+  }
+  return theirs.next().done === true ? 0 : -1;
 }
 
 function rank(value: ScalarValue): number {
