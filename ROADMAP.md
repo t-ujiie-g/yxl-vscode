@@ -3951,6 +3951,44 @@ than widening it silently.
 
 ## 11. Living changelog
 
+### 2026-09-24 — Column widths on a sheet with a column group (#191, 0.2.2)
+
+Found by the reader in 0.2.1. The grid is `table-layout: fixed`, which takes
+its column widths from the first row; a column group puts its outline row above
+the headings, and its cells carried no width, so the browser shared the table
+out evenly. Frozen columns, positioned from the declared widths, and spilled
+text then no longer met the columns drawn.
+
+- The outline cells carry their column's width, as the heading cells do. A
+  `<colgroup>` was the other shape, and was not taken: it would repeat the pads,
+  corners and row gutters every row already lays out.
+- **The widths were half of it**, which the reader found when the first fix was
+  tried: the harness grid had been measured for widths, not for what paints over
+  what. Sticky cells of one `z-index` paint in document order, so a frozen cell
+  that spills was covered by the frozen cells after it, and a spilling cell of a
+  frozen row showed through the frozen columns it scrolled under. Each band now
+  has a level of its own; `tests/layering.test.ts` reads the stylesheet and pins
+  the ladder, and fails on the one before.
+- A frozen column's text stops at the freeze line, as Excel's panes do, rather
+  than lying over the cells that scroll under it; the outline row over frozen
+  columns stays with them.
+- Checked in Chromium on the built webview bundle, fed the drawing `project()`
+  makes of the issue's spec — not the harness — at rest and scrolled: widths as
+  declared, the title whole across A–C, nothing showing through C.
+- **The group control, while there, at the reader's request**: the − and + were
+  9px with an 8px glyph. They are 16px now, as Google Sheets draws them, with a
+  bracket through the middle of the gutter ending at the button, a hover and a
+  focus ring; a collapsed group's + sits at the seam its columns were hidden at,
+  and rows take the same shape. Drawing it found a nested level's bracket had
+  never shown: `position: relative` on an outline cell overrode its `sticky`, so
+  the `top` pinning each heading row moved the second level down by a row, under
+  the letters. The rule is gone, and a test holds every outline cell sticky.
+- The reader then found an open group's − gone where a group inside it was
+  collapsed over its last column: the control went on the run's last column,
+  which was not drawn. The bracket now runs from the first drawn line of a run
+  to the last, as Sheets draws it.
+- 2605 → 2625 tests.
+
 ### 2026-09-24 — A §8 pass over the rows, widths and names
 
 In the same pull request, at the reader's request.

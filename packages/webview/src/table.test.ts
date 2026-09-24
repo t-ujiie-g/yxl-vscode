@@ -315,9 +315,55 @@ describe('a heading a reader clicks', () => {
       'Collapse columns B-F',
       'Collapse columns C-E',
     ]);
+    // Each level has a row of its own, so a nested one's control sits in it unmoved.
+    expect(controls.map((one) => one.style.top)).toEqual(['', '']);
 
     controls[0]?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
     expect(on.hide).toHaveBeenCalledWith('column', 2, 6, true);
+  });
+
+  it('gives every cell of the first head row a width, which a fixed layout takes its columns from (#191)', () => {
+    const outlined = sheet({
+      rows: 2,
+      columns: 5,
+      widths: [
+        { first: 1, last: 1, size: 3.33, hidden: false, group: null },
+        { first: 2, last: 2, size: 22, hidden: false, group: null },
+        { first: 4, last: 5, size: null, hidden: true, group: 1 },
+      ],
+    });
+    const into = shown({ drawing: drawing({ sheets: [outlined] }) });
+
+    const [first, ...rest] = [...into.querySelectorAll<HTMLElement>('thead tr')];
+    const headings = rest[rest.length - 1];
+    const widths = (row: HTMLElement | undefined) =>
+      [...(row?.children ?? [])].map((one) => (one as HTMLElement).style.width);
+
+    expect(first?.classList.contains('outline')).toBe(true);
+    expect(widths(first).every((one) => one !== '')).toBe(true);
+    expect(widths(first)).toEqual(widths(headings));
+  });
+
+  it("ends an open group's bracket at its last drawn column, where a group inside it is collapsed", () => {
+    const nested = sheet({
+      rows: 2,
+      columns: 9,
+      widths: [
+        { first: 5, last: 7, size: null, hidden: false, group: 1 },
+        { first: 6, last: 7, size: null, hidden: true, group: 2 },
+      ],
+    });
+    const into = shown({ drawing: drawing({ sheets: [nested] }) });
+
+    const controls = [...into.querySelectorAll<HTMLButtonElement>('thead .grouping.control')];
+    expect(controls.map((one) => [one.title, one.textContent])).toEqual([
+      ['Collapse columns E-G', '\u2212'],
+      ['Open columns F-G', '+'],
+    ]);
+
+    const [outer] = [...into.querySelectorAll<HTMLElement>('thead tr.outline.column')];
+    const ends = outer?.querySelector('.grouping.control')?.parentElement;
+    expect(ends?.classList.contains('opens')).toBe(true);
   });
 
   it('puts the way back on the heading a collapsed group sits behind', () => {
@@ -932,6 +978,19 @@ describe('a cell with more than one line in it', () => {
 describe('text that does not fit its cell', () => {
   const wide = (of: Partial<DrawnSheet> = {}) =>
     drawing({ sheets: [sheet({ rows: 1, columns: 3, ...of })] });
+
+  it("stops at the freeze line where it starts in a frozen column, as Excel's panes do (#191)", () => {
+    const held = wide({
+      columns: 4,
+      freeze: { row: 1, col: 3 },
+      cells: [cell(1, 1, { value: 'a heading long enough to run past the freeze line' })],
+    });
+    const one = held.sheets[0];
+    const over = at(shown({ drawing: held }), 1, 1)?.querySelector<HTMLElement>('.spill');
+
+    if (one === undefined) throw new Error('no sheet');
+    expect(over?.style.maxWidth).toBe(`${widthOf(one, 1) + widthOf(one, 2)}px`);
+  });
 
   it('runs over the empty cells beside it, as both spreadsheets let it', () => {
     const held = wide({ cells: [cell(1, 1, { value: 'a very long heading indeed' })] });

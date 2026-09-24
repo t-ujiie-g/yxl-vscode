@@ -285,7 +285,7 @@ body {
 
 .grid th.outline {
   position: sticky;
-  z-index: 2;
+  z-index: 5;
 }
 
 /* The column gutter is a heading row like the letters under it, and has to stay
@@ -293,78 +293,119 @@ body {
    behind show through where it was. */
 .grid thead td.outline {
   position: sticky;
-  z-index: 6;
+  z-index: 12;
 }
 
-/* The bracket over the run: a line along the gutter, turned down at the end it
-   starts from, as Excel draws one. */
-.grid .outline.in {
-  position: relative;
+.grid thead td.outline.stays {
+  z-index: 13;
 }
 
+/* The bracket over the run, as Google Sheets draws one: a line through the
+   middle of the gutter, turned down at the end it starts from, ending at the
+   control. */
 .grid td.outline.column.in::after,
-.grid th.outline.row.in::after {
+.grid th.outline.row.in::after,
+.grid td.outline.column.opens::before,
+.grid th.outline.row.opens::before {
   content: "";
   position: absolute;
-  background: #7a7a7a;
+  background: #5f6368;
 }
 
 .grid td.outline.column.in::after {
+  top: 50%;
   right: 0;
-  bottom: 3px;
   left: 0;
   height: 1px;
 }
 
 .grid td.outline.column.opens::after {
-  left: 3px;
+  left: 4px;
+}
+
+.grid td.outline.column.in:has(.control)::after {
+  right: 1px;
+}
+
+.grid td.outline.column.opens::before {
+  top: 50%;
   bottom: 3px;
-  height: 5px;
+  left: 4px;
   width: 1px;
 }
 
 .grid th.outline.row.in::after {
   top: 0;
-  right: 3px;
   bottom: 0;
+  left: 50%;
   width: 1px;
 }
 
 .grid th.outline.row.opens::after {
-  top: 3px;
+  top: 4px;
+}
+
+.grid th.outline.row.in:has(.control)::after {
+  bottom: 1px;
+}
+
+.grid th.outline.row.opens::before {
+  top: 4px;
   right: 3px;
-  width: 5px;
+  left: 50%;
   height: 1px;
 }
 
+/* The control that collapses a run or opens it again: big enough to hit, and
+   over the bracket's end, where Sheets puts it. */
 .grid button.grouping.control {
   position: absolute;
+  z-index: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 9px;
-  height: 9px;
-  padding: 0;
-  border: 1px solid #7a7a7a;
-  border-radius: 2px;
+  box-sizing: border-box;
+  width: 16px;
+  height: 16px;
+  padding: 0 0 1px;
+  border: 1px solid #80868b;
+  border-radius: 3px;
   background: #ffffff;
-  color: #444444;
-  font: 700 8px / 1 var(--vscode-font-family);
+  color: #3c4043;
+  font: 400 14px / 1 var(--vscode-font-family);
   cursor: pointer;
 }
 
-/* The one that opens a collapsed run sits on a heading rather than in the
-   gutter, since the run it belongs to is not drawn at all. */
-.grid th.hides .grouping.control {
-  top: 1px;
+.grid button.grouping.control:hover {
+  border-color: #3c4043;
+  background: #e8eaed;
+}
+
+.grid button.grouping.control:focus-visible {
+  outline: 2px solid var(--vscode-focusBorder, #0078d4);
+  outline-offset: 1px;
+}
+
+/* An open run's control ends the bracket, at the far side of its last column
+   or row; a collapsed one's sits where the run was hidden. */
+.grid .outline.column .grouping.control {
+  top: calc(50% - 8px);
   right: 1px;
 }
 
-.grid .outline.column .grouping.control,
+.grid .outline.column.opening .grouping.control {
+  right: auto;
+  left: 1px;
+}
+
 .grid .outline.row .grouping.control {
-  top: auto;
-  right: 1px;
   bottom: 1px;
+  left: calc(50% - 8px);
+}
+
+.grid .outline.row.opening .grouping.control {
+  top: 1px;
+  bottom: auto;
 }
 
 /* Where a run is hidden, on the heading that comes after it — the only thing
@@ -589,7 +630,7 @@ body {
    thick and grey, over the cells it divides. */
 .split {
   position: absolute;
-  z-index: 3;
+  z-index: 4;
   background: #7a7a7a;
   pointer-events: none;
 }
@@ -650,7 +691,7 @@ body {
   position: absolute;
   top: 0;
   right: 0;
-  z-index: 2;
+  z-index: 1;
   border: 5px solid transparent;
   border-top-color: #e81123;
   border-right-color: #e81123;
@@ -686,7 +727,7 @@ body {
   position: absolute;
   top: 0;
   left: 0;
-  z-index: 5;
+  z-index: 11;
   width: max(100%, 12rem);
   box-sizing: border-box;
   border: 2px solid #c8a800;
@@ -703,7 +744,7 @@ body {
   position: absolute;
   top: 0;
   left: 0;
-  z-index: 5;
+  z-index: 11;
   width: max(100%, 18rem);
   box-sizing: border-box;
   border: 2px solid #107c41;
@@ -864,17 +905,17 @@ body {
 .grid thead th {
   position: sticky;
   top: 0;
-  z-index: 6;
+  z-index: 12;
 }
 
 .grid tbody th {
   position: sticky;
-  z-index: 2;
+  z-index: 5;
 }
 
 .grid thead th.corner {
   padding: 0;
-  z-index: 8;
+  z-index: 14;
 }
 
 .grid .pad,
@@ -896,36 +937,45 @@ body {
 }
 
 .grid thead th.stays,
+.grid thead td.outline.stays,
 .grid tr.frozen th {
   background-color: #f5f5f5;
 }
 
-/* Sticky cells of one z-index paint in the order they are written, so a band
-   that is to stay in front of another has to say by how much. */
+/* Sticky cells of one z-index paint in the order they are written, so every
+   band that stays in front of another has a level of its own (#191): a frozen
+   column over what scrolls under it, and a cell that spills over the white
+   ground of the cells it spills across. */
 .grid td.stays {
-  z-index: 1;
+  z-index: 2;
 }
 
-.grid tr.frozen td {
+.grid td.stays.spilling {
   z-index: 3;
 }
 
-/* A frozen row's cells are sticky and carry a white ground of their own, which
-   would paint over the text spilling from the cell before them. */
+.grid tr.frozen td {
+  z-index: 6;
+}
+
 .grid tr.frozen td.spilling {
-  z-index: 4;
+  z-index: 7;
 }
 
 .grid tr.frozen td.stays {
-  z-index: 4;
+  z-index: 8;
+}
+
+.grid tr.frozen td.stays.spilling {
+  z-index: 9;
 }
 
 .grid tr.frozen th {
-  z-index: 5;
+  z-index: 10;
 }
 
 .grid thead th.stays {
-  z-index: 7;
+  z-index: 13;
 }
 
 /* The heading of a row or column the selection reaches, as both spreadsheets
@@ -952,7 +1002,7 @@ body {
   position: absolute;
   top: 0;
   left: 0;
-  z-index: 4;
+  z-index: 11;
   width: 100%;
   min-height: 100%;
   box-sizing: border-box;
@@ -1254,7 +1304,7 @@ body {
   position: absolute;
   top: 0;
   left: 0;
-  z-index: 2;
+  z-index: 4;
 }
 
 .float {

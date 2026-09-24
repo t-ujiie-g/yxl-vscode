@@ -4,6 +4,25 @@ Every release names the `yxl` it was built against: the schema is not frozen
 until yxl's v1.0, so the pinned compiler is part of what a version means
 (`ROADMAP.md` §8 Q6).
 
+## 0.2.2 — 2026-09-24
+
+Still targets **yxl 0.5.0**.
+
+- **Column widths hold on a sheet with a column group** (#191). A `group:` on
+  any column put its outline row first in the grid's heading, and that row
+  carried no widths, so every column was drawn the same width.
+- **Text spilling across frozen columns reads whole** (#191). A long title in a
+  frozen column was cut up by the frozen cells beside it, text from a scrolling
+  column showed through the frozen ones, and the outline row over frozen
+  columns scrolled away. Text from a frozen column now stops at the freeze line,
+  as Excel's panes do.
+- **A group's − and + are the size Google Sheets draws them.** 16px rather than
+  9, with a bracket through the middle of the outline gutter that ends at the
+  button. A collapsed group's + sits at the seam where its columns were hidden,
+  and a nested group's bracket is drawn in its own row again, where it had
+  slipped out of sight. With a group collapsed inside an open one, the outer
+  group's − stays at the end of what is still shown.
+
 ## 0.2.1 — 2026-09-24
 
 Still targets **yxl 0.5.0**.
