@@ -225,6 +225,7 @@ export function above(sheet: DrawnSheet, level: number, asks: Asks): HTMLElement
     cell.className = 'outline column';
     // A fixed-layout table takes its column widths from its first row, which this is (#191).
     cell.style.width = `${wide}px`;
+    if (one.stays) stay(sheet, cell, { col: one.at });
 
     const run = runs.find((each) => held(each, one.at));
     if (run !== undefined) drawOutline(cell, 'column', run, one.at, asks);
@@ -572,7 +573,7 @@ function line(
   return line;
 }
 
-/** How wide a cell's text may run: its own width plus the empty cells right of it, or `0`. */
+/** How far a cell's text runs over the empty cells right of it, or `0`; a frozen column's stops at the freeze line. */
 function spillOf(
   sheet: DrawnSheet,
   held: ReadonlyMap<string, DrawnCell>,
@@ -581,8 +582,11 @@ function spillOf(
 ): number {
   if (!spills(held.get(cellKey(col, row)))) return 0;
 
+  const frozen = sheet.freeze !== null && col < sheet.freeze.col;
+  const last = frozen && sheet.freeze !== null ? sheet.freeze.col - 1 : sheet.of.columns;
+
   let width = widthOf(sheet, col);
-  for (let over = col + 1; over <= sheet.of.columns; over += 1) {
+  for (let over = col + 1; over <= last; over += 1) {
     if (shows(held.get(cellKey(over, row)))) break;
     width += widthOf(sheet, over);
   }

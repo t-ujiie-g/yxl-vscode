@@ -3962,11 +3962,20 @@ text then no longer met the columns drawn.
 - The outline cells carry their column's width, as the heading cells do. A
   `<colgroup>` was the other shape, and was not taken: it would repeat the pads,
   corners and row gutters every row already lays out.
-- The test pins the rule rather than the symptom — the first head row gives
-  every cell a width, the heading row's — since jsdom lays nothing out. The
-  symptom was measured in Chromium on the grid the harness draws: every column
-  76.2px wide before, 28.3 / 90.1 / 159.0 as declared after.
-- 2605 → 2606 tests.
+- **The widths were half of it**, which the reader found when the first fix was
+  tried: the harness grid had been measured for widths, not for what paints over
+  what. Sticky cells of one `z-index` paint in document order, so a frozen cell
+  that spills was covered by the frozen cells after it, and a spilling cell of a
+  frozen row showed through the frozen columns it scrolled under. Each band now
+  has a level of its own; `tests/layering.test.ts` reads the stylesheet and pins
+  the ladder, and fails on the one before.
+- A frozen column's text stops at the freeze line, as Excel's panes do, rather
+  than lying over the cells that scroll under it; the outline row over frozen
+  columns stays with them.
+- Checked in Chromium on the built webview bundle, fed the drawing `project()`
+  makes of the issue's spec — not the harness — at rest and scrolled: widths as
+  declared, the title whole across A–C, nothing showing through C.
+- 2605 → 2622 tests.
 
 ### 2026-09-24 — A §8 pass over the rows, widths and names
 

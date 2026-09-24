@@ -10,8 +10,12 @@ Still targets **yxl 0.5.0**.
 
 - **Column widths hold on a sheet with a column group** (#191). A `group:` on
   any column put its outline row first in the grid's heading, and that row
-  carried no widths, so every column was drawn the same width — which in turn
-  moved frozen columns and let long text spill over its neighbours.
+  carried no widths, so every column was drawn the same width.
+- **Text spilling across frozen columns reads whole** (#191). A long title in a
+  frozen column was cut up by the frozen cells beside it, text from a scrolling
+  column showed through the frozen ones, and the outline row over frozen
+  columns scrolled away. Text from a frozen column now stops at the freeze line,
+  as Excel's panes do.
 
 ## 0.2.1 — 2026-09-24
 

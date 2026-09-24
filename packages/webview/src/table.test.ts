@@ -955,6 +955,19 @@ describe('text that does not fit its cell', () => {
   const wide = (of: Partial<DrawnSheet> = {}) =>
     drawing({ sheets: [sheet({ rows: 1, columns: 3, ...of })] });
 
+  it("stops at the freeze line where it starts in a frozen column, as Excel's panes do (#191)", () => {
+    const held = wide({
+      columns: 4,
+      freeze: { row: 1, col: 3 },
+      cells: [cell(1, 1, { value: 'a heading long enough to run past the freeze line' })],
+    });
+    const one = held.sheets[0];
+    const over = at(shown({ drawing: held }), 1, 1)?.querySelector<HTMLElement>('.spill');
+
+    if (one === undefined) throw new Error('no sheet');
+    expect(over?.style.maxWidth).toBe(`${widthOf(one, 1) + widthOf(one, 2)}px`);
+  });
+
   it('runs over the empty cells beside it, as both spreadsheets let it', () => {
     const held = wide({ cells: [cell(1, 1, { value: 'a very long heading indeed' })] });
     const one = held.sheets[0];
