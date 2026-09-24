@@ -344,6 +344,28 @@ describe('a heading a reader clicks', () => {
     expect(widths(first)).toEqual(widths(headings));
   });
 
+  it("ends an open group's bracket at its last drawn column, where a group inside it is collapsed", () => {
+    const nested = sheet({
+      rows: 2,
+      columns: 9,
+      widths: [
+        { first: 5, last: 7, size: null, hidden: false, group: 1 },
+        { first: 6, last: 7, size: null, hidden: true, group: 2 },
+      ],
+    });
+    const into = shown({ drawing: drawing({ sheets: [nested] }) });
+
+    const controls = [...into.querySelectorAll<HTMLButtonElement>('thead .grouping.control')];
+    expect(controls.map((one) => [one.title, one.textContent])).toEqual([
+      ['Collapse columns E-G', '\u2212'],
+      ['Open columns F-G', '+'],
+    ]);
+
+    const [outer] = [...into.querySelectorAll<HTMLElement>('thead tr.outline.column')];
+    const ends = outer?.querySelector('.grouping.control')?.parentElement;
+    expect(ends?.classList.contains('opens')).toBe(true);
+  });
+
   it('puts the way back on the heading a collapsed group sits behind', () => {
     const on = asks();
     const collapsed = sheet({

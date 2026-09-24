@@ -228,7 +228,7 @@ export function above(sheet: DrawnSheet, level: number, asks: Asks): HTMLElement
     if (one.stays) stay(sheet, cell, { col: one.at });
 
     const run = runs.find((each) => held(each, one.at));
-    if (run !== undefined) drawOutline(cell, 'column', run, one.at, asks);
+    if (run !== undefined) drawOutline(sheet, cell, 'column', run, one.at, asks);
 
     const gone = behind(drawn, one.at);
     const over = gone === null ? null : groupOver(sheet, 'column', gone);

@@ -1,6 +1,7 @@
 import type { Axis } from '@yxl-vscode/spec';
 import type { DrawnSheet, Sized } from './protocol';
 import { type Asks, OUTLINE } from './showing';
+import { heightOf, widthOf } from './window';
 import { chrome, spanned } from './worded';
 
 /** How many levels of outline this axis has, which is how wide its gutter is (ADR-045). */
@@ -34,7 +35,7 @@ export function outline(
 
     const run =
       row === null ? undefined : runs.find((one) => one.group === level && held(one, row));
-    if (run !== undefined && row !== null) drawOutline(cell, 'row', run, row, asks);
+    if (run !== undefined && row !== null) drawOutline(sheet, cell, 'row', run, row, asks);
     if (over !== null && over.group === level) opening(cell, 'row', over, asks);
 
     return cell;
@@ -46,8 +47,12 @@ export function held(run: Grouped, at: number): boolean {
   return run.first <= at && at <= run.last;
 }
 
-/** The bracket and the control one level of an outline puts in its gutter. */
+/**
+ * The bracket and the control one level of an outline puts in its gutter, from
+ * the run's first drawn line to its last: a group collapsed inside it hides some.
+ */
 export function drawOutline(
+  sheet: DrawnSheet,
   cell: HTMLElement,
   axis: Axis,
   run: Grouped,
@@ -56,9 +61,13 @@ export function drawOutline(
 ): void {
   if (run.hidden) return;
 
+  const drawn = (line: number) =>
+    (axis === 'column' ? widthOf(sheet, line) : heightOf(sheet, line)) > 0;
+  const lines = Array.from({ length: run.last - run.first + 1 }, (_, one) => run.first + one);
+
   cell.classList.add('in');
-  if (at === run.first) cell.classList.add('opens');
-  if (at === run.last) cell.append(control(axis, run, false, asks));
+  if (at === lines.find(drawn)) cell.classList.add('opens');
+  if (at === lines.findLast(drawn)) cell.append(control(axis, run, false, asks));
 }
 
 /** The control that opens a collapsed group, in the gutter beside the seam its run is hidden at. */

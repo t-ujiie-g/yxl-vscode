@@ -3983,7 +3983,11 @@ text then no longer met the columns drawn.
   never shown: `position: relative` on an outline cell overrode its `sticky`, so
   the `top` pinning each heading row moved the second level down by a row, under
   the letters. The rule is gone, and a test holds every outline cell sticky.
-- 2605 → 2624 tests.
+- The reader then found an open group's − gone where a group inside it was
+  collapsed over its last column: the control went on the run's last column,
+  which was not drawn. The bracket now runs from the first drawn line of a run
+  to the last, as Sheets draws it.
+- 2605 → 2625 tests.
 
 ### 2026-09-24 — A §8 pass over the rows, widths and names
 

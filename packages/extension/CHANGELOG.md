@@ -20,7 +20,8 @@ Still targets **yxl 0.5.0**.
   9, with a bracket through the middle of the outline gutter that ends at the
   button. A collapsed group's + sits at the seam where its columns were hidden,
   and a nested group's bracket is drawn in its own row again, where it had
-  slipped out of sight.
+  slipped out of sight. With a group collapsed inside an open one, the outer
+  group's − stays at the end of what is still shown.
 
 ## 0.2.1 — 2026-09-24
 
