@@ -320,6 +320,28 @@ describe('a heading a reader clicks', () => {
     expect(on.hide).toHaveBeenCalledWith('column', 2, 6, true);
   });
 
+  it('gives every cell of the first head row a width, which a fixed layout takes its columns from (#191)', () => {
+    const outlined = sheet({
+      rows: 2,
+      columns: 5,
+      widths: [
+        { first: 1, last: 1, size: 3.33, hidden: false, group: null },
+        { first: 2, last: 2, size: 22, hidden: false, group: null },
+        { first: 4, last: 5, size: null, hidden: true, group: 1 },
+      ],
+    });
+    const into = shown({ drawing: drawing({ sheets: [outlined] }) });
+
+    const [first, ...rest] = [...into.querySelectorAll<HTMLElement>('thead tr')];
+    const headings = rest[rest.length - 1];
+    const widths = (row: HTMLElement | undefined) =>
+      [...(row?.children ?? [])].map((one) => (one as HTMLElement).style.width);
+
+    expect(first?.classList.contains('outline')).toBe(true);
+    expect(widths(first).every((one) => one !== '')).toBe(true);
+    expect(widths(first)).toEqual(widths(headings));
+  });
+
   it('puts the way back on the heading a collapsed group sits behind', () => {
     const on = asks();
     const collapsed = sheet({

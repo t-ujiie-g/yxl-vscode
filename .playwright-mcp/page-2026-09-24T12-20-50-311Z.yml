@@ -1,0 +1,125 @@
+- generic [active] [ref=e1]:
+  - navigation [ref=e2]:
+    - button "Double-click to rename, drag to reorder" [ref=e3] [cursor=pointer]: Sales Double-click to rename, drag to reorder
+    - button "Add a sheet" [ref=e4] [cursor=pointer]: + Add a sheet
+  - generic [ref=e5]:
+    - generic "Font" [ref=e6]:
+      - combobox [disabled] [ref=e7]:
+        - option "Default" [selected]
+        - option "Arial"
+        - option "BIZ UDPゴシック"
+        - option "Calibri"
+        - option "Courier New"
+        - option "Georgia"
+        - option "Meiryo"
+        - option "MS PGothic"
+        - option "Times New Roman"
+        - option "Verdana"
+        - option "Yu Gothic"
+        - option "Yu Mincho"
+      - text: Font
+    - generic "Font size" [ref=e8]:
+      - combobox [disabled] [ref=e9]:
+        - option "—" [selected]
+        - option "8"
+        - option "9"
+        - option "10"
+        - option "11"
+        - option "12"
+        - option "14"
+        - option "16"
+        - option "18"
+        - option "20"
+        - option "24"
+        - option "28"
+        - option "36"
+        - option "48"
+        - option "72"
+      - text: Font size
+    - button "Bold (Ctrl+B)" [disabled] [ref=e11]: B Bold (Ctrl+B)
+    - button "Italic (Ctrl+I)" [disabled] [ref=e12]: I Italic (Ctrl+I)
+    - button "Underline (Ctrl+U)" [disabled] [ref=e13]: U Underline (Ctrl+U)
+    - button "Strikethrough" [disabled] [ref=e14]: S Strikethrough
+    - button "Text colour" [disabled] [ref=e17]:
+      - generic [ref=e18]: A
+      - generic [ref=e19]: ▾
+      - text: Text colour
+    - button "Fill" [disabled] [ref=e21]:
+      - generic [ref=e22]: ■
+      - generic [ref=e23]: ▾
+      - text: Fill
+    - button "Align left" [disabled] [ref=e25]
+    - button "Align centre" [disabled] [ref=e31]
+    - button "Align right" [disabled] [ref=e37]
+    - button "Align top" [disabled] [ref=e44]
+    - button "Align middle" [disabled] [ref=e49]
+    - button "Align bottom" [disabled] [ref=e54]
+    - button "Wrap text" [disabled] [ref=e59]: ↵ Wrap text
+    - generic "Number format" [ref=e61]:
+      - combobox [disabled] [ref=e62]:
+        - option "General" [selected]
+        - option "#,##0"
+        - option "#,##0.00"
+        - option "0.00"
+        - option "0%"
+        - option "0.0%"
+        - option "¥#,##0"
+        - option "$#,##0.00"
+        - option "yyyy-mm-dd"
+        - option "h:mm"
+      - text: Number format
+    - button "Format as percent" [disabled] [ref=e63]: "% Format as percent"
+    - button "Fewer decimal places" [disabled] [ref=e64]: .0← Fewer decimal places
+    - button "More decimal places" [disabled] [ref=e65]: .00→ More decimal places
+    - button "Borders" [disabled] [ref=e68]:
+      - generic [ref=e74]: ▾
+      - text: Borders
+    - button "Freeze panes" [ref=e76] [cursor=pointer]:
+      - generic [ref=e85]: ▾
+      - text: Freeze panes
+    - button "Clear formatting" [disabled] [ref=e87]: T Clear formatting
+  - generic [ref=e88]:
+    - textbox "Go to an address" [ref=e89]
+    - generic [ref=e90]: fx
+    - textbox "What this cell holds" [disabled] [ref=e91]
+  - table [ref=e93]:
+    - rowgroup [ref=e94]:
+      - row [ref=e95]:
+        - columnheader [ref=e96]
+        - cell [ref=e97]
+        - cell [ref=e98]
+        - cell [ref=e99]
+        - cell [ref=e100]
+        - cell [ref=e101]:
+          - button "+" [ref=e102] [cursor=pointer]
+        - cell [ref=e103]
+        - cell [ref=e104]
+      - row [ref=e105]:
+        - columnheader [ref=e106]:
+          - button "Select the whole sheet" [ref=e107] [cursor=pointer]
+        - columnheader "A" [ref=e108]
+        - columnheader "B" [ref=e110]
+        - columnheader "C" [ref=e112]
+        - columnheader "D" [ref=e114]
+        - columnheader "G" [ref=e116]
+        - columnheader "H" [ref=e118]
+        - columnheader "I" [ref=e120]
+    - rowgroup [ref=e122]:
+      - row [ref=e123]:
+        - columnheader "1" [ref=e124]
+        - cell [ref=e126]
+        - cell [ref=e127]
+        - cell [ref=e128]
+        - cell [ref=e129]
+        - cell [ref=e130]
+        - cell [ref=e131]
+        - cell [ref=e132]
+      - row [ref=e133]:
+        - columnheader "2" [ref=e134]
+        - cell [ref=e136]
+        - cell [ref=e137]
+        - cell [ref=e138]
+        - cell [ref=e139]
+        - cell [ref=e140]
+        - cell [ref=e141]
+        - cell [ref=e142]

@@ -4,6 +4,15 @@ Every release names the `yxl` it was built against: the schema is not frozen
 until yxl's v1.0, so the pinned compiler is part of what a version means
 (`ROADMAP.md` §8 Q6).
 
+## 0.2.2 — 2026-09-24
+
+Still targets **yxl 0.5.0**.
+
+- **Column widths hold on a sheet with a column group** (#191). A `group:` on
+  any column put its outline row first in the grid's heading, and that row
+  carried no widths, so every column was drawn the same width — which in turn
+  moved frozen columns and let long text spill over its neighbours.
+
 ## 0.2.1 — 2026-09-24
 
 Still targets **yxl 0.5.0**.

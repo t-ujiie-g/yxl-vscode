@@ -3951,6 +3951,23 @@ than widening it silently.
 
 ## 11. Living changelog
 
+### 2026-09-24 — Column widths on a sheet with a column group (#191, 0.2.2)
+
+Found by the reader in 0.2.1. The grid is `table-layout: fixed`, which takes
+its column widths from the first row; a column group puts its outline row above
+the headings, and its cells carried no width, so the browser shared the table
+out evenly. Frozen columns, positioned from the declared widths, and spilled
+text then no longer met the columns drawn.
+
+- The outline cells carry their column's width, as the heading cells do. A
+  `<colgroup>` was the other shape, and was not taken: it would repeat the pads,
+  corners and row gutters every row already lays out.
+- The test pins the rule rather than the symptom — the first head row gives
+  every cell a width, the heading row's — since jsdom lays nothing out. The
+  symptom was measured in Chromium on the grid the harness draws: every column
+  76.2px wide before, 28.3 / 90.1 / 159.0 as declared after.
+- 2605 → 2606 tests.
+
 ### 2026-09-24 — A §8 pass over the rows, widths and names
 
 In the same pull request, at the reader's request.

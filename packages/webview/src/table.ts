@@ -218,10 +218,13 @@ export function above(sheet: DrawnSheet, level: number, asks: Asks): HTMLElement
       }
       continue;
     }
-    if (widthOf(sheet, one.at) === 0) continue;
+    const wide = widthOf(sheet, one.at);
+    if (wide === 0) continue;
 
     const cell = document.createElement('td');
     cell.className = 'outline column';
+    // A fixed-layout table takes its column widths from its first row, which this is (#191).
+    cell.style.width = `${wide}px`;
 
     const run = runs.find((each) => held(each, one.at));
     if (run !== undefined) drawOutline(cell, 'column', run, one.at, asks);
