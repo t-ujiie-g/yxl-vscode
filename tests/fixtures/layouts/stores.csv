@@ -6,3 +6,6 @@ a*,x*y,直営,10,5,true
 b,"q?r",FC,20,25,true
 10,n1,直営,1,2,true
 9,n2,FC,3,4,false
+a,n3,FC,4,4,true
+,n4,直営,6,5,true
+𐀀,n5,FC,7,8,false

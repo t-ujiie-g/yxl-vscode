@@ -6,7 +6,11 @@ until yxl's v1.0, so the pinned compiler is part of what a version means
 
 ## 0.2.2 — 2026-09-24
 
-Still targets **yxl 0.5.0**.
+Targets **yxl 0.5.1**, up from 0.5.0.
+
+- **A footer's groups sort as yxl 0.5.1 sorts them.** `order: asc` and `desc`
+  put text in code-point order — `aa` before `b` — where 0.5.0 put shorter text
+  first. The preview follows the compiler, so it moves with it.
 
 - **Column widths hold on a sheet with a column group** (#191). A `group:` on
   any column put its outline row first in the grid's heading, and that row
