@@ -16,6 +16,11 @@ Still targets **yxl 0.5.0**.
   column showed through the frozen ones, and the outline row over frozen
   columns scrolled away. Text from a frozen column now stops at the freeze line,
   as Excel's panes do.
+- **A group's − and + are the size Google Sheets draws them.** 16px rather than
+  9, with a bracket through the middle of the outline gutter that ends at the
+  button. A collapsed group's + sits at the seam where its columns were hidden,
+  and a nested group's bracket is drawn in its own row again, where it had
+  slipped out of sight.
 
 ## 0.2.1 — 2026-09-24
 

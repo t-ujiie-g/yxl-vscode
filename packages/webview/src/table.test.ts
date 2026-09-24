@@ -315,6 +315,8 @@ describe('a heading a reader clicks', () => {
       'Collapse columns B-F',
       'Collapse columns C-E',
     ]);
+    // Each level has a row of its own, so a nested one's control sits in it unmoved.
+    expect(controls.map((one) => one.style.top)).toEqual(['', '']);
 
     controls[0]?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
     expect(on.hide).toHaveBeenCalledWith('column', 2, 6, true);

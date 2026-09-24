@@ -72,10 +72,6 @@ function control(axis: Axis, run: Grouped, open: boolean, asks: Asks): HTMLEleme
   const drawn = document.createElement('button');
   drawn.type = 'button';
   drawn.className = `grouping ${axis} control`;
-  drawn.style.setProperty(
-    axis === 'column' ? 'top' : 'left',
-    `${((run.group ?? 1) - 1) * LEVEL}px`,
-  );
   drawn.textContent = open ? '+' : '\u2212';
   const span = spanned(axis, run.first, run.last);
   drawn.title = open ? chrome('view.open-run', { span }) : chrome('view.collapse-run', { span });
@@ -122,9 +118,6 @@ export function hidden(heading: HTMLElement, axis: Axis, run: Span, asks: Asks):
 export function behind(drawn: number | null, at: number): Span | null {
   return drawn !== null && at > drawn + 1 ? { first: drawn + 1, last: at - 1 } : null;
 }
-
-/** How far apart the levels of an outline sit, which is what makes a nested one legible. */
-const LEVEL = 4;
 
 /** A run a band groups, which is the runs `docs/spec.md` §4 gives an outline level above zero. */
 type Grouped = Sized & { readonly group: number };

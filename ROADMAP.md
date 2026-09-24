@@ -3975,7 +3975,15 @@ text then no longer met the columns drawn.
 - Checked in Chromium on the built webview bundle, fed the drawing `project()`
   makes of the issue's spec — not the harness — at rest and scrolled: widths as
   declared, the title whole across A–C, nothing showing through C.
-- 2605 → 2622 tests.
+- **The group control, while there, at the reader's request**: the − and + were
+  9px with an 8px glyph. They are 16px now, as Google Sheets draws them, with a
+  bracket through the middle of the gutter ending at the button, a hover and a
+  focus ring; a collapsed group's + sits at the seam its columns were hidden at,
+  and rows take the same shape. Drawing it found a nested level's bracket had
+  never shown: `position: relative` on an outline cell overrode its `sticky`, so
+  the `top` pinning each heading row moved the second level down by a row, under
+  the letters. The rule is gone, and a test holds every outline cell sticky.
+- 2605 → 2624 tests.
 
 ### 2026-09-24 — A §8 pass over the rows, widths and names
 

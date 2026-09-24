@@ -47,3 +47,18 @@ describe('the order sticky cells paint in (#191)', () => {
     expect(level('.grid thead td.outline.stays')).toBe(level('.grid thead th.stays'));
   });
 });
+
+describe('the outline gutter', () => {
+  it('keeps every outline cell sticky, where `relative` would move a lower level down by its own `top`', () => {
+    for (const rule of css.matchAll(/([^{}]+)\{([^}]*)\}/g)) {
+      const outline = (rule[1] ?? '').includes('.outline');
+      if (outline) expect(rule[2] ?? '', rule[1]).not.toMatch(/position:\s*relative/);
+    }
+  });
+
+  it('draws the group control big enough to hit, as Google Sheets does', () => {
+    const control = /\.grid button\.grouping\.control \{([^}]*)\}/.exec(css)?.[1] ?? '';
+    expect(control).toMatch(/width: 16px/);
+    expect(control).toMatch(/height: 16px/);
+  });
+});
