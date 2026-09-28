@@ -1,7 +1,7 @@
 import type { Axis } from '@yxl-vscode/spec';
 import { columnLabel } from '@yxl-vscode/units';
 import { corner } from './boxes';
-import { askInto, drawCell, shows, spills, typeInto } from './cell';
+import { askInto, drawCell, type SpannedMerge, shows, spills, typeInto } from './cell';
 import { copying, edging, filling, going, looking as lookingFor, pasting, undoing } from './keys';
 import {
   behind,
@@ -16,7 +16,7 @@ import {
   outline,
   type Span,
 } from './outline';
-import type { DrawnCell, DrawnMerge, DrawnSheet } from './protocol';
+import type { DrawnCell, DrawnSheet } from './protocol';
 import {
   type Asks,
   cellKey,
@@ -129,16 +129,22 @@ function markedBy(sheet: DrawnSheet): Map<string, string[]> {
   return problems;
 }
 
-/** Each merge at its top-left cell, and every address it swallows, which must not be drawn. */
+/** Each merge at the first of its cells that shows, and every other address it swallows. */
 function mergedIn(sheet: DrawnSheet): Merged {
-  const anchored = new Map<string, DrawnMerge>();
+  const anchored = new Map<string, SpannedMerge>();
   const covered = new Set<string>();
 
   for (const merge of sheet.merges) {
-    anchored.set(cellKey(merge.left, merge.top), merge);
+    const rows = shownIn(merge.top, merge.bottom, (row) => heightOf(sheet, row));
+    const cols = shownIn(merge.left, merge.right, (col) => widthOf(sheet, col));
+    const [top, left] = [rows[0], cols[0]];
+    if (top !== undefined && left !== undefined) {
+      anchored.set(cellKey(left, top), { ...merge, rows: rows.length, cols: cols.length });
+    }
+
     for (let row = merge.top; row <= merge.bottom; row += 1) {
       for (let col = merge.left; col <= merge.right; col += 1) {
-        if (row !== merge.top || col !== merge.left) covered.add(cellKey(col, row));
+        if (row !== top || col !== left) covered.add(cellKey(col, row));
       }
     }
   }
@@ -146,8 +152,14 @@ function mergedIn(sheet: DrawnSheet): Merged {
   return { anchored, covered };
 }
 
+function shownIn(first: number, last: number, sizeOf: (at: number) => number): number[] {
+  const shown: number[] = [];
+  for (let at = first; at <= last; at += 1) if (sizeOf(at) > 0) shown.push(at);
+  return shown;
+}
+
 interface Merged {
-  readonly anchored: ReadonlyMap<string, DrawnMerge>;
+  readonly anchored: ReadonlyMap<string, SpannedMerge>;
   readonly covered: ReadonlySet<string>;
 }
 
@@ -402,164 +414,12 @@ function line(
       continue;
     }
 
-    const col = one.at;
-    if (merged.covered.has(cellKey(col, row)) || widthOf(sheet, col) === 0) continue;
+    if (merged.covered.has(cellKey(one.at, row)) || widthOf(sheet, one.at) === 0) continue;
 
-    const here = held.get(cellKey(col, row));
-    const table = tableAt(sheet, row, col);
-    const heads = table !== null && row === table.top;
-    const filtered = filters(sheet, row, col);
-    const note = here?.note ?? null;
-    const link = here?.link ?? null;
-    const checks = here?.validation ?? null;
-    const anchored = merged.anchored.get(cellKey(col, row));
-    const drawn = drawCell(
-      here,
-      anchored,
-      anchored === undefined ? spillOf(sheet, held, row, col) : 0,
-      sheet.protect !== null,
-    );
-    if (drawn.querySelector('.spill') !== null) drawn.classList.add('spilling');
-    if (table !== null) drawn.classList.add(...banding(table, row, col));
-    if (filtered || heads) drawn.append(dropdown());
-    if (note !== null) drawn.append(noted());
-    if (link !== null) drawn.classList.add('linked');
-    if (checks !== null) drawn.append(validated(checks));
-    if (shows(here)) drawn.classList.add('holds');
-    tells(drawn, [
-      filtered ? filterSaid() : '',
-      heads && table !== null ? tableSaid(table) : '',
-      note === null ? '' : noteSaid(note),
-      link === null ? '' : linkSaid(link),
-      checks?.says ?? '',
-    ]);
-    drawn.setAttribute('data-at', cellKey(col, row));
-    if (one.stays) stay(sheet, drawn, { col });
-    if (showing.selected?.row === row && showing.selected.col === col) {
-      drawn.classList.add('selected');
-    }
-    if (ranged(showing, { row, col })) drawn.classList.add('ranged');
-    if (copiedFrom(showing, { row, col })) drawn.classList.add('copied');
-    if (lookedUp(showing, { row, col })) drawn.classList.add('found');
-    if (showing.reached?.cells.has(cellKey(col, row)) === true) drawn.classList.add('reached');
-
-    const said = problems.get(cellKey(col, row));
-    if (said !== undefined) {
-      drawn.classList.add('problem');
-      drawn.title = said.join('\n');
-    }
-    const asked = showing.asking;
-    if (asked?.at.row === row && asked.at.col === col) {
-      askInto(drawn, asking(asked.what, note, link), (text) => {
-        if (text === null) asks.askAt(null);
-        else if (asked.what === 'note') asks.note(row, col, text);
-        else if (asked.what === 'list') asks.validate(choicesIn(text));
-        else asks.link(row, col, { kind: asked.what, text });
-      });
-    }
-
-    const type = (seed?: string): void => {
-      if (drawn.querySelector('.typing') !== null) return;
-
-      typeInto(drawn, held.get(cellKey(col, row)), seed, (text, went) => {
-        asks.edit(row, col, text);
-        goTo(drawn, sheet, { row: row + went.rows, col: col + went.cols }, asks);
-      });
-    };
-
-    // Focusable, so keys reach it; not tab-reachable, or the page cannot be left.
-    drawn.tabIndex = -1;
-    drawn.addEventListener('mousedown', (event) => {
-      // Not the right button, which fires this before the menu it is opening
-      // and would throw away the selection that menu is about.
-      if (event.button !== 0) return;
-
-      if (link !== null && (event.metaKey || event.ctrlKey)) {
-        asks.follow(row, col);
-        return;
-      }
-
-      if (event.shiftKey) asks.reachTo(row, col);
-      else asks.select(row, col);
-    });
-    drawn.addEventListener('mouseenter', (event) => {
-      if ((event.buttons & 1) === 1) asks.dragTo(row, col);
-    });
-    drawn.addEventListener('dblclick', () => type());
-    drawn.addEventListener('contextmenu', (event) => {
-      event.preventDefault();
-      asks.pointAt({ kind: 'cell', row, col, x: event.clientX, y: event.clientY });
-    });
-    drawn.addEventListener('keydown', (event) => {
-      // The edit box is a child of the cell, so its keys bubble here.
-      if (event.target !== drawn) return;
-
-      if (undoing(event)) {
-        event.preventDefault();
-        asks.undo(event.shiftKey);
-        return;
-      }
-
-      const through = lookingFor(event);
-      if (through !== null) {
-        event.preventDefault();
-        if (through === 'open') asks.look(null);
-        else asks.goOn(through === 'on' ? 1 : -1);
-        return;
-      }
-
-      const filled = filling(event);
-      if (filled !== null) {
-        event.preventDefault();
-        asks.fill(filled);
-        return;
-      }
-
-      const taking = copying(event);
-      if (taking !== null) {
-        event.preventDefault();
-        asks.copy(row, col, taking === 'cut');
-        return;
-      }
-
-      // Not taken over: the clipboard only arrives in the `paste` event this
-      // key sets off, and the view decides there which paste this is.
-      if (pasting(event)) {
-        asks.paste(row, col);
-        return;
-      }
-
-      const far = edging(event);
-      if (far !== null) {
-        event.preventDefault();
-        asks.edgeTo(row, col, far, event.shiftKey);
-        return;
-      }
-
-      const move = going(event, sheet, { row, col });
-      if (move !== null) {
-        event.preventDefault();
-        goTo(drawn, sheet, move.to, asks, move.extend);
-        return;
-      }
-
-      if (event.key === 'Enter' || event.key === 'F2') {
-        event.preventDefault();
-        type();
-        return;
-      }
-
-      if (event.key === 'Delete' || event.key === 'Backspace') {
-        event.preventDefault();
-        asks.empty(row, col);
-        return;
-      }
-
-      if (typed(event)) {
-        event.preventDefault();
-        type(event.key);
-      }
-    });
+    const merge = merged.anchored.get(cellKey(one.at, row));
+    const at = merge === undefined ? { row, col: one.at } : { row: merge.top, col: merge.left };
+    const drawn = cellAt(sheet, at, merge, held, problems, showing, asks);
+    if (one.stays) stay(sheet, drawn, { col: one.at });
     line.append(drawn);
   }
 
@@ -571,6 +431,172 @@ function line(
   }
 
   return line;
+}
+
+/** The `<td>` for one address, which for a merge is its top-left cell, drawn wherever the merge first shows. */
+function cellAt(
+  sheet: DrawnSheet,
+  { row, col }: { row: number; col: number },
+  merge: SpannedMerge | undefined,
+  held: ReadonlyMap<string, DrawnCell>,
+  problems: ReadonlyMap<string, readonly string[]>,
+  showing: Showing,
+  asks: Asks,
+): HTMLTableCellElement {
+  const here = held.get(cellKey(col, row));
+  const table = tableAt(sheet, row, col);
+  const heads = table !== null && row === table.top;
+  const filtered = filters(sheet, row, col);
+  const note = here?.note ?? null;
+  const link = here?.link ?? null;
+  const checks = here?.validation ?? null;
+  const drawn = drawCell(
+    here,
+    merge,
+    merge === undefined ? spillOf(sheet, held, row, col) : 0,
+    sheet.protect !== null,
+  );
+  if (drawn.querySelector('.spill') !== null) drawn.classList.add('spilling');
+  if (table !== null) drawn.classList.add(...banding(table, row, col));
+  if (filtered || heads) drawn.append(dropdown());
+  if (note !== null) drawn.append(noted());
+  if (link !== null) drawn.classList.add('linked');
+  if (checks !== null) drawn.append(validated(checks));
+  if (shows(here)) drawn.classList.add('holds');
+  tells(drawn, [
+    filtered ? filterSaid() : '',
+    heads && table !== null ? tableSaid(table) : '',
+    note === null ? '' : noteSaid(note),
+    link === null ? '' : linkSaid(link),
+    checks?.says ?? '',
+  ]);
+  drawn.setAttribute('data-at', cellKey(col, row));
+  if (showing.selected?.row === row && showing.selected.col === col) {
+    drawn.classList.add('selected');
+  }
+  if (ranged(showing, { row, col })) drawn.classList.add('ranged');
+  if (copiedFrom(showing, { row, col })) drawn.classList.add('copied');
+  if (lookedUp(showing, { row, col })) drawn.classList.add('found');
+  if (showing.reached?.cells.has(cellKey(col, row)) === true) drawn.classList.add('reached');
+
+  const said = problems.get(cellKey(col, row));
+  if (said !== undefined) {
+    drawn.classList.add('problem');
+    drawn.title = said.join('\n');
+  }
+  const asked = showing.asking;
+  if (asked?.at.row === row && asked.at.col === col) {
+    askInto(drawn, asking(asked.what, note, link), (text) => {
+      if (text === null) asks.askAt(null);
+      else if (asked.what === 'note') asks.note(row, col, text);
+      else if (asked.what === 'list') asks.validate(choicesIn(text));
+      else asks.link(row, col, { kind: asked.what, text });
+    });
+  }
+
+  const type = (seed?: string): void => {
+    if (drawn.querySelector('.typing') !== null) return;
+
+    typeInto(drawn, held.get(cellKey(col, row)), seed, (text, went) => {
+      asks.edit(row, col, text);
+      goTo(drawn, sheet, { row: row + went.rows, col: col + went.cols }, asks);
+    });
+  };
+
+  // Focusable, so keys reach it; not tab-reachable, or the page cannot be left.
+  drawn.tabIndex = -1;
+  drawn.addEventListener('mousedown', (event) => {
+    // Not the right button, which fires this before the menu it is opening
+    // and would throw away the selection that menu is about.
+    if (event.button !== 0) return;
+
+    if (link !== null && (event.metaKey || event.ctrlKey)) {
+      asks.follow(row, col);
+      return;
+    }
+
+    if (event.shiftKey) asks.reachTo(row, col);
+    else asks.select(row, col);
+  });
+  drawn.addEventListener('mouseenter', (event) => {
+    if ((event.buttons & 1) === 1) asks.dragTo(row, col);
+  });
+  drawn.addEventListener('dblclick', () => type());
+  drawn.addEventListener('contextmenu', (event) => {
+    event.preventDefault();
+    asks.pointAt({ kind: 'cell', row, col, x: event.clientX, y: event.clientY });
+  });
+  drawn.addEventListener('keydown', (event) => {
+    // The edit box is a child of the cell, so its keys bubble here.
+    if (event.target !== drawn) return;
+
+    if (undoing(event)) {
+      event.preventDefault();
+      asks.undo(event.shiftKey);
+      return;
+    }
+
+    const through = lookingFor(event);
+    if (through !== null) {
+      event.preventDefault();
+      if (through === 'open') asks.look(null);
+      else asks.goOn(through === 'on' ? 1 : -1);
+      return;
+    }
+
+    const filled = filling(event);
+    if (filled !== null) {
+      event.preventDefault();
+      asks.fill(filled);
+      return;
+    }
+
+    const taking = copying(event);
+    if (taking !== null) {
+      event.preventDefault();
+      asks.copy(row, col, taking === 'cut');
+      return;
+    }
+
+    // Not taken over: the clipboard only arrives in the `paste` event this
+    // key sets off, and the view decides there which paste this is.
+    if (pasting(event)) {
+      asks.paste(row, col);
+      return;
+    }
+
+    const far = edging(event);
+    if (far !== null) {
+      event.preventDefault();
+      asks.edgeTo(row, col, far, event.shiftKey);
+      return;
+    }
+
+    const move = going(event, sheet, { row, col });
+    if (move !== null) {
+      event.preventDefault();
+      goTo(drawn, sheet, move.to, asks, move.extend);
+      return;
+    }
+
+    if (event.key === 'Enter' || event.key === 'F2') {
+      event.preventDefault();
+      type();
+      return;
+    }
+
+    if (event.key === 'Delete' || event.key === 'Backspace') {
+      event.preventDefault();
+      asks.empty(row, col);
+      return;
+    }
+
+    if (typed(event)) {
+      event.preventDefault();
+      type(event.key);
+    }
+  });
+  return drawn;
 }
 
 /** How far a cell's text runs over the empty cells right of it, or `0`; a frozen column's stops at the freeze line. */
