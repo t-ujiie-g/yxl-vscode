@@ -4,6 +4,19 @@ Every release names the `yxl` it was built against: the schema is not frozen
 until yxl's v1.0, so the pinned compiler is part of what a version means
 (`ROADMAP.md` §8 Q6).
 
+## 0.2.3 — 2026-09-29
+
+Targets **yxl 0.5.1**, as 0.2.2 did.
+
+- **A merge over a hidden row or column no longer pushes the cells beside it
+  along** (#194). A footer label merged across a hidden key column drew every
+  cell right of it one column over, under the wrong heading; a merge down
+  across a hidden row did the same to the rows below. A merge now spans only
+  the rows and columns that are shown.
+- **A merge whose top-left cell is hidden still shows.** It is drawn from the
+  first of its cells that is shown, with the top-left cell's value, as Excel
+  draws it — where the whole merge used to disappear.
+
 ## 0.2.2 — 2026-09-24
 
 Targets **yxl 0.5.1**, up from 0.5.0.
