@@ -200,8 +200,9 @@ describe('a cell the reader cannot type into', () => {
 });
 
 describe('a cell that anchors a merge', () => {
-  it('spans the region, which is how Excel shows one value across it', () => {
-    const drawn = drawCell(cell(1, 1, { value: 'wide' }), { top: 1, left: 1, bottom: 2, right: 3 });
+  it('spans the rows and columns of it that are drawn', () => {
+    const merge = { top: 1, left: 1, bottom: 2, right: 4, rows: 2, cols: 3 };
+    const drawn = drawCell(cell(1, 1, { value: 'wide' }), merge);
     expect([drawn.colSpan, drawn.rowSpan]).toEqual([3, 2]);
   });
 

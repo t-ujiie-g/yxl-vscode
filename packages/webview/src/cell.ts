@@ -6,17 +6,23 @@ import type { DrawnBar, DrawnCell, DrawnMerge, DrawnRun } from './protocol';
 import { sparkline } from './sparkline';
 import { chrome } from './worded';
 
+/** A merge with the rows and columns of it that are drawn, which leave the hidden ones out. */
+export interface SpannedMerge extends DrawnMerge {
+  readonly rows: number;
+  readonly cols: number;
+}
+
 /** One cell as a `<td>`: what it says, and the look it was sent wearing. */
 export function drawCell(
   cell: DrawnCell | undefined,
-  merge: DrawnMerge | undefined,
+  merge: SpannedMerge | undefined,
   spill = 0,
   protectedSheet = false,
 ): HTMLTableCellElement {
   const drawn = document.createElement('td');
   if (merge !== undefined) {
-    drawn.colSpan = merge.right - merge.left + 1;
-    drawn.rowSpan = merge.bottom - merge.top + 1;
+    drawn.colSpan = merge.cols;
+    drawn.rowSpan = merge.rows;
   }
 
   // Excel locks every cell, so on a protected sheet the ones worth marking are

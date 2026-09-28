@@ -38,6 +38,67 @@ describe('a merge', () => {
       1,
     );
   });
+
+  describe('over a hidden line', () => {
+    const hidden = { size: null, hidden: true, group: null };
+    const addresses = (into: HTMLElement, row: number) =>
+      [...(into.querySelectorAll('tbody tr')[row - 1]?.querySelectorAll('td') ?? [])].map((one) =>
+        one.getAttribute('data-at'),
+      );
+
+    it('spans only the columns drawn, so the cells right of it stay under their headings (#194)', () => {
+      const over = sheet({
+        rows: 2,
+        columns: 5,
+        widths: [{ first: 2, last: 2, ...hidden }],
+        merges: [{ top: 2, left: 1, bottom: 2, right: 3 }],
+      });
+      const into = shown({ drawing: drawing({ sheets: [over] }) });
+
+      expect(at(into, 2, 1)?.colSpan).toBe(2);
+      expect(addresses(into, 1)).toEqual(['1:1', '3:1', '4:1', '5:1']);
+      expect(addresses(into, 2)).toEqual(['1:2', '4:2', '5:2']);
+    });
+
+    it('spans only the rows drawn', () => {
+      const down = sheet({
+        rows: 3,
+        columns: 2,
+        heights: [{ first: 2, last: 2, ...hidden }],
+        merges: [{ top: 1, left: 1, bottom: 3, right: 1 }],
+      });
+      const into = shown({ drawing: drawing({ sheets: [down] }) });
+
+      expect(at(into, 1, 1)?.rowSpan).toBe(2);
+      expect(addresses(into, 2)).toEqual(['2:3']);
+    });
+
+    it('shows its top-left cell where the merge first shows, when that cell is hidden', () => {
+      const after = sheet({
+        rows: 1,
+        columns: 4,
+        widths: [{ first: 1, last: 1, ...hidden }],
+        merges: [{ top: 1, left: 1, bottom: 1, right: 3 }],
+        cells: [cell(1, 1, { value: 'wide' })],
+      });
+      const into = shown({ drawing: drawing({ sheets: [after] }) });
+
+      expect(addresses(into, 1)).toEqual(['1:1', '4:1']);
+      expect([at(into, 1, 1)?.colSpan, at(into, 1, 1)?.textContent]).toEqual([2, 'wide']);
+    });
+
+    it('draws nothing when every column of it is hidden', () => {
+      const gone = sheet({
+        rows: 1,
+        columns: 4,
+        widths: [{ first: 2, last: 3, ...hidden }],
+        merges: [{ top: 1, left: 2, bottom: 1, right: 3 }],
+      });
+      const into = shown({ drawing: drawing({ sheets: [gone] }) });
+
+      expect(addresses(into, 1)).toEqual(['1:1', '4:1']);
+    });
+  });
 });
 
 describe('a sheet larger than the window drawn of it', () => {

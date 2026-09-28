@@ -3952,6 +3952,25 @@ than widening it silently.
 
 ## 11. Living changelog
 
+### 2026-09-29 — A merge over a hidden line (#194)
+
+Reported against 0.2.2: a footer label merged across a hidden key column
+(`merge_to:` over `hidden: true`) pushed every cell right of it one column
+along, under the wrong headings. A hidden line draws no `<td>`, and the merge's
+`colSpan` still counted it.
+
+- A merge spans the rows and columns of it that are drawn, both ways — the
+  issue suspected the vertical case, and it was there too.
+- A merge whose top-left cell is hidden is drawn from the first of its cells
+  that shows, still as its top-left address: it holds that cell's value, and
+  selecting or typing into it is about that cell, as in Excel. Before, the
+  whole merge vanished and the row shifted left instead. A merge hidden
+  entirely draws nothing.
+- The body of a row's cell moved out of `line()` into `cellAt()`, so the drawn
+  position and the address it stands for can differ.
+- 2613 → 2617 tests, run against yxl 0.5.1. Comment shape: export 999 / 2166
+  (avg 2.2), private 647 / 647 (1.0), inline 142 / 227 (1.6), 0 over.
+
 ### 2026-09-24 — The pin moves to yxl 0.5.1
 
 yxl 0.5.1 is one fix, the one this editor reported: yxl#104. A footer group's
