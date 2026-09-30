@@ -36,18 +36,18 @@ export function drawCell(
   if (cell === undefined) return drawn;
 
   if (cell.bar !== null) drawn.append(bar(cell.bar));
+  const content = merge === undefined ? drawn : within(drawn, merge.height);
 
   const icon = cell.icon === null ? null : iconOf(cell.icon);
-  if (icon !== null) drawn.append(icon);
+  if (icon !== null) content.append(icon);
 
-  if (cell.sparkline !== null) drawn.append(sparkline(cell.sparkline));
+  if (cell.sparkline !== null) content.append(sparkline(cell.sparkline));
 
   const hidden = cell.bar?.barOnly === true || cell.icon?.iconsOnly === true;
   const text = hidden ? '' : cell.rich === null ? shown(cell) : '';
-  if (cell.rich !== null && !hidden) drawn.append(...cell.rich.map(run));
-  else if (spill > 0) drawn.append(spilling(text, spill));
-  else if (text !== '') drawn.append(document.createTextNode(text));
-  if (merge !== undefined) keptTo(drawn, merge.height);
+  if (cell.rich !== null && !hidden) content.append(...cell.rich.map(run));
+  else if (spill > 0) content.append(spilling(text, spill));
+  else if (text !== '') content.append(document.createTextNode(text));
 
   // A value that holds a line break is drawn with it, wrapped or not: the break
   // is what the spec says, and `nowrap` would eat it (`docs/spec.md` §3).
@@ -85,17 +85,14 @@ function bar(of: DrawnBar): HTMLElement {
   return drawn;
 }
 
-/** A merge's content cut at the rows it spans, which Excel never grows to fit a merge (#196). */
-function keptTo(drawn: HTMLTableCellElement, height: number): void {
-  const within = document.createElement('div');
-  within.className = 'within';
-  within.style.setProperty('--spans', `${height}px`);
-  within.append(...[...drawn.childNodes].filter((node) => !isBar(node)));
-  drawn.append(within);
-}
+/** The box a merge's content is drawn in, cut at the rows it spans: Excel never grows a row to fit a merge (#196). */
+function within(drawn: HTMLTableCellElement, height: number): HTMLElement {
+  const box = document.createElement('div');
+  box.className = 'within';
+  box.style.setProperty('--spans', `${height}px`);
+  drawn.append(box);
 
-function isBar(node: Node): boolean {
-  return node instanceof HTMLElement && node.classList.contains('bar');
+  return box;
 }
 
 /** Text let past the cell's own width, over the empty cells beside it, as both spreadsheets let it. */

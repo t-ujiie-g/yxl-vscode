@@ -217,6 +217,14 @@ describe('a cell that anchors a merge', () => {
     ]);
   });
 
+  it('leaves its data bar outside that box, as wide as the whole merge', () => {
+    const merge = { top: 1, left: 1, bottom: 1, right: 2, rows: 1, cols: 2, height: 20 };
+    const bar = { color: '638EC6', fraction: 0.5, barOnly: false };
+    const drawn = drawCell(cell(1, 1, { value: 5, bar }), merge);
+
+    expect([...drawn.children].map((one) => one.className)).toEqual(['bar', 'within']);
+  });
+
   it('spans nothing when nothing is merged there', () => {
     const drawn = drawCell(cell(1, 1, { value: 'x' }), undefined);
     expect([drawn.colSpan, drawn.rowSpan]).toEqual([1, 1]);
