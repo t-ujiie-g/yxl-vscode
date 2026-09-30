@@ -6,10 +6,11 @@ import type { DrawnBar, DrawnCell, DrawnMerge, DrawnRun } from './protocol';
 import { sparkline } from './sparkline';
 import { chrome } from './worded';
 
-/** A merge with the rows and columns of it that are drawn, which leave the hidden ones out. */
+/** A merge with the rows and columns of it that are drawn, and the pixels those rows are tall; hidden ones are left out. */
 export interface SpannedMerge extends DrawnMerge {
   readonly rows: number;
   readonly cols: number;
+  readonly height: number;
 }
 
 /** One cell as a `<td>`: what it says, and the look it was sent wearing. */
@@ -35,17 +36,18 @@ export function drawCell(
   if (cell === undefined) return drawn;
 
   if (cell.bar !== null) drawn.append(bar(cell.bar));
+  const content = merge === undefined ? drawn : within(drawn, merge.height);
 
   const icon = cell.icon === null ? null : iconOf(cell.icon);
-  if (icon !== null) drawn.append(icon);
+  if (icon !== null) content.append(icon);
 
-  if (cell.sparkline !== null) drawn.append(sparkline(cell.sparkline));
+  if (cell.sparkline !== null) content.append(sparkline(cell.sparkline));
 
   const hidden = cell.bar?.barOnly === true || cell.icon?.iconsOnly === true;
   const text = hidden ? '' : cell.rich === null ? shown(cell) : '';
-  if (cell.rich !== null && !hidden) drawn.append(...cell.rich.map(run));
-  else if (spill > 0) drawn.append(spilling(text, spill));
-  else if (text !== '') drawn.append(document.createTextNode(text));
+  if (cell.rich !== null && !hidden) content.append(...cell.rich.map(run));
+  else if (spill > 0) content.append(spilling(text, spill));
+  else if (text !== '') content.append(document.createTextNode(text));
 
   // A value that holds a line break is drawn with it, wrapped or not: the break
   // is what the spec says, and `nowrap` would eat it (`docs/spec.md` §3).
@@ -81,6 +83,16 @@ function bar(of: DrawnBar): HTMLElement {
   drawn.style.background = painted(of.color);
 
   return drawn;
+}
+
+/** The box a merge's content is drawn in, cut at the rows it spans: Excel never grows a row to fit a merge (#196). */
+function within(drawn: HTMLTableCellElement, height: number): HTMLElement {
+  const box = document.createElement('div');
+  box.className = 'within';
+  box.style.setProperty('--spans', `${height}px`);
+  drawn.append(box);
+
+  return box;
 }
 
 /** Text let past the cell's own width, over the empty cells beside it, as both spreadsheets let it. */

@@ -139,7 +139,8 @@ function mergedIn(sheet: DrawnSheet): Merged {
     const cols = shownIn(merge.left, merge.right, (col) => widthOf(sheet, col));
     const [top, left] = [rows[0], cols[0]];
     if (top !== undefined && left !== undefined) {
-      anchored.set(cellKey(left, top), { ...merge, rows: rows.length, cols: cols.length });
+      const height = rows.reduce((sum, row) => sum + heightOf(sheet, row), 0);
+      anchored.set(cellKey(left, top), { ...merge, rows: rows.length, cols: cols.length, height });
     }
 
     for (let row = merge.top; row <= merge.bottom; row += 1) {
