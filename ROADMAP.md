@@ -3964,8 +3964,8 @@ The model was right — the difference was only in the webview's layout.
   can no longer push a row taller. Unmerged wrapped cells still grow their row,
   as Excel's fitting does.
 - Where the text does not fit, the first lines show, as in Excel.
-- 2617 → 2619 tests. Comment shape: export 999 / 2166 (avg 2.2), private 648 /
-  648 (1.0), inline 142 / 227 (1.6), 0 over.
+- 2630 → 2632 tests, run against yxl 0.5.1. Comment shape: export 999 / 2166
+  (avg 2.2), private 648 / 648 (1.0), inline 142 / 227 (1.6), 0 over.
 
 ### 2026-09-29 — A merge over a hidden line (#194, 0.2.3)
 
