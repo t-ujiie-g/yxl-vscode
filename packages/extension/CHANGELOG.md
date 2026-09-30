@@ -4,6 +4,17 @@ Every release names the `yxl` it was built against: the schema is not frozen
 until yxl's v1.0, so the pinned compiler is part of what a version means
 (`ROADMAP.md` §8 Q6).
 
+## 0.2.4 — 2026-09-30
+
+Targets **yxl 0.5.1**, as 0.2.3 did.
+
+- **A wrapped merged cell no longer makes its row taller** (#196). Excel leaves
+  merged cells out of fitting a row's height, so a row with no declared height
+  stays one line tall and the rest of a merged heading is cut. The preview grew
+  the row to show every line, and so showed more than Excel does. It now cuts
+  the text where Excel does. A cell that is not merged still grows its row, as
+  in Excel.
+
 ## 0.2.3 — 2026-09-29
 
 Targets **yxl 0.5.1**, as 0.2.2 did.
