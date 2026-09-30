@@ -6,10 +6,11 @@ import type { DrawnBar, DrawnCell, DrawnMerge, DrawnRun } from './protocol';
 import { sparkline } from './sparkline';
 import { chrome } from './worded';
 
-/** A merge with the rows and columns of it that are drawn, which leave the hidden ones out. */
+/** A merge with the rows and columns of it that are drawn, and the pixels those rows are tall; hidden ones are left out. */
 export interface SpannedMerge extends DrawnMerge {
   readonly rows: number;
   readonly cols: number;
+  readonly height: number;
 }
 
 /** One cell as a `<td>`: what it says, and the look it was sent wearing. */
@@ -46,6 +47,7 @@ export function drawCell(
   if (cell.rich !== null && !hidden) drawn.append(...cell.rich.map(run));
   else if (spill > 0) drawn.append(spilling(text, spill));
   else if (text !== '') drawn.append(document.createTextNode(text));
+  if (merge !== undefined) keptTo(drawn, merge.height);
 
   // A value that holds a line break is drawn with it, wrapped or not: the break
   // is what the spec says, and `nowrap` would eat it (`docs/spec.md` §3).
@@ -81,6 +83,19 @@ function bar(of: DrawnBar): HTMLElement {
   drawn.style.background = painted(of.color);
 
   return drawn;
+}
+
+/** A merge's content cut at the rows it spans, which Excel never grows to fit a merge (#196). */
+function keptTo(drawn: HTMLTableCellElement, height: number): void {
+  const within = document.createElement('div');
+  within.className = 'within';
+  within.style.setProperty('--spans', `${height}px`);
+  within.append(...[...drawn.childNodes].filter((node) => !isBar(node)));
+  drawn.append(within);
+}
+
+function isBar(node: Node): boolean {
+  return node instanceof HTMLElement && node.classList.contains('bar');
 }
 
 /** Text let past the cell's own width, over the empty cells beside it, as both spreadsheets let it. */

@@ -201,9 +201,20 @@ describe('a cell the reader cannot type into', () => {
 
 describe('a cell that anchors a merge', () => {
   it('spans the rows and columns of it that are drawn', () => {
-    const merge = { top: 1, left: 1, bottom: 2, right: 4, rows: 2, cols: 3 };
+    const merge = { top: 1, left: 1, bottom: 2, right: 4, rows: 2, cols: 3, height: 40 };
     const drawn = drawCell(cell(1, 1, { value: 'wide' }), merge);
     expect([drawn.colSpan, drawn.rowSpan]).toEqual([3, 2]);
+  });
+
+  it('holds its value in a box cut at the height of its rows', () => {
+    const merge = { top: 1, left: 1, bottom: 1, right: 2, rows: 1, cols: 2, height: 20 };
+    const drawn = drawCell(cell(1, 1, { value: 'wide' }), merge);
+    const within = drawn.querySelector<HTMLElement>(':scope > .within');
+
+    expect([within?.textContent, within?.style.getPropertyValue('--spans')]).toEqual([
+      'wide',
+      '20px',
+    ]);
   });
 
   it('spans nothing when nothing is merged there', () => {

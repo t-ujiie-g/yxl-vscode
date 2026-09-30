@@ -681,6 +681,12 @@ body {
   position: relative;
 }
 
+/* The rows' height less the cell's 1px padding either side and its gridline. */
+.grid td > .within {
+  max-height: calc(var(--spans) - 3px);
+  overflow: hidden;
+}
+
 .grid.bare td {
   border-color: transparent;
 }

@@ -3952,6 +3952,21 @@ than widening it silently.
 
 ## 11. Living changelog
 
+### 2026-09-30 — A merge never grows its rows (#196)
+
+Reported against 0.2.3: a wrapped heading in a merged cell showed every line in
+the preview, and only the first in Excel. Excel leaves merged cells out of
+fitting a row's height, so a row with no declared height stays one line tall
+and the rest is cut; the preview let the table grow the row to fit the merge.
+The model was right — the difference was only in the webview's layout.
+
+- A merge's content sits in a box cut at the height of the rows it spans, so it
+  can no longer push a row taller. Unmerged wrapped cells still grow their row,
+  as Excel's fitting does.
+- Where the text does not fit, the first lines show, as in Excel.
+- 2617 → 2619 tests. Comment shape: export 999 / 2166 (avg 2.2), private 648 /
+  648 (1.0), inline 142 / 227 (1.6), 0 over.
+
 ### 2026-09-29 — A merge over a hidden line (#194, 0.2.3)
 
 Reported against 0.2.2: a footer label merged across a hidden key column

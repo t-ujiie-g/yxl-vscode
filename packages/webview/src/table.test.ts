@@ -6,7 +6,7 @@ import { asks, at, cell, drawing, scrolled, sheet, showingOf, shown } from './ha
 import type { DrawnCell, DrawnSheet, DrawnTable } from './protocol';
 import type { Asks, Showing } from './showing';
 import { pinned } from './table';
-import { widthOf } from './window';
+import { heightOf, widthOf } from './window';
 
 describe('the grid', () => {
   it('draws a heading row of column names, and a number down the side', () => {
@@ -36,6 +36,29 @@ describe('a merge', () => {
     const into = shown({ drawing: drawing({ sheets: [merged] }) });
     expect([...(into.querySelectorAll('tbody tr')[0]?.querySelectorAll('td') ?? [])]).toHaveLength(
       1,
+    );
+  });
+
+  it('keeps its text to the rows it spans, which Excel never grows to fit a merge (#196)', () => {
+    const tall = sheet({
+      rows: 3,
+      columns: 2,
+      heights: [
+        { first: 1, last: 1, size: 30, hidden: false, group: null },
+        { first: 2, last: 2, size: null, hidden: true, group: null },
+      ],
+      merges: [{ top: 1, left: 1, bottom: 3, right: 2 }],
+      cells: [cell(1, 1, { value: 'wrapped', style: { 'align.wrap': true } })],
+    });
+    const within = at(
+      shown({ drawing: drawing({ sheets: [tall] }) }),
+      1,
+      1,
+    )?.querySelector<HTMLElement>('.within');
+
+    expect(within?.textContent).toBe('wrapped');
+    expect(within?.style.getPropertyValue('--spans')).toBe(
+      `${heightOf(tall, 1) + heightOf(tall, 3)}px`,
     );
   });
 
