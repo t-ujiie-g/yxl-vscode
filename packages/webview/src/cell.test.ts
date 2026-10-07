@@ -173,6 +173,76 @@ describe('what a cell looks like', () => {
   });
 });
 
+describe('where a cell with no alignment of its own puts what it shows', () => {
+  const aligned = (of: Partial<DrawnCell>) => drawCell(cell(1, 1, of), undefined).style.textAlign;
+
+  it('puts a number right, as Excel does (#201)', () => {
+    expect(aligned({ value: 123.4 })).toBe('right');
+  });
+
+  it('puts a date right, since a date is the number Excel keeps', () => {
+    expect(aligned({ value: 46302, format: 'yyyy-mm-dd' })).toBe('right');
+  });
+
+  it('puts a truth value in the middle', () => {
+    expect(aligned({ value: true })).toBe('center');
+  });
+
+  it('puts an error in the middle', () => {
+    expect(aligned({ formula: '1/0', computed: { kind: 'error', error: '#DIV/0!' } })).toBe(
+      'center',
+    );
+  });
+
+  it('goes by what a formula came to, not by the formula', () => {
+    expect(aligned({ formula: 'A1*2', computed: { kind: 'value', value: 8 } })).toBe('right');
+  });
+
+  it('leaves text where the stylesheet puts it', () => {
+    expect(aligned({ value: '文字' })).toBe('');
+  });
+
+  it('gives way to the alignment the cell was given', () => {
+    expect(aligned({ value: 123.4, style: { 'align.horizontal': 'left' } })).toBe('left');
+  });
+});
+
+describe('the colour a number format gives the number', () => {
+  const coloured = (value: number, format: string, of: Partial<DrawnCell> = {}) =>
+    drawCell(cell(1, 1, { value, format, ...of }), undefined).style.color;
+
+  it("draws a negative number in its section's colour (#200)", () => {
+    expect(coloured(-12.3, '0.0_ ;[Red]\\-0.0\\ ')).toBe('rgb(255, 0, 0)');
+  });
+
+  it('draws each section in its own colour', () => {
+    expect([coloured(5, '[Blue]0.0;[Red]0.0'), coloured(-5, '[Blue]0.0;[Red]0.0')]).toEqual([
+      'rgb(0, 0, 255)',
+      'rgb(255, 0, 0)',
+    ]);
+  });
+
+  it("draws Excel's green, which is not CSS's", () => {
+    expect(coloured(1, '[Green]0')).toBe('rgb(0, 255, 0)');
+  });
+
+  it('draws a colour given by its index in the palette', () => {
+    expect(coloured(1, '[Color10]0')).toBe('rgb(0, 128, 0)');
+  });
+
+  it('wins over the font colour, as in Excel', () => {
+    expect(coloured(-1, '0;[Red]-0', { style: { 'font.color': colour('0000FF') } })).toBe(
+      'rgb(255, 0, 0)',
+    );
+  });
+
+  it('leaves the font colour alone in a section that names none', () => {
+    expect(coloured(1, '0;[Red]-0', { style: { 'font.color': colour('0000FF') } })).toBe(
+      'rgb(0, 0, 255)',
+    );
+  });
+});
+
 describe('a cell the reader cannot type into', () => {
   it('is marked, so the reader knows before they try rather than after', () => {
     const drawn = drawCell(cell(1, 1, { value: 1, editable: 'external' }), undefined);
@@ -201,13 +271,13 @@ describe('a cell the reader cannot type into', () => {
 
 describe('a cell that anchors a merge', () => {
   it('spans the rows and columns of it that are drawn', () => {
-    const merge = { top: 1, left: 1, bottom: 2, right: 4, rows: 2, cols: 3, height: 40 };
+    const merge = { top: 1, left: 1, bottom: 2, right: 4, rows: 2, cols: 3, height: 40, cut: null };
     const drawn = drawCell(cell(1, 1, { value: 'wide' }), merge);
     expect([drawn.colSpan, drawn.rowSpan]).toEqual([3, 2]);
   });
 
   it('holds its value in a box cut at the height of its rows', () => {
-    const merge = { top: 1, left: 1, bottom: 1, right: 2, rows: 1, cols: 2, height: 20 };
+    const merge = { top: 1, left: 1, bottom: 1, right: 2, rows: 1, cols: 2, height: 20, cut: null };
     const drawn = drawCell(cell(1, 1, { value: 'wide' }), merge);
     const within = drawn.querySelector<HTMLElement>(':scope > .within');
 
@@ -218,7 +288,7 @@ describe('a cell that anchors a merge', () => {
   });
 
   it('leaves its data bar outside that box, as wide as the whole merge', () => {
-    const merge = { top: 1, left: 1, bottom: 1, right: 2, rows: 1, cols: 2, height: 20 };
+    const merge = { top: 1, left: 1, bottom: 1, right: 2, rows: 1, cols: 2, height: 20, cut: null };
     const bar = { color: '638EC6', fraction: 0.5, barOnly: false };
     const drawn = drawCell(cell(1, 1, { value: 5, bar }), merge);
 

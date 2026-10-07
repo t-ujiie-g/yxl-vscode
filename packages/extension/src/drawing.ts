@@ -14,7 +14,7 @@ import {
   styleAt,
 } from '@yxl-vscode/compile';
 import type { Diagnostic } from '@yxl-vscode/diag';
-import { conditionKey, type Evaluation } from '@yxl-vscode/evaluate';
+import type { Evaluation } from '@yxl-vscode/evaluate';
 import type { Axis, ScalarValue, SpecDoc } from '@yxl-vscode/spec';
 import {
   type A1Addr,
@@ -172,7 +172,7 @@ function drawSheet(
     shapes: shapesOf(sheet),
     widths: sheet.columns.map(sizedRun),
     heights: sheet.rows.map(sizedRun),
-    cells: drawCells(sheet, { at, rows, columns, freeze }, evaluation, grid),
+    cells: drawCells(sheet, windowOf(sheet, { at, rows, columns, freeze }), evaluation, grid),
     merges: sheet.merges.map(
       (merge): DrawnMerge => ({
         top: merge.rect.top,
@@ -258,10 +258,41 @@ interface Drawn {
   readonly freeze: DrawnSheet['freeze'];
 }
 
+/** One address the view may draw. */
+type Place = { readonly row: number; readonly col: number };
+
+/** The addresses a window draws, and the top-left cell of each merge it reaches, which the view draws the merge with. */
+function windowOf(sheet: CompiledSheet, drawing: Drawn): Place[] {
+  const rows = lines(drawing.at.row, drawing.rows, drawing.freeze?.row ?? 1);
+  const cols = lines(drawing.at.col, drawing.columns, drawing.freeze?.col ?? 1);
+  const places = rows.flatMap((row) => cols.map((col) => ({ row, col })));
+
+  const meets = (drawn: readonly number[], first: number, last: number) =>
+    drawn.some((line) => line >= first && line <= last);
+  for (const { rect } of sheet.merges) {
+    const outside = !rows.includes(rect.top) || !cols.includes(rect.left);
+    if (outside && meets(rows, rect.top, rect.bottom) && meets(cols, rect.left, rect.right)) {
+      places.push({ row: rect.top, col: rect.left });
+    }
+  }
+
+  return places;
+}
+
+/** Every cell of a rectangle, as the places a run or a copy is drawn from. */
+function placesIn(at: Place, rows: number, columns: number): Place[] {
+  const places: Place[] = [];
+  for (let row = at.row; row < at.row + rows; row += 1) {
+    for (let col = at.col; col < at.col + columns; col += 1) places.push({ row, col });
+  }
+
+  return places;
+}
+
 /** Every address the view draws with anything to show — a band gives an empty cell a look. */
 function drawCells(
   sheet: CompiledSheet,
-  drawing: Drawn,
+  places: readonly Place[],
   evaluation: Evaluation | null,
   grid: CompiledGrid | null = null,
 ): DrawnCell[] {
@@ -274,64 +305,56 @@ function drawCells(
   const ranked = overRanges(sheet.conditional, written, held);
   const over = spreads(sheet.conditional, written, held);
 
-  for (const row of lines(drawing.at.row, drawing.rows, drawing.freeze?.row ?? 1)) {
-    for (const col of lines(drawing.at.col, drawing.columns, drawing.freeze?.col ?? 1)) {
-      const addr = addrAt({ col, row });
-      const cell = cellAt(sheet, addr);
-      const note = sheet.notes.get(addr) ?? null;
-      const link = sheet.links.get(addr) ?? null;
-      const asked = validating(sheet, addr);
-      const sparkline = sparklineAt(sheet, grid, evaluation, addr);
-      const computed = evaluation?.values.get(qualified(sheet.name, addr)) ?? null;
+  for (const { row, col } of places) {
+    const addr = addrAt({ col, row });
+    const cell = cellAt(sheet, addr);
+    const note = sheet.notes.get(addr) ?? null;
+    const link = sheet.links.get(addr) ?? null;
+    const asked = validating(sheet, addr);
+    const sparkline = sparklineAt(sheet, grid, evaluation, addr);
+    const computed = evaluation?.values.get(qualified(sheet.name, addr)) ?? null;
 
-      // The rules go over what the cell wears, since Excel's own conditional
-      // looks sit above a cell's style (`docs/spec.md` §10).
-      const deciding = {
-        at: addr,
-        value: cell?.value ?? null,
-        computed,
-        conditions: (rule: NodeId) =>
-          evaluation?.conditions.get(conditionKey(rule, sheet.name, addr)) ?? null,
-      };
-      const layers = [
-        ...styleAt(sheet, addr),
-        ...applied(sheet.conditional, deciding, ranked, over),
-      ];
-      const style = settled(resolve(layers));
-      const holds =
-        cell !== null && (cell.value !== null || cell.formula !== null || cell.rich !== null);
-      const bare = !holds && note === null && link === null && asked === null && sparkline === null;
-      if (bare && Object.keys(style).length === 0) continue;
+    // The rules go over what the cell wears, since Excel's own conditional
+    // looks sit above a cell's style (`docs/spec.md` §10).
+    const deciding = {
+      at: addr,
+      value: cell?.value ?? null,
+      computed,
+      conditions: (rule: NodeId) => evaluation?.condition(rule, sheet.name, addr) ?? null,
+    };
+    const layers = [...styleAt(sheet, addr), ...applied(sheet.conditional, deciding, ranked, over)];
+    const style = settled(resolve(layers));
+    const holds =
+      cell !== null && (cell.value !== null || cell.formula !== null || cell.rich !== null);
+    const bare = !holds && note === null && link === null && asked === null && sparkline === null;
+    if (bare && Object.keys(style).length === 0) continue;
 
-      drawn.push({
-        row,
-        col,
-        value: cell?.value ?? null,
-        formula: cell?.formula ?? null,
-        filledFrom: filledFrom(cell),
-        rich: cell?.rich?.map((run) => ({ text: run.text, style: run.look })) ?? null,
-        computed,
-        overridden: cell?.provenance.value.kind === 'override',
-        editable: typeable(sheet, addr, cell),
-        format: applies(layers, cell?.value ?? null, cell?.format ?? null),
-        style,
-        bar: barAt(sheet.conditional, deciding, over),
-        icon: iconAt(sheet.conditional, deciding, over),
-        note: note === null ? null : { text: note.text, author: note.author },
-        link:
-          link === null
-            ? null
-            : { kind: link.target.kind, target: link.target.text, tip: link.tip },
-        sparkline,
-        validation:
-          asked === null
-            ? null
-            : {
-                choices: grid === null ? null : choicesOf(grid, sheet.name, asked.asks),
-                says: validationSaid(asked),
-              },
-      });
-    }
+    drawn.push({
+      row,
+      col,
+      value: cell?.value ?? null,
+      formula: cell?.formula ?? null,
+      filledFrom: filledFrom(cell),
+      rich: cell?.rich?.map((run) => ({ text: run.text, style: run.look })) ?? null,
+      computed,
+      overridden: cell?.provenance.value.kind === 'override',
+      editable: typeable(sheet, addr, cell),
+      format: applies(layers, cell?.value ?? null, cell?.format ?? null),
+      style,
+      bar: barAt(sheet.conditional, deciding, over),
+      icon: iconAt(sheet.conditional, deciding, over),
+      note: note === null ? null : { text: note.text, author: note.author },
+      link:
+        link === null ? null : { kind: link.target.kind, target: link.target.text, tip: link.tip },
+      sparkline,
+      validation:
+        asked === null
+          ? null
+          : {
+              choices: grid === null ? null : choicesOf(grid, sheet.name, asked.asks),
+              says: validationSaid(asked),
+            },
+    });
   }
 
   return drawn;
@@ -348,12 +371,12 @@ export function drawRun(
   evaluation: Evaluation | null,
 ): DrawnCell[] {
   const of = extent(sheet);
-  const window =
+  const places =
     axis === 'column'
-      ? { at: { row: 1, col: at }, rows: of.rows, columns: 1 }
-      : { at: { row: at, col: 1 }, rows: 1, columns: of.columns };
+      ? placesIn({ row: 1, col: at }, of.rows, 1)
+      : placesIn({ row: at, col: 1 }, 1, of.columns);
 
-  return drawCells(sheet, { ...window, freeze: null }, evaluation);
+  return drawCells(sheet, places, evaluation);
 }
 
 /** Every cell of a rectangle, drawn as the view draws them: what a copy the view cannot make is made of. */
@@ -362,13 +385,12 @@ export function drawOver(
   rect: Rect,
   evaluation: Evaluation | null,
 ): DrawnCell[] {
-  const window = {
-    at: { row: rect.top, col: rect.left },
-    rows: rect.bottom - rect.top + 1,
-    columns: rect.right - rect.left + 1,
-  };
-
-  return drawCells(sheet, { ...window, freeze: null }, evaluation);
+  const at = { row: rect.top, col: rect.left };
+  return drawCells(
+    sheet,
+    placesIn(at, rect.bottom - rect.top + 1, rect.right - rect.left + 1),
+    evaluation,
+  );
 }
 
 /** The rows or columns drawn along one axis: the frozen band, which stays, and then the window. */

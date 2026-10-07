@@ -1,16 +1,21 @@
 import { BORDER_EDGES, type ScalarValue, type StyleValues } from '@yxl-vscode/spec';
 import { painted } from '@yxl-vscode/units';
-import { format as excel } from 'numfmt';
+import { format as excel, formatColor } from 'numfmt';
 import { iconOf } from './icons';
 import type { DrawnBar, DrawnCell, DrawnMerge, DrawnRun } from './protocol';
 import { sparkline } from './sparkline';
+import { PADDING } from './window';
 import { chrome } from './worded';
 
-/** A merge with the rows and columns of it that are drawn, and the pixels those rows are tall; hidden ones are left out. */
+/**
+ * A merge as the piece of it a `<td>` draws: its rows and columns that are drawn, and the pixels
+ * those rows are tall. `cut` is where a piece sits in a merge the window drew only part of, in pixels.
+ */
 export interface SpannedMerge extends DrawnMerge {
   readonly rows: number;
   readonly cols: number;
   readonly height: number;
+  readonly cut: { readonly before: number; readonly wide: number } | null;
 }
 
 /** One cell as a `<td>`: what it says, and the look it was sent wearing. */
@@ -36,7 +41,7 @@ export function drawCell(
   if (cell === undefined) return drawn;
 
   if (cell.bar !== null) drawn.append(bar(cell.bar));
-  const content = merge === undefined ? drawn : within(drawn, merge.height);
+  const content = merge === undefined ? drawn : within(drawn, merge);
 
   const icon = cell.icon === null ? null : iconOf(cell.icon);
   if (icon !== null) content.append(icon);
@@ -68,6 +73,10 @@ export function drawCell(
   if (cell.computed?.kind === 'error') drawn.classList.add('problem');
   else if (cell.computed === null && cell.filledFrom !== null) drawn.classList.add('filled');
   apply(drawn, cell.style);
+  const general = cell.style['align.horizontal'] === undefined ? standard(cell) : null;
+  if (general !== null) drawn.style.setProperty('text-align', general);
+  const tint = hidden || cell.rich !== null ? null : tinted(cell);
+  if (tint !== null) drawn.style.setProperty('color', tint);
 
   const over = edges(cell.style);
   if (over !== null) drawn.append(over);
@@ -85,11 +94,15 @@ function bar(of: DrawnBar): HTMLElement {
   return drawn;
 }
 
-/** The box a merge's content is drawn in, cut at the rows it spans: Excel never grows a row to fit a merge (#196). */
-function within(drawn: HTMLTableCellElement, height: number): HTMLElement {
+/** The box a merge's content is drawn in, cut at the rows it spans (#196) and as wide as the whole merge. */
+function within(drawn: HTMLTableCellElement, merge: SpannedMerge): HTMLElement {
   const box = document.createElement('div');
   box.className = 'within';
-  box.style.setProperty('--spans', `${height}px`);
+  box.style.setProperty('--spans', `${merge.height}px`);
+  if (merge.cut !== null) {
+    box.style.marginLeft = `${-merge.cut.before}px`;
+    box.style.width = `${merge.cut.wide - PADDING}px`;
+  }
   drawn.append(box);
 
   return box;
@@ -354,6 +367,38 @@ function held(cell: DrawnCell): ScalarValue | null {
   return cell.computed?.kind === 'value' ? cell.computed.value : cell.value;
 }
 
+/** Where Excel's General alignment puts what a cell shows: a number right, a truth or an error centred, text left. */
+function standard(cell: DrawnCell): string | null {
+  if (cell.computed?.kind === 'error') return 'center';
+
+  const value = held(cell);
+  if (typeof value === 'number') return 'right';
+  return typeof value === 'boolean' ? 'center' : null;
+}
+
+/** The colour a number format's section draws its number in (`[Red]`), or `null` where it names none. */
+function tinted(cell: DrawnCell): string | null {
+  const value = held(cell);
+  if (typeof value !== 'number' || cell.format === null) return null;
+
+  const named = formatColor(cell.format, value, { throws: false });
+  if (typeof named !== 'string') return null;
+
+  return SECTION_COLORS[named] ?? named;
+}
+
+/** Excel's eight named section colours, which are not CSS's: its `[Green]` is `#00FF00`. */
+const SECTION_COLORS: Readonly<Record<string, string>> = {
+  black: '#000000',
+  blue: '#0000FF',
+  cyan: '#00FFFF',
+  green: '#00FF00',
+  magenta: '#FF00FF',
+  red: '#FF0000',
+  white: '#FFFFFF',
+  yellow: '#FFFF00',
+};
+
 function formatted(value: ScalarValue, format: string | null): string {
   if (typeof value === 'number' && format !== null) return excel(format, value, { throws: false });
   return value === null ? '' : String(value);
@@ -444,9 +489,9 @@ export function shows(cell: DrawnCell | undefined): boolean {
   return cell.rich !== null || cell.formula !== null || cell.value !== null;
 }
 
-/** Whether a cell's text may run past its own width: Excel wraps or clips it otherwise. */
+/** Whether a cell's text may run past its own width: Excel wraps or clips it otherwise, and never lets a number. */
 export function spills(cell: DrawnCell | undefined): boolean {
-  if (cell === undefined || !shows(cell)) return false;
+  if (cell === undefined || !shows(cell) || standard(cell) !== null) return false;
 
   const style = cell.style;
   const where = style['align.horizontal'];

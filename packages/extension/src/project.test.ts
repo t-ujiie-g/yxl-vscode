@@ -63,6 +63,20 @@ describe('a drawn spec', () => {
     expect(cell?.value).toBeNull();
   });
 
+  it('gives a `formula:` rule its look at the blank cells it covers too (#199)', () => {
+    const source = `${SALES}    cells:\n      A1: 4\n    conditional:\n      - { at: A1:B2, formula: "TRUE", style: { fill: FFFF00 } }\n`;
+    const sheet = project(source, FILE, read, new Map(), new Map(), univerEngine()).drawing
+      .sheets[0];
+    const lit = sheet?.cells.filter((one) => one.style.fill === 'FFFF00');
+
+    expect(lit?.map((one) => [one.row, one.col])).toEqual([
+      [1, 1],
+      [1, 2],
+      [2, 1],
+      [2, 2],
+    ]);
+  });
+
   it('computes nothing when it is given no engine, and says so with a null', () => {
     const source = `${SALES}    cells:\n      B2: 1\n      B3: { formula: "B2+1" }\n`;
     expect(at(source, 2, 3)?.computed).toBeNull();
@@ -196,6 +210,22 @@ describe('a drawn spec', () => {
     expect(sheet.cells.map((cell) => cell.row)).toEqual(
       Array.from({ length: 200 }, (_, at) => at + 150),
     );
+  });
+
+  it('draws the top-left cell of a merge the window reaches, scrolled past it (#198)', () => {
+    const source = `${TALL.replace('    cells:', '    merges: [B1:B400]\n    cells:')}      B1: { value: band, style: { fill: E2F0D9 } }\n`;
+    const sheet = drawn(source, new Map([['Sales', { row: 150, col: 1 }]]));
+
+    expect(
+      sheet.cells.filter((cell) => cell.col === 2).map((cell) => [cell.row, cell.value]),
+    ).toEqual([[1, 'band']]);
+  });
+
+  it('draws no merge cell the window does not reach', () => {
+    const source = `${TALL.replace('    cells:', '    merges: [B1:B20]\n    cells:')}      B1: band\n`;
+    const sheet = drawn(source, new Map([['Sales', { row: 150, col: 1 }]]));
+
+    expect(sheet.cells.some((cell) => cell.col === 2)).toBe(false);
   });
 
   it('keeps a window inside the sheet, however far the view asks to go', () => {

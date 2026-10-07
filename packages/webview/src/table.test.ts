@@ -6,7 +6,7 @@ import { asks, at, cell, drawing, scrolled, sheet, showingOf, shown } from './ha
 import type { DrawnCell, DrawnSheet, DrawnTable } from './protocol';
 import type { Asks, Showing } from './showing';
 import { pinned } from './table';
-import { heightOf, widthOf } from './window';
+import { heightOf, PADDING, widthOf } from './window';
 
 describe('the grid', () => {
   it('draws a heading row of column names, and a number down the side', () => {
@@ -121,6 +121,84 @@ describe('a merge', () => {
 
       expect(addresses(into, 1)).toEqual(['1:1', '4:1']);
     });
+  });
+});
+
+describe('a merge reaching past the window drawn of it', () => {
+  const anchors = (into: HTMLElement) =>
+    [...into.querySelectorAll<HTMLTableCellElement>('td[data-at="1:1"]')].map((one) => [
+      one.colSpan,
+      one.rowSpan,
+      one.textContent,
+    ]);
+
+  it('draws the columns of it the window holds, when its top-left is left of them (#198)', () => {
+    const wide = sheet({
+      rows: 1,
+      columns: 3,
+      at: { row: 1, col: 4 },
+      of: { rows: 1, columns: 10 },
+      merges: [{ top: 1, left: 1, bottom: 1, right: 8 }],
+      cells: [cell(1, 1, { value: 'wide' })],
+    });
+
+    expect(anchors(shown({ drawing: drawing({ sheets: [wide] }) }))).toEqual([[3, 1, 'wide']]);
+  });
+
+  it('puts its text where it sits in the whole merge, not at the start of what is drawn', () => {
+    const wide = sheet({
+      rows: 1,
+      columns: 3,
+      at: { row: 1, col: 4 },
+      of: { rows: 1, columns: 10 },
+      merges: [{ top: 1, left: 1, bottom: 1, right: 8 }],
+      cells: [cell(1, 1, { value: 'wide', style: { 'align.horizontal': 'center' } })],
+    });
+    const box = shown({ drawing: drawing({ sheets: [wide] }) }).querySelector<HTMLElement>(
+      'td[data-at="1:1"] .within',
+    );
+    const across = (first: number, last: number) =>
+      Array.from({ length: last - first + 1 }, (_, at) => widthOf(wide, first + at)).reduce(
+        (sum, one) => sum + one,
+      );
+
+    expect([box?.style.marginLeft, box?.style.width]).toEqual([
+      `${-across(1, 3)}px`,
+      `${across(1, 8) - PADDING}px`,
+    ]);
+  });
+
+  it('draws the rows of it the window holds, when its top-left is above them', () => {
+    const tall = sheet({
+      rows: 2,
+      columns: 1,
+      at: { row: 51, col: 1 },
+      of: { rows: 100, columns: 1 },
+      merges: [{ top: 1, left: 1, bottom: 60, right: 1 }],
+      cells: [cell(1, 1, { value: 'tall' })],
+    });
+
+    expect(anchors(shown({ drawing: drawing({ sheets: [tall] }) }))).toEqual([[1, 2, 'tall']]);
+  });
+
+  it('draws a piece either side of the columns the window leaves out', () => {
+    const split = sheet({
+      rows: 1,
+      columns: 2,
+      at: { row: 1, col: 6 },
+      of: { rows: 1, columns: 10 },
+      freeze: { row: 1, col: 3 },
+      merges: [{ top: 1, left: 1, bottom: 1, right: 7 }],
+      cells: [cell(1, 1, { value: 'both' })],
+    });
+    const into = shown({ drawing: drawing({ sheets: [split] }) });
+    const row = [...(into.querySelector('tbody tr')?.querySelectorAll('td') ?? [])];
+
+    expect(anchors(into)).toEqual([
+      [2, 1, 'both'],
+      [2, 1, 'both'],
+    ]);
+    expect(row.map((one) => one.className.includes('pad'))).toEqual([false, true, false, true]);
   });
 });
 
@@ -1097,6 +1175,14 @@ describe('text that does not fit its cell', () => {
   it('does not run where the cell wraps, which is what wrapping is for', () => {
     const held = wide({
       cells: [cell(1, 1, { value: 'a very long heading', style: { 'align.wrap': true } })],
+    });
+
+    expect(at(shown({ drawing: held }), 1, 1)?.querySelector('.spill')).toBeNull();
+  });
+
+  it('does not run where it is a number, which Excel never lets past its cell', () => {
+    const held = wide({
+      cells: [cell(1, 1, { value: 1234567890123456, style: { 'align.horizontal': 'left' } })],
     });
 
     expect(at(shown({ drawing: held }), 1, 1)?.querySelector('.spill')).toBeNull();

@@ -4,6 +4,24 @@ Every release names the `yxl` it was built against: the schema is not frozen
 until yxl's v1.0, so the pinned compiler is part of what a version means
 (`ROADMAP.md` §8 Q6).
 
+## 0.2.5 — 2026-10-08
+
+Targets **yxl 0.5.1**, as 0.2.4 did.
+
+- **A merge stays drawn when its top-left cell is scrolled out of view**
+  (#198). A wide heading disappeared as soon as the reader scrolled right of
+  its first column; a tall merge did the same scrolling down. The part of the
+  merge on screen is now drawn, and its text sits where Excel puts it in the
+  whole merge.
+- **A `formula:` conditional rule applies to blank cells** (#199). It was only
+  ever applied to cells holding something, so a rule like `formula: "TRUE"`
+  drawing a table's borders left an empty template bare.
+- **A number format's colours are drawn** (#200): `[Red]`, `[Blue]` and the rest,
+  so a negative number under `#,##0;[Red]-#,##0` is red.
+- **Numbers and dates are right-aligned, and truth values and errors centred,
+  where a cell sets no alignment** (#201), as in Excel. A number no longer runs
+  over the empty cells beside it.
+
 ## 0.2.4 — 2026-09-30
 
 Targets **yxl 0.5.1**, as 0.2.3 did.

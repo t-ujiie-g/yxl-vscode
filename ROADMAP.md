@@ -1492,7 +1492,8 @@ of its colours and why a header row showed no filter.
       channel of their own — a condition is asked *about* a cell, not held by
       one, and must never become that cell's value (ADR-014). Only a truthy
       value matches; an error or a name the engine has nothing behind matches
-      nothing rather than everything.
+      nothing rather than everything. *(2026-10-08, #199: asked at every drawn
+      cell the range covers, blank or not, when it is drawn — §11.)*
 - [x] `color_scale` and `data_bar` **drawn**, against the thresholds yxl
       actually writes — read out of a built workbook rather than recalled: a
       scale is `min` / `percentile 50` / `max`, a bar `min` / `max`. A scale is
@@ -3951,6 +3952,50 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-10-08 — Four things the preview drew unlike Excel (#198–#201, 0.2.5)
+
+Reported together against 0.2.4, from one real workbook. All four were in how
+the preview draws; the specs were right.
+
+- **A merge whose top-left cell is outside the drawn window still shows**
+  (#198). The window draws 200 rows and 50 columns; past them, a merge was not
+  drawn at all once its top-left cell scrolled out, so a 57-column heading
+  vanished as soon as the reader scrolled right. The host now sends the
+  top-left cell of every merge the window reaches, and the view draws a merge
+  as one piece per unbroken run of drawn rows and columns — the frozen band and
+  the window are two runs when columns lie between them. #194 did the same for
+  hidden lines.
+- **A piece's text sits where it sits in the whole merge**: the box it is drawn
+  in is as wide as the merge and pushed left by the part not drawn, so
+  left-aligned text scrolled out is gone and centred text stays at the merge's
+  middle, as in Excel. Down the page, a cut piece still places its text in the
+  rows it draws.
+- **A `formula:` rule applies to blank cells** (#199). It was asked once per
+  *written* cell, in the evaluation passes, so a rule drawing a table's borders
+  over an empty template drew nothing. The issue's small spec worked; its
+  workbook was a template. A rule is now asked at each drawn cell it covers,
+  when that cell is drawn, against the settled workbook, and kept — the passes
+  ask nothing for it, so rules no longer count towards the 20 000-formula limit
+  either. `Evaluation.conditions` became `condition(rule, sheet, at)`. A window
+  under one rule is 10 000 asks; two rules over a full window measured 0.2 s.
+  The engine is shared by the panel, so it is handed the rule's own workbook
+  again before the first ask after another evaluation.
+- **A number format's section colour is drawn** (#200): `[Red]`, `[Blue]` and
+  the rest of Excel's eight, as Excel's colours rather than CSS's — Excel's
+  `[Green]` is `#00FF00` — and `[ColorN]` from the palette. It wins over the
+  font colour, as in Excel. `numfmt`'s `formatColor` picks the section.
+- **A cell with no horizontal alignment is aligned by what it shows** (#201): a
+  number or a date right, a truth value or an error centred, text left. What a
+  formula came to decides, not the formula. A number no longer spills into the
+  empty cells beside it either, which Excel never lets it.
+- Not done: Excel writes a truth value as `TRUE`; the preview still says
+  `true`.
+- Checked in Chromium on the built bundles, fed the drawing `project()` makes:
+  the issues' specs, a 104-column merge scrolled to column 60, centred and
+  left-aligned.
+- 2620 → 2646 tests, run against yxl 0.5.1. Comment shape: export 998 / 2167
+  (avg 2.2), private 656 / 656 (1.0), inline 142 / 227 (1.6), 0 over.
 
 ### 2026-09-30 — A merge never grows its rows (#196, 0.2.4)
 

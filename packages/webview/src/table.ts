@@ -60,27 +60,20 @@ export function grid(sheet: DrawnSheet, showing: Showing, asks: Asks): HTMLEleme
   const merged = mergedIn(sheet);
   const problems = markedBy(sheet);
 
-  const stays = (sheet.freeze?.row ?? 1) - 1;
   let drawn: number | null = null;
-  for (let row = 1; row <= stays; row += 1) {
-    if (heightOf(sheet, row) === 0) continue;
-    body.append(line(sheet, row, held, merged, problems, showing, asks, behind(drawn, row)));
-    drawn = row;
+  for (const one of alongOf(sheet, 'row')) {
+    if ('pad' in one) {
+      if (one.pad > 0) {
+        body.append(gap(sheet, one.pad));
+        drawn = null;
+      }
+      continue;
+    }
+    if (heightOf(sheet, one.at) === 0) continue;
+
+    body.append(line(sheet, one.at, held, merged, problems, showing, asks, behind(drawn, one.at)));
+    drawn = one.at;
   }
-
-  const from = Math.max(sheet.at.row, stays + 1);
-  const before = down(sheet, from) - down(sheet, stays + 1);
-  if (before > 0) body.append(gap(sheet, before));
-  if (before > 0) drawn = null;
-
-  for (let row = from; row < sheet.at.row + sheet.rows; row += 1) {
-    if (heightOf(sheet, row) === 0) continue;
-    body.append(line(sheet, row, held, merged, problems, showing, asks, behind(drawn, row)));
-    drawn = row;
-  }
-
-  const after = down(sheet, sheet.of.rows + 1) - down(sheet, sheet.at.row + sheet.rows);
-  if (after > 0) body.append(gap(sheet, after));
 
   table.append(body);
   return table;
@@ -129,23 +122,39 @@ function markedBy(sheet: DrawnSheet): Map<string, string[]> {
   return problems;
 }
 
-/** Each merge at the first of its cells that shows, and every other address it swallows. */
+/** Each merge as a piece per unbroken stretch the window draws, at its first cell that shows, and the drawn addresses it swallows. */
 function mergedIn(sheet: DrawnSheet): Merged {
   const anchored = new Map<string, SpannedMerge>();
   const covered = new Set<string>();
+  const downward = stretchesOf(alongOf(sheet, 'row'));
+  const sideways = stretchesOf(alongOf(sheet, 'column'));
 
   for (const merge of sheet.merges) {
-    const rows = shownIn(merge.top, merge.bottom, (row) => heightOf(sheet, row));
-    const cols = shownIn(merge.left, merge.right, (col) => widthOf(sheet, col));
-    const [top, left] = [rows[0], cols[0]];
-    if (top !== undefined && left !== undefined) {
-      const height = rows.reduce((sum, row) => sum + heightOf(sheet, row), 0);
-      anchored.set(cellKey(left, top), { ...merge, rows: rows.length, cols: cols.length, height });
-    }
+    for (const lines of downward) {
+      const rows = shownIn(lines, merge.top, merge.bottom, (row) => heightOf(sheet, row));
+      const top = rows[0];
+      if (top === undefined) continue;
 
-    for (let row = merge.top; row <= merge.bottom; row += 1) {
-      for (let col = merge.left; col <= merge.right; col += 1) {
-        if (row !== top || col !== left) covered.add(cellKey(col, row));
+      const height = rows.reduce((sum, row) => sum + heightOf(sheet, row), 0);
+      for (const columns of sideways) {
+        const cols = shownIn(columns, merge.left, merge.right, (col) => widthOf(sheet, col));
+        const left = cols[0];
+        if (left === undefined) continue;
+
+        const before = widthAcross(sheet, merge.left, left - 1);
+        const wide = widthAcross(sheet, merge.left, merge.right);
+        const whole =
+          before === 0 && wide === cols.reduce((sum, col) => sum + widthOf(sheet, col), 0);
+        anchored.set(cellKey(left, top), {
+          ...merge,
+          rows: rows.length,
+          cols: cols.length,
+          height,
+          cut: whole ? null : { before, wide },
+        });
+        for (const row of rows) {
+          for (const col of cols) if (row !== top || col !== left) covered.add(cellKey(col, row));
+        }
       }
     }
   }
@@ -153,10 +162,30 @@ function mergedIn(sheet: DrawnSheet): Merged {
   return { anchored, covered };
 }
 
-function shownIn(first: number, last: number, sizeOf: (at: number) => number): number[] {
-  const shown: number[] = [];
-  for (let at = first; at <= last; at += 1) if (sizeOf(at) > 0) shown.push(at);
-  return shown;
+function widthAcross(sheet: DrawnSheet, first: number, last: number): number {
+  let sum = 0;
+  for (let col = first; col <= last; col += 1) sum += widthOf(sheet, col);
+  return sum;
+}
+
+function shownIn(
+  lines: readonly number[],
+  first: number,
+  last: number,
+  sizeOf: (at: number) => number,
+): number[] {
+  return lines.filter((at) => at >= first && at <= last && sizeOf(at) > 0);
+}
+
+/** The runs of lines drawn side by side, which a pad with any size to it breaks. */
+function stretchesOf(along: readonly Along[]): number[][] {
+  const runs: number[][] = [[]];
+  for (const one of along) {
+    if (!('pad' in one)) runs[runs.length - 1]?.push(one.at);
+    else if (one.pad > 0) runs.push([]);
+  }
+
+  return runs.filter((run) => run.length > 0);
 }
 
 interface Merged {
@@ -175,7 +204,7 @@ function headings(sheet: DrawnSheet, showing: Showing, asks: Asks): HTMLElement 
   line.append(...outline(sheet, null, asks), corner(asks, gutterOf(sheet, 'row')));
 
   let drawn: number | null = null;
-  for (const one of columnsOf(sheet)) {
+  for (const one of alongOf(sheet, 'column')) {
     if ('pad' in one) {
       // Only a pad with width to it breaks the run: the empty one between the
       // frozen band and the window has nothing between its two sides.
@@ -223,7 +252,7 @@ export function above(sheet: DrawnSheet, level: number, asks: Asks): HTMLElement
   const runs = groupsOf(sheet, 'column').filter((run) => run.group === level);
   let drawn: number | null = null;
 
-  for (const one of columnsOf(sheet)) {
+  for (const one of alongOf(sheet, 'column')) {
     if ('pad' in one) {
       if (one.pad > 0) {
         line.append(pad(one.pad));
@@ -257,21 +286,23 @@ export function above(sheet: DrawnSheet, level: number, asks: Asks): HTMLElement
 /** One place along a line: a column to draw, or the width of those the window left out. */
 type Along = { readonly at: number; readonly stays: boolean } | { readonly pad: number };
 
-/** What a line is drawn from across: the frozen columns, then the window's own, the rest as width. */
-function columnsOf(sheet: DrawnSheet): Along[] {
-  const stays = (sheet.freeze?.col ?? 1) - 1;
+/** What a line is drawn from along an axis: the frozen band, then the window's own, the rest as size. */
+function alongOf(sheet: DrawnSheet, axis: Axis): Along[] {
+  const column = axis === 'column';
+  const stays = ((column ? sheet.freeze?.col : sheet.freeze?.row) ?? 1) - 1;
+  const at = column ? sheet.at.col : sheet.at.row;
+  const end = at + (column ? sheet.columns : sheet.rows);
+  const last = column ? sheet.of.columns : sheet.of.rows;
+  const edge = (line: number) => (column ? across(sheet, line) : down(sheet, line));
+
   const along: Along[] = [];
-  for (let col = 1; col <= stays; col += 1) along.push({ at: col, stays: true });
+  for (let line = 1; line <= stays; line += 1) along.push({ at: line, stays: true });
 
-  const from = Math.max(sheet.at.col, stays + 1);
-  along.push({ pad: across(sheet, from) - across(sheet, stays + 1) });
-  for (let col = from; col < sheet.at.col + sheet.columns; col += 1) {
-    along.push({ at: col, stays: false });
-  }
+  const from = Math.max(at, stays + 1);
+  along.push({ pad: edge(from) - edge(stays + 1) });
+  for (let line = from; line < end; line += 1) along.push({ at: line, stays: false });
 
-  along.push({
-    pad: across(sheet, sheet.of.columns + 1) - across(sheet, sheet.at.col + sheet.columns),
-  });
+  along.push({ pad: edge(last + 1) - edge(end) });
   return along;
 }
 
@@ -409,7 +440,7 @@ function line(
   number.append(grip('row', row, heightOf(sheet, row), asks));
   line.append(number);
 
-  for (const one of columnsOf(sheet)) {
+  for (const one of alongOf(sheet, 'column')) {
     if ('pad' in one) {
       if (one.pad > 0) line.append(pad(one.pad));
       continue;

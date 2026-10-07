@@ -4,7 +4,7 @@ import { load } from '@yxl-vscode/loader';
 import { type A1Addr, qualified, type SheetName, sheetName } from '@yxl-vscode/units';
 import { describe, expect, it } from 'vitest';
 import type { Asked, Engine, HeldSheet } from './engine';
-import { conditionKey, evaluate } from './evaluate';
+import { evaluate } from './evaluate';
 
 /** An engine that answers `A1` with what `A1` holds: the passes are under test here, not the engine. */
 function reader(): Engine & { readonly asked: Asked[] } {
@@ -112,14 +112,9 @@ describe('what a pass asks the engine for', () => {
     expect(asks(spec).map((one) => one.at)).toEqual(['B1', 'B2', 'B3']);
   });
 
-  it('asks a `formula:` rule once per written cell it covers, at that cell offset', () => {
-    const spec = `${SALES}    cells:\n      A1: 1\n      A2: 2\n    conditional:\n      - at: A1:A9\n        formula: "A1"\n        style: { font: { bold: true } }\n`;
-    const asked = asks(spec).filter((one) => one.asks !== undefined);
-
-    expect(asked.map((one) => [one.at, one.offset])).toEqual([
-      ['A1', [0, 0]],
-      ['A2', [0, 1]],
-    ]);
+  it('asks nothing for a `formula:` rule, which is decided where it is drawn', () => {
+    const spec = `${SALES}    cells:\n      A1: 1\n    conditional:\n      - at: A1:A9\n        formula: "A1"\n        style: { font: { bold: true } }\n`;
+    expect(asks(spec).filter((one) => one.asks !== undefined)).toEqual([]);
   });
 
   it('gives the engine every sheet, including one that holds no value at all', () => {
@@ -202,20 +197,72 @@ describe('what a pass makes of the answers', () => {
 });
 
 describe('what a `formula:` rule came to', () => {
-  it('is answered under the rule that asked, and never as the cell own value', () => {
-    const spec = `${SALES}    cells:\n      A1: 2\n      B1: { formula: "A1" }\n    conditional:\n      - at: A1:A9\n        formula: "A1"\n        style: { font: { bold: true } }\n`;
-    const { doc } = load(parse(spec, { file: 'spec.yxl.yaml' }));
+  const RULED = `${SALES}    cells:\n      A1: 2\n      A2: 3\n      B1: { formula: "A1" }\n    conditional:\n      - at: A1:A9\n        formula: "A1"\n        style: { font: { bold: true } }\n`;
+
+  function ruled(source: string, engine: Engine = reader(), limit?: number) {
+    const { doc } = load(parse(source, { file: 'spec.yxl.yaml' }));
     if (doc === null) throw new Error('did not load');
 
     const grid = compile(doc);
     const rule = grid.sheets[0]?.conditional[0];
     if (rule === undefined) throw new Error('compiled no rule');
 
-    const done = evaluate(grid, reader());
-    expect(done.conditions.get(conditionKey(rule.node, named('Sales'), 'A1' as A1Addr))).toEqual({
+    return { done: evaluate(grid, engine, limit), rule: rule.node };
+  }
+
+  it('is answered under the rule that asked, and never as the cell own value', () => {
+    const { done, rule } = ruled(RULED);
+
+    expect(done.condition(rule, named('Sales'), 'A1' as A1Addr)).toEqual({
       kind: 'value',
       value: 2,
     });
     expect(done.values.get(qualified(named('Sales'), 'A1' as A1Addr))).toBeUndefined();
+  });
+
+  it('is asked at a blank cell too, moved by its offset from the rule corner', () => {
+    const engine = reader();
+    const { done, rule } = ruled(RULED, engine);
+    done.condition(rule, named('Sales'), 'A5' as A1Addr);
+
+    expect(engine.asked.slice(-1).map((one) => [one.at, one.offset])).toEqual([['A5', [0, 4]]]);
+  });
+
+  it('is computed once per cell, however often the cell is drawn', () => {
+    const engine = reader();
+    const { done, rule } = ruled(RULED, engine);
+    const before = engine.asked.length;
+    done.condition(rule, named('Sales'), 'A2' as A1Addr);
+    done.condition(rule, named('Sales'), 'A2' as A1Addr);
+
+    expect(engine.asked.length - before).toBe(1);
+  });
+
+  it('is asked of its own workbook after the engine was handed another', () => {
+    const engine = reader();
+    const { done, rule } = ruled(RULED, engine);
+    ruled(RULED.replace('A2: 3', 'A2: 30'), engine);
+
+    expect(done.condition(rule, named('Sales'), 'A2' as A1Addr)).toEqual({
+      kind: 'value',
+      value: 3,
+    });
+  });
+
+  it('is not computed on a sheet whose formulas are not', () => {
+    const engine: Engine = { ...reader(), about: () => ({ unknown: ['LAMBDA'], reads: [] }) };
+    const { done, rule } = ruled(RULED, engine);
+
+    expect(done.condition(rule, named('Sales'), 'A1' as A1Addr)?.kind).toBe('unsupported');
+  });
+
+  it('is nothing at all for a workbook past the limit, and does not count towards it', () => {
+    expect(ruled(RULED, reader(), 1).done.stopped).toBe(false);
+
+    const { done, rule } = ruled(RULED, reader(), 0);
+    expect([done.stopped, done.condition(rule, named('Sales'), 'A1' as A1Addr)]).toEqual([
+      true,
+      null,
+    ]);
   });
 });
