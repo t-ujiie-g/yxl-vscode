@@ -70,6 +70,12 @@ export function parseQualifiedRange(text: string): QualifiedRange | null {
   return sheet === null || at === null ? null : { sheet, at };
 }
 
+/** The sheet a reference names before its `!`, or `null` where it names none or never closes its quote. */
+export function sheetPrefix(text: string): string | null {
+  const split = text.startsWith("'") ? quoted(text) : plain(text);
+  return split?.name ?? null;
+}
+
 /** An unquoted name holds no `!`, so the first one divides. */
 function plain(text: string): { name: string; rest: string } | null {
   const bang = text.indexOf('!');

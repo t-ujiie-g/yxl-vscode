@@ -3,6 +3,7 @@ import { KEY, type Override, type Visibility } from '@yxl-vscode/spec';
 import {
   type Color,
   type FilePath,
+  names,
   parseQualifiedAddr,
   qualified,
   type SheetName,
@@ -21,6 +22,7 @@ import {
   refused,
   writtenSheet,
 } from './direct';
+import { references } from './renaming';
 import { say } from './text';
 
 /** A sheet a reader asked for, by the name it is to have. */
@@ -72,8 +74,8 @@ export interface Deleting {
 
 /**
  * A sheet taken out of `sheets:`, with the overrides that named its cells. It is
- * refused where nothing would be left to show, or where a surviving formula
- * names it — Excel writes `#REF!` there, and this writes nothing (ADR-001).
+ * refused where nothing would be left to show, or where a surviving formula or
+ * `references` entry names it — Excel writes `#REF!` there (ADR-001).
  */
 export function deleteSheet(spec: Projection, where: Deleting, read: Reading): Intent {
   const sheet = spec.doc.sheets.find((one) => nameOf(one) === where.sheet);
@@ -85,7 +87,12 @@ export function deleteSheet(spec: Projection, where: Deleting, read: Reading): I
     return refused(say('intent.workbook-needs-a-shown-sheet'));
   }
 
-  const held = [...cellsNaming(spec, where.sheet)];
+  const held = [
+    ...cellsNaming(spec, where.sheet),
+    ...references(spec.doc, read)
+      .filter((one) => one.on !== where.sheet && names(one.text, where.sheet))
+      .map((one) => one.where),
+  ];
   if (held.length > 0) {
     const shown = held.slice(0, 3).join(', ');
     return refused(

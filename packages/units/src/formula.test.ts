@@ -1,6 +1,6 @@
 import { reading } from '@yxl-vscode/diag';
 import { describe, expect, it } from 'vitest';
-import { type Line, moved, type Offset, renamed, shifted } from './formula';
+import { type Line, moved, names, type Offset, renamed, shifted } from './formula';
 import type { SheetName } from './name';
 import { WORDS } from './text';
 
@@ -242,5 +242,32 @@ describe('a formula once a sheet is renamed', () => {
 
   it('does nothing where the name has not changed', () => {
     expect(to('Sales!A1', 'Sales', 'Sales')).toBe('Sales!A1');
+  });
+  it('keeps the quotes on a sheet it is not about (#207)', () => {
+    expect(to("'Q1 Sales'!A1+Sales!B1")).toBe("'Q1 Sales'!A1+Revenue!B1");
+  });
+
+  it('renames either end of a 3D reference, in both spellings (#207)', () => {
+    expect(to('SUM(Sales:Summary!A1)')).toBe('SUM(Revenue:Summary!A1)');
+    expect(to('SUM(Notes:Sales!A1)')).toBe('SUM(Notes:Revenue!A1)');
+    expect(to("SUM('Sales:Summary'!A1)", 'Sales', 'Q4 data')).toBe("SUM('Q4 data:Summary'!A1)");
+    expect(to('SUM(Notes:Summary!A1)')).toBe('SUM(Notes:Summary!A1)');
+  });
+
+  it('leaves a range that is not 3D a range', () => {
+    expect(to('SUM(A1:B2)+SUM(Sales!A:B)')).toBe('SUM(A1:B2)+SUM(Revenue!A:B)');
+  });
+});
+
+describe('whether a formula names a sheet', () => {
+  it.each([
+    ['Sales!A1', true],
+    ['SUM(Sales:Summary!A1)', true],
+    ['SUM(Notes:Sales!A1)', true],
+    ["SUM('Notes:Sales'!A1)", true],
+    ["'Q1 Sales'!A1", false],
+    ['"Sales!A1"', false],
+  ])('%s', (formula, expected) => {
+    expect(names(formula, 'Sales' as SheetName)).toBe(expected);
   });
 });

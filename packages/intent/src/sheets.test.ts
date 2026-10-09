@@ -94,6 +94,33 @@ describe('a sheet taken out', () => {
     );
   });
 
+  it.each([
+    ['a link', '    links:\n      A1: { to: "Sales!A1" }\n', 'Notes!A1'],
+    [
+      'a list',
+      '    validations:\n      - { at: B1:B1, list: { from: Sales!A1:A2 } }\n',
+      'Notes!B1:B1',
+    ],
+    [
+      'a rule',
+      '    conditional:\n      - { at: A1:A1, formula: "Sales!A1>0", style: { fill: "FF0000" } }\n',
+      'Notes!A1:A1',
+    ],
+    [
+      'a chart',
+      '    charts:\n      - { type: column, at: D2, series: [{ values: Sales!A1:A2 }] }\n',
+      'Notes!D2',
+    ],
+    ['a sparkline', '    sparklines:\n      - { at: C1, data: Sales!A1:B1 }\n', 'Notes!C1'],
+    ['a 3D reference', '    cells:\n      A1: { formula: "SUM(Notes:Sales!A1)" }\n', 'Notes!A1'],
+  ])('is refused where %s on a surviving sheet names it (#207)', (_label, keys, where) => {
+    const source = `${ONE}  - name: Notes\n${keys}`;
+
+    expect(deleted(source, 'Sales')).toBe(
+      `refused: \`Sales\` is named by ${where}, which would be left with \`#REF!\``,
+    );
+  });
+
   it('leaves a formula on the sheet itself alone, which goes with it', () => {
     const source = `sheets:\n  - name: Sales\n    cells:\n      A1: 1\n      A2: { formula: "Sales!A1*2" }\n  - name: Notes\n    cells:\n      A1: hello\n`;
 

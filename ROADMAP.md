@@ -1434,13 +1434,16 @@ rather than carried through blind (`docs/spec.md` §2).
       quotes the new name where Excel's grammar needs it, and leaves a name
       inside a string alone. The edit claims exactly the cells whose formula it
       rewrites, so `verify` still catches anything else that moved.
+      *(2026-10-10, #207: and every rule `formula:`, list `from:`, link `to:`,
+      chart range and sparkline `data:`, and both ends of a 3D reference — §11.)*
 - [x] **Delete a sheet** from the tab's menu — its entry, and the overrides on
       its cells, which yxl refuses if left dangling. Refused where it is the
       only sheet, where a surviving formula names it (Excel writes `#REF!`
       there; this writes nothing), and where every other sheet sets
       `visibility:`, which is not read yet and so cannot be shown to leave one
       visible (§2). That last refusal tightens into a real check when the
-      hide/unhide item below lands.
+      hide/unhide item below lands. *(2026-10-10, #207: refused over the same
+      references outside cells that a rename rewrites — §11.)*
 - [x] **Reorder** by dragging a tab — the `sheets:` sequence is tab order. One
       `write` over the whole sequence, whose inverse is the text it replaced:
       every entry keeps its own bytes and its own comments, and the blank lines
@@ -3954,6 +3957,32 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-10-10 — A sheet renamed or taken out left references behind (#207, 0.2.8)
+
+Reported against 0.2.5: renaming `Sales` rewrote cell formulas, `formulas:`,
+`defs.formulas` and overrides, and left a link's `to:`, a list's `from:`, a
+rule's `formula:`, a chart's ranges and a sparkline's `data:` on `Sales!`. The
+file was saved, and yxl would not build it. Taking the sheet out had the same
+hole. Nothing here noticed, because the preview did not check those references.
+
+- **A rename rewrites every place a sheet is named in text**, and a deletion
+  is refused over the same places on the sheets that stay. One list, in
+  `renaming.ts`, serves both, so the two cannot drift apart.
+- **Both ends of a 3D reference move**: `Sales:Summary!A1` and the quoted
+  `'Sales:Summary'!A1`. A deletion is refused where either end names the sheet.
+- **A rename kept the quotes off a sheet it was not about** — `'Q1 Sales'!A1`
+  came out as `Q1 Sales!A1` when `Sales` was renamed, breaking the formula.
+  Found while writing the 3D case; `renamed` now leaves a name it does not move
+  exactly as written.
+- **A reference to a sheet the spec does not declare is an error** in the
+  preview, as in yxl — in a link, a list, a chart's values, categories or
+  `name_from:`, and a sparkline. A link to a defined name names no sheet and is
+  not checked. Rule formulas are not checked, as yxl does not check them.
+- Checked with yxl 0.5.1: the six cases above read the same here as there, and
+  the issue's spec renamed both to `Revenue` and to `Q3 data` builds.
+- 2681 → 2706 tests, run against yxl 0.5.1. Comment shape: export 1003 / 2177
+  (avg 2.2), private 658 / 658 (1.0), inline 142 / 227 (1.6), 0 over.
 
 ### 2026-10-10 — A fill as a range left its first cell behind (#216, 0.2.7)
 

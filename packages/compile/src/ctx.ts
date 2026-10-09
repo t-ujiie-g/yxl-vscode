@@ -30,9 +30,9 @@ export interface DataFile {
 export type DataReader = (from: FilePath, path: FilePath) => DataFile | null;
 
 /**
- * What compiling has in hand throughout: parameters resolved once, definitions
- * indexed once, every layout placed once (by name and by node) with the names
- * it makes, the way out to a data file, and somewhere to put what it could not draw.
+ * What compiling has in hand throughout: parameters, definitions, layouts (by
+ * name and by node) and the names they make, the sheets declared, the way out
+ * to a data file, and somewhere to put what it could not draw.
  */
 export interface Ctx {
   readonly diagnostics: Diagnostic[];
@@ -48,6 +48,7 @@ export interface Ctx {
   readonly layouts: Map<string, Placed>;
   readonly placed: Map<NodeId, Placed>;
   readonly names: Map<string, CompiledName>;
+  readonly sheets: Set<string>;
 }
 
 /** Where each parameter is declared, with every parameter its default is built from. */
@@ -84,6 +85,7 @@ export function context(doc: SpecDoc, read: DataReader | null, set: Setting): Ct
     layouts: new Map(),
     placed: new Map(),
     names: new Map(),
+    sheets: new Set(),
   };
 
   for (const cycle of cycles) {
@@ -100,6 +102,12 @@ export type Setting = ReadonlyMap<string, string>;
 
 export function reject(ctx: Ctx, code: Code, message: Saying, node: SpecNode): void {
   ctx.diagnostics.push(error(code, message, { file: node.file, span: node.span }));
+}
+
+/** Reports a reference to a sheet the spec does not declare, as yxl does. */
+export function declaredSheet(ctx: Ctx, name: string | null, node: SpecNode): void {
+  if (name === null || ctx.sheets.has(name)) return;
+  reject(ctx, CODE.unknownSheet, say('compile.no-such-sheet', { name }), node);
 }
 
 /** A value with its parameters substituted; an unresolved placeholder survives as text. */
