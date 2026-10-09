@@ -1393,6 +1393,8 @@ Deliberately **not** here: a second selection with `Cmd`+click (every answer in
       or **a cell each**, the references moved per row (ADR-031). The range is
       not offered where the line holds values, or where anything is already
       written under it, since a range may not cross a cell the sheet writes.
+      *(2026-10-10, #216: the line's own `cells:` entries go, and a line that
+      wears a style or a format is not offered as a range — §11.)*
       **The drag handle is not in**: the keys and the menu are the gesture, and
       a handle is a second way to ask the same question.
 - [x] Sorting a `data:` rectangle: its rows rewritten, and nothing else touched
@@ -3952,6 +3954,28 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-10-10 — A fill as a range left its first cell behind (#216, 0.2.7)
+
+Reported against 0.2.5: filling `C1:C2` down as a `formulas:` range wrote the
+range and kept `C1: { formula: … }`, and yxl refuses a range over a cell the
+sheet writes. Nothing here noticed.
+
+- **The range replaces the line it was filled from.** Each formula's `cells:`
+  entry is taken out with the same patch, and `cells:` with its last entry. A
+  line that also wears a `style:` or a `format:` is not offered as a range: a
+  range has no look of its own (`docs/spec.md` §3), so taking the entry out
+  would lose it. A cell each is still offered.
+- **A range over a cell, or over another range, is an error** in the preview,
+  as in yxl (`compile.fill-overlap`): over a `cells:` entry, a `data:` field
+  that is not `null`, or a cell a layout draws; ranges from a layout count as
+  ranges. yxl stops at the first; this reports each range once per kind of
+  clash. With it the checker refuses such an edit whatever made it.
+- `KEY.formula` joins the schema keys.
+- Checked with yxl 0.5.1: a range over a `cells:` entry and a `null` field
+  read the same here as there.
+- 2673 → 2681 tests, run against yxl 0.5.1. Comment shape: export 999 / 2168
+  (avg 2.2), private 658 / 658 (1.0), inline 142 / 227 (1.6), 0 over.
 
 ### 2026-10-10 — A write that broke the YAML was saved as a success (#203, #204, 0.2.6)
 

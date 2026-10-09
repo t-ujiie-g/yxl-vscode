@@ -292,6 +292,42 @@ describe('a `formulas:` range', () => {
   });
 });
 
+describe('a `formulas:` range over something else that writes a cell (#216)', () => {
+  const RANGE = '    formulas:\n      - at: C1:C3\n        formula: "B1*2"\n';
+
+  it('is refused over a `cells:` entry, naming the cell', () => {
+    const drawn = grid(`${SALES}    cells:\n      C1: { formula: "B1*2" }\n${RANGE}`);
+
+    expect(drawn.diagnostics.map((one) => english(one.message))).toEqual([
+      'the formula range `C1:C3` covers `C1`, which the sheet also writes as a cell; split the range around it',
+    ]);
+  });
+
+  it('is refused over a field of a `data:` block', () => {
+    const spec = `${SALES}    data:\n      - at: C2\n        values:\n          - [x]\n${RANGE}`;
+
+    expect(codes(spec)).toEqual([CODE.fillOverlap]);
+  });
+
+  it('is not refused over a `data:` field that is `null`, which writes no cell', () => {
+    const spec = `${SALES}    data:\n      - at: C2\n        values:\n          - [null, x]\n${RANGE}`;
+
+    expect(codes(spec)).toEqual([]);
+  });
+
+  it('is refused over another range, naming the one it meets', () => {
+    const spec = `${SALES}${RANGE}      - at: B3:D3\n        formula: "A3"\n`;
+
+    expect(grid(spec).diagnostics.map((one) => english(one.message))).toEqual([
+      'the formula range `B3:D3` overlaps the one at `C1:C3`; a cell holds one formula',
+    ]);
+  });
+
+  it('is not refused beside a cell it does not cover', () => {
+    expect(codes(`${SALES}    cells:\n      C4: 1\n${RANGE}`)).toEqual([]);
+  });
+});
+
 describe('an override, which is the last thing to speak of a cell', () => {
   const spec = `${SALES}    cells:\n      A2: { value: 1, format: "0.00" }\n`;
 

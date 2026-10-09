@@ -4,6 +4,18 @@ Every release names the `yxl` it was built against: the schema is not frozen
 until yxl's v1.0, so the pinned compiler is part of what a version means
 (`ROADMAP.md` §8 Q6).
 
+## 0.2.7 — 2026-10-10
+
+Targets **yxl 0.5.1**, as 0.2.6 did.
+
+- **Filling formulas down or right as one range no longer leaves the first
+  cell behind** (#216). The range was written and the cell it was filled from
+  kept, which yxl refuses to build. The cell is now replaced by the range; a
+  cell that also has a style or a format is filled a cell each instead, so its
+  look is not lost.
+- **A formula range that covers a cell the sheet writes, or another range, is
+  reported** in the preview, as `yxl build` reports it.
+
 ## 0.2.6 — 2026-10-10
 
 Targets **yxl 0.5.1**, as 0.2.5 did.
