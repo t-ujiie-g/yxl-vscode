@@ -4,6 +4,21 @@ Every release names the `yxl` it was built against: the schema is not frozen
 until yxl's v1.0, so the pinned compiler is part of what a version means
 (`ROADMAP.md` §8 Q6).
 
+## 0.2.8 — 2026-10-10
+
+Targets **yxl 0.5.1**, as 0.2.7 did.
+
+- **Renaming a sheet updates every reference to it** (#207): links,
+  drop-down lists read from a range, conditional rules, chart ranges and
+  sparklines as well as formulas, and both ends of a 3D reference such as
+  `Sales:Summary!A1`. Before, the spec was saved with the old name in those
+  places and would not build.
+- **Renaming a sheet no longer strips the quotes from another sheet's name** in
+  a formula: `'Q1 Sales'!A1` stayed `'Q1 Sales'!A1`, not `Q1 Sales!A1`.
+- **Deleting a sheet is refused while any of those still names it.**
+- **A link, list, chart or sparkline that names a sheet the spec does not have
+  is reported** in the preview, as `yxl build` reports it.
+
 ## 0.2.7 — 2026-10-10
 
 Targets **yxl 0.5.1**, as 0.2.6 did.
