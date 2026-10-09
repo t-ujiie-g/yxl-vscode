@@ -8,6 +8,7 @@ export const CODE = {
   unknownFormula: 'compile.unknown-formula',
   badAddress: 'compile.bad-address',
   badRange: 'compile.bad-range',
+  fillOverlap: 'compile.fill-overlap',
   badPath: 'compile.bad-path',
   badColumn: 'compile.bad-column',
   badRow: 'compile.bad-row',

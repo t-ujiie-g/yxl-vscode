@@ -1,4 +1,5 @@
 import { type CompiledSheet, cellAt, sheetOf } from '@yxl-vscode/compile';
+import type { Node, Op } from '@yxl-vscode/cst';
 import { type Saying, sentence } from '@yxl-vscode/diag';
 import { type Axis, KEY } from '@yxl-vscode/spec';
 import {
@@ -11,6 +12,7 @@ import {
   type SheetName,
 } from '@yxl-vscode/units';
 import { putEntries, sequenceIn } from './anchored';
+import { whole } from './clear';
 import { type Held, keptElsewhere, located, type Projection, type Reading } from './direct';
 import { type Entry, landed, taking } from './landing';
 import type { Candidate } from './resolve';
@@ -112,7 +114,7 @@ function onCells(
   };
 }
 
-/** One `formulas:` range, where the line holds formulas and nothing is written under it (§3). */
+/** One `formulas:` range in place of each formula on the line, where nothing is written under it (§3). */
 function asRange(sheet: CompiledSheet, where: Filling, read: Reading): Candidate | null {
   const down = where.axis === 'row';
   const from = down ? where.rect.top : where.rect.left;
@@ -122,12 +124,21 @@ function asRange(sheet: CompiledSheet, where: Filling, read: Reading): Candidate
 
   const ranges: string[] = [];
   const moves: { sheet: SheetName; at: A1Addr }[] = [];
+  const taken: Op[] = [];
+  const found = located(sheet.node, read);
+  if (found.kind === 'refused') return null;
 
   for (let one = across.first; one <= across.last; one += 1) {
     const source = down ? addrAt({ col: one, row: from }) : addrAt({ col: from, row: one });
     const cell = cellAt(sheet, source);
     if (cell === null || cell.formula === null) return null;
     if (cell.provenance.value.kind !== 'literal') return null;
+
+    const entry = located(cell.provenance.value.node, read);
+    if (entry.kind === 'refused' || entry.file !== found.file || !formulaOnly(entry.node)) {
+      return null;
+    }
+    taken.push({ op: 'remove', path: entry.path });
 
     const rect = down
       ? { top: from, left: one, bottom: where.rect.bottom, right: one }
@@ -138,8 +149,7 @@ function asRange(sheet: CompiledSheet, where: Filling, read: Reading): Candidate
     for (const at of addressesOf(rect)) moves.push({ sheet: where.sheet, at });
   }
 
-  const found = located(sheet.node, read);
-  if (found.kind === 'refused' || ranges.length === 0) return null;
+  if (ranges.length === 0) return null;
 
   // Not an answer at all where the ranges are another file's: an answer offered
   // is one this editor can make.
@@ -153,13 +163,23 @@ function asRange(sheet: CompiledSheet, where: Filling, read: Reading): Candidate
     intent: {
       kind: 'edit',
       file: found.file,
-      patch: { ops: putEntries(sequenceIn(found, KEY.formulas), ranges) },
+      patch: {
+        ops: [
+          ...whole(taken, found.file, read),
+          ...putEntries(sequenceIn(found, KEY.formulas), ranges),
+        ],
+      },
       expects: {
         cells: new Set(moves.map((one) => qualified(one.sheet, one.at))),
         beyond: 'ask',
       },
     },
   };
+}
+
+/** Whether a cell entry says nothing but its formula: a range has no look of its own to carry the rest (§3). */
+function formulaOnly(node: Node): boolean {
+  return node.kind === 'map' && node.entries.every((one) => one.key.value === KEY.formula);
 }
 
 /** Whether anything in the rectangle but its first cell is already written, which a range may not cross. */

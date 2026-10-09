@@ -28,6 +28,7 @@ export const KEY = {
   data: 'data',
   defs: 'defs',
   format: 'format',
+  formula: 'formula',
   formulas: 'formulas',
   freeze: 'freeze',
   gridlines: 'gridlines',

@@ -9,6 +9,7 @@ import {
   type Note,
   type RowBand,
   type Sheet,
+  type SpecNode,
   type Table,
   type Validation,
   VISIBILITIES,
@@ -20,14 +21,17 @@ import {
   cellOf,
   columnsOf,
   type FilePath,
+  overlapping,
   parseA1Range,
   parseColumnSpan,
   parseRowSpan,
   type Rect,
+  rangeOf,
   rectOf,
   rowsOf,
   type SheetName,
   sheetName,
+  within,
 } from '@yxl-vscode/units';
 import {
   address,
@@ -80,11 +84,19 @@ export function compileSheet(ctx: Ctx, sheet: Sheet): Drafted {
   const merges: CompiledMerge[] = [];
   const conditional: CompiledRule[] = [];
   const layouts: CompiledLayout[] = [];
+  const written = new Map<CompiledFill, SpecNode>();
 
   for (const key of sheet.keyOrder) {
     if (key === 'cells') placeCells(ctx, sheet, cells);
     if (key === 'data') for (const block of sheet.data) placeData(ctx, block, cells, name);
-    if (key === 'formulas') for (const range of sheet.formulas) placeFill(ctx, range, fills);
+    if (key === 'formulas') {
+      for (const range of sheet.formulas) {
+        const fill = placeFill(ctx, range);
+        if (fill === null) continue;
+        fills.push(fill);
+        written.set(fill, range);
+      }
+    }
     if (key === 'columns') columns.push(...kept(sheet.columns, (band) => columnBand(ctx, band)));
     if (key === 'merges') merges.push(...kept(sheet.merges, (one) => mergedRegion(ctx, one)));
     if (key === 'conditional') {
@@ -102,12 +114,15 @@ export function compileSheet(ctx: Ctx, sheet: Sheet): Drafted {
         cells.set(cell.at, under === undefined ? cell : layer(under, cell, DRAWS));
       }
       fills.push(...drawn.fills);
+      for (const fill of drawn.fills) written.set(fill, layout);
       columns.push(...drawn.bands);
       merges.push(...drawn.merges);
       conditional.push(...drawn.rules);
       layouts.push(drawn.layout);
     }
   }
+
+  clashes(ctx, written, cells);
 
   return {
     sheet: {
@@ -244,22 +259,46 @@ function place(
   }
 }
 
-function placeFill(ctx: Ctx, range: FormulaRange, fills: CompiledFill[]): void {
+function placeFill(ctx: Ctx, range: FormulaRange): CompiledFill | null {
   const spelled = text(ctx, range.at, range);
   const read = parseA1Range(spelled);
   if (read === null) {
     reject(ctx, CODE.badRange, say('compile.not-a-range', { spelled }), range);
-    return;
+    return null;
   }
 
   const rect = rectOf(read);
-  fills.push({
+  return {
     rect,
     anchor: addrAt({ col: rect.left, row: rect.top }),
     formula: text(ctx, range.formula, range),
     node: range.id,
     layout: null,
-  });
+  };
+}
+
+/** A filled range may share no cell with another range or with a written cell (`docs/spec.md` §3). */
+function clashes(
+  ctx: Ctx,
+  written: ReadonlyMap<CompiledFill, SpecNode>,
+  cells: ReadonlyMap<string, CompiledCell>,
+): void {
+  const fills = [...written];
+  const placed = [...cells.values()];
+
+  for (const [index, [fill, node]] of fills.entries()) {
+    const range = rangeOf(fill.rect);
+    const earlier = fills.slice(0, index).find(([one]) => overlapping(one.rect, fill.rect));
+    if (earlier !== undefined) {
+      const other = rangeOf(earlier[0].rect);
+      reject(ctx, CODE.fillOverlap, say('compile.fills-overlap', { range, other }), node);
+    }
+
+    const cell = placed.find((one) => within(cellOf(one.at), fill.rect));
+    if (cell !== undefined) {
+      reject(ctx, CODE.fillOverlap, say('compile.fill-covers-cell', { range, at: cell.at }), node);
+    }
+  }
 }
 
 /** The sheet's name with its parameters filled in; what Excel would refuse is the compiler's to say (ADR-011). */

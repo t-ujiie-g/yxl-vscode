@@ -43,7 +43,17 @@ describe('a column of formulas filled down', () => {
     if (range === undefined) throw new Error('nothing was offered');
 
     expect(taken(spec, range)).toBe(
-      `${spec}    formulas:\n      - at: C1:C3\n        formula: "B1*2"\n`,
+      `${HOLDS}    formulas:\n      - at: C1:C3\n        formula: "B1*2"\n`,
+    );
+  });
+
+  it('takes the line it was filled from out of `cells:`, and the key with its last entry (#216)', () => {
+    const alone = `${SALES}    cells:\n      C1: { formula: "B1*2" }\n`;
+    const [range] = offered(alone, at(1, 3, 3, 3));
+    if (range === undefined) throw new Error('nothing was offered');
+
+    expect(taken(alone, range)).toBe(
+      `${SALES}    formulas:\n      - at: C1:C3\n        formula: "B1*2"\n`,
     );
   });
 
@@ -76,6 +86,17 @@ describe('what a fill will not make a range of', () => {
 
   it('a run with a cell already written under it, which a range may not cross', () => {
     const spec = `${HOLDS}      C1: { formula: "B1*2" }\n      C3: kept\n`;
+
+    expect(offered(spec, at(1, 3, 3, 3)).map((one) => one.id)).toEqual(['onCells']);
+  });
+});
+
+describe('what a fill will not make a range of, where the line wears a look', () => {
+  it.each([
+    ['a style', 'C1: { formula: "B1*2", style: { font: { bold: true } } }'],
+    ['a format', 'C1: { formula: "B1*2", format: "0.0" }'],
+  ])('%s, which a range could not keep (#216)', (_label, cell) => {
+    const spec = `${HOLDS}      ${cell}\n`;
 
     expect(offered(spec, at(1, 3, 3, 3)).map((one) => one.id)).toEqual(['onCells']);
   });

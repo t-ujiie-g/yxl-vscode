@@ -123,7 +123,7 @@ export function clearRange(
 }
 
 /** The same removals, with a mapping whose every entry is going taken out whole: an empty `cells:` will not load. */
-function whole(
+export function whole(
   ops: readonly Op[],
   file: FilePath,
   read: Reading,

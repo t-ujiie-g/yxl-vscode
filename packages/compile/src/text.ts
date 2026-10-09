@@ -4,6 +4,8 @@ import { type Book, type Nothing, type Saying, speaking, type Words } from '@yxl
 export type Says = {
   'compile.not-a-cell-reference': { spelled: string };
   'compile.not-a-range': { spelled: string };
+  'compile.fills-overlap': { range: string; other: string };
+  'compile.fill-covers-cell': { range: string; at: string };
   'compile.not-a-column': { spelled: string };
   'compile.not-a-row': { spelled: string };
   'compile.not-a-sheet-and-a-cell': { spelled: string };
@@ -69,6 +71,10 @@ export const say = speaking<Says>();
 const en: Words<Says> = {
   'compile.not-a-cell-reference': ({ spelled }) => `\`${spelled}\` is not a cell reference`,
   'compile.not-a-range': ({ spelled }) => `\`${spelled}\` is not a range`,
+  'compile.fills-overlap': ({ range, other }) =>
+    `the formula range \`${range}\` overlaps the one at \`${other}\`; a cell holds one formula`,
+  'compile.fill-covers-cell': ({ range, at }) =>
+    `the formula range \`${range}\` covers \`${at}\`, which the sheet also writes as a cell; split the range around it`,
   'compile.not-a-column': ({ spelled }) => `\`${spelled}\` is not a column or a range of columns`,
   'compile.not-a-row': ({ spelled }) => `\`${spelled}\` is not a row or a range of rows`,
   'compile.not-a-sheet-and-a-cell': ({ spelled }) => `\`${spelled}\` is not a sheet and a cell`,
@@ -156,6 +162,10 @@ const en: Words<Says> = {
 const ja: Words<Says> = {
   'compile.not-a-cell-reference': ({ spelled }) => `\`${spelled}\` はセル参照ではありません`,
   'compile.not-a-range': ({ spelled }) => `\`${spelled}\` は範囲ではありません`,
+  'compile.fills-overlap': ({ range, other }) =>
+    `数式の範囲 \`${range}\` が \`${other}\` の範囲と重なっています。1 つのセルが持てる数式は 1 つです`,
+  'compile.fill-covers-cell': ({ range, at }) =>
+    `数式の範囲 \`${range}\` が、シートがセルとしても書いている \`${at}\` を覆っています。範囲をそのセルの前後で分けてください`,
   'compile.not-a-column': ({ spelled }) => `\`${spelled}\` は列または列の範囲ではありません`,
   'compile.not-a-row': ({ spelled }) => `\`${spelled}\` は行または行の範囲ではありません`,
   'compile.not-a-sheet-and-a-cell': ({ spelled }) =>
