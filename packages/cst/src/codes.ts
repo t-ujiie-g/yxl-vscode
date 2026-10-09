@@ -1,5 +1,6 @@
 /** Every diagnostic this package can raise; a code is stable and greppable, so it is API. */
 export const CODE = {
+  syntax: 'cst.syntax',
   alias: 'cst.alias',
   unexpectedToken: 'cst.unexpected-token',
   nonStringKey: 'cst.non-string-key',

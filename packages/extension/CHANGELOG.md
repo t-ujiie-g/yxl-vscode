@@ -4,6 +4,19 @@ Every release names the `yxl` it was built against: the schema is not frozen
 until yxl's v1.0, so the pinned compiler is part of what a version means
 (`ROADMAP.md` §8 Q6).
 
+## 0.2.6 — 2026-10-10
+
+Targets **yxl 0.5.1**, as 0.2.5 did.
+
+- **Text with a comma, bracket or brace is quoted when it is written** (#203).
+  Typing `x]` into a cell written as `{ value: …, style: … }` or into a `data:`
+  row saved a file `yxl build` could not read; typing `a, b` there was refused
+  with a reason that made no sense.
+- **A spec that is not valid YAML says so** (#204). A stray bracket or an
+  unterminated quote was passed over in silence, and the preview drew what it
+  could recover; it is now reported, and an edit that would leave the file
+  like that is refused.
+
 ## 0.2.5 — 2026-10-08
 
 Targets **yxl 0.5.1**, as 0.2.4 did.
