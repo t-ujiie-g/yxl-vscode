@@ -190,5 +190,29 @@ describe('parse', () => {
       const { diagnostics } = read('use: *missing\n');
       expect(diagnostics[0]?.file).toBe('test.yxl.yaml');
     });
+
+    describe('reports what is not YAML at all (#204)', () => {
+      it.each([
+        ['a bracket closing nothing in a flow mapping', 'cells:\n  A1: { value: x], style: 1 }\n'],
+        ['a brace closing the flow mapping early', 'cells:\n  A1: { value: a}b, style: 1 }\n'],
+        ['a bracket closing nothing after a flow sequence', 'cells:\n  A1: [a, b]]\n'],
+        ['an unterminated quote', 'cells:\n  A1: "unterminated\n'],
+        ['an entry indented short of its siblings', 'cells:\n  A1: 1\n B1: 2\n'],
+      ])('%s', (_label, source) => {
+        const { diagnostics } = read(source);
+        expect(diagnostics.map((one) => one.code)).toContain(CODE.syntax);
+        expect(english(diagnostics[0]?.message ?? '')).toMatch(/^this is not valid YAML: /);
+      });
+
+      it('leaves a key written twice to the loader, which names it', () => {
+        expect(read('a: 1\na: 2\n').diagnostics).toEqual([]);
+      });
+
+      it('places the error where the YAML went wrong', () => {
+        const source = 'cells:\n  A1: [a, b]]\n';
+        const [found] = read(source).diagnostics;
+        expect(source.slice(found?.span.start, found?.span.end)).toBe(']');
+      });
+    });
   });
 });

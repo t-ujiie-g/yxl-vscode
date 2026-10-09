@@ -1,5 +1,5 @@
 import { type Diagnostic, error, type Saying, type Span, span, union } from '@yxl-vscode/diag';
-import { CST, Parser } from 'yaml';
+import { Composer, CST, Parser } from 'yaml';
 import { CODE, type Code } from './codes';
 import type { Entry, Node, Parsed, Scalar, ScalarStyle, Sequence } from './node';
 import { resolvePlain } from './scalar';
@@ -17,7 +17,8 @@ const STYLES: Record<string, ScalarStyle> = {
  */
 export function parse(source: string, options: { file: string }): Parsed {
   const reader = new Reader(options.file, source);
-  const documents = [...new Parser().parse(source)].filter((t) => t.type === 'document');
+  const tokens = [...new Parser().parse(source)];
+  const documents = tokens.filter((t) => t.type === 'document');
 
   const [first, ...rest] = documents;
   for (const extra of rest) {
@@ -27,8 +28,18 @@ export function parse(source: string, options: { file: string }): Parsed {
     });
   }
 
+  syntaxErrors(tokens, reader);
   const root = first?.value ? reader.node(first.value) : null;
   return { root, diagnostics: reader.diagnostics, source, file: options.file };
+}
+
+/** What YAML forbids and the token stream recovers past silently; duplicate keys are the loader's. */
+function syntaxErrors(tokens: readonly CST.Token[], reader: Reader): void {
+  const [first] = new Composer({ uniqueKeys: false }).compose(tokens);
+  for (const found of first?.errors ?? []) {
+    const [detail = ''] = found.message.split('\n');
+    reader.reject(CODE.syntax, say('cst.syntax', { detail }), span(found.pos[0], found.pos[1]));
+  }
 }
 
 class Reader {

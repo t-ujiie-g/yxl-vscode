@@ -161,6 +161,29 @@ describe('an edit that would break the spec', () => {
 
     expect(done.ok).toBe(true);
   });
+
+  it('is refused when it adds an error like one the spec already had', () => {
+    const broken = SPEC.replace('A1: Region', 'A1: { $ref: nosuch }');
+    const done = edit(broken, about('Sales!B1'), {
+      op: 'write',
+      path: ['sheets', 0, 'cells', 'B1'],
+      source: '{ $ref: other }',
+    });
+
+    expect(done.ok).toBe(false);
+  });
+
+  it('is refused when what it wrote is not YAML, though the parser recovers a value (#204)', () => {
+    const done = edit(SPEC, about('Sales!A1'), {
+      op: 'write',
+      path: ['sheets', 0, 'cells', 'A1'],
+      source: '{ value: x], format: "@" }',
+    });
+
+    expect(done.ok).toBe(false);
+    if (done.ok !== false) return;
+    expect(done.diagnostics[0]?.code).toBe('cst.syntax');
+  });
 });
 
 describe('an edit that cannot be made at all', () => {

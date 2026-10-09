@@ -160,6 +160,10 @@ function errorsBeyond(
   before: readonly Diagnostic[],
   after: readonly Diagnostic[],
 ): readonly Diagnostic[] {
-  const had = new Set(before.map((one) => `${one.code}@${one.file}`));
-  return after.filter((one) => !had.has(`${one.code}@${one.file}`));
+  const had = new Set(before.map(kindOf));
+  return after.filter((one) => !had.has(kindOf(one)));
+}
+
+function kindOf(diagnostic: Diagnostic): string {
+  return `${diagnostic.code}@${diagnostic.file}@${JSON.stringify(diagnostic.message)}`;
 }

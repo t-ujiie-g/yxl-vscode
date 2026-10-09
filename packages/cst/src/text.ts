@@ -22,6 +22,7 @@ export type Says = {
   'cst.cannot-remove-root': Nothing;
   'cst.overlapping-edits': Nothing;
   'cst.multiple-documents': Nothing;
+  'cst.syntax': { detail: string };
   'cst.alias': Nothing;
   'cst.non-string-key': Nothing;
   'cst.unexpected-token': { token: string };
@@ -57,6 +58,7 @@ const en: Words<Says> = {
   'cst.cannot-remove-root': () => 'the document root cannot be removed',
   'cst.overlapping-edits': () => 'two edits cover the same text',
   'cst.multiple-documents': () => 'a spec holds one document; the rest are ignored',
+  'cst.syntax': ({ detail }) => `this is not valid YAML: ${detail}`,
   'cst.alias': () => 'YAML aliases are not supported; name the value in `defs:` and reference it',
   'cst.non-string-key': () => 'a mapping key must be text',
   'cst.unexpected-token': ({ token }) => `unexpected ${token}`,
@@ -88,6 +90,7 @@ const ja: Words<Says> = {
   'cst.cannot-remove-root': () => 'ドキュメントのルートは削除できません',
   'cst.overlapping-edits': () => '2 つの編集が同じ範囲にかかっています',
   'cst.multiple-documents': () => 'spec が持つドキュメントは 1 つで、残りは無視されます',
+  'cst.syntax': ({ detail }) => `YAML として正しくありません: ${detail}`,
   'cst.alias': () =>
     'YAML のエイリアスには対応していません。`defs:` で名前を付けて参照してください',
   'cst.non-string-key': () => 'マッピングのキーは文字列でなければなりません',

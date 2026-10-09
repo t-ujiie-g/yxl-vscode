@@ -4,6 +4,7 @@ import { resolvePlain } from './scalar';
 export type Value = string | number | boolean | null;
 
 const INDICATORS = new Set('-?:,[]{}#&*!|>\'"%@`');
+const FLOW_INDICATORS = /[,[\]{}]/;
 
 /**
  * A value as YAML source, keeping the `style` the replaced node had so the diff
@@ -26,12 +27,13 @@ function renderNumber(value: number): string {
   return String(value);
 }
 
-/** Whether text written bare reads back as itself — `resolvePlain` run backwards. */
+/** Whether text written bare reads back as itself, in a flow collection too (#203). */
 function isPlainSafe(text: string): boolean {
   if (text === '') return false;
   if (text !== text.trim()) return false;
   if (/[\n\r\t]/.test(text)) return false;
   if (INDICATORS.has(text[0] as string)) return false;
+  if (FLOW_INDICATORS.test(text)) return false;
   if (text.includes(': ') || text.endsWith(':')) return false;
   if (text.includes(' #')) return false;
   return resolvePlain(text) === text;

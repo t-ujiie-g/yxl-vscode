@@ -50,6 +50,10 @@ describe('renderScalar', () => {
       [' padded', '" padded"'],
       ['trailing ', '"trailing "'],
       ['ends:', '"ends:"'],
+      ['x]', '"x]"'],
+      ['a}b', '"a}b"'],
+      ['a, b', '"a, b"'],
+      ['x[y', '"x[y"'],
     ])('%s', (value, expected) => {
       expect(renderScalar(value)).toBe(expected);
     });
@@ -128,5 +132,28 @@ describe('what renderScalar writes, parse reads back unchanged', () => {
 
   it.each(values.map((v) => [JSON.stringify(v), v] as const))('%s', (_label, value) => {
     expect(roundTrip(value)).toEqual(value);
+  });
+});
+
+describe('what renderScalar writes into a flow collection, parse reads back unchanged', () => {
+  function inFlow(value: Value): Value[] {
+    const written = renderScalar(value);
+    const { root, diagnostics } = parse(`key: [${written}, { k: ${written} }]\n`, {
+      file: 'written.yaml',
+    });
+    expect(diagnostics, `writing ${JSON.stringify(value)} produced ${written}`).toEqual([]);
+
+    const seq = root?.kind === 'map' ? root.entries[0]?.value : undefined;
+    if (seq?.kind !== 'seq') throw new Error(`writing ${JSON.stringify(value)} gave ${written}`);
+    const [item, map] = seq.items;
+    const inner = map?.kind === 'map' ? map.entries[0]?.value : undefined;
+    if (item?.kind !== 'scalar' || inner?.kind !== 'scalar') {
+      throw new Error(`writing ${JSON.stringify(value)} gave ${written}`);
+    }
+    return [item.value, inner.value];
+  }
+
+  it.each(['x]', 'a}b', 'a, b', 'x[y', '{a', 'A1:B2', 'APAC'])('%s', (value) => {
+    expect(inFlow(value)).toEqual([value, value]);
   });
 });

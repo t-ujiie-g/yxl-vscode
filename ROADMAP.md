@@ -3953,6 +3953,36 @@ than widening it silently.
 
 ## 11. Living changelog
 
+### 2026-10-10 — A write that broke the YAML was saved as a success (#203, #204, 0.2.6)
+
+Reported against 0.2.5. Typing `x]` into a cell written as a flow mapping
+saved `{ value: x], … }`, which `yxl build` refuses; typing `a, b` was refused
+for a reason no reader could act on.
+
+- **Text holding `,` `[` `]` `{` or `}` is quoted wherever it is written**
+  (#203). `renderScalar` looked at the first character only, so inside a flow
+  mapping, a `data:` row or a `list:` the rest was written bare. It now quotes
+  such text in a block too: the writer does not know which it is writing into,
+  and every caller that builds a flow collection by hand goes through it.
+- **What is not YAML is a diagnostic** (#204). The token stream recovers past a
+  stray bracket or an unterminated quote without a word, and our reader read
+  what it recovered, so the checker compared two clean compilations and let the
+  broken file through. `parse` now composes the same tokens with `yaml`'s
+  `Composer` and reports its errors as `cst.syntax`; duplicate keys stay the
+  loader's. Composing a 950 KB spec costs 65 ms over the 286 ms the parse
+  already took.
+- **The checker tells errors apart by what they say**, not by code and file
+  alone: a spec with one unknown `$ref` let every further unknown `$ref`
+  through. A copy of an error already there — a band split into three, each
+  naming the same missing style — still passes, as a spec mid-edit must.
+- Not done: the checker does not yet confirm a written cell came to the value
+  typed. A compiled value is not the typed one — a date becomes a serial, a
+  `{{param}}` is filled — so the comparison needs the typed meaning carried
+  through, and with the two fixes above the case that prompted it is closed.
+- Checked with yxl 0.5.1: the quoted flow mapping and `data:` row build.
+- 2646 → 2673 tests, run against yxl 0.5.1. Comment shape: export 998 / 2167
+  (avg 2.2), private 657 / 657 (1.0), inline 142 / 227 (1.6), 0 over.
+
 ### 2026-10-08 — Four things the preview drew unlike Excel (#198–#201, 0.2.5)
 
 Reported together against 0.2.4, from one real workbook. All four were in how

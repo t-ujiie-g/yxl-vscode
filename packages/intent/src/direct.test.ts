@@ -68,6 +68,28 @@ describe('typing a value into a cell', () => {
 
     expect(edited(sources, setValue(grid, at('A1'), '008', read))).toContain('A1: "008"');
   });
+
+  describe('quotes text holding the punctuation of a flow collection (#203)', () => {
+    it.each(['x]', 'a}b', 'a, b', 'x[y'])('%s, inside a flow mapping', (typed) => {
+      const sources = { [ROOT]: `${SALES}    cells:\n      A1: { value: x, format: "@" }\n` };
+      const { grid, read } = files(sources);
+
+      expect(edited(sources, setValue(grid, at('A1'), typed, read))).toContain(
+        `A1: { value: ${JSON.stringify(typed)}, format: "@" }`,
+      );
+    });
+
+    it.each(['x]', 'a}b', 'a, b'])('%s, inside a `data:` row', (typed) => {
+      const sources = {
+        [ROOT]: `${SALES}    data:\n      - at: C1\n        values:\n          - [APAC, 1]\n`,
+      };
+      const { grid, read } = files(sources);
+
+      expect(edited(sources, setValue(grid, at('C1'), typed, read))).toContain(
+        `- [${JSON.stringify(typed)}, 1]`,
+      );
+    });
+  });
 });
 
 describe('what typing into a cell will not do', () => {
