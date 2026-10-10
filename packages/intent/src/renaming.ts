@@ -45,57 +45,18 @@ export function renameSheet(spec: Projection, where: Renaming, read: Reading): I
   if (sheet === undefined) return refused(say('intent.no-such-sheet', { sheet: where.sheet }));
 
   const ops = new Map<FilePath, Op[]>();
-  const put = (id: NodeId, key: string | Path | null, value: string): boolean => {
+  const put = (id: NodeId, under: Path, value: string): boolean => {
     const found = located(id, read);
     if (found.kind === 'refused') return false;
 
-    const path: Path = [
-      ...found.path,
-      ...(key === null ? [] : typeof key === 'string' ? [key] : key),
-    ];
+    const path: Path = [...found.path, ...under];
     ops.set(found.file, [...(ops.get(found.file) ?? []), { op: 'set', path, value }]);
     return true;
   };
 
-  if (!put(sheet.id, KEY.name, to)) return refused(say('intent.no-place-to-rename'));
+  if (!put(sheet.id, [KEY.name], to)) return refused(say('intent.no-place-to-rename'));
 
-  const bodies: { id: NodeId; key: string | null; body: string; what: string }[] = [
-    ...spec.doc.sheets.flatMap((one) => [
-      ...one.cells.flatMap((cell) =>
-        cell.formula?.kind === 'inline'
-          ? [
-              {
-                id: cell.id,
-                key: 'formula',
-                body: cell.formula.body,
-                what: `a cell of \`${nameOf(one)}\``,
-              },
-            ]
-          : [],
-      ),
-      ...one.formulas.map((range) => ({
-        id: range.id,
-        key: 'formula',
-        body: range.formula,
-        what: `a range of \`${nameOf(one)}\``,
-      })),
-    ]),
-    ...spec.doc.defs.formulas.map((def) => ({
-      id: def.id,
-      key: null,
-      body: def.body,
-      what: `\`${def.name}\``,
-    })),
-  ];
-
-  for (const one of bodies) {
-    const now = renamed(one.body, where.sheet, to);
-    if (!now.ok)
-      return refused(say('intent.named-formula-breaks', { what: one.what, why: now.why }));
-    if (now.formula !== one.body) put(one.id, one.key, now.formula);
-  }
-
-  for (const one of references(spec.doc, read)) {
+  for (const one of [...formulas(spec.doc), ...references(spec.doc, read)]) {
     const now = renamed(one.text, where.sheet, to);
     if (!now.ok)
       return refused(say('intent.named-formula-breaks', { what: one.where, why: now.why }));
@@ -107,7 +68,7 @@ export function renameSheet(spec: Projection, where: Renaming, read: Reading): I
     const read1 = at === null ? null : parseQualifiedAddr(at);
     if (read1 === null || read1.sheet !== where.sheet) continue;
 
-    put(one.id, KEY.at, qualified(to, read1.at));
+    put(one.id, [KEY.at], qualified(to, read1.at));
   }
 
   const files = [...ops.keys()];
@@ -134,9 +95,8 @@ function spelled(at: Override['at']): string | null {
 }
 
 /**
- * Text outside a cell that may name a sheet, as yxl reads it: a rule's
- * `formula:`, a list's `from:`, a link's `to:`, and the ranges a chart or a
- * sparkline plots. `path` is under the node `id`; `where` names it for a reader.
+ * One piece of the spec's text that may name a sheet, at `path` under the node
+ * `id`; `where` names it for a reader.
  */
 export interface Reference {
   readonly id: NodeId;
@@ -146,7 +106,33 @@ export interface Reference {
   readonly where: string;
 }
 
-/** Every `Reference` the spec writes, on every sheet; a `${...}` in its place is not one. */
+/** Every formula the spec writes in place: in a cell, over a `formulas:` range, and in `defs.formulas`. */
+function formulas(doc: SpecDoc): Reference[] {
+  const found: Reference[] = [];
+
+  for (const sheet of doc.sheets) {
+    const on = nameOf(sheet);
+    for (const cell of sheet.cells) {
+      if (cell.formula?.kind !== 'inline') continue;
+      const where = `a cell of \`${on}\``;
+      found.push({ id: cell.id, path: [KEY.formula], text: cell.formula.body, on, where });
+    }
+    for (const range of sheet.formulas) {
+      const where = `a range of \`${on}\``;
+      found.push({ id: range.id, path: [KEY.formula], text: range.formula, on, where });
+    }
+  }
+  for (const def of doc.defs.formulas) {
+    found.push({ id: def.id, path: [], text: def.body, on: null, where: `\`${def.name}\`` });
+  }
+
+  return found;
+}
+
+/**
+ * Every reference besides `formulas`, as yxl reads them: a rule's `formula:`, a
+ * list's `from:`, a link's `to:`, and what a chart or a sparkline plots.
+ */
 export function references(doc: SpecDoc, read: Reading): Reference[] {
   const found: Reference[] = [];
 

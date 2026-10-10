@@ -3958,6 +3958,40 @@ than widening it silently.
 
 ## 11. Living changelog
 
+### 2026-10-11 — Refactoring pass after 0.2.6–0.2.8 (`AGENTS.md` §8)
+Walked §8's lenses over what #220–#222 added and the code they touched.
+Findings, and what each came to:
+
+- **§8.1 Constants.** `KEY.formula` arrived with #216, and `'formula'` was
+  still a literal path key in `direct.ts`, `line.ts` and `resolve.ts`. One
+  constant now.
+- **§8.2 Duplicates.** `fill.ts` quoted a range's formula by hand, a second
+  `renderScalar(…, 'double')` that did not escape a line break. Gone.
+  `renameSheet` ran two loops of the same shape, one over formulas and one over
+  `references`; `formulas()` now returns the same `Reference`, and one loop
+  rewrites both.
+- **§8.3 File splitting.** `compile/sheet.ts` is 490 lines. **Not split**: the
+  overlap check reads the cells and ranges placement has just made, and moving
+  it would hand both across a seam for no reader's benefit.
+- **§8.4 Tests.** `sheetPrefix` and `references` had no direct test; they do.
+- **§8.5 Documentation.** The README's `name` row said only formulas follow a
+  rename. Its row for putting lines in says every construct the line reaches
+  moves, which #206 shows is not so; that sentence is #206's to correct, with
+  the fix.
+- **§8.6 Comments.** A stray doc comment sat above another in `line.ts`; gone.
+  0 over the limit before and after.
+- **§8.7 Layers.** Clean.
+- **Found on the way:** `line.ts` read a qualified address back by splitting
+  at the first `!`, and a sheet name may hold one, so a line put into sheet
+  `Q!1` offered to move cells of a sheet `Q`. It splits at the last `!` now,
+  since an address never holds one.
+- **Recorded, not changed:** the corpus test that removes every entry of
+  `subtotals.yxl.yaml` takes 1.07 s, up from 0.85 s before #204 added a second
+  YAML pass to every parse. It failed once in a full run and passed on every
+  rerun; the error was not kept, and vitest's 5 s limit is the likely cause.
+- 2706 → 2715 tests, run against yxl 0.5.1. Comment shape: export 1003 / 2179
+  (avg 2.2), private 658 / 658 (1.0), inline 142 / 227 (1.6), 0 over.
+
 ### 2026-10-10 — A sheet renamed or taken out left references behind (#207, 0.2.8)
 
 Reported against 0.2.5: renaming `Sales` rewrote cell formulas, `formulas:`,

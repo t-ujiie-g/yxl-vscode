@@ -50,7 +50,7 @@ export const SHEET_KEYS: readonly Covered[] = [
   {
     key: 'name',
     standing: 'editable',
-    says: 'renamed from its tab; every formula that names it follows',
+    says: 'renamed from its tab; every formula, link, list, rule, chart and sparkline that names it follows',
   },
   {
     key: 'cells',

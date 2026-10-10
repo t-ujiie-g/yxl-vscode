@@ -1,7 +1,7 @@
 import type { Line, SheetName } from '@yxl-vscode/units';
 import { describe, expect, it } from 'vitest';
 import { files, tried } from './harness';
-import { drawLine } from './line';
+import { drawLine, setLine } from './line';
 
 const SALES = 'sheets:\n  - name: Sales\n';
 
@@ -167,5 +167,18 @@ describe('a row taken away', () => {
     expect(drawn(spec, row(5, -1))).toBe(
       'refused: `B1` holds `=A5*2`, and `A5` names a row this would take away',
     );
+  });
+});
+
+describe('what a line offers to move', () => {
+  it('names the sheet whole where the name holds a `!`', () => {
+    const spec = 'sheets:\n  - name: Q!1\n    cells:\n      A1: 1\n';
+    const { doc, grid, read } = files(spec);
+    const line: Line = { sheet: 'Q!1' as SheetName, axis: 'row', at: 1, by: 1 };
+
+    expect(setLine({ doc, grid }, line, read)[0]?.moves).toEqual([
+      { sheet: 'Q!1', at: 'A1' },
+      { sheet: 'Q!1', at: 'A2' },
+    ]);
   });
 });
