@@ -1,7 +1,7 @@
 import type { SheetName } from '@yxl-vscode/units';
 import { describe, expect, it } from 'vitest';
 import { files, tried } from './harness';
-import { renameSheet } from './renaming';
+import { references, renameSheet } from './renaming';
 
 /** The sheet renamed, through the checker — the file, or why not. */
 function called(source: string, sheet: string, name: string): string {
@@ -117,5 +117,37 @@ describe('what a rename will not do', () => {
 
   it('rename a sheet that is not there', () => {
     expect(called(TWO, 'Nowhere', 'Revenue')).toBe('refused: there is no sheet named `Nowhere`');
+  });
+});
+
+describe('references', () => {
+  it('lists every reference besides a formula, with the path under its node', () => {
+    const spec = `sheets:
+  - name: Summary
+    links:
+      A1: { to: "Sales!A1" }
+      A2: https://example.com
+    validations:
+      - { at: B1:B1, list: { from: Sales!A1:A2 } }
+    conditional:
+      - { at: A1:A1, formula: "Sales!A1>0", style: { fill: "FF0000" } }
+    charts:
+      - { type: column, at: D2, series: [{ values: Sales!A1:A2, name_from: Sales!B1 }] }
+    sparklines:
+      - { at: C1, data: Sales!A1:B1 }
+      - cells:
+          - { at: C2, data: Sales!A2:B2 }
+`;
+    const { doc, read } = files(spec);
+
+    expect(references(doc, read).map((one) => [one.where, one.path, one.text])).toEqual([
+      ['Summary!A1:A1', ['formula'], 'Sales!A1>0'],
+      ['Summary!B1:B1', ['list', 'from'], 'Sales!A1:A2'],
+      ['Summary!A1', ['to'], 'Sales!A1'],
+      ['Summary!D2', ['values'], 'Sales!A1:A2'],
+      ['Summary!D2', ['name_from'], 'Sales!B1'],
+      ['Summary!C1', ['data'], 'Sales!A1:B1'],
+      ['Summary!C2', ['cells', 0, 'data'], 'Sales!A2:B2'],
+    ]);
   });
 });

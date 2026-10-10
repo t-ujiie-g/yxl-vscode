@@ -1,5 +1,5 @@
 import { type CompiledSheet, cellAt, sheetOf } from '@yxl-vscode/compile';
-import type { Node, Op } from '@yxl-vscode/cst';
+import { type Node, type Op, renderScalar } from '@yxl-vscode/cst';
 import { type Saying, sentence } from '@yxl-vscode/diag';
 import { type Axis, KEY } from '@yxl-vscode/spec';
 import {
@@ -145,7 +145,7 @@ function asRange(sheet: CompiledSheet, where: Filling, read: Reading): Candidate
       : { top: one, left: from, bottom: one, right: where.rect.right };
     if (written(sheet, rect)) return null;
 
-    ranges.push(`at: ${rangeOf(rect)}\nformula: ${quoted(cell.formula)}`);
+    ranges.push(`at: ${rangeOf(rect)}\nformula: ${renderScalar(cell.formula, 'double')}`);
     for (const at of addressesOf(rect)) moves.push({ sheet: where.sheet, at });
   }
 
@@ -187,8 +187,4 @@ function written(sheet: CompiledSheet, rect: Rect): boolean {
   return addressesOf(rect)
     .slice(1)
     .some((at) => cellAt(sheet, at) !== null);
-}
-
-function quoted(formula: string): string {
-  return `"${formula.replaceAll('\\', '\\\\').replaceAll('"', '\\"')}"`;
 }

@@ -392,7 +392,7 @@ function wholeRange(
     intent: {
       kind: 'edit',
       file: found.file,
-      patch: { ops: [{ op: 'set', path: [...found.path, 'formula'], value: formula }] },
+      patch: { ops: [{ op: 'set', path: [...found.path, KEY.formula], value: formula }] },
       expects: {
         cells: new Set(moves.map((one) => qualified(one.sheet as SheetName, one.at))),
         beyond: 'refuse',

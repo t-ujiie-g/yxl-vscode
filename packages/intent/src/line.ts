@@ -87,11 +87,10 @@ export function setLine(spec: Projection, line: Line, read: Reading): readonly C
   ];
 }
 
-/** What the gesture is, as the reader asked for it. */
-/** One qualified address back into the sheet and cell it names. */
+/** One qualified address back into the sheet and cell it names; a sheet name may hold `!`, an address never does. */
 function named(one: string): FullAddr {
-  const [sheet = '', at = ''] = one.split('!');
-  return { sheet: sheet as SheetName, at: at as A1Addr };
+  const bang = one.lastIndexOf('!');
+  return { sheet: one.slice(0, bang) as SheetName, at: one.slice(bang + 1) as A1Addr };
 }
 
 interface Writing {
@@ -143,7 +142,7 @@ function writing(sheet: CompiledSheet, line: Line, read: Reading): Writing | Int
     const now = shifted(cell.formula, sheet.name, line);
     if (now.ok && now.formula !== cell.formula) {
       put(located(from.node, read), (path) => [
-        { op: 'set', path: [...path, 'formula'], value: now.formula },
+        { op: 'set', path: [...path, KEY.formula], value: now.formula },
       ]);
     }
   }
@@ -185,7 +184,7 @@ function writing(sheet: CompiledSheet, line: Line, read: Reading): Writing | Int
     put(found, (path) => [
       { op: 'set', path: [...path, KEY.at], value: rangeOf(rect) },
       ...(now.ok && now.formula !== fill.formula
-        ? [{ op: 'set', path: [...path, 'formula'], value: now.formula } as const]
+        ? [{ op: 'set', path: [...path, KEY.formula], value: now.formula } as const]
         : []),
     ]);
   }

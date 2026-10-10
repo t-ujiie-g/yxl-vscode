@@ -162,14 +162,14 @@ export function setFormula(
   if (written.kind === 'refused') return written;
 
   const at = written.node;
-  if (at.kind !== 'map' || !holds(at, 'formula')) {
+  if (at.kind !== 'map' || !holds(at, KEY.formula)) {
     return refused(say('intent.written-as-a-value', { at: where.at }));
   }
 
   return {
     kind: 'edit',
     file: written.file,
-    patch: { ops: [{ op: 'set', path: [...written.path, 'formula'], value: formula }] },
+    patch: { ops: [{ op: 'set', path: [...written.path, KEY.formula], value: formula }] },
     expects: { cells: new Set([qualified(sheet.name, where.at)]), beyond: 'ask' },
   };
 }
@@ -200,7 +200,7 @@ function valuePath(origin: FacetOrigin, sheet: CompiledSheet, at: A1Addr, read: 
   if (written.node.kind !== 'map') return written;
 
   // A `value:` beside a `formula:` is Excel's cached result (`docs/spec.md` §3).
-  if (holds(written.node, 'formula')) {
+  if (holds(written.node, KEY.formula)) {
     return refused(say('intent.holds-a-formula', { at }));
   }
 
