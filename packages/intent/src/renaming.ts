@@ -1,5 +1,5 @@
-import type { Op, Path } from '@yxl-vscode/cst';
-import { KEY, type Override } from '@yxl-vscode/spec';
+import { holds, type Op, type Path } from '@yxl-vscode/cst';
+import { KEY, type Override, type SpecDoc } from '@yxl-vscode/spec';
 import {
   type FilePath,
   type NodeId,
@@ -29,7 +29,8 @@ export interface Renaming {
 
 /**
  * A sheet renamed: its own `name:`, and everything that named it — every
- * formula, every `defs.formulas` body, and every override's `at:`.
+ * formula, every `defs.formulas` body, every override's `at:`, and every
+ * `references` entry.
  */
 export function renameSheet(spec: Projection, where: Renaming, read: Reading): Intent {
   const why = whyNotASheetName(where.name);
@@ -44,11 +45,14 @@ export function renameSheet(spec: Projection, where: Renaming, read: Reading): I
   if (sheet === undefined) return refused(say('intent.no-such-sheet', { sheet: where.sheet }));
 
   const ops = new Map<FilePath, Op[]>();
-  const put = (id: NodeId, key: string | null, value: string): boolean => {
+  const put = (id: NodeId, key: string | Path | null, value: string): boolean => {
     const found = located(id, read);
     if (found.kind === 'refused') return false;
 
-    const path: Path = key === null ? found.path : [...found.path, key];
+    const path: Path = [
+      ...found.path,
+      ...(key === null ? [] : typeof key === 'string' ? [key] : key),
+    ];
     ops.set(found.file, [...(ops.get(found.file) ?? []), { op: 'set', path, value }]);
     return true;
   };
@@ -91,6 +95,13 @@ export function renameSheet(spec: Projection, where: Renaming, read: Reading): I
     if (now.formula !== one.body) put(one.id, one.key, now.formula);
   }
 
+  for (const one of references(spec.doc, read)) {
+    const now = renamed(one.text, where.sheet, to);
+    if (!now.ok)
+      return refused(say('intent.named-formula-breaks', { what: one.where, why: now.why }));
+    if (now.formula !== one.text) put(one.id, one.path, now.formula);
+  }
+
   for (const one of spec.doc.overrides) {
     const at = spelled(one.at);
     const read1 = at === null ? null : parseQualifiedAddr(at);
@@ -120,4 +131,57 @@ export function renameSheet(spec: Projection, where: Renaming, read: Reading): I
 /** What an override's `at:` says, or `null` where a template stands in its place. */
 function spelled(at: Override['at']): string | null {
   return typeof at === 'string' || !('kind' in at) ? qualified(at.sheet, at.at) : null;
+}
+
+/**
+ * Text outside a cell that may name a sheet, as yxl reads it: a rule's
+ * `formula:`, a list's `from:`, a link's `to:`, and the ranges a chart or a
+ * sparkline plots. `path` is under the node `id`; `where` names it for a reader.
+ */
+export interface Reference {
+  readonly id: NodeId;
+  readonly path: Path;
+  readonly text: string;
+  readonly on: SheetName | null;
+  readonly where: string;
+}
+
+/** Every `Reference` the spec writes, on every sheet; a `${...}` in its place is not one. */
+export function references(doc: SpecDoc, read: Reading): Reference[] {
+  const found: Reference[] = [];
+
+  for (const sheet of doc.sheets) {
+    const on = nameOf(sheet);
+    const add = (id: NodeId, path: Path, text: unknown, at: unknown) => {
+      if (typeof text !== 'string') return;
+      const where = typeof at === 'string' ? `${on}!${at}` : `${on}`;
+      found.push({ id, path, text, on, where });
+    };
+
+    for (const rule of sheet.conditional) {
+      if (rule.test.kind === 'formula') add(rule.id, [KEY.formula], rule.test.body, rule.at);
+    }
+    for (const one of sheet.validations) {
+      if (one.test.kind === 'listFrom') add(one.id, [KEY.list, 'from'], one.test.from, one.at);
+    }
+    for (const link of sheet.links) {
+      if (link.target.kind === 'to') add(link.id, [KEY.to], link.target.text, link.at);
+    }
+    for (const chart of sheet.charts) {
+      for (const series of chart.series) {
+        add(series.id, [KEY.values], series.values, chart.at);
+        add(series.id, [KEY.categories], series.categories, chart.at);
+        add(series.id, [KEY.nameFrom], series.nameFrom, chart.at);
+      }
+    }
+    for (const group of sheet.sparklines) {
+      const node = located(group.id, read);
+      const listed = node.kind === 'found' && holds(node.node, KEY.cells);
+      group.cells.forEach((one, index) => {
+        add(group.id, listed ? [KEY.cells, index, KEY.data] : [KEY.data], one.data, one.at);
+      });
+    }
+  }
+
+  return found;
 }

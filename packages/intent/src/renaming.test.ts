@@ -68,6 +68,40 @@ sheets:
   });
 });
 
+describe('a sheet renamed, where more than a cell names it (#207)', () => {
+  const REFERRED = `sheets:
+  - name: Sales
+    cells: { A1: 1, A2: 2, B1: 3, B2: 4 }
+  - name: Summary
+    cells:
+      E1: { formula: "SUM(Sales:Summary!A1)" }
+    links:
+      A1: { to: "Sales!A1" }
+    validations:
+      - { at: B1:B1, list: { from: Sales!A1:A2 } }
+    conditional:
+      - { at: A1:A1, formula: "Sales!A1>0", style: { fill: "FF0000" } }
+    charts:
+      - { type: column, at: D2, series: [{ values: Sales!A1:A2, categories: Sales!B1:B2 }] }
+    sparklines:
+      - { at: C1, data: Sales!A1:B1 }
+      - cells:
+          - { at: C2, data: Sales!A2:B2 }
+`;
+
+  it('takes a link, a list, a rule, a chart, a sparkline and a 3D reference with it', () => {
+    expect(called(REFERRED, 'Sales', 'Revenue')).toBe(REFERRED.replaceAll('Sales', 'Revenue'));
+  });
+
+  it('quotes each where the new name needs it', () => {
+    const done = called(REFERRED, 'Sales', 'Q3 data');
+
+    expect(done).toContain(`list: { from: "'Q3 data'!A1:A2" }`);
+    expect(done).toContain(`- { at: C2, data: "'Q3 data'!A2:B2" }`);
+    expect(done).toContain(`formula: "SUM('Q3 data:Summary'!A1)"`);
+  });
+});
+
 describe('what a rename will not do', () => {
   it('call a sheet what another sheet is called', () => {
     expect(called(TWO, 'Sales', 'Notes')).toBe('refused: there is already a sheet named `Notes`');

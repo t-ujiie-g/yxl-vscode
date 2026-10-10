@@ -328,6 +328,42 @@ describe('a `formulas:` range over something else that writes a cell (#216)', ()
   });
 });
 
+describe('a reference to a sheet the spec does not declare (#207)', () => {
+  it.each([
+    ['a link', '    links:\n      A1: { to: "Nope!A1" }\n'],
+    ['a list', '    validations:\n      - { at: B1:B1, list: { from: Nope!A1:A2 } }\n'],
+    [
+      'a chart',
+      '    charts:\n      - { type: column, at: D2, series: [{ values: Nope!A1:A2 }] }\n',
+    ],
+    [
+      "a chart's categories",
+      '    charts:\n      - { type: column, at: D2, series: [{ values: A1:A2, categories: Nope!B1:B2 }] }\n',
+    ],
+    [
+      'a series name',
+      '    charts:\n      - { type: column, at: D2, series: [{ values: A1:A2, name_from: Nope!B1 }] }\n',
+    ],
+    ['a sparkline', '    sparklines:\n      - { at: C1, data: Nope!A1:B1 }\n'],
+  ])('is reported in %s, naming the sheet', (_label, keys) => {
+    const drawn = grid(`${SALES}${keys}`);
+
+    expect(drawn.diagnostics.map((one) => [one.code, english(one.message)])).toEqual([
+      [CODE.unknownSheet, 'no sheet is named `Nope`'],
+    ]);
+  });
+
+  it('is not reported where the sheet is declared, quoted or not', () => {
+    const spec = `${SALES}    links:\n      A1: { to: "'Sales'!A1" }\n      A2: { to: Sales!A1 }\n`;
+
+    expect(codes(spec)).toEqual([]);
+  });
+
+  it('is not reported in a link to a name, which names no sheet', () => {
+    expect(codes(`${SALES}    links:\n      A1: { to: Totals }\n`)).toEqual([]);
+  });
+});
+
 describe('an override, which is the last thing to speak of a cell', () => {
   const spec = `${SALES}    cells:\n      A2: { value: 1, format: "0.00" }\n`;
 

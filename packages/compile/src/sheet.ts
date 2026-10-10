@@ -31,6 +31,7 @@ import {
   rowsOf,
   type SheetName,
   sheetName,
+  sheetPrefix,
   within,
 } from '@yxl-vscode/units';
 import {
@@ -44,7 +45,7 @@ import {
   spokenBy,
 } from './cell';
 import { CODE } from './codes';
-import { type Ctx, filled, openData, reject, text } from './ctx';
+import { type Ctx, declaredSheet, filled, openData, reject, text } from './ctx';
 import { draw } from './drawing';
 import { chart, image, shape, sparklines } from './float';
 import type {
@@ -429,7 +430,10 @@ function asking(ctx: Ctx, one: Validation): CompiledAsk | null {
   if (test.kind !== 'listFrom') return test;
 
   const read = readRange(ctx, text(ctx, test.from, one), one);
-  return read === null ? null : { kind: 'listFrom', ...read };
+  if (read === null) return null;
+
+  declaredSheet(ctx, read.sheet, one);
+  return { kind: 'listFrom', ...read };
 }
 
 /** Each link by the address it sits on; the later of two links on one cell is the one Excel keeps. */
@@ -440,9 +444,12 @@ function linksOf(ctx: Ctx, links: readonly Link[]): Map<string, CompiledLink> {
     const at = address(ctx, link.at, link);
     if (at === null) continue;
 
+    const target = text(ctx, link.target.text, link);
+    if (link.target.kind === 'to') declaredSheet(ctx, sheetPrefix(target), link);
+
     drawn.set(at, {
       at,
-      target: { kind: link.target.kind, text: text(ctx, link.target.text, link) },
+      target: { kind: link.target.kind, text: target },
       tip: link.tip === null ? null : text(ctx, link.tip, link),
       node: link.id,
     });

@@ -59,5 +59,6 @@ export {
   type QualifiedCell,
   type QualifiedRange,
   qualified,
+  sheetPrefix,
 } from './qualified';
 export { WORDS } from './text';

@@ -34,10 +34,9 @@ export interface Options {
 export function compile(doc: SpecDoc, options: Options = {}): CompiledGrid {
   const ctx = context(doc, options.read ?? null, options.params ?? new Map());
   const quiet = { ...ctx, diagnostics: [] };
-  placeAll(
-    ctx,
-    doc.sheets.map((sheet) => [named(quiet, sheet), sheet] as const),
-  );
+  const sheets = doc.sheets.map((sheet) => [named(quiet, sheet), sheet] as const);
+  for (const [name] of sheets) ctx.sheets.add(name);
+  placeAll(ctx, sheets);
   const drafts = doc.sheets.map((sheet) => compileSheet(ctx, sheet));
 
   for (const override of doc.overrides) applyOverride(ctx, override, drafts);

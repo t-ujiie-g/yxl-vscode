@@ -43,7 +43,13 @@ function calling(from: SheetName, to: SheetName): Rule {
     column: (text) => text,
     row: (text) => text,
     why: (word) => say('units.could-not-be-written', { word }),
-    named: (name) => (name === from ? sheetSpelled(to) : name),
+    named: (name) => {
+      const sheets = name.split(':');
+      if (!sheets.includes(from)) return null;
+      const now = sheets.map((one) => (one === from ? to : one));
+      const bare = now.every((one) => sheetSpelled(one as SheetName) === one);
+      return bare ? now.join(':') : sheetSpelled(now.join(':') as SheetName);
+    },
   };
 }
 
@@ -57,8 +63,8 @@ export function names(formula: string, sheet: SheetName): boolean {
     row: (text) => text,
     why: (word) => say('units.could-not-be-read', { word }),
     named: (name) => {
-      if (name === sheet) found = true;
-      return name;
+      if (name.split(':').includes(sheet)) found = true;
+      return null;
     },
   });
 
@@ -106,7 +112,7 @@ function walked(formula: string, rule: Rule): Moved {
       const text = formula.slice(at, end);
       const quotes = char === "'" && formula[end] === '!';
       named = quotes ? text.slice(1, -1) : null;
-      out.push(quotes && rule.named !== undefined ? rule.named(named as string) : text);
+      out.push((quotes ? rule.named?.(named as string) : null) ?? text);
       at = end;
       continue;
     }
@@ -155,8 +161,8 @@ interface Rule {
   readonly column: (text: string, of: string | null) => string | null;
   readonly row: (text: string, of: string | null) => string | null;
   readonly why: (word: string) => Saying;
-  /** How the sheet a reference names is written, where a rule rewrites that instead. */
-  readonly named?: (name: string) => string;
+  /** The sheet a reference names, written anew, or `null` to keep it as written; `A:B` is a 3D reference. */
+  readonly named?: (name: string) => string | null;
 }
 
 /** Moving a shared formula: relative halves slide, `$`-anchored ones hold still. */
@@ -229,8 +235,14 @@ function word(formula: string, at: number, rule: Rule, of: string | null): Taken
   const text = formula.slice(at, end);
   const after = formula[skipSpace(formula, end)] ?? '';
   if (after === '(' || after === '[' || after === '!') {
-    const sheet = after === '!' && rule.named !== undefined ? rule.named(text) : text;
+    const sheet = (after === '!' ? rule.named?.(text) : null) ?? text;
     return { is: 'text', text: sheet, end, names: after === '!' ? text : null };
+  }
+
+  const last = formula[end] === ':' ? wordEnd(formula, end + 1) : end;
+  if (last > end + 1 && formula[last] === '!') {
+    const sheets = formula.slice(at, last);
+    return { is: 'text', text: rule.named?.(sheets) ?? sheets, end: last, names: sheets };
   }
 
   if (CELL.test(text)) {

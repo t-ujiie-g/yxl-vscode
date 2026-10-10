@@ -15,10 +15,10 @@ import {
   type SpecNode,
   type Style,
 } from '@yxl-vscode/spec';
-import { parseQualifiedCell, type SheetName } from '@yxl-vscode/units';
+import { parseQualifiedCell, type SheetName, sheetPrefix } from '@yxl-vscode/units';
 import { address, colour, spelling } from './cell';
 import { CODE } from './codes';
-import { type Ctx, reject, text } from './ctx';
+import { type Ctx, declaredSheet, reject, text } from './ctx';
 import type {
   CompiledChart,
   CompiledChartAxis,
@@ -53,9 +53,15 @@ export function chart(ctx: Ctx, one: Chart, sheet: SheetName): CompiledChart | n
         reject(ctx, CODE.badAddress, say('compile.not-a-cell-reference', { spelled }), each);
       }
 
+      const values = text(ctx, each.values, each);
+      const categories = each.categories === null ? null : text(ctx, each.categories, each);
+      for (const plotted of [values, categories, spelled]) {
+        if (plotted !== null) declaredSheet(ctx, sheetPrefix(plotted), each);
+      }
+
       return {
-        values: text(ctx, each.values, each),
-        categories: each.categories === null ? null : text(ctx, each.categories, each),
+        values,
+        categories,
         name: each.name === null ? null : text(ctx, each.name, each),
         nameFrom: from,
         node: each.id,
@@ -172,6 +178,9 @@ export function sparklines(ctx: Ctx, group: SparklineGroup): CompiledSparkline[]
     if (at === null) return [];
 
     const data = readRange(ctx, text(ctx, one.data, group), group);
-    return data === null ? [] : [{ ...shared, at, data }];
+    if (data === null) return [];
+
+    declaredSheet(ctx, data.sheet, group);
+    return [{ ...shared, at, data }];
   });
 }
