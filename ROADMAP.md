@@ -3975,6 +3975,38 @@ than widening it silently.
 
 ## 11. Living changelog
 
+### 2026-10-11 — Borders, arrow keys, and what sits below a wrapped row (#212, #218, #219)
+
+Three reports about where the view puts things.
+
+- **A border is drawn on the gridline it shares** (#212). Each cell drew its
+  edges inside itself, so two bordered neighbours showed two lines with the
+  gridline between. Every `td` already carries its own right and bottom
+  gridline; that line is now the boundary's border — the cell's own edge there
+  or its neighbour's facing one, the heavier winning, as in Excel. Only a
+  first-row cell's top edge and a first-column cell's left one, which no
+  neighbour carries, are still drawn inside the cell. A merge takes its look
+  from its top-left cell and its neighbour from its first row or column; a
+  border across a hidden line is not drawn.
+- **Arrow keys and Tab step as Excel steps** (#218): out past the far edge of
+  a merge, over hidden rows and columns, and onto a merge's top-left cell —
+  never onto a cell a merge hides, which has no `<td>` and was taken for one
+  outside the window. Where every line beyond is hidden, the step stays.
+- **What sits over the sheet follows a wrapped row** (#219). The print area,
+  the page breaks and the floats were placed by declared heights while a row
+  with wrapped text grows. After layout, `grownBy()` measures each drawn row
+  against its declaration and moves each of them down by what the rows above
+  grew, stretching the print area over any inside it. Not done: the scroll
+  arithmetic that asks for a window (`wanted()`) and where a dragged float
+  lands (`landing()`) still count declared heights.
+- Checked by rendering the built view in headless Chrome, fed the drawing the
+  host makes: one line per boundary on the gridline, the print area on its
+  rows under a grown row, the shape on its row. The key moves were checked on
+  the verification file's own drawing.
+- 2792 → 2804 tests, run against yxl 0.5.1; the 13 new view tests fail on the
+  old code. Comment shape: export 1017 / 2215 (avg 2.2), private 672 / 672
+  (1.0), inline 148 / 233 (1.6), 0 over.
+
 ### 2026-10-11 — What a cell shows, as Excel shows it (#209, #210, #211, #213)
 
 Four reports of the preview showing a value unlike Excel; each was in how the

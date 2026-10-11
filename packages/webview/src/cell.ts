@@ -79,7 +79,7 @@ export function drawCell(
   const tint = hidden || cell.rich !== null ? null : tinted(cell);
   if (tint !== null) drawn.style.setProperty('color', tint);
 
-  const over = edges(cell.style);
+  const over = edges(cell);
   if (over !== null) drawn.append(over);
 
   return drawn;
@@ -119,9 +119,10 @@ function spilling(text: string, width: number): HTMLElement {
   return over;
 }
 
-/** A cell's own borders, drawn over the grid's lines rather than collapsed with them, which a 1px line loses. */
-function edges(style: StyleValues): HTMLElement | null {
-  const drawn = declarations(style).filter(([name]) => name.startsWith('border-'));
+/** A first-row cell's top edge and a first-column cell's left one, which no neighbour's gridline carries. */
+function edges(cell: DrawnCell): HTMLElement | null {
+  const outer = [cell.row === 1 ? 'border-top' : null, cell.col === 1 ? 'border-left' : null];
+  const drawn = declarations(cell.style).filter(([name]) => outer.includes(name));
   if (drawn.length === 0) return null;
 
   const over = document.createElement('span');
@@ -471,6 +472,38 @@ function declarations(style: StyleValues): [string, string][] {
   }
 
   return css;
+}
+
+/**
+ * The line on a cell's right or bottom gridline, which is the boundary with its
+ * neighbour: its own edge there or the neighbour's facing one, the heavier
+ * winning as in Excel (#212), or `null` to leave the gridline as it is.
+ */
+export function gridline(
+  own: StyleValues | undefined,
+  facing: StyleValues | undefined,
+  side: 'right' | 'bottom',
+): string | null {
+  const across = side === 'right' ? 'left' : 'top';
+  const mine = edgeOf(own, side);
+  const theirs = edgeOf(facing, across);
+  if (mine === null) return theirs?.css ?? null;
+  if (theirs === null) return mine.css;
+
+  return theirs.weight > mine.weight ? theirs.css : mine.css;
+}
+
+function edgeOf(
+  style: StyleValues | undefined,
+  side: (typeof BORDER_EDGES)[number],
+): { css: string; weight: number } | null {
+  const line = style?.[`border.${side}.style`];
+  if (style === undefined || line === undefined) return null;
+
+  const edge = style[`border.${side}.color`];
+  const drawnWith = edge === undefined ? 'currentColor' : painted(edge);
+  const width = thickness(line);
+  return { css: `${width} solid ${drawnWith}`, weight: Number.parseFloat(width) };
 }
 
 /** The look a run or a line of shape text wears, as CSS on the element drawing it. */

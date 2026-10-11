@@ -139,7 +139,7 @@ function box(
     drawn.style.width = `${size.width}px`;
     drawn.style.height = `${size.height}px`;
   }
-  return drawn;
+  return hangs(drawn, at.row);
 }
 
 /** A chart as an outline, a title, a legend and a mark of its type — the sketch ADR-029 asks for. */
@@ -519,4 +519,11 @@ function geometry(kind: string): SVGElement {
 /** How a chart type reads in a sentence: `column_percent_stacked` is three words. */
 function spelled(type: string): string {
   return type.replace(/_/g, ' ');
+}
+
+/** Marks what is drawn over the sheet with the row it hangs from, and the one it reaches down to. */
+export function hangs(drawn: HTMLElement, row: number, reaches?: number): HTMLElement {
+  drawn.dataset['hangs'] = String(row);
+  if (reaches !== undefined) drawn.dataset['reaches'] = String(reaches);
+  return drawn;
 }

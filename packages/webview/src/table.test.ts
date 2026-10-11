@@ -1530,3 +1530,25 @@ describe('what stays put while the rest scrolls', () => {
     ]);
   });
 });
+
+describe('borders two cells share (#212)', () => {
+  it('are one line on the gridline between them, not one inside each', () => {
+    const thin = { 'border.left.style': 'thin', 'border.right.style': 'thin' } as const;
+    const bordered = sheet({
+      rows: 5,
+      columns: 3,
+      cells: [cell(4, 1, { style: thin }), cell(4, 2, { style: thin })],
+    });
+    const into = shown({ drawing: drawing({ sheets: [bordered] }) });
+
+    expect([at(into, 4, 1)?.style.borderRight, at(into, 4, 2)?.style.borderRight]).toEqual([
+      '1px solid',
+      '1px solid',
+    ]);
+    // A4 is in column A, whose left edge has no neighbour's gridline to sit on.
+    expect(at(into, 4, 1)?.querySelector('.edges')?.getAttribute('style')).toBe(
+      'border-left: 1px solid;',
+    );
+    expect(at(into, 4, 2)?.querySelector('.edges')).toBeNull();
+  });
+});

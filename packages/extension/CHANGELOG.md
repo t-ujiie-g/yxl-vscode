@@ -47,6 +47,12 @@ Targets **yxl 0.5.1**, as 0.2.8 did.
   error value centred, a format's text section applied to text, underline and
   strikethrough together, and a conditional format comparing `"1"` no longer
   matching the number 1.
+- **Borders between neighbouring cells are one line on the gridline** (#212),
+  not two lines either side of it.
+- **Arrow keys and Tab move as in Excel** (#218): through a merged cell in one
+  step, and over hidden rows and columns.
+- **The print area, page breaks, charts, images and shapes stay on their rows
+  below a row that has grown to fit wrapped text** (#219).
 
 ## 0.2.8 — 2026-10-10
 

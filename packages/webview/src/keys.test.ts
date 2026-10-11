@@ -93,6 +93,44 @@ describe('where a key takes the reader', () => {
   });
 });
 
+describe('a key over merges and hidden lines, as Excel moves (#218)', () => {
+  const MERGED = sheet({
+    merges: [{ top: 1, left: 1, bottom: 2, right: 3 }],
+    widths: [{ first: 4, last: 4, size: null, hidden: true, group: null }],
+    heights: [{ first: 4, last: 5, size: null, hidden: true, group: null }],
+  });
+  const to = (pressed: string, from: { row: number; col: number }) =>
+    going(key({ key: pressed }), MERGED, from)?.to;
+
+  it('leaves a merge past its far edge, and skips a hidden column', () => {
+    expect(to('ArrowRight', { row: 1, col: 1 })).toEqual({ row: 1, col: 5 });
+    expect(to('Tab', { row: 1, col: 1 })).toEqual({ row: 1, col: 5 });
+  });
+
+  it('leaves a merge downward past its bottom row', () => {
+    expect(to('ArrowDown', { row: 1, col: 1 })).toEqual({ row: 3, col: 1 });
+  });
+
+  it('lands on the top-left of a merge it steps into', () => {
+    expect(to('ArrowUp', { row: 3, col: 2 })).toEqual({ row: 1, col: 1 });
+    expect(to('ArrowLeft', { row: 2, col: 5 })).toEqual({ row: 1, col: 1 });
+  });
+
+  it('skips hidden rows either way', () => {
+    expect(to('ArrowDown', { row: 3, col: 6 })).toEqual({ row: 6, col: 6 });
+    expect(to('ArrowUp', { row: 6, col: 6 })).toEqual({ row: 3, col: 6 });
+  });
+
+  it('stays where it is where every line beyond is hidden', () => {
+    const top = sheet({ heights: [{ first: 1, last: 2, size: null, hidden: true, group: null }] });
+    expect(going(key({ key: 'ArrowUp' }), top, { row: 3, col: 1 })?.to).toEqual({ row: 3, col: 1 });
+  });
+
+  it('stays on the first line rather than stepping off the sheet', () => {
+    expect(to('ArrowUp', { row: 1, col: 6 })).toEqual({ row: 1, col: 6 });
+  });
+});
+
 describe('the rectangle two corners make', () => {
   it('reads the same whichever corner was put down first', () => {
     const one = between({ row: 4, col: 2 }, { row: 2, col: 5 });
