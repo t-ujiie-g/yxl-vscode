@@ -2074,7 +2074,8 @@ here is detectable by analysis.
       cells only, and only where the root file holds `defs:` itself)*
 - [x] Definitions that resolve alike → one the others' readers follow
       *(2026-08-30, found by a reader whose spec held three identical
-      `defs.styles` entries — which of them survives is theirs to choose)*
+      `defs.styles` entries — which of them survives is theirs to choose;
+      2026-10-11, #217: every place a style is named follows, not only cells)*
 - [x] Homogeneous `cells:` rectangles → `data:` with inline `values:`
       *(Phase 11, 2026-08-23, as a gesture on the rectangle)*
 - [x] Columns of translated formulas → a `formulas:` range
@@ -3974,6 +3975,57 @@ than widening it silently.
 
 ## 11. Living changelog
 
+### 2026-10-11 — A `data:` block reaches from its `at:` (#215)
+
+Reported against 0.2.5: a block was located by the rectangle round the cells
+that held something, so one whose first row or column was all `null` — the
+way §9 leaves room for a derived column — was taken to start a row or a column
+late. Sorting it, or putting a line in beside it, counted rows from the wrong
+place and was refused for moving cells it had not named.
+
+- **Compile says where each block reaches**: `CompiledSheet.blocks`, from its
+  `at:` over every row it has, blank fields and rows included, and for a file
+  over the rows read. `blocks()` in `shift.ts`, which rebuilt it from the
+  cells, is gone; the sort, the line and *add a row to the table* read the
+  compiled one.
+- **A sort puts nothing last going down too**, as Excel does. The blanks were
+  ranked inside the comparison the direction reverses.
+- Checked through the host's `sort()` and `line()` on the verification file:
+  the issue's three cases and the descending sort.
+- 2749 → 2756 tests, run against yxl 0.5.1; the four new intent tests fail on
+  the old code. Comment shape: export 1009 / 2192 (avg 2.2), private 663 / 663
+  (1.0), inline 149 / 234 (1.6), 0 over.
+
+### 2026-10-11 — Gathering alike definitions reached only cells (#217)
+
+Reported against 0.2.5: *Gather definitions that say the same thing* rewrote
+the `style:` of cells and nothing else, so a definition named by an `extends:`,
+a band, a conditional format, an override or a layout was taken away from
+under it. The gate caught it — after the reader had picked which name to keep —
+and said so in diagnostic codes.
+
+- **Every place a style is named follows the one kept**: a cell's, a band's, a
+  rule's and an override's `style:`, an `extends:` in a definition or in a
+  style written in place, and in a layout its columns, their rules, its header
+  cells, `header_style:` and footer rows, groups included, and the columns of
+  `defs.blocks`.
+- **A set is not offered where it cannot be gathered**: where one of its names
+  is used from a file this cannot write, where one of them extends another —
+  keeping the child would make it extend itself, and dropping the `extends:`
+  would change its look — or where any style is named by a `${...}`, which
+  could be any of them.
+- **A refused tidy-up says why in words**: the diagnostics' messages, not their
+  codes. `tidy.ts` reaches VS Code, so that line has no test.
+- **The command was never in the palette on a spec** — found by the reader
+  running the verification file. Its `when` clause escaped the dot twice,
+  `/\\\\.yxl\\\\.ya?ml$/` in the manifest, which asks for a backslash in the file
+  name; it showed only with the preview focused. `manifest.test.ts` now tests
+  every file pattern a menu holds against `report.yxl.yaml` and `report.yaml`.
+- 2735 → 2749 tests, run against yxl 0.5.1; the 13 new ones fail on the old
+  `merge.ts`. Comment shape: export 1010 / 2190 (avg 2.2), private 662 / 662
+  (1.0), inline 148 / 233 (1.6), 0 over. No version bump: releases are batched
+  until the open issues are done.
+
 ### 2026-10-11 — A row or a column moves everything that names a place (#206, 0.2.9)
 
 Reported against 0.2.5: putting a row in or taking one out moved `cells:`,
@@ -4023,27 +4075,6 @@ not the reason.
   its way, all build.
 - 2715 → 2735 tests, run against yxl 0.5.1. Comment shape: export 1010 / 2190
   (avg 2.2), private 659 / 659 (1.0), inline 147 / 232 (1.6), 0 over.
-
-### 2026-10-11 — A `data:` block reaches from its `at:` (#215)
-
-Reported against 0.2.5: a block was located by the rectangle round the cells
-that held something, so one whose first row or column was all `null` — the
-way §9 leaves room for a derived column — was taken to start a row or a column
-late. Sorting it, or putting a line in beside it, counted rows from the wrong
-place and was refused for moving cells it had not named.
-
-- **Compile says where each block reaches**: `CompiledSheet.blocks`, from its
-  `at:` over every row it has, blank fields and rows included, and for a file
-  over the rows read. `blocks()` in `shift.ts`, which rebuilt it from the
-  cells, is gone; the sort, the line and *add a row to the table* read the
-  compiled one.
-- **A sort puts nothing last going down too**, as Excel does. The blanks were
-  ranked inside the comparison the direction reverses.
-- Checked through the host's `sort()` and `line()` on the verification file:
-  the issue's three cases and the descending sort.
-- 2735 → 2742 tests, run against yxl 0.5.1; the four new intent tests fail on
-  the old code. Comment shape: export 1009 / 2192 (avg 2.2), private 660 / 660
-  (1.0), inline 148 / 233 (1.6), 0 over.
 
 ### 2026-10-11 — Refactoring pass after 0.2.6–0.2.8 (`AGENTS.md` §8)
 Walked §8's lenses over what #220–#222 added and the code they touched.
