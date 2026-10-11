@@ -276,12 +276,8 @@ function page(axis: 'column' | 'row', at: number): HTMLElement {
   return line;
 }
 
-/**
- * What is drawn over the sheet, moved down by what the rows above it measure
- * over what they declare, since a row with wrapped text grows (#219); nothing
- * where there is no layout to measure.
- */
-export function grownBy(into: HTMLElement, sheet: DrawnSheet): void {
+/** What is drawn over the sheet, moved down by what wrapped rows above it grew past their height (#219). */
+function grownBy(into: HTMLElement, sheet: DrawnSheet): void {
   const grown: [number, number][] = [];
   for (const heading of into.querySelectorAll<HTMLElement>('tbody th[data-row]')) {
     const line = heading.parentElement;

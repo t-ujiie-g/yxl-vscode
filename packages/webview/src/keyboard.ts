@@ -50,7 +50,7 @@ export function keyboard(into: HTMLElement, showing: Showing, had: Held): void {
 }
 
 /** The keyboard on the cell the reader has selected, where there is one. */
-export function focusCell(into: HTMLElement, showing: Showing): void {
+function focusCell(into: HTMLElement, showing: Showing): void {
   if (showing.selected === null) return;
 
   const at = cellKey(showing.selected.col, showing.selected.row);

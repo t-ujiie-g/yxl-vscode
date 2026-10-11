@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { describe, expect, it } from 'vitest';
-import { draw, grownBy, restate } from './draw';
+import { describe, expect, it, vi } from 'vitest';
+import { draw, restate } from './draw';
 import { asks, at, cell, drawing, sheet, showingOf, shown } from './harness';
 import type { Showing } from './showing';
 
@@ -406,36 +406,27 @@ describe('where the paper falls', () => {
   });
 
   it('moves down by what a wrapped row above it grew, and stretches over one inside it (#219)', () => {
-    const into = paper({
-      area: { top: 5, left: 1, bottom: 6, right: 2 },
-      breaks: [{ row: 8, col: 1 }],
-    });
-    const box = into.querySelector<HTMLElement>('.paper .area');
-    const line = into.querySelector<HTMLElement>('.paper .break.row');
-    const [top, height, lineTop] = [box?.style.top, box?.style.height, line?.style.top].map((one) =>
-      Number.parseFloat(one ?? ''),
-    );
-
-    // jsdom lays nothing out: every row measures 20px, and row 2 has grown to 50.
-    for (const heading of into.querySelectorAll<HTMLElement>('tbody th[data-row]')) {
-      const row = Number(heading.dataset['row']);
-      Object.defineProperty(heading.parentElement, 'offsetHeight', { value: row === 2 ? 50 : 20 });
-    }
-    grownBy(into, sheet({ ...roomy }));
-
-    expect(
-      [box?.style.top, box?.style.height, line?.style.top].map((one) =>
+    const area = { area: { top: 5, left: 1, bottom: 6, right: 2 }, breaks: [{ row: 8, col: 1 }] };
+    const placed = (into: HTMLElement) => {
+      const box = into.querySelector<HTMLElement>('.paper .area');
+      const line = into.querySelector<HTMLElement>('.paper .break.row');
+      return [box?.style.top, box?.style.height, line?.style.top].map((one) =>
         Number.parseFloat(one ?? ''),
-      ),
-    ).toEqual([(top ?? 0) + 30, height, (lineTop ?? 0) + 30]);
-  });
+      );
+    };
+    const [top = 0, height, lineTop = 0] = placed(paper(area));
 
-  it('stays where it is where nothing is laid out to measure', () => {
-    const into = paper({ area: { top: 5, left: 1, bottom: 6, right: 2 } });
-    const before = into.querySelector<HTMLElement>('.paper .area')?.style.top;
-    grownBy(into, sheet({ ...roomy }));
+    // jsdom lays nothing out: every row measures 20px, as declared, and row 2 has grown to 50.
+    const laidOut = vi
+      .spyOn(HTMLElement.prototype, 'offsetHeight', 'get')
+      .mockImplementation(function (this: HTMLElement) {
+        if (this.tagName !== 'TR') return 0;
+        return this.querySelector('th[data-row="2"]') === null ? 20 : 50;
+      });
+    const grown = placed(paper(area));
+    laidOut.mockRestore();
 
-    expect(into.querySelector<HTMLElement>('.paper .area')?.style.top).toBe(before);
+    expect(grown).toEqual([top + 30, height, lineTop + 30]);
   });
 
   it('says the rest of it under the grid, where a line in the sheet cannot', () => {

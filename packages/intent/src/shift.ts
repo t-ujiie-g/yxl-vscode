@@ -50,7 +50,7 @@ export function shifting(spec: Projection, sheet: CompiledSheet, line: Line): Sh
   const written = handWritten(own);
 
   for (const cell of own?.cells ?? []) {
-    const at = typeof cell.at === 'string' ? parseA1Addr(cell.at) : null;
+    const at = point(cell.at);
     const does = at === null ? null : of.at(cellOf(at));
     if (does !== null) moves.push({ of: 'cell', node: cell.id, at, does });
   }
@@ -103,6 +103,11 @@ export function shifting(spec: Projection, sheet: CompiledSheet, line: Line): Sh
   }
 
   return { moves, stops };
+}
+
+/** An address written as one, or `null` where a template or a layout's name stands in its place. */
+export function point(at: unknown): A1Addr | null {
+  return typeof at === 'string' ? parseA1Addr(at) : null;
 }
 
 /** The sheet a line is drawn in, as the spec writes it. */

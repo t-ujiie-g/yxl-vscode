@@ -14,7 +14,6 @@ import {
   type FilePath,
   type Line,
   type NodeId,
-  parseA1Addr,
   qualified,
   type Rect,
   rangeOf,
@@ -34,7 +33,7 @@ import {
   refused,
 } from './direct';
 import type { Candidate } from './resolve';
-import { along, grown, handWritten, held, moved, ownSheet, shifting } from './shift';
+import { along, grown, handWritten, held, moved, ownSheet, point, shifting } from './shift';
 import { say } from './text';
 
 /**
@@ -154,7 +153,7 @@ function writing(
 
   // The entries as written: an override over a cell leaves the entry under it to move.
   for (const cell of own?.cells ?? []) {
-    const at = typeof cell.at === 'string' ? parseA1Addr(cell.at) : null;
+    const at = point(cell.at);
     const does = at === null ? null : of.at(cellOf(at));
     const gone = does === 'goes';
     if (at !== null && does !== null) {

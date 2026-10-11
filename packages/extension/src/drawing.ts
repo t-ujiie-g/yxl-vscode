@@ -1,5 +1,6 @@
 import {
   addressesIn,
+  type CompiledBand,
   type CompiledCell,
   type CompiledGrid,
   type CompiledSheet,
@@ -443,11 +444,8 @@ function filledFrom(cell: CompiledCell | null): string | null {
   return across === 0 && down === 0 ? null : origin.anchor;
 }
 
-/**
- * Bands as the runs Excel is left with: each attribute from the last band that
- * sets it, as yxl writes them (#208); neighbours alike are one run.
- */
-export function sizedRuns(bands: readonly CompiledSheet['columns'][number][]): Sized[] {
+/** Bands as disjoint runs, each attribute from the last band that sets it, as yxl writes them (#208). */
+function sizedRuns(bands: readonly CompiledBand[]): Sized[] {
   const edges = [...new Set(bands.flatMap((band) => [band.first, band.last + 1]))].sort(
     (one, than) => one - than,
   );
@@ -479,8 +477,8 @@ export function sizedRuns(bands: readonly CompiledSheet['columns'][number][]): S
 }
 
 function lastSet<T>(
-  bands: readonly CompiledSheet['columns'][number][],
-  of: (band: CompiledSheet['columns'][number]) => T | null,
+  bands: readonly CompiledBand[],
+  of: (band: CompiledBand) => T | null,
 ): T | null {
   return bands.map(of).findLast((one) => one !== null) ?? null;
 }

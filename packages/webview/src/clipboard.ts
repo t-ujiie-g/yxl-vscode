@@ -1,7 +1,8 @@
 import type { Rect } from '@yxl-vscode/units';
-import { fillOf, shown, styleText } from './cell';
+import { fillOf, styleText } from './cell';
 import { tabbed } from './fields';
 import type { DrawnCell, DrawnSheet } from './protocol';
+import { shown } from './shown';
 
 /** What a copied rectangle puts on the clipboard: the values as text, the look as a table (ADR-028). */
 export interface Flavours {

@@ -2,7 +2,7 @@
 
 import { type Color, parseColor } from '@yxl-vscode/units';
 import { describe, expect, it } from 'vitest';
-import { drawCell, gridline, typeInto, underFormat } from './cell';
+import { drawCell, gridline, typeInto } from './cell';
 import { cell } from './harness';
 import type { DrawnCell } from './protocol';
 
@@ -438,23 +438,6 @@ describe('the line on a gridline two cells share (#212)', () => {
 
   it('is nothing where neither cell draws one, which leaves the gridline', () => {
     expect(gridline({ 'font.bold': true }, undefined, 'bottom')).toBeNull();
-  });
-});
-
-describe('what a format would make of the number a cell shows', () => {
-  it('is the number the spec holds, under the code asked about', () => {
-    expect(underFormat(cell(1, 1, { value: 1234.5678 }), '#,##0.00')).toBe('1,234.57');
-  });
-
-  it('is what a formula was computed to, since that is the number on screen (ADR-014)', () => {
-    const of = cell(1, 1, { value: null, computed: { kind: 'value', value: 0.085 } });
-
-    expect(underFormat(of, '0.0%')).toBe('8.5%');
-  });
-
-  it('is nothing where the cell holds no number to make anything of', () => {
-    expect(underFormat(cell(1, 1, { value: 'APAC' }), '#,##0')).toBeNull();
-    expect(underFormat(cell(1, 1, { value: null }), '#,##0')).toBeNull();
   });
 });
 
