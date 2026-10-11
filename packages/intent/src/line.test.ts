@@ -1,6 +1,6 @@
 import type { Line, SheetName } from '@yxl-vscode/units';
 import { describe, expect, it } from 'vitest';
-import { files, tried } from './harness';
+import { english, files, tried } from './harness';
 import { drawLine, setLine } from './line';
 
 const SALES = 'sheets:\n  - name: Sales\n';
@@ -319,5 +319,15 @@ describe('what a line will not move, and says why (#206)', () => {
     expect(drawn(spec, row(4, -1))).toBe(
       'refused: `Sales!B1:B1` refers to `A3:A4`, and `A4` names a row this would take away',
     );
+  });
+});
+
+describe('what a line counts before it asks', () => {
+  it('counts what it writes, not what a layout draws', () => {
+    const spec = `${SALES}    layouts:\n      - at: A3\n        values: [[a, 1]]\n        columns: [{ name: n, header: [Top, N], width: 9 }, { name: v, header: [Top, V] }]\n`;
+    const { doc, grid, read } = files(spec);
+    const [answer] = setLine({ doc, grid }, row(1), read);
+
+    expect(english(answer?.what ?? '')).toBe('Put row in above row 1, moving 1 thing');
   });
 });

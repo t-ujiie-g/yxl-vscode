@@ -76,7 +76,7 @@ function namings(doc: SpecDoc): Naming[] {
   const use = (id: NodeId, key: string, style: StyleUse | null) => {
     if (style?.kind === 'ref') found.push({ id, under: [key], name: style.name });
     if (style?.kind === 'inline' && style.style.extends !== null) {
-      found.push({ id, under: [key, EXTENDS], name: style.style.extends });
+      found.push({ id, under: [key, KEY.extends], name: style.style.extends });
     }
   };
   const header = (cells: readonly (HeaderCell | null)[] | null) => {
@@ -103,7 +103,7 @@ function namings(doc: SpecDoc): Naming[] {
       use(one.id, KEY.style, one.style);
     }
     for (const layout of sheet.layouts) {
-      use(layout.id, HEADER_STYLE, layout.headerStyle);
+      use(layout.id, KEY.headerStyle, layout.headerStyle);
       for (const entry of layout.columns) {
         if (entry.kind === 'column') column(entry);
         else header(entry.header);
@@ -115,14 +115,11 @@ function namings(doc: SpecDoc): Naming[] {
   for (const block of doc.defs.blocks) for (const one of block.columns) column(one);
   for (const def of doc.defs.styles) {
     if (def.style.extends !== null)
-      found.push({ id: def.id, under: [EXTENDS], name: def.style.extends });
+      found.push({ id: def.id, under: [KEY.extends], name: def.style.extends });
   }
 
   return found;
 }
-
-const EXTENDS = 'extends';
-const HEADER_STYLE = 'header_style';
 
 /** Whether one of these definitions reaches another through `extends:`, which keeping either would break. */
 function inherited(doc: SpecDoc, names: readonly StyleName[]): boolean {

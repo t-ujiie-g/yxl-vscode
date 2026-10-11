@@ -28,6 +28,8 @@ Targets **yxl 0.5.1**, as 0.2.8 did.
   rows and columns put in beside it** (#215). They were refused with a reason
   that did not fit.
 - **Sorting Z to A leaves blank cells at the bottom**, as Excel does (#215).
+- **Putting a row in above a layout no longer asks first** because of the
+  formulas the layout draws: only what the edit writes is counted.
 
 ## 0.2.8 — 2026-10-10
 

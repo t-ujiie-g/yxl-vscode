@@ -6,15 +6,18 @@ import {
   REACH,
 } from '@yxl-vscode/compile';
 import type { Saying } from '@yxl-vscode/diag';
+import type { Sheet } from '@yxl-vscode/spec';
 import {
   type A1Addr,
   addrAt,
   cellOf,
   type Line,
   type NodeId,
+  parseA1Addr,
   type Rect,
   shifted,
 } from '@yxl-vscode/units';
+import { nameOf, type Projection } from './direct';
 import { say } from './text';
 
 /** What a line does to one construct: it moves whole, it takes the line in, or it goes with it. */
@@ -39,23 +42,24 @@ export interface Shift {
 }
 
 /** Everything a line drawn in this sheet would move, counted before any of it is written. */
-export function shifting(sheet: CompiledSheet, line: Line): Shift {
+export function shifting(spec: Projection, sheet: CompiledSheet, line: Line): Shift {
   const moves: Moving[] = [];
   const stops: Saying[] = [];
   const of = along(line);
+  const own = ownSheet(spec, line);
+  const written = handWritten(own);
+
+  for (const cell of own?.cells ?? []) {
+    const at = typeof cell.at === 'string' ? parseA1Addr(cell.at) : null;
+    const does = at === null ? null : of.at(cellOf(at));
+    if (does !== null) moves.push({ of: 'cell', node: cell.id, at, does });
+  }
 
   for (const at of addressesIn(sheet, REACH)) {
     const cell = cellAt(sheet, at);
-    if (cell === null) continue;
-
-    const does = of.at(cellOf(at));
-    if (does !== null && cell.provenance.value.kind === 'literal') {
-      moves.push({ of: 'cell', node: cell.provenance.value.node, at, does });
-    }
-
     // A cell the line takes away is not asked to survive it: its formula goes
     // with it, which is what Excel does rather than leaving `#REF!`.
-    if (does === 'goes') continue;
+    if (cell === null || of.at(cellOf(at)) === 'goes') continue;
 
     const why = keeps(sheet, cell, line);
     if (why !== null) stops.push(why);
@@ -74,17 +78,23 @@ export function shifting(sheet: CompiledSheet, line: Line): Shift {
 
   for (const fill of sheet.fills) {
     const does = of.over(fill.rect);
-    if (does !== null) moves.push({ of: 'formulas', node: fill.node, at: null, does });
+    if (does !== null && written.has(fill.node)) {
+      moves.push({ of: 'formulas', node: fill.node, at: null, does });
+    }
   }
 
   for (const merge of sheet.merges) {
     const does = of.over(merge.rect);
-    if (does !== null) moves.push({ of: 'merge', node: merge.node, at: null, does });
+    if (does !== null && written.has(merge.node)) {
+      moves.push({ of: 'merge', node: merge.node, at: null, does });
+    }
   }
 
   for (const band of line.axis === 'column' ? sheet.columns : sheet.rows) {
     const does = of.run(band.first, band.last);
-    if (does !== null) moves.push({ of: 'band', node: band.node, at: null, does });
+    if (does !== null && written.has(band.node)) {
+      moves.push({ of: 'band', node: band.node, at: null, does });
+    }
   }
 
   if (sheet.freeze !== null) {
@@ -93,6 +103,20 @@ export function shifting(sheet: CompiledSheet, line: Line): Shift {
   }
 
   return { moves, stops };
+}
+
+/** The sheet a line is drawn in, as the spec writes it. */
+export function ownSheet(spec: Projection, line: Line): Sheet | undefined {
+  return spec.doc.sheets.find((one) => nameOf(one) === line.sheet);
+}
+
+/** The ranges, merges and bands a sheet writes by hand; a layout draws its own, and they move with it. */
+export function handWritten(own: Sheet | undefined): ReadonlySet<NodeId> {
+  return new Set(
+    [own?.formulas, own?.merges, own?.columns, own?.rows].flatMap(
+      (list) => list?.map((one) => one.id) ?? [],
+    ),
+  );
 }
 
 /** Whether a cell's formula could be written again where the line leaves it, and why not. */
