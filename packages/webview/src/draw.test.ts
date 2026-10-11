@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { describe, expect, it } from 'vitest';
-import { draw, restate } from './draw';
+import { draw, grownBy, restate } from './draw';
 import { asks, at, cell, drawing, sheet, showingOf, shown } from './harness';
 import type { Showing } from './showing';
 
@@ -403,6 +403,39 @@ describe('where the paper falls', () => {
 
   it('draws nothing where the setup says neither an area nor a break', () => {
     expect(paper({}).querySelector('.paper')).toBeNull();
+  });
+
+  it('moves down by what a wrapped row above it grew, and stretches over one inside it (#219)', () => {
+    const into = paper({
+      area: { top: 5, left: 1, bottom: 6, right: 2 },
+      breaks: [{ row: 8, col: 1 }],
+    });
+    const box = into.querySelector<HTMLElement>('.paper .area');
+    const line = into.querySelector<HTMLElement>('.paper .break.row');
+    const [top, height, lineTop] = [box?.style.top, box?.style.height, line?.style.top].map((one) =>
+      Number.parseFloat(one ?? ''),
+    );
+
+    // jsdom lays nothing out: every row measures 20px, and row 2 has grown to 50.
+    for (const heading of into.querySelectorAll<HTMLElement>('tbody th[data-row]')) {
+      const row = Number(heading.dataset['row']);
+      Object.defineProperty(heading.parentElement, 'offsetHeight', { value: row === 2 ? 50 : 20 });
+    }
+    grownBy(into, sheet({ ...roomy }));
+
+    expect(
+      [box?.style.top, box?.style.height, line?.style.top].map((one) =>
+        Number.parseFloat(one ?? ''),
+      ),
+    ).toEqual([(top ?? 0) + 30, height, (lineTop ?? 0) + 30]);
+  });
+
+  it('stays where it is where nothing is laid out to measure', () => {
+    const into = paper({ area: { top: 5, left: 1, bottom: 6, right: 2 } });
+    const before = into.querySelector<HTMLElement>('.paper .area')?.style.top;
+    grownBy(into, sheet({ ...roomy }));
+
+    expect(into.querySelector<HTMLElement>('.paper .area')?.style.top).toBe(before);
   });
 
   it('says the rest of it under the grid, where a line in the sheet cannot', () => {

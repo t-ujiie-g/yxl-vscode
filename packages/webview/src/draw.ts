@@ -1,5 +1,5 @@
 import { findBar, formulaBar, told } from './boxes';
-import { floats } from './float';
+import { floats, hangs } from './float';
 import { heldBy, keyboard } from './keyboard';
 import { takingAll, wearing } from './keys';
 import { fit } from './menus';
@@ -29,7 +29,7 @@ import {
 } from './showing';
 import { grid, headed, pinned } from './table';
 import { toolbar } from './toolbar';
-import { across, down, pixelsOf, type Where, wanted } from './window';
+import { across, down, heightOf, pixelsOf, type Where, wanted } from './window';
 import { chrome } from './worded';
 
 /**
@@ -70,6 +70,7 @@ export function draw(into: HTMLElement, showing: Showing, asks: Asks): void {
     box.scrollTop = kept.top;
     box.scrollLeft = kept.left;
     pinned(box);
+    grownBy(box, sheet);
   }
 
   const menu = pointing(showing, asks);
@@ -254,6 +255,7 @@ function printed(sheet: DrawnSheet): HTMLElement | null {
     box.style.top = `${top + down(sheet, print.area.top)}px`;
     box.style.width = `${across(sheet, print.area.right + 1) - across(sheet, print.area.left)}px`;
     box.style.height = `${down(sheet, print.area.bottom + 1) - down(sheet, print.area.top)}px`;
+    hangs(box, print.area.top, print.area.bottom + 1);
     drawn.append(box);
   }
 
@@ -261,7 +263,7 @@ function printed(sheet: DrawnSheet): HTMLElement | null {
     // A break starts a page above and left of the cell it names, so each one is
     // two lines where neither edge is the sheet's own (`docs/spec.md` §5).
     if (at.col > 1) drawn.append(page('column', left + across(sheet, at.col)));
-    if (at.row > 1) drawn.append(page('row', top + down(sheet, at.row)));
+    if (at.row > 1) drawn.append(hangs(page('row', top + down(sheet, at.row)), at.row));
   }
 
   return drawn;
@@ -272,6 +274,35 @@ function page(axis: 'column' | 'row', at: number): HTMLElement {
   line.className = `break ${axis}`;
   line.style.setProperty(axis === 'column' ? 'left' : 'top', `${at}px`);
   return line;
+}
+
+/**
+ * What is drawn over the sheet, moved down by what the rows above it measure
+ * over what they declare, since a row with wrapped text grows (#219); nothing
+ * where there is no layout to measure.
+ */
+export function grownBy(into: HTMLElement, sheet: DrawnSheet): void {
+  const grown: [number, number][] = [];
+  for (const heading of into.querySelectorAll<HTMLElement>('tbody th[data-row]')) {
+    const line = heading.parentElement;
+    if (line === null || line.offsetHeight === 0) return;
+
+    const row = Number(heading.dataset['row']);
+    const extra = line.offsetHeight - heightOf(sheet, row);
+    if (extra > 0) grown.push([row, extra]);
+  }
+  if (grown.length === 0) return;
+
+  const above = (row: number) =>
+    grown.reduce((sum, [at, extra]) => (at < row ? sum + extra : sum), 0);
+  for (const one of into.querySelectorAll<HTMLElement>('[data-hangs]')) {
+    const from = Number(one.dataset['hangs']);
+    one.style.top = `${Number.parseFloat(one.style.top) + above(from)}px`;
+    if (one.dataset['reaches'] === undefined) continue;
+
+    const to = Number(one.dataset['reaches']);
+    one.style.height = `${Number.parseFloat(one.style.height) + above(to) - above(from)}px`;
+  }
 }
 
 /** Where a sheet is split, said under the grid: a bar in the sheet has nowhere to say it itself. */

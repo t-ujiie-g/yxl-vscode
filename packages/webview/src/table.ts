@@ -1,7 +1,7 @@
 import type { Axis } from '@yxl-vscode/spec';
 import { columnLabel } from '@yxl-vscode/units';
 import { corner } from './boxes';
-import { askInto, drawCell, type SpannedMerge, shows, spills, typeInto } from './cell';
+import { askInto, drawCell, gridline, type SpannedMerge, shows, spills, typeInto } from './cell';
 import { copying, edging, filling, going, looking as lookingFor, pasting, undoing } from './keys';
 import {
   behind,
@@ -489,6 +489,18 @@ function cellAt(
     sheet.protect !== null,
   );
   if (drawn.querySelector('.spill') !== null) drawn.classList.add('spilling');
+  const right = gridline(
+    here?.style,
+    held.get(cellKey((merge?.right ?? col) + 1, row))?.style,
+    'right',
+  );
+  const bottom = gridline(
+    here?.style,
+    held.get(cellKey(col, (merge?.bottom ?? row) + 1))?.style,
+    'bottom',
+  );
+  if (right !== null) drawn.style.borderRight = right;
+  if (bottom !== null) drawn.style.borderBottom = bottom;
   if (table !== null) drawn.classList.add(...banding(table, row, col));
   if (filtered || heads) drawn.append(dropdown());
   if (note !== null) drawn.append(noted());

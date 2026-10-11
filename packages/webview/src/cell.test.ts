@@ -2,7 +2,7 @@
 
 import { type Color, parseColor } from '@yxl-vscode/units';
 import { describe, expect, it } from 'vitest';
-import { drawCell, typeInto, underFormat } from './cell';
+import { drawCell, gridline, typeInto, underFormat } from './cell';
 import { cell } from './harness';
 import type { DrawnCell } from './protocol';
 
@@ -391,12 +391,17 @@ describe('the borders a cell wears', () => {
     expect(drawn.querySelector<HTMLElement>('.edges')?.style.borderLeft).toBe('1px solid');
   });
 
-  it('are one element for every edge the cell has', () => {
-    const over = edges({
-      style: { 'border.top.style': 'thin', 'border.bottom.style': 'double' },
-    });
+  it("are drawn in the cell only on the sheet's first row and column, where no neighbour has a gridline for them (#212)", () => {
+    const style = {
+      'border.top.style': 'thin',
+      'border.left.style': 'thin',
+      'border.bottom.style': 'double',
+    } as const;
 
-    expect(over?.getAttribute('style')).toBe('border-top: 1px solid; border-bottom: 2px solid;');
+    expect(edges({ style })?.getAttribute('style')).toBe(
+      'border-left: 1px solid; border-top: 1px solid;',
+    );
+    expect(drawCell(cell(2, 2, { style }), undefined).querySelector('.edges')).toBeNull();
   });
 
   it('are not there at all where the cell has none', () => {
@@ -409,6 +414,30 @@ describe('the borders a cell wears', () => {
     });
 
     expect(over?.getAttribute('style')).toBe('border-top: 1px solid rgb(204, 204, 204);');
+  });
+});
+
+describe('the line on a gridline two cells share (#212)', () => {
+  it("is the one cell's edge, or the other's facing it, not both", () => {
+    expect(gridline({ 'border.right.style': 'thin' }, undefined, 'right')).toBe(
+      '1px solid currentColor',
+    );
+    expect(gridline(undefined, { 'border.left.style': 'thin' }, 'right')).toBe(
+      '1px solid currentColor',
+    );
+    expect(
+      gridline({ 'border.bottom.style': 'thin' }, { 'border.top.style': 'thin' }, 'bottom'),
+    ).toBe('1px solid currentColor');
+  });
+
+  it('is the heavier of the two where both draw one, as Excel draws it', () => {
+    expect(
+      gridline({ 'border.right.style': 'thin' }, { 'border.left.style': 'thick' }, 'right'),
+    ).toBe('3px solid currentColor');
+  });
+
+  it('is nothing where neither cell draws one, which leaves the gridline', () => {
+    expect(gridline({ 'font.bold': true }, undefined, 'bottom')).toBeNull();
   });
 });
 

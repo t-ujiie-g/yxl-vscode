@@ -1,6 +1,6 @@
 import type { Axis } from '@yxl-vscode/spec';
 import type { Rect } from '@yxl-vscode/units';
-import type { DrawnSheet, Far } from './protocol';
+import type { DrawnMerge, DrawnSheet, Far, Sized } from './protocol';
 
 /** A cell of the grid, as the view points at one. */
 export interface At {
@@ -33,7 +33,7 @@ export function going(event: KeyboardEvent, sheet: DrawnSheet, from: At): Going 
   const step = stepping(event, sheet);
   if (step === null) return null;
 
-  const to = { row: from.row + step.rows, col: from.col + step.cols };
+  const to = landed(sheet, from, step);
 
   // Shift+Tab steps back rather than reaching, as in every spreadsheet.
   return { to, extend: event.key === 'Tab' ? false : extend };
@@ -62,6 +62,39 @@ export function edging(event: KeyboardEvent): Far | null {
     default:
       return null;
   }
+}
+
+/** Where a step lands as in Excel (#218): past a merge it leaves, over hidden lines, onto a merge's top-left. */
+function landed(sheet: DrawnSheet, from: At, step: { rows: number; cols: number }): At {
+  const leaving = mergeAt(sheet, from);
+  const edge = (at: number, by: number, near: number, far: number) =>
+    leaving === undefined || by === 0 ? at : by > 0 ? far : near;
+
+  const rowFrom = edge(from.row, step.rows, leaving?.top ?? 0, leaving?.bottom ?? 0);
+  const colFrom = edge(from.col, step.cols, leaving?.left ?? 0, leaving?.right ?? 0);
+  const row = past(rowFrom + step.rows, Math.sign(step.rows), sheet.heights) ?? from.row;
+  const col = past(colFrom + step.cols, Math.sign(step.cols), sheet.widths) ?? from.col;
+  const entering = mergeAt(sheet, { row, col });
+
+  return entering === undefined ? { row, col } : { row: entering.top, col: entering.left };
+}
+
+/** The first line from `at` on, going `by`, that is not hidden; `null` where every one to the sheet's edge is. */
+function past(at: number, by: number, runs: readonly Sized[]): number | null {
+  const hidden = (line: number) =>
+    runs.some((run) => run.hidden && run.first <= line && line <= run.last);
+  let line = Math.max(1, at);
+  while (hidden(line)) {
+    if (by === 0 || line + by < 1) return null;
+    line += by;
+  }
+  return line;
+}
+
+function mergeAt(sheet: DrawnSheet, at: At): DrawnMerge | undefined {
+  return sheet.merges.find(
+    (one) => one.top <= at.row && at.row <= one.bottom && one.left <= at.col && at.col <= one.right,
+  );
 }
 
 /** How far an ordinary movement key goes, before any of it is clamped. */
