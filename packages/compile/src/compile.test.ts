@@ -1,5 +1,5 @@
 import { reading } from '@yxl-vscode/diag';
-import { filePath, nodeId, type SheetName } from '@yxl-vscode/units';
+import { filePath, nodeId, rangeOf, type SheetName } from '@yxl-vscode/units';
 import { describe, expect, it } from 'vitest';
 import { CODE } from './codes';
 import { addressesIn, REACH, sheetOf } from './compile';
@@ -263,6 +263,22 @@ describe('a `data:` block that names a file', () => {
     const [diagnostic] = grid(broken, reader).diagnostics;
     expect(diagnostic?.code).toBe(CODE.badTable);
     expect(english(diagnostic?.message ?? '')).toContain('broken.csv');
+  });
+});
+
+describe('a `data:` block, as far as it reaches', () => {
+  it('reaches from its `at:` over every row and field, blank ones too (#215)', () => {
+    const spec = `${SALES}    data:\n      - at: B2\n        values:\n          - [null, null, null]\n          - [x, 2]\n          - [null]\n`;
+
+    expect(sheet(spec).blocks.map((one) => [rangeOf(one.rect), one.file])).toEqual([
+      ['B2:D4', null],
+    ]);
+  });
+
+  it('is not a block where it holds no field at all', () => {
+    expect(
+      sheet(`${SALES}    data:\n      - at: B2\n        values:\n          - []\n`).blocks,
+    ).toEqual([]);
   });
 });
 

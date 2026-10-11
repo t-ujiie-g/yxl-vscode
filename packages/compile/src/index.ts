@@ -14,6 +14,7 @@ export { finds } from './find';
 export type {
   CompiledAsk,
   CompiledBand,
+  CompiledBlock,
   CompiledCell,
   CompiledChart,
   CompiledChartAxis,

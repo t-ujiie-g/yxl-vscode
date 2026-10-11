@@ -35,7 +35,7 @@ import {
   refused,
 } from './direct';
 import type { Candidate } from './resolve';
-import { along, blocks, grown, held, moved, shifting } from './shift';
+import { along, grown, held, moved, shifting } from './shift';
 import { say } from './text';
 
 /**
@@ -182,7 +182,7 @@ function writing(
     }
   }
 
-  for (const block of blocks(sheet)) {
+  for (const block of sheet.blocks) {
     const does = of.over(block.rect);
     if (does === null) continue;
 

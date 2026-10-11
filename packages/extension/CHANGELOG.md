@@ -18,6 +18,10 @@ Targets **yxl 0.5.1**, as 0.2.8 did.
   sheet with an override, a cell whose formula is a `$ref`, or only layouts.
 - **A line through a layout, or one that would take a table's header row, is
   refused** with that reason, rather than writing a spec yxl would not build.
+- **A `data:` table whose first row or column is all blank can be sorted, and
+  rows and columns put in beside it** (#215). They were refused with a reason
+  that did not fit.
+- **Sorting Z to A leaves blank cells at the bottom**, as Excel does (#215).
 
 ## 0.2.8 — 2026-10-10
 

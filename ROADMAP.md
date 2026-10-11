@@ -1404,7 +1404,8 @@ Deliberately **not** here: a second selection with `Cmd`+click (every answer in
       the selection starts in — the row moves whole, the column only says which
       key. Each row is written where it goes **as the file wrote it**, so a sort
       changes the order of the lines and nothing about any of them. Numbers,
-      then text, then nothing, as a column orders in Excel.
+      then text, then nothing, as a column orders in Excel. *(2026-10-11,
+      #215: nothing stays last going down as well — §11.)*
 
 ### Phase 12 — The sheets themselves
 A workbook is more than one sheet, and a spreadsheet user reaches for the tab bar
@@ -4022,6 +4023,27 @@ not the reason.
   its way, all build.
 - 2715 → 2735 tests, run against yxl 0.5.1. Comment shape: export 1010 / 2190
   (avg 2.2), private 659 / 659 (1.0), inline 147 / 232 (1.6), 0 over.
+
+### 2026-10-11 — A `data:` block reaches from its `at:` (#215)
+
+Reported against 0.2.5: a block was located by the rectangle round the cells
+that held something, so one whose first row or column was all `null` — the
+way §9 leaves room for a derived column — was taken to start a row or a column
+late. Sorting it, or putting a line in beside it, counted rows from the wrong
+place and was refused for moving cells it had not named.
+
+- **Compile says where each block reaches**: `CompiledSheet.blocks`, from its
+  `at:` over every row it has, blank fields and rows included, and for a file
+  over the rows read. `blocks()` in `shift.ts`, which rebuilt it from the
+  cells, is gone; the sort, the line and *add a row to the table* read the
+  compiled one.
+- **A sort puts nothing last going down too**, as Excel does. The blanks were
+  ranked inside the comparison the direction reverses.
+- Checked through the host's `sort()` and `line()` on the verification file:
+  the issue's three cases and the descending sort.
+- 2735 → 2742 tests, run against yxl 0.5.1; the four new intent tests fail on
+  the old code. Comment shape: export 1009 / 2192 (avg 2.2), private 660 / 660
+  (1.0), inline 148 / 233 (1.6), 0 over.
 
 ### 2026-10-11 — Refactoring pass after 0.2.6–0.2.8 (`AGENTS.md` §8)
 Walked §8's lenses over what #220–#222 added and the code they touched.
