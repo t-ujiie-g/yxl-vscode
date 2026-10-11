@@ -1,3 +1,4 @@
+import { basename } from 'node:path';
 import { type CompiledSheet, finds, reaches } from '@yxl-vscode/compile';
 import type { Saying } from '@yxl-vscode/diag';
 import { type Engine, univerEngine } from '@yxl-vscode/evaluate';
@@ -40,7 +41,7 @@ import { paste, pastedWith, pasteFrom, whose } from './clipboard';
 import { asText } from './copying';
 import { asOpen, put, reveal, textOf } from './documents';
 import { edgeFrom } from './edges';
-import { besideSpec } from './files';
+import { besideOf, besideSpec, rewatched } from './files';
 import { fill } from './fills';
 import { group } from './group';
 import { hide } from './hidden';
@@ -158,6 +159,8 @@ export class Preview {
   private nodes: Nodes = new Map();
   /** Every file the last drawing was read from, which is what a redraw watches. */
   private sources = new Set<string>();
+  /** A watcher on each of those files but the spec, for a change made outside VS Code (#214). */
+  private readonly watchers = new Map<string, vscode.FileSystemWatcher>();
   private read = -1;
   private readonly params = new Map<string, string>();
   private readonly windows = new Map<string, Window>();
@@ -270,6 +273,30 @@ export class Preview {
     this.redraw();
   }
 
+  /** Watches what the last drawing asked for, and lets go of what it no longer asks for. */
+  private watch(asked: ReadonlySet<string>): void {
+    const { start, stop } = rewatched(
+      new Set(this.watchers.keys()),
+      asked,
+      this.document.uri.fsPath,
+    );
+
+    for (const file of stop) {
+      this.watchers.get(file)?.dispose();
+      this.watchers.delete(file);
+    }
+    for (const file of start) {
+      const at = vscode.Uri.file(file);
+      const watcher = vscode.workspace.createFileSystemWatcher(
+        new vscode.RelativePattern(vscode.Uri.joinPath(at, '..'), basename(file)),
+      );
+      watcher.onDidChange(() => this.later());
+      watcher.onDidCreate(() => this.later());
+      watcher.onDidDelete(() => this.later());
+      this.watchers.set(file, watcher);
+    }
+  }
+
   private later(): void {
     clearTimeout(this.settling);
     this.settling = setTimeout(() => this.redraw(), SETTLE);
@@ -331,12 +358,15 @@ export class Preview {
     this.read = this.document.version;
 
     const sources = new Set<string>();
+    // A file asked for and missing is watched too, so its coming back redraws.
+    const asked = new Set<string>();
     const drawn = project(
       this.document.getText(),
       file,
       (from, path) => {
         const found = asOpen(from, path);
         if (found !== null) sources.add(found.file);
+        asked.add(found?.file ?? besideOf(from, path));
         return found;
       },
       this.params,
@@ -348,6 +378,7 @@ export class Preview {
     this.drawn = drawn;
     this.nodes = drawn.nodes;
     this.sources = sources;
+    this.watch(asked);
 
     this.send(drawing);
     this.problems.set(
@@ -709,6 +740,7 @@ export class Preview {
     clearTimeout(this.settling);
     clearTimeout(this.following);
     for (const listener of this.listeners) listener.dispose();
+    for (const watcher of this.watchers.values()) watcher.dispose();
     this.problems.dispose();
   }
 

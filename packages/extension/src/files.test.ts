@@ -2,7 +2,7 @@ import type { DataReader } from '@yxl-vscode/compile';
 import type { IncludeReader } from '@yxl-vscode/loader';
 import { type FilePath, filePath } from '@yxl-vscode/units';
 import { describe, expect, it } from 'vitest';
-import { besideSpec, openFirst } from './files';
+import { besideOf, besideSpec, openFirst, rewatched } from './files';
 
 const AT = (path: string): FilePath => filePath(path) ?? ('' as FilePath);
 
@@ -46,5 +46,34 @@ describe('a picked file written beside the spec', () => {
 
   it('says so where it sits above the spec, since a `data:` path may too', () => {
     expect(besideSpec('/specs/here/report.yxl.yaml', '/specs/logo.png')).toBe('../logo.png');
+  });
+});
+
+describe('which files a drawing watches (#214)', () => {
+  it('starts on each file the drawing read, but not the spec itself', () => {
+    const read = new Set(['/s/spec.yxl.yaml', '/s/rows.csv', '/s/sales.yaml']);
+
+    expect(rewatched(new Set(), read, '/s/spec.yxl.yaml')).toEqual({
+      start: ['/s/rows.csv', '/s/sales.yaml'],
+      stop: [],
+    });
+  });
+
+  it('keeps what it still reads, and stops on what it no longer does', () => {
+    const watched = new Set(['/s/rows.csv', '/s/old.csv']);
+    const read = new Set(['/s/spec.yxl.yaml', '/s/rows.csv', '/s/new.json']);
+
+    expect(rewatched(watched, read, '/s/spec.yxl.yaml')).toEqual({
+      start: ['/s/new.json'],
+      stop: ['/s/old.csv'],
+    });
+  });
+});
+
+describe('where a file a spec names is', () => {
+  it('is beside the file that names it, whichever slash it was written with', () => {
+    expect(besideOf('/s/spec.yxl.yaml', 'data/rows.csv')).toBe('/s/data/rows.csv');
+    expect(besideOf('/s/spec.yxl.yaml', 'data\\rows.csv')).toBe('/s/data/rows.csv');
+    expect(besideOf('/s/spec.yxl.yaml', '../rows.csv')).toBe('/rows.csv');
   });
 });

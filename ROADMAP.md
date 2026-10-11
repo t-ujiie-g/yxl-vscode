@@ -3975,6 +3975,25 @@ than widening it silently.
 
 ## 11. Living changelog
 
+### 2026-10-11 — A file the spec reads, changed outside VS Code (#214)
+
+Reported against 0.2.5: the preview redrew on a change to an open document or
+a save, and on nothing else, so a `csv:`, `json:` or `$include` file rewritten
+by a script, a `git pull` or a checkout left it stale until the spec was
+touched.
+
+- **Each file a drawing asks for is watched**, the spec aside — its open buffer
+  already speaks — and a change, a creation or a deletion redraws, through the
+  same settling delay as a keystroke. A file asked for and missing is watched
+  too, so its coming back redraws; the first cut watched only what was read,
+  and a deleted CSV would have stopped being watched at the redraw that missed
+  it.
+- `rewatched()` works out which watchers to start and stop, and `besideOf()`
+  names where a spec's path points; both are tested. The watchers themselves
+  are VS Code's and are checked by hand with the verification folder.
+- 2804 → 2807 tests, run against yxl 0.5.1. Comment shape: export 1019 / 2222
+  (avg 2.2), private 674 / 674 (1.0), inline 149 / 234 (1.6), 0 over.
+
 ### 2026-10-11 — Borders, arrow keys, and what sits below a wrapped row (#212, #218, #219)
 
 Three reports about where the view puts things.

@@ -10,7 +10,7 @@ import { type FilePath, filePath } from '@yxl-vscode/units';
  * `from` is — the includer, or the opened spec — is the caller's to choose.
  */
 export const readBeside: IncludeReader & DataReader = (from, path) => {
-  const found = resolve(dirname(from), path.replace(/\\/g, '/'));
+  const found = besideOf(from, path);
   const file = filePath(found);
   if (file === null) return null;
 
@@ -20,6 +20,11 @@ export const readBeside: IncludeReader & DataReader = (from, path) => {
     return null;
   }
 };
+
+/** Where a file a spec names is, read beside the file that names it; a backslash is a `/` on every platform. */
+export function besideOf(from: string, path: string): string {
+  return resolve(dirname(from), path.replace(/\\/g, '/'));
+}
 
 /** The same reader, answering with what the editor holds where it holds anything: an unsaved buffer is the spec. */
 export function openFirst(
@@ -43,4 +48,21 @@ export function openFirst(
 export function besideSpec(spec: string, chosen: string): string {
   const from = relative(dirname(spec), chosen).replace(/\\/g, '/');
   return from === '' ? chosen.replace(/\\/g, '/') : from;
+}
+
+/**
+ * Which files to start and stop watching once a drawing has been read: every
+ * file it asked for but the spec, whose open buffer speaks for itself (#214).
+ */
+export function rewatched(
+  watched: ReadonlySet<string>,
+  read: ReadonlySet<string>,
+  spec: string,
+): { start: string[]; stop: string[] } {
+  const wanted = new Set([...read].filter((file) => file !== spec));
+
+  return {
+    start: [...wanted].filter((file) => !watched.has(file)),
+    stop: [...watched].filter((file) => !wanted.has(file)),
+  };
 }
