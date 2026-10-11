@@ -3975,6 +3975,36 @@ than widening it silently.
 
 ## 11. Living changelog
 
+### 2026-10-11 — Refactoring pass after #206, #217 and #215 (`AGENTS.md` §8)
+Walked §8's lenses over what #224–#226 added and the code they touched.
+Findings, and what each came to:
+
+- **§8.2 Drift — the one with a consequence.** #206 taught `writing()` to
+  leave what a layout draws to the layout and to walk `cells:` as written;
+  `shifting()`, which counts what a line moves and decides whether to ask
+  first, still counted from the compiled sheet. A layout with 21 formula
+  columns made a row put in above it ask "moving 22 things" for an edit that
+  writes one `at:`. `handWritten()` and `ownSheet()` in `shift.ts` now serve
+  both, and both walk `cells:` as written.
+- **§8.2, looked at and kept:** `Moving.node`, `.at` and `.does` are read only
+  by `shift.test.ts`. They are the consequence enumeration Phase 11 asks for —
+  what each construct does — so they stay; the finding was wrong.
+- **§8.1 Constants.** `merge.ts` named `extends` and `header_style` itself;
+  they are `KEY.extends` and `KEY.headerStyle` now.
+- **§8.3 File splitting.** `compile/sheet.ts` was 514 lines. A `data:` block's
+  placement — `placeData`, `reach`, `readTable`, `place` — is `docs/spec.md` §9
+  on its own and moved to `data.ts`; `sheet.ts` is 410.
+- **§8.4 Tests.** `anchors`, `formulas`, `overrideAt`, and `whole` over a
+  sequence had no direct test; they do. `placeData` is exported only within
+  `compile` and is tested through it.
+- **§8.6.** `anchors.ts` pushed a `renameKey` by hand beside `set` and
+  `remove` helpers; it has a `rename` one too.
+- **§8.7 Layers.** Clean.
+- Checked through the host's `line()`: the layout file above asked first
+  before, and is put in at once now.
+- 2756 → 2764 tests, run against yxl 0.5.1. Comment shape: export 1012 / 2195
+  (avg 2.2), private 662 / 662 (1.0), inline 148 / 233 (1.6), 0 over.
+
 ### 2026-10-11 — A `data:` block reaches from its `at:` (#215)
 
 Reported against 0.2.5: a block was located by the rectangle round the cells

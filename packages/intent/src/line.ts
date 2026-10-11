@@ -29,13 +29,12 @@ import {
   type Found,
   type Intent,
   located,
-  nameOf,
   type Projection,
   type Reading,
   refused,
 } from './direct';
 import type { Candidate } from './resolve';
-import { along, grown, held, moved, shifting } from './shift';
+import { along, grown, handWritten, held, moved, ownSheet, shifting } from './shift';
 import { say } from './text';
 
 /**
@@ -49,7 +48,7 @@ export function drawLine(spec: Projection, line: Line, read: Reading): Intent {
   if (line.at < 1) return refused(say('intent.no-such-band', { axis: line.axis, at: line.at }));
 
   const besides = anchors(spec, line, read);
-  const stopped = [...shifting(sheet, line).stops, ...besides.stops][0];
+  const stopped = [...shifting(spec, sheet, line).stops, ...besides.stops][0];
   if (stopped !== undefined) return refused(stopped);
 
   const written = writing(spec, sheet, line, read, besides.edits);
@@ -84,7 +83,7 @@ export function setLine(spec: Projection, line: Line, read: Reading): readonly C
   // The one answer, whatever the intent turns out to be: a refusal carries its
   // own reason, and swallowing it here would leave the reader with none.
   const intent = drawLine(spec, line, read);
-  const { moves } = shifting(sheet, line);
+  const { moves } = shifting(spec, sheet, line);
   const keys = moves.filter((one) => one.of === 'cell').length;
   const things = moves.length + anchors(spec, line, read).edits.length;
 
@@ -126,18 +125,13 @@ function writing(
   besides: readonly Anchored[],
 ): Writing | Intent {
   const of = along(line);
-  const own = spec.doc.sheets.find((one) => nameOf(one) === line.sheet);
+  const own = ownSheet(spec, line);
   const bodies = new Map<NodeId, string>();
   for (const cell of own?.cells ?? []) {
     if (cell.formula?.kind === 'inline') bodies.set(cell.id, cell.formula.body);
   }
   for (const range of own?.formulas ?? []) bodies.set(range.id, range.formula);
-  // A layout draws merges, ranges and bands too; those move with the layout.
-  const written = new Set(
-    [own?.formulas, own?.merges, own?.columns, own?.rows].flatMap(
-      (list) => list?.map((one) => one.id) ?? [],
-    ),
-  );
+  const written = handWritten(own);
   const ops = new Map<FilePath, Op[]>();
   const moves: A1Addr[] = [];
 

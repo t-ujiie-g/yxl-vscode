@@ -17,9 +17,9 @@ import {
   type SheetName,
   shifted,
 } from '@yxl-vscode/units';
-import { located, nameOf, type Projection, type Reading } from './direct';
+import { located, type Projection, type Reading } from './direct';
 import { formulas, overrideAt, references } from './renaming';
-import { along, type Does, grown, moved } from './shift';
+import { along, type Does, grown, moved, ownSheet } from './shift';
 import { say } from './text';
 
 /** One node a line rewrites, and the ops that do it once the node's path is known. */
@@ -50,8 +50,11 @@ export function anchors(
   const going = (id: NodeId, path: Path) =>
     removed.some((one) => one.id === id && one.under.every((step, index) => path[index] === step));
 
-  const sheet = spec.doc.sheets.find((one) => nameOf(one) === line.sheet);
-  if (sheet !== undefined) onSheet(spec, sheet, line, read, { edits, stops, set, remove });
+  const rename = (id: NodeId, to: A1Addr) =>
+    edits.push({ id, ops: (path) => [{ op: 'renameKey', path, to }] });
+
+  const sheet = ownSheet(spec, line);
+  if (sheet !== undefined) onSheet(spec, sheet, line, read, { stops, set, remove, rename });
 
   const rewrite = (
     one: { id: NodeId; path: Path; text: string; where: string },
@@ -102,8 +105,8 @@ export function anchors(
 const NOWHERE = '' as SheetName;
 
 interface Collecting {
-  readonly edits: Anchored[];
   readonly stops: Saying[];
+  readonly rename: (id: NodeId, to: A1Addr) => void;
   readonly set: (id: NodeId, under: Path, value: string) => void;
   readonly remove: (id: NodeId, under?: Path) => void;
 }
@@ -119,11 +122,7 @@ function onSheet(spec: Projection, sheet: Sheet, line: Line, read: Reading, to: 
     if (at === null || does === null) continue;
 
     if (does === 'goes') remove(one.id);
-    else
-      to.edits.push({
-        id: one.id,
-        ops: (path) => [{ op: 'renameKey', path, to: moved(at, line) }],
-      });
+    else to.rename(one.id, moved(at, line));
   }
 
   for (const one of [...sheet.conditional, ...sheet.validations, ...sheet.tables]) {

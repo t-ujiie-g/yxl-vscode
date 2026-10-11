@@ -2,7 +2,7 @@ import { applyPatch } from '@yxl-vscode/patch';
 import type { A1Addr, SheetName } from '@yxl-vscode/units';
 import { type Ctx, checked } from '@yxl-vscode/verify';
 import { describe, expect, it } from 'vitest';
-import { clearCell, clearRange } from './clear';
+import { clearCell, clearRange, whole } from './clear';
 import { type Intent, reading, type Text } from './direct';
 import { english, files, ROOT } from './harness';
 
@@ -224,5 +224,28 @@ describe('a rectangle emptied as one edit', () => {
 
     expect(intent.kind).toBe('edit');
     expect(reads).toBe(1);
+  });
+});
+
+describe('whole', () => {
+  const RULES = `${SALES}    conditional:\n      - { at: A1:A1, cell: { greater_than: 0 }, style: { fill: "FF0000" } }\n      - { at: A2:A2, cell: { greater_than: 0 }, style: { fill: "FF0000" } }\n`;
+  const under = ['sheets', 0, 'conditional'];
+
+  it('takes a sequence out by its key where every item of it is going', () => {
+    const { read } = files({ [ROOT]: RULES });
+    const ops = [
+      { op: 'remove' as const, path: [...under, 0] },
+      { op: 'remove' as const, path: [...under, 1] },
+    ];
+
+    expect(whole(ops, ROOT, read)).toEqual([{ op: 'remove', path: under }]);
+  });
+
+  it('leaves the items where the same patch keeps one of them', () => {
+    const { read } = files({ [ROOT]: RULES });
+    const ops = [{ op: 'remove' as const, path: [...under, 0] }];
+    const adding = [{ op: 'set' as const, path: [...under, 1, 'at'], value: 'A1:A1' }];
+
+    expect(whole([...ops, ...adding], ROOT, read, adding)).toEqual([...ops, ...adding]);
   });
 });

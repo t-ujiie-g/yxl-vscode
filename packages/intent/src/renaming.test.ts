@@ -1,7 +1,7 @@
 import type { SheetName } from '@yxl-vscode/units';
 import { describe, expect, it } from 'vitest';
 import { files, tried } from './harness';
-import { references, renameSheet } from './renaming';
+import { formulas, overrideAt, references, renameSheet } from './renaming';
 
 /** The sheet renamed, through the checker — the file, or why not. */
 function called(source: string, sheet: string, name: string): string {
@@ -149,5 +149,27 @@ describe('references', () => {
       ['Summary!C1', ['data'], 'Sales!A1:B1'],
       ['Summary!C2', ['cells', 0, 'data'], 'Sales!A2:B2'],
     ]);
+  });
+});
+
+describe('formulas', () => {
+  it('lists every formula written in place, and not one read by name', () => {
+    const spec = `defs:\n  formulas:\n    double: "Sales!A1*2"\nsheets:\n  - name: Sales\n    cells:\n      A1: 1\n      B1: { formula: "A1+1" }\n      C1: { formula: { $ref: double } }\n    formulas:\n      - { at: D1:D3, formula: "A1*3" }\n`;
+    const { doc } = files(spec);
+
+    expect(formulas(doc).map((one) => [one.where, one.path, one.text])).toEqual([
+      ['a cell of `Sales`', ['formula'], 'A1+1'],
+      ['a range of `Sales`', ['formula'], 'A1*3'],
+      ['`double`', [], 'Sales!A1*2'],
+    ]);
+  });
+});
+
+describe('overrideAt', () => {
+  it("spells an override's cell as `Sheet!A1`, and a template as nothing", () => {
+    const spec = `params:\n  at: A1\nsheets:\n  - name: Sales\n    cells:\n      A1: 1\noverrides:\n  - { at: Sales!A1, value: 2 }\n  - { at: "Sales!\${at}", value: 3 }\n`;
+    const { doc } = files(spec);
+
+    expect(doc.overrides.map((one) => overrideAt(one.at))).toEqual(['Sales!A1', null]);
   });
 });
