@@ -4,39 +4,54 @@ Every release names the `yxl` it was built against: the schema is not frozen
 until yxl's v1.0, so the pinned compiler is part of what a version means
 (`ROADMAP.md` §8 Q6).
 
-## 0.2.9 — 2026-10-11
+## 0.3.0 — 2026-10-11
 
-Targets **yxl 0.5.1**, as 0.2.8 did.
+Targets **yxl 0.5.1**, as 0.2.5 did. Every issue reported against 0.2.5, in one
+release; 0.2.6 to 0.2.9 were numbered along the way and never published.
 
-- **Putting a row or a column in, or taking one out, moves everything that
-  names a place** (#206): notes, links, conditional formats, drop-down lists,
-  the filter, the print area and page breaks, tables, charts, images, shapes,
-  sparklines, layouts and overrides — and formulas on other sheets and in
-  `defs.formulas` that point into the sheet. Before, only the cells moved, and
-  the rest was left at its old address.
-- **Inserting a row no longer fails with a reason that made no sense** on a
-  sheet with an override, a cell whose formula is a `$ref`, or only layouts.
-- **A line through a layout, or one that would take a table's header row, is
-  refused** with that reason, rather than writing a spec yxl would not build.
+### Edits no longer save a spec yxl will not build
+
+- **Text with a comma, bracket or brace is quoted when it is written** (#203).
+  Typing `x]` into a cell written as `{ value: …, style: … }` or into a `data:`
+  row saved a file `yxl build` could not read; typing `a, b` there was refused
+  with a reason that made no sense.
+- **A spec that is not valid YAML says so** (#204). A stray bracket or an
+  unterminated quote was passed over in silence, and the preview drew what it
+  could recover; it is now reported, and an edit that would leave the file
+  like that is refused.
+- **Filling formulas down or right as one range no longer leaves the first
+  cell behind** (#216). The cell is replaced by the range; a cell that also has
+  a style or a format is filled a cell each instead, so its look is not lost.
+- **Renaming a sheet updates every reference to it** (#207): links, drop-down
+  lists read from a range, conditional rules, chart ranges and sparklines as
+  well as formulas, and both ends of a 3D reference such as
+  `Sales:Summary!A1`. It no longer strips the quotes from another sheet's name
+  in a formula. **Deleting a sheet is refused while any of those still names
+  it.**
 - **Gathering definitions that say the same thing updates every place they are
   named** (#217): bands, conditional formats, overrides, layouts and other
   definitions' `extends:`, not only cells. A set that cannot be gathered safely
-  is no longer offered, and a refused tidy-up says why in words.
-- **"Gather Repeated Looks into a Definition" appears in the command palette
-  when a spec is open.** It was shown only while the preview had focus.
-- **A `data:` table whose first row or column is all blank can be sorted, and
-  rows and columns put in beside it** (#215). They were refused with a reason
-  that did not fit.
-- **Sorting Z to A leaves blank cells at the bottom**, as Excel does (#215).
+  is no longer offered, and a refused tidy-up says why in words. The command
+  — "Gather Repeated Looks into a Definition" — now appears in the command
+  palette when a spec is open, not only while the preview has focus.
+
+### Rows and columns put in or taken out move everything
+
+- **Everything that names a place moves with the line** (#206): notes, links,
+  conditional formats, drop-down lists, the filter, the print area and page
+  breaks, tables, charts, images, shapes, sparklines, layouts and overrides —
+  and formulas on other sheets and in `defs.formulas` that point into the
+  sheet. Before, only the cells moved.
+- **No more refusals with reasons that did not fit**, on a sheet with an
+  override, a cell whose formula is a `$ref`, only layouts (#206), or a `data:`
+  table whose first row or column is all blank (#215). A line through a layout,
+  or one that would take a table's header row, is refused with that reason.
 - **Putting a row in above a layout no longer asks first** because of the
   formulas the layout draws: only what the edit writes is counted.
-- **`0x1F`, `0o17` and `0b101` typed into a cell stay as you typed them**
-  (#205); they were written as the numbers 31, 15 and 5. `TRUE` and `FALSE`
-  are truth values whatever their case, as in Excel.
-- **Where two column or row bands overlap, the preview shows what yxl builds**
-  (#208): the later band's style replaces the earlier one rather than adding
-  to it, and a width set by one band survives a later band that only hides
-  the column.
+- **Sorting Z to A leaves blank cells at the bottom**, as Excel does (#215).
+
+### The preview shows what Excel and yxl show
+
 - **Numbers with no format show as Excel's General** (#209): `=1/3` is
   `0.333333333`, not sixteen digits.
 - **Dates in a `date1904: true` workbook show the right day** (#210); they
@@ -47,55 +62,29 @@ Targets **yxl 0.5.1**, as 0.2.8 did.
   error value centred, a format's text section applied to text, underline and
   strikethrough together, and a conditional format comparing `"1"` no longer
   matching the number 1.
+- **Where two column or row bands overlap, the preview shows what yxl builds**
+  (#208): the later band's style replaces the earlier one rather than adding
+  to it, and a width set by one band survives a later band that only hides
+  the column.
 - **Borders between neighbouring cells are one line on the gridline** (#212),
   not two lines either side of it.
-- **Arrow keys and Tab move as in Excel** (#218): through a merged cell in one
-  step, and over hidden rows and columns.
 - **The print area, page breaks, charts, images and shapes stay on their rows
   below a row that has grown to fit wrapped text** (#219).
+- **The preview reports what `yxl build` refuses** that it used to pass over: a
+  formula range over a cell the sheet writes or over another range (#216), and
+  a link, list, chart or sparkline naming a sheet the spec does not have
+  (#207).
+
+### Typing and moving
+
+- **`0x1F`, `0o17` and `0b101` typed into a cell stay as you typed them**
+  (#205); they were written as the numbers 31, 15 and 5. `TRUE` and `FALSE`
+  are truth values whatever their case, as in Excel.
+- **Arrow keys and Tab move as in Excel** (#218): through a merged cell in one
+  step, and over hidden rows and columns.
 - **The preview follows a CSV, JSON or `$include` file changed outside VS
   Code** (#214) — by a script, `git pull` or a checkout — including one that
   is deleted and comes back.
-
-## 0.2.8 — 2026-10-10
-
-Targets **yxl 0.5.1**, as 0.2.7 did.
-
-- **Renaming a sheet updates every reference to it** (#207): links,
-  drop-down lists read from a range, conditional rules, chart ranges and
-  sparklines as well as formulas, and both ends of a 3D reference such as
-  `Sales:Summary!A1`. Before, the spec was saved with the old name in those
-  places and would not build.
-- **Renaming a sheet no longer strips the quotes from another sheet's name** in
-  a formula: `'Q1 Sales'!A1` stayed `'Q1 Sales'!A1`, not `Q1 Sales!A1`.
-- **Deleting a sheet is refused while any of those still names it.**
-- **A link, list, chart or sparkline that names a sheet the spec does not have
-  is reported** in the preview, as `yxl build` reports it.
-
-## 0.2.7 — 2026-10-10
-
-Targets **yxl 0.5.1**, as 0.2.6 did.
-
-- **Filling formulas down or right as one range no longer leaves the first
-  cell behind** (#216). The range was written and the cell it was filled from
-  kept, which yxl refuses to build. The cell is now replaced by the range; a
-  cell that also has a style or a format is filled a cell each instead, so its
-  look is not lost.
-- **A formula range that covers a cell the sheet writes, or another range, is
-  reported** in the preview, as `yxl build` reports it.
-
-## 0.2.6 — 2026-10-10
-
-Targets **yxl 0.5.1**, as 0.2.5 did.
-
-- **Text with a comma, bracket or brace is quoted when it is written** (#203).
-  Typing `x]` into a cell written as `{ value: …, style: … }` or into a `data:`
-  row saved a file `yxl build` could not read; typing `a, b` there was refused
-  with a reason that made no sense.
-- **A spec that is not valid YAML says so** (#204). A stray bracket or an
-  unterminated quote was passed over in silence, and the preview drew what it
-  could recover; it is now reported, and an edit that would leave the file
-  like that is refused.
 
 ## 0.2.5 — 2026-10-08
 
