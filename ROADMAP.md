@@ -3891,7 +3891,9 @@ names.
   set to, or to say plainly that a fitted width is this editor's best guess at
   Excel's.
 - **Q20 — Two bands over one column or row: does the later replace, or layer?**
-  *(Opened 2026-10-11 by #208; upstream's to answer, not asked yet.)* yxl's
+  ✅ *Answered 2026-10-11 by the maintainer: **replace** is intended, and a band
+  that should add to another's look says so with `extends:`. Upstream's
+  t-ujiie-g/yxl#109 asks for §4 to say it.* *(Opened 2026-10-11 by #208.)* yxl's
   emitter replaces — the last band with a look wins whole, and the size, hidden
   and outline level each go to the last band that sets them — and the preview
   now does the same (AGENTS.md §2). `docs/spec.md` §4 says columns, rows and
