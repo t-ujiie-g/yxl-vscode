@@ -6,7 +6,15 @@ import {
   REACH,
 } from '@yxl-vscode/compile';
 import type { Saying } from '@yxl-vscode/diag';
-import { type A1Addr, cellOf, type Line, type NodeId, type Rect, shifted } from '@yxl-vscode/units';
+import {
+  type A1Addr,
+  addrAt,
+  cellOf,
+  type Line,
+  type NodeId,
+  type Rect,
+  shifted,
+} from '@yxl-vscode/units';
 import { say } from './text';
 
 /** What a line does to one construct: it moves whole, it takes the line in, or it goes with it. */
@@ -168,6 +176,42 @@ export function along(line: Line): Along {
     over: (rect) => run(columns ? rect.left : rect.top, columns ? rect.right : rect.bottom),
     run,
   };
+}
+
+/** One address once the line is drawn. */
+export function moved(at: A1Addr, line: Line): A1Addr {
+  const cell = cellOf(at);
+  const one = line.axis === 'column' ? cell.col : cell.row;
+
+  return line.axis === 'column'
+    ? addrAt({ col: one + line.by, row: cell.row })
+    : addrAt({ col: cell.col, row: one + line.by });
+}
+
+/** A rectangle with the line taken in: the far end moves, the near one stays. */
+export function grown(rect: Rect, line: Line, does: string): Rect {
+  const near = line.axis === 'column' ? rect.left : rect.top;
+  const far = line.axis === 'column' ? rect.right : rect.bottom;
+  const run = held(near, far, line, does);
+
+  return line.axis === 'column'
+    ? { ...rect, left: run.first, right: run.last }
+    : { ...rect, top: run.first, bottom: run.last };
+}
+
+/** A run of the axis once the line is drawn: it moves whole, or it takes the line in. */
+export function held(
+  first: number,
+  last: number,
+  line: Line,
+  does: string,
+): { first: number; last: number } {
+  if (does === 'shifts') return { first: first + line.by, last: last + line.by };
+
+  const gone =
+    line.by < 0 ? Math.min(last, line.at - line.by - 1) - Math.max(first, line.at) + 1 : 0;
+
+  return { first, last: line.by < 0 ? last - gone : last + line.by };
 }
 
 /** The run a line covers, as the reader sees it named: one row inserted, or the rows a delete takes. */

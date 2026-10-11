@@ -13,16 +13,29 @@ import {
   cellOf,
   type FilePath,
   type Line,
+  type NodeId,
+  parseA1Addr,
   qualified,
   type Rect,
   rangeOf,
   type SheetName,
   shifted,
 } from '@yxl-vscode/units';
+import { type Anchored, anchors } from './anchors';
 import { spelled } from './bands';
-import { type Found, type Intent, located, type Projection, type Reading, refused } from './direct';
+import { whole } from './clear';
+import {
+  cellsNaming,
+  type Found,
+  type Intent,
+  located,
+  nameOf,
+  type Projection,
+  type Reading,
+  refused,
+} from './direct';
 import type { Candidate } from './resolve';
-import { along, blocks, shifting } from './shift';
+import { along, blocks, grown, held, moved, shifting } from './shift';
 import { say } from './text';
 
 /**
@@ -35,10 +48,11 @@ export function drawLine(spec: Projection, line: Line, read: Reading): Intent {
   if (sheet === null) return refused(say('intent.no-such-sheet', { sheet: line.sheet }));
   if (line.at < 1) return refused(say('intent.no-such-band', { axis: line.axis, at: line.at }));
 
-  const stopped = shifting(sheet, line).stops[0];
+  const besides = anchors(spec, line, read);
+  const stopped = [...shifting(sheet, line).stops, ...besides.stops][0];
   if (stopped !== undefined) return refused(stopped);
 
-  const written = writing(sheet, line, read);
+  const written = writing(spec, sheet, line, read, besides.edits);
   if (written.kind !== 'writing') return written;
 
   return {
@@ -46,7 +60,10 @@ export function drawLine(spec: Projection, line: Line, read: Reading): Intent {
     file: written.file,
     patch: { ops: written.ops },
     expects: {
-      cells: new Set(written.moves.map((at) => qualified(sheet.name, at))),
+      cells: new Set([
+        ...written.moves.map((at) => qualified(sheet.name, at)),
+        ...cellsNaming(spec, sheet.name),
+      ]),
       beyond: 'ask',
     },
   };
@@ -69,6 +86,7 @@ export function setLine(spec: Projection, line: Line, read: Reading): readonly C
   const intent = drawLine(spec, line, read);
   const { moves } = shifting(sheet, line);
   const keys = moves.filter((one) => one.of === 'cell').length;
+  const things = moves.length + anchors(spec, line, read).edits.length;
 
   return [
     {
@@ -77,11 +95,11 @@ export function setLine(spec: Projection, line: Line, read: Reading): readonly C
       what: say(line.by < 0 ? 'intent.take-lines-away' : 'intent.put-lines-in', {
         ...reaching(line),
         many: line.by,
-        things: moves.length,
+        things,
         keys,
       }),
       moves: intent.kind === 'edit' ? [...intent.expects.cells].map(named) : [],
-      alone: moves.length <= MANY,
+      alone: things <= MANY,
       intent,
     },
   ];
@@ -100,8 +118,26 @@ interface Writing {
   readonly moves: readonly A1Addr[];
 }
 
-function writing(sheet: CompiledSheet, line: Line, read: Reading): Writing | Intent {
+function writing(
+  spec: Projection,
+  sheet: CompiledSheet,
+  line: Line,
+  read: Reading,
+  besides: readonly Anchored[],
+): Writing | Intent {
   const of = along(line);
+  const own = spec.doc.sheets.find((one) => nameOf(one) === line.sheet);
+  const bodies = new Map<NodeId, string>();
+  for (const cell of own?.cells ?? []) {
+    if (cell.formula?.kind === 'inline') bodies.set(cell.id, cell.formula.body);
+  }
+  for (const range of own?.formulas ?? []) bodies.set(range.id, range.formula);
+  // A layout draws merges, ranges and bands too; those move with the layout.
+  const written = new Set(
+    [own?.formulas, own?.merges, own?.columns, own?.rows].flatMap(
+      (list) => list?.map((one) => one.id) ?? [],
+    ),
+  );
   const ops = new Map<FilePath, Op[]>();
   const moves: A1Addr[] = [];
 
@@ -122,26 +158,25 @@ function writing(sheet: CompiledSheet, line: Line, read: Reading): Writing | Int
     if (does !== 'goes') moves.push(moved(at, line));
   }
 
-  for (const [key, cell] of sheet.cells) {
-    const at = key as A1Addr;
-    const from = cell.provenance.value;
-    if (from.kind !== 'literal') continue;
-
-    const does = of.at(cellOf(at));
+  // The entries as written: an override over a cell leaves the entry under it to move.
+  for (const cell of own?.cells ?? []) {
+    const at = typeof cell.at === 'string' ? parseA1Addr(cell.at) : null;
+    const does = at === null ? null : of.at(cellOf(at));
     const gone = does === 'goes';
-    if (does !== null) {
-      put(located(from.node, read), (path) =>
+    if (at !== null && does !== null) {
+      put(located(cell.id, read), (path) =>
         gone ? [{ op: 'remove', path }] : [{ op: 'renameKey', path, to: moved(at, line) }],
       );
     }
 
     // A formula says the same thing from where it stands, whether or not the
-    // line moved the cell it is written in.
-    if (gone || cell.formula === null) continue;
+    // line moved the cell it is written in; one read from `defs.formulas` moves there.
+    const body = bodies.get(cell.id);
+    if (gone || body === undefined) continue;
 
-    const now = shifted(cell.formula, sheet.name, line);
-    if (now.ok && now.formula !== cell.formula) {
-      put(located(from.node, read), (path) => [
+    const now = shifted(body, sheet.name, line);
+    if (now.ok && now.formula !== body) {
+      put(located(cell.id, read), (path) => [
         { op: 'set', path: [...path, KEY.formula], value: now.formula },
       ]);
     }
@@ -171,7 +206,8 @@ function writing(sheet: CompiledSheet, line: Line, read: Reading): Writing | Int
 
   for (const fill of sheet.fills) {
     const does = of.over(fill.rect);
-    if (does === null) continue;
+    const body = bodies.get(fill.node);
+    if (does === null || body === undefined) continue;
 
     const found = located(fill.node, read);
     if (does === 'goes') {
@@ -180,10 +216,10 @@ function writing(sheet: CompiledSheet, line: Line, read: Reading): Writing | Int
     }
 
     const rect = grown(fill.rect, line, does);
-    const now = shifted(fill.formula, sheet.name, line);
+    const now = shifted(body, sheet.name, line);
     put(found, (path) => [
       { op: 'set', path: [...path, KEY.at], value: rangeOf(rect) },
-      ...(now.ok && now.formula !== fill.formula
+      ...(now.ok && now.formula !== body
         ? [{ op: 'set', path: [...path, KEY.formula], value: now.formula } as const]
         : []),
     ]);
@@ -191,7 +227,7 @@ function writing(sheet: CompiledSheet, line: Line, read: Reading): Writing | Int
 
   for (const merge of sheet.merges) {
     const does = of.over(merge.rect);
-    if (does === null) continue;
+    if (does === null || !written.has(merge.node)) continue;
 
     put(located(merge.node, read), (path) =>
       does === 'goes'
@@ -202,7 +238,7 @@ function writing(sheet: CompiledSheet, line: Line, read: Reading): Writing | Int
 
   for (const band of line.axis === 'column' ? sheet.columns : sheet.rows) {
     const does = of.run(band.first, band.last);
-    if (does === null) continue;
+    if (does === null || !written.has(band.node)) continue;
 
     const run = held(band.first, band.last, line, does);
     // A row band's `at:` is a number where it names one row, and the file said
@@ -231,6 +267,8 @@ function writing(sheet: CompiledSheet, line: Line, read: Reading): Writing | Int
     );
   }
 
+  for (const one of besides) put(located(one.id, read), one.ops);
+
   const files = [...ops.keys()];
   const file = files[0];
   if (file === undefined) return refused(say('intent.nothing-moves', reaching(line)));
@@ -238,7 +276,18 @@ function writing(sheet: CompiledSheet, line: Line, read: Reading): Writing | Int
     return refused(say('intent.band-across-files', reaching(line)));
   }
 
-  return { kind: 'writing', file, ops: ops.get(file) ?? [], moves };
+  // Whatever was to change inside a node the line takes away goes with it.
+  const gone = (ops.get(file) ?? []).filter((one) => one.op === 'remove').map((one) => one.path);
+  const kept = (ops.get(file) ?? []).filter(
+    (one) => one.op === 'remove' || !gone.some((path) => inside(one.path, path)),
+  );
+  const adding = kept.filter((one) => one.op !== 'remove');
+  return { kind: 'writing', file, ops: whole(kept, file, read, adding), moves };
+}
+
+/** Whether `path` lies strictly under `under`. */
+function inside(path: Path, under: Path): boolean {
+  return path.length > under.length && under.every((step, index) => path[index] === step);
 }
 
 /** Why more than one column cannot come out of this block at once: its rows are `[a, b]`. */
@@ -252,45 +301,9 @@ function flowing(found: Found, line: Line): string | null {
   return 'rows written as `[a, b]` give up one field at a time, so take these away one by one';
 }
 
-/** One address once the line is drawn. */
-function moved(at: A1Addr, line: Line): A1Addr {
-  const cell = cellOf(at);
-  const one = line.axis === 'column' ? cell.col : cell.row;
-
-  return line.axis === 'column'
-    ? addrAt({ col: one + line.by, row: cell.row })
-    : addrAt({ col: cell.col, row: one + line.by });
-}
-
 /** The top-left of a rectangle that moves whole. */
 function corner(rect: Rect, line: Line): string {
   return moved(addrAt({ col: rect.left, row: rect.top }), line);
-}
-
-/** A rectangle with the line taken in: the far end moves, the near one stays. */
-function grown(rect: Rect, line: Line, does: string): Rect {
-  const near = line.axis === 'column' ? rect.left : rect.top;
-  const far = line.axis === 'column' ? rect.right : rect.bottom;
-  const run = held(near, far, line, does);
-
-  return line.axis === 'column'
-    ? { ...rect, left: run.first, right: run.last }
-    : { ...rect, top: run.first, bottom: run.last };
-}
-
-/** A run of the axis once the line is drawn: it moves whole, or it takes the line in. */
-function held(
-  first: number,
-  last: number,
-  line: Line,
-  does: string,
-): { first: number; last: number } {
-  if (does === 'shifts') return { first: first + line.by, last: last + line.by };
-
-  const gone =
-    line.by < 0 ? Math.min(last, line.at - line.by - 1) - Math.max(first, line.at) + 1 : 0;
-
-  return { first, last: line.by < 0 ? last - gone : last + line.by };
 }
 
 /** The gap a line opens inside an inline `data:` block, or the row it takes out of one. */

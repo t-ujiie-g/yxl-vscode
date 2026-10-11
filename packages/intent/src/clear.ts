@@ -122,7 +122,7 @@ export function clearRange(
   };
 }
 
-/** The same removals, with a mapping whose every entry is going taken out whole: an empty `cells:` will not load. */
+/** The same removals, with a collection whose every member is going taken out whole: an empty `cells:` will not load. */
 export function whole(
   ops: readonly Op[],
   file: FilePath,
@@ -151,7 +151,7 @@ export function whole(
   return done;
 }
 
-/** Whether every entry of the mapping at `path` is going, with nothing the same patch adds left in it. */
+/** Whether every entry of the mapping or item of the sequence at `path` is going, with nothing the same patch adds left in it. */
 function leftEmpty(
   root: Node,
   path: Path,
@@ -159,10 +159,13 @@ function leftEmpty(
   adding: readonly Op[],
 ): boolean {
   const holder = nodeAt(root, path);
-  if (holder === null || holder.kind !== 'map' || holder.entries.length === 0) return false;
-  if (fills(path, adding)) return false;
+  if (holder === null || holder.kind === 'scalar' || fills(path, adding)) return false;
 
-  return holder.entries.every((entry) => going.has(marked([...path, String(entry.key.value)])));
+  const members =
+    holder.kind === 'map'
+      ? holder.entries.map((entry): Path => [...path, String(entry.key.value)])
+      : holder.items.map((_, index): Path => [...path, index]);
+  return members.length > 0 && members.every((one) => going.has(marked(one)));
 }
 
 /** Whether the patch puts something into the mapping at `path`, which is what keeps it. */

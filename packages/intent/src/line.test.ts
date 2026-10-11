@@ -182,3 +182,124 @@ describe('what a line offers to move', () => {
     ]);
   });
 });
+
+describe('what else names a place, moved with the line (#206)', () => {
+  const NAMED = `${SALES}    cells:
+      A3: APAC
+      B3: 10
+      A4: EMEA
+      B4: 20
+`;
+
+  it.each([
+    ['a note', '    comments:\n      A3: "check this"\n', '      A4: "check this"\n'],
+    ['a link', '    links:\n      A3: { to: "Sales!B3" }\n', '      A4: { to: "Sales!B4" }\n'],
+    [
+      'a rule, its range and its formula',
+      '    conditional:\n      - { at: A3:A4, formula: "B3>15", style: { fill: "FF0000" } }\n',
+      '      - { at: A4:A5, formula: "B4>15", style: { fill: "FF0000" } }\n',
+    ],
+    [
+      'a list, its range and where it reads from',
+      '    validations:\n      - { at: A3:A4, list: { from: B3:B4 } }\n',
+      '      - { at: A4:A5, list: { from: B4:B5 } }\n',
+    ],
+    ['a filter', '    filter: A3:B4\n', '    filter: A4:B5\n'],
+    [
+      'the print area and its breaks',
+      '    print:\n      area: A3:B4\n      breaks: [A4]\n',
+      '    print:\n      area: A4:B5\n      breaks: [A5]\n',
+    ],
+    ['a table', '    tables:\n      - at: A3:B4\n', '      - at: A4:B5\n'],
+    [
+      'a chart, where it sits and what it plots',
+      '    charts:\n      - { type: column, at: D3, series: [{ values: B3:B4, categories: A3:A4 }] }\n',
+      '      - { type: column, at: D4, series: [{ values: B4:B5, categories: A4:A5 }] }\n',
+    ],
+    [
+      'a sparkline, written either way',
+      '    sparklines:\n      - { at: C3, data: B3:B4 }\n      - cells:\n          - { at: C4, data: A4:B4 }\n',
+      '      - { at: C4, data: B4:B5 }\n      - cells:\n          - { at: C5, data: A5:B5 }\n',
+    ],
+  ])('%s', (_label, keys, after) => {
+    expect(drawn(`${NAMED}${keys}`, row(1))).toContain(after);
+  });
+
+  it('moves a formula on another sheet that names a cell the line moves', () => {
+    const spec = `${NAMED}  - name: Summary\n    cells:\n      A1: { formula: "Sales!B4*2" }\n`;
+
+    expect(drawn(spec, row(1))).toContain('A1: { formula: "Sales!B5*2" }');
+  });
+
+  it('moves a `defs.formulas` body, and leaves a cell that reads it as written', () => {
+    const spec = `${NAMED}      C3: { formula: { $ref: double } }\ndefs:\n  formulas:\n    double: "Sales!B3*2"\n`;
+    const done = drawn(spec, row(1));
+
+    expect(done).toContain('      C4: { formula: { $ref: double } }\n');
+    expect(done).toContain('    double: "Sales!B4*2"\n');
+  });
+
+  it('moves an override with the cell it is over', () => {
+    const spec = `${NAMED}overrides:\n  - at: Sales!B4\n    value: 99\n`;
+    const done = drawn(spec, row(1));
+
+    expect(done).toContain('      B5: 20\n');
+    expect(done).toContain('  - at: Sales!B5\n');
+  });
+
+  it('moves a layout that sits below the line', () => {
+    const spec = `${SALES}    layouts:\n      - at: A3\n        values: [[a, 1]]\n        columns: [{ name: n, header: N }, { name: v }]\n`;
+
+    expect(drawn(spec, row(1))).toContain('      - at: A4\n');
+  });
+
+  it('takes the note, the link and the sparkline of a row it takes away, and the key with the last', () => {
+    const spec = `${NAMED}    comments:\n      A3: "check this"\n    links:\n      A3: { to: "Sales!B4" }\n    sparklines:\n      - { at: C3, data: A4:B4 }\n`;
+
+    expect(drawn(spec, row(3, -1))).toBe(`${SALES}    cells:\n      A3: EMEA\n      B3: 20\n`);
+  });
+});
+
+describe('a construct the line takes away', () => {
+  it('is not asked whether what it refers to survives, since it goes too', () => {
+    const spec = `${SALES}    cells:\n      A3: 1\n      A4: 2\n    sparklines:\n      - { at: C3, data: A3:B3 }\n    conditional:\n      - { at: A3:A3, formula: "A3>0", style: { fill: "FF0000" } }\n`;
+
+    expect(drawn(spec, row(3, -1))).toBe(`${SALES}    cells:\n      A3: 2\n`);
+  });
+});
+
+describe('a chart whose row is taken away', () => {
+  it('stays on the row that takes its place, as Excel keeps it', () => {
+    const spec = `${SALES}    cells:\n      A1: 1\n    charts:\n      - { type: column, at: D3, series: [{ values: A1:A1 }] }\n      - { type: column, at: D9, series: [{ values: A1:A1 }] }\n`;
+    const done = drawn(spec, row(3, -2));
+
+    expect(done).toContain('      - { type: column, at: D3,');
+    expect(done).toContain('      - { type: column, at: D7,');
+  });
+});
+
+describe('what a line will not move, and says why (#206)', () => {
+  it('a layout it would cut through', () => {
+    const spec = `${SALES}    layouts:\n      - at: A3\n        values: [[a, 1], [b, 2]]\n        columns: [{ name: n, header: N }, { name: v }]\n`;
+
+    expect(drawn(spec, row(4))).toBe(
+      'refused: a layout draws rows 3-5, and moves only whole, so draw lines above or below it',
+    );
+  });
+
+  it('a table it would leave without its header or a row of data', () => {
+    const spec = `${SALES}    cells:\n      A2: Name\n      A3: x\n    tables:\n      - at: A2:A3\n`;
+
+    expect(drawn(spec, row(2, -1))).toBe(
+      'refused: the table at `A2:A3` would lose its header row or be left with no row of data',
+    );
+  });
+
+  it('a reference that names the row it takes away', () => {
+    const spec = `${SALES}    cells:\n      A3: 1\n      A4: 2\n    validations:\n      - { at: B1:B1, list: { from: A3:A4 } }\n`;
+
+    expect(drawn(spec, row(4, -1))).toBe(
+      'refused: `Sales!B1:B1` refers to `A3:A4`, and `A4` names a row this would take away',
+    );
+  });
+});

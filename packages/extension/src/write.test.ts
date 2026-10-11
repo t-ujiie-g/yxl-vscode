@@ -1113,6 +1113,14 @@ describe('rows put in and taken away from the heading', () => {
     expect(told).toEqual(['row 5 put in.']);
   });
 
+  it('moves a layout below it by where it sits (#206)', async () => {
+    const { spec, port, files, refusals } = editor({ [ROOT]: LAID_OUT });
+
+    await line(spec, { sheet: 'Sales', axis: 'row', at: 1, by: 1 }, port);
+    expect(refusals).toEqual([]);
+    expect(files[ROOT]).toBe(LAID_OUT.replace('      - at: A1\n', '      - at: A2\n'));
+  });
+
   it('takes a row away, and the cells inside it with it', async () => {
     const { spec, port, files } = editor({ [ROOT]: SHEET });
 
@@ -1342,9 +1350,12 @@ describe('a patch that would write inside a layout', () => {
     ops: [{ op: 'set' as const, path, value: '20' }],
   });
 
-  it('is one whose op lands under a layout anywhere but a row of its data or a width', () => {
+  it('is one whose op lands under a layout anywhere but a row of its data, a width or where it sits', () => {
     const layout = ['sheets', 0, 'layouts', 0];
-    expect(intoLayout(spec.grid, ROOT, set([...layout, 'at']))).toBe(true);
+    expect(intoLayout(spec.grid, ROOT, set([...layout, 'at']))).toBe(false);
+    expect(intoLayout(spec.grid, ROOT, { ops: [{ op: 'remove', path: [...layout, 'at'] }] })).toBe(
+      true,
+    );
     expect(intoLayout(spec.grid, ROOT, set([...layout, 'columns', 1, 'style']))).toBe(true);
     expect(intoLayout(spec.grid, ROOT, set([...layout, 'columns', 1, 'width']))).toBe(false);
     expect(intoLayout(spec.grid, ROOT, set([...layout, 'values', 0, 1]))).toBe(false);
