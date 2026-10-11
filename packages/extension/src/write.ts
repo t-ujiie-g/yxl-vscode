@@ -398,8 +398,8 @@ export async function applied(
 }
 
 /**
- * Whether a patch writes inside a layout anywhere but the two places an edit
- * may: its `values:` rows, and a column's `width:` (ADR-057, ADR-059).
+ * Whether a patch writes inside a layout anywhere but the three places an edit
+ * may: its `values:` rows, a column's `width:`, and its `at:` (ADR-059, ADR-060).
  */
 export function intoLayout(grid: CompiledGrid, file: FilePath, patch: Patch): boolean {
   const layouts = grid.sheets.flatMap((sheet) =>
@@ -418,6 +418,7 @@ export function intoLayout(grid: CompiledGrid, file: FilePath, patch: Patch): bo
 }
 
 function admitted(op: Patch['ops'][number], within: readonly (string | number)[]): boolean {
+  if (within[0] === KEY.at) return op.op === 'set' && within.length === 1;
   if (within[0] === KEY.values) return op.op === 'set' && within.length === 3;
   if (within[0] !== KEY.columns || typeof within[1] !== 'number') return false;
   if (op.op === 'add') return within.length === 2 && op.key === KEY.width;

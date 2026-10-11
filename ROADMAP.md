@@ -3650,6 +3650,19 @@ columns it sizes.
 a column's `width:`. Anything else inside a layout is still refused, so the next
 edit is added the same way — deliberately.
 
+### ADR-060 — A line moves a layout whole, by its `at:`
+**Accepted** 2026-10-11. Extends ADR-059's list of what the write guard admits
+inside a layout; nothing else in it changes.
+
+A row or a column put in or taken out above or left of a layout moves the
+layout as Excel would move the cells it draws: the layout's own `at:` is `set`
+to where its corner lands, and nothing inside it is touched. A line *through* a
+layout is refused before any patch exists — what the layout's header, body and
+footer should become is not one answer (ADR-001). So the guard admits a third
+edit, a `set` of `at:` itself; removing it, or writing under it, is still
+refused. An `at: { below: … }` is never written: it follows the layout it
+names.
+
 ## 8. Open questions
 
 - **Q1 — `cells:` A1 keys and row insertion.** ✅ *Answered 2026-08-23.*
@@ -3994,6 +4007,11 @@ not the reason.
   refused.
 - **A row taken from under a table's header, or that leaves it no row of data,
   is refused**: yxl will not build a table without both.
+- **The write guard refused the layout's move** — found by the reader running
+  the verification file: the intent was right, and the host's `intoLayout`
+  admitted only `values:` rows and widths inside a layout (ADR-059). ADR-060
+  adds the layout's own `at:`. The verification had called the intent and not
+  the host; the files are now checked through the host's `line()` as well.
 - A reference on something the line takes away is not asked whether it
   survives, since it goes too.
 - `KEY.print` joins the schema keys; `moved`, `grown` and `held` moved to
@@ -4002,7 +4020,7 @@ not the reason.
 - Checked with yxl 0.5.1: a spec with every construct above, a row put in above
   row 1, a column put in at A, and row 2 taken out once the table is out of
   its way, all build.
-- 2715 → 2734 tests, run against yxl 0.5.1. Comment shape: export 1010 / 2190
+- 2715 → 2735 tests, run against yxl 0.5.1. Comment shape: export 1010 / 2190
   (avg 2.2), private 659 / 659 (1.0), inline 147 / 232 (1.6), 0 over.
 
 ### 2026-10-11 — Refactoring pass after 0.2.6–0.2.8 (`AGENTS.md` §8)
