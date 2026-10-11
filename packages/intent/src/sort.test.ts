@@ -62,6 +62,32 @@ describe('rows of a table put in order', () => {
   });
 });
 
+describe('a table whose first row is all blanks (#215)', () => {
+  const HEADLESS = `${SALES}    data:\n      - at: A1\n        values:\n          - [null, null]\n          - [EMEA, 3]\n          - [APAC, 1]\n          - [LATAM, 2]\n`;
+
+  it('sorts the rows the selection covers, counted from its `at:`', () => {
+    expect(sorted(HEADLESS, at(2, 1, 4))).toBe(
+      `${SALES}    data:\n      - at: A1\n        values:\n          - [null, null]\n          - [APAC, 1]\n          - [EMEA, 3]\n          - [LATAM, 2]\n`,
+    );
+  });
+});
+
+describe('blanks in a sort', () => {
+  const BLANKS = `${SALES}    data:\n      - at: A1\n        values:\n          - [b]\n          - [null]\n          - [a]\n          - [5]\n`;
+
+  it('go last going up, as Excel puts them', () => {
+    expect(sorted(BLANKS, at(1, 1, 4))).toContain(
+      '          - [5]\n          - [a]\n          - [b]\n          - [null]\n',
+    );
+  });
+
+  it('go last going down too (#215)', () => {
+    expect(sorted(BLANKS, at(1, 1, 4), true)).toContain(
+      '          - [b]\n          - [a]\n          - [5]\n          - [null]\n',
+    );
+  });
+});
+
 describe('what a sort will not put in order', () => {
   it('rows that are not a table written here', () => {
     const spec = `${SALES}    cells:\n      A1: EMEA\n      A2: APAC\n`;

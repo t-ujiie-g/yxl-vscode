@@ -24,6 +24,10 @@ Targets **yxl 0.5.1**, as 0.2.8 did.
   is no longer offered, and a refused tidy-up says why in words.
 - **"Gather Repeated Looks into a Definition" appears in the command palette
   when a spec is open.** It was shown only while the preview had focus.
+- **A `data:` table whose first row or column is all blank can be sorted, and
+  rows and columns put in beside it** (#215). They were refused with a reason
+  that did not fit.
+- **Sorting Z to A leaves blank cells at the bottom**, as Excel does (#215).
 
 ## 0.2.8 — 2026-10-10
 

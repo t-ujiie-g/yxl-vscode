@@ -29,6 +29,7 @@ import type {
   A1Addr,
   CellRef,
   Color,
+  FilePath,
   NodeId,
   QualifiedCell,
   Rect,
@@ -67,6 +68,7 @@ export interface CompiledSheet {
   readonly node: NodeId;
   readonly cells: ReadonlyMap<string, CompiledCell>;
   readonly fills: readonly CompiledFill[];
+  readonly blocks: readonly CompiledBlock[];
   readonly columns: readonly CompiledBand[];
   readonly rows: readonly CompiledBand[];
   readonly merges: readonly CompiledMerge[];
@@ -311,6 +313,16 @@ export interface CompiledRule {
   readonly style: readonly StyleLayer[];
   readonly stopIfTrue: boolean;
   readonly node: NodeId;
+}
+
+/**
+ * One `data:` block, as far as its rows reach from its anchor whether or not a
+ * field holds anything; `file` is the one it read, `null` for inline `values:`.
+ */
+export interface CompiledBlock {
+  readonly rect: Rect;
+  readonly node: NodeId;
+  readonly file: FilePath | null;
 }
 
 /**

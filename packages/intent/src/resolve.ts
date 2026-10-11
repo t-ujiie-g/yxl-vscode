@@ -36,7 +36,6 @@ import {
   type Reading,
   type Text,
 } from './direct';
-import { blocks } from './shift';
 import { say } from './text';
 import { meaning } from './typed';
 
@@ -231,7 +230,7 @@ function ontoBlock(
   if (typed === '' || 'formula' in holds) return null;
 
   const cell = cellOf(where.at);
-  const block = blocks(sheet).find(
+  const block = sheet.blocks.find(
     (one) =>
       one.file === null &&
       one.rect.bottom === cell.row - 1 &&

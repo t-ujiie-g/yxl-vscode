@@ -61,7 +61,7 @@ export function shifting(sheet: CompiledSheet, line: Line): Shift {
     if (why !== null) stops.push(why);
   }
 
-  for (const block of blocks(sheet)) {
+  for (const block of sheet.blocks) {
     const does = of.over(block.rect);
     if (does === null) continue;
     if ((does === 'grows' || does === 'shrinks') && block.file !== null) {
@@ -103,40 +103,6 @@ function keeps(sheet: CompiledSheet, cell: CompiledCell, line: Line): Saying | n
   return done.ok
     ? null
     : say('intent.formula-would-break', { at: cell.at, formula: cell.formula, why: done.why });
-}
-
-/** One `data:` block, as the cells it laid down say where it reaches. */
-export interface Block {
-  readonly node: NodeId;
-  readonly rect: Rect;
-  readonly file: string | null;
-}
-
-/** Every `data:` block on a sheet, each as the rectangle its cells actually cover. */
-export function blocks(sheet: CompiledSheet): Block[] {
-  const found = new Map<NodeId, { rect: Rect; file: string | null }>();
-
-  for (const cell of sheet.cells.values()) {
-    const from = cell.provenance.value;
-    if (from.kind !== 'inline' && from.kind !== 'external') continue;
-
-    const { col, row } = cellOf(cell.at);
-    const held = found.get(from.node);
-    const file = from.kind === 'external' ? from.file : null;
-    if (held === undefined) {
-      found.set(from.node, { rect: { top: row, left: col, bottom: row, right: col }, file });
-      continue;
-    }
-
-    held.rect = {
-      top: Math.min(held.rect.top, row),
-      left: Math.min(held.rect.left, col),
-      bottom: Math.max(held.rect.bottom, row),
-      right: Math.max(held.rect.right, col),
-    };
-  }
-
-  return [...found].map(([node, one]) => ({ node, rect: one.rect, file: one.file }));
 }
 
 /** The line, asked what it does to a place, a rectangle, or a run of the axis it is drawn on. */

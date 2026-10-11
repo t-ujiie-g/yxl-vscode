@@ -3,7 +3,6 @@ import { nodeAt, type Op } from '@yxl-vscode/cst';
 import type { ScalarValue } from '@yxl-vscode/spec';
 import { addrAt, qualified, type Rect, type SheetName } from '@yxl-vscode/units';
 import { type Intent, located, type Projection, type Reading, refused } from './direct';
-import { blocks } from './shift';
 import { say } from './text';
 
 /** Rows of one `data:` block to be put in order, by the column the selection starts in. */
@@ -25,7 +24,7 @@ export function setSorted(spec: Projection, where: Sorting, read: Reading): Inte
     return refused(say('intent.sort-needs-more-rows'));
   }
 
-  const block = blocks(sheet).find(
+  const block = sheet.blocks.find(
     (one) =>
       one.file === null &&
       one.rect.top <= where.rect.top &&
@@ -63,9 +62,12 @@ export function setSorted(spec: Projection, where: Sorting, read: Reading): Inte
     });
   }
 
-  const put = [...rows].sort((one, than) =>
-    where.down ? after(than.by, one.by) : after(one.by, than.by),
-  );
+  // Excel puts an empty field last whichever way it sorts.
+  const put = [...rows].sort((one, than) => {
+    const blank = Number(one.by === null) - Number(than.by === null);
+    if (blank !== 0) return blank;
+    return where.down ? after(than.by, one.by) : after(one.by, than.by);
+  });
   const ops: Op[] = [];
   const cells = new Set<string>();
 

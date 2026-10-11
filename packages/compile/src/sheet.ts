@@ -51,6 +51,7 @@ import { chart, image, shape, sparklines } from './float';
 import type {
   CompiledAsk,
   CompiledBand,
+  CompiledBlock,
   CompiledCell,
   CompiledFill,
   CompiledLayout,
@@ -81,6 +82,7 @@ export function compileSheet(ctx: Ctx, sheet: Sheet): Drafted {
   const name = named(ctx, sheet);
   const cells = new Map<string, CompiledCell>();
   const fills: CompiledFill[] = [];
+  const blocks: CompiledBlock[] = [];
   const columns: CompiledBand[] = [];
   const merges: CompiledMerge[] = [];
   const conditional: CompiledRule[] = [];
@@ -89,7 +91,12 @@ export function compileSheet(ctx: Ctx, sheet: Sheet): Drafted {
 
   for (const key of sheet.keyOrder) {
     if (key === 'cells') placeCells(ctx, sheet, cells);
-    if (key === 'data') for (const block of sheet.data) placeData(ctx, block, cells, name);
+    if (key === 'data') {
+      for (const block of sheet.data) {
+        const placed = placeData(ctx, block, cells, name);
+        if (placed !== null) blocks.push(placed);
+      }
+    }
     if (key === 'formulas') {
       for (const range of sheet.formulas) {
         const fill = placeFill(ctx, range);
@@ -131,6 +138,7 @@ export function compileSheet(ctx: Ctx, sheet: Sheet): Drafted {
       node: sheet.id,
       cells,
       fills,
+      blocks,
       columns,
       rows: sheet.rows.map((band) => rowBand(ctx, band)).filter((band) => band !== null),
       merges,
@@ -186,23 +194,39 @@ function placeData(
   block: DataBlock,
   cells: Map<string, CompiledCell>,
   sheet: SheetName,
-): void {
+): CompiledBlock | null {
   const anchor = anchored(ctx, block.at, block, sheet);
-  if (anchor === null) return;
+  if (anchor === null) return null;
 
   if (block.source.kind === 'inline') {
     const rows = block.source.rows.map((row) =>
       row.map((field) => filled(ctx, field, block).value),
     );
     place(cells, anchor, rows, (row, col) => ({ kind: 'inline', node: block.id, row, col }));
-    return;
+    return reach(anchor, rows, block, null);
   }
 
   const opened = readTable(ctx, block, block.source);
-  if (opened === null) return;
+  if (opened === null) return null;
 
   const { file, rows } = opened;
   place(cells, anchor, rows, (row, col) => ({ kind: 'external', node: block.id, file, row, col }));
+  return reach(anchor, rows, block, file);
+}
+
+/** The rectangle a block's rows cover from its anchor, `null` where it has no field at all. */
+function reach(
+  anchor: A1Addr,
+  rows: readonly DataRow[],
+  block: DataBlock,
+  file: FilePath | null,
+): CompiledBlock | null {
+  const wide = Math.max(0, ...rows.map((row) => row.length));
+  if (rows.length === 0 || wide === 0) return null;
+
+  const { col, row } = cellOf(anchor);
+  const rect = { top: row, left: col, bottom: row + rows.length - 1, right: col + wide - 1 };
+  return { rect, node: block.id, file };
 }
 
 /** The rows a block names, read through the injected reader (ADR-004) against the opened spec (`docs/spec.md` §9). */

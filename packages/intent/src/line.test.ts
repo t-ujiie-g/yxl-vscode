@@ -278,6 +278,24 @@ describe('a chart whose row is taken away', () => {
   });
 });
 
+describe('a data block whose first row or column is all blanks (#215)', () => {
+  it('opens a gap by where its `at:` says it starts', () => {
+    const spec = `${SALES}    data:\n      - at: A1\n        values:\n          - [null, 1]\n          - [null, 2]\n`;
+
+    expect(drawn(spec, column(1))).toBe(
+      `${SALES}    data:\n      - at: B1\n        values:\n          - [null, 1]\n          - [null, 2]\n`,
+    );
+  });
+
+  it('moves by its `at:` when the line goes in above it', () => {
+    const spec = `${SALES}    data:\n      - at: A2\n        values:\n          - [null, null]\n          - [x, 2]\n`;
+
+    expect(drawn(spec, row(1))).toBe(
+      `${SALES}    data:\n      - at: A3\n        values:\n          - [null, null]\n          - [x, 2]\n`,
+    );
+  });
+});
+
 describe('what a line will not move, and says why (#206)', () => {
   it('a layout it would cut through', () => {
     const spec = `${SALES}    layouts:\n      - at: A3\n        values: [[a, 1], [b, 2]]\n        columns: [{ name: n, header: N }, { name: v }]\n`;
