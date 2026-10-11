@@ -4044,7 +4044,12 @@ and said so in diagnostic codes.
   could be any of them.
 - **A refused tidy-up says why in words**: the diagnostics' messages, not their
   codes. `tidy.ts` reaches VS Code, so that line has no test.
-- 2735 → 2748 tests, run against yxl 0.5.1; the 13 new ones fail on the old
+- **The command was never in the palette on a spec** — found by the reader
+  running the verification file. Its `when` clause escaped the dot twice,
+  `/\\\\.yxl\\\\.ya?ml$/` in the manifest, which asks for a backslash in the file
+  name; it showed only with the preview focused. `manifest.test.ts` now tests
+  every file pattern a menu holds against `report.yxl.yaml` and `report.yaml`.
+- 2735 → 2749 tests, run against yxl 0.5.1; the 13 new ones fail on the old
   `merge.ts`. Comment shape: export 1010 / 2190 (avg 2.2), private 662 / 662
   (1.0), inline 148 / 233 (1.6), 0 over. No version bump: releases are batched
   until the open issues are done.

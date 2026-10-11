@@ -29,6 +29,14 @@ interface Manifest {
 const manifest = JSON.parse(readFileSync(join(EXTENSION, 'package.json'), 'utf8')) as Manifest;
 const { commands, menus, keybindings } = manifest.contributes;
 
+/** Every file pattern a `when` clause tests, as VS Code reads the regular expression. */
+function patterns(): RegExp[] {
+  return Object.values(menus)
+    .flat()
+    .flatMap((one) => [...(one.when ?? '').matchAll(/resourceFilename =~ \/(.+?)\/(?=\s|$)/g)])
+    .map((found) => new RegExp(found[1] ?? ''));
+}
+
 /** One of VS Code's own translation files, which is where the manifest's `%key%` are answered (ADR-051). */
 function nls(language: string): Record<string, string> {
   const name = language === 'en' ? 'package.nls.json' : `package.nls.${language}.json`;
@@ -48,6 +56,18 @@ function registered(): string[] {
 }
 
 describe('what this editor contributes to VS Code', () => {
+  it("shows a spec's commands on a spec, and on nothing else", () => {
+    const found = patterns();
+
+    expect(found.length).toBeGreaterThan(0);
+    expect(
+      found.filter((one) => !one.test('report.yxl.yaml') || !one.test('report.yxl.yml')),
+    ).toEqual([]);
+    expect(found.filter((one) => one.test('report.yaml') || one.test('reportyxl.yaml'))).toEqual(
+      [],
+    );
+  });
+
   it('declares every command a menu names, or the menu holds a button that does nothing', () => {
     const named = Object.values(menus)
       .flat()
