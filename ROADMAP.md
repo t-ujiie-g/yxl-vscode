@@ -1327,7 +1327,9 @@ Deliberately **not** here: a second selection with `Cmd`+click (every answer in
             are located against the tree as it was and spliced at the end, so
             four hundred `renameKey`s are four hundred disjoint edits, and the
             op the §4.5 table was holding a place for is one the language does
-            not have to grow.
+            not have to grow. *(2026-10-11, #206: the write reached six
+            constructs, and the reference from another sheet was never written;
+            every construct that names a place moves now — §11.)*
       - [x] **The gesture on the heading**: *Insert N rows above / below* and
             *Delete N rows* on the row numbers, the same three on the column
             letters, over the run the reader has selected. The count is in
@@ -3957,6 +3959,51 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-10-11 — A row or a column moves everything that names a place (#206, 0.2.9)
+
+Reported against 0.2.5: putting a row in or taking one out moved `cells:`,
+`data:`, `formulas:`, merges, bands and the freeze, and left everything else at
+the address it had. A note stayed on the cell its value had left, a table's
+header row slid out from under it, and a formula on another sheet went on
+naming the old row. None of it shows in the cells the checker compares, so it
+was saved without a word. Three gestures were refused for reasons that were
+not the reason.
+
+- **`anchors.ts` lists what else names a place**, and the line moves it:
+  notes and links by their key, a rule's, a list's and a table's range, the
+  filter, the print area and its breaks, where a chart, an image, a shape, a
+  sparkline and a layout sit, and an override's `at:`. A range takes the line
+  in as a merge does; what the line takes away goes, and the key with its last
+  entry. A floating object whose row goes stays on the row that takes its place,
+  as Excel keeps it.
+- **Every reference moves with it**, through `shifted`: rule formulas, a list's
+  `from:`, a link's `to:`, what a chart and a sparkline plot, formulas on other
+  sheets, `defs.formulas` bodies and an override's `formula:`. One that names
+  what a delete takes is refused, as a cell's formula already was (ADR-031).
+- **The three wrong reasons.** *Written twice*: an override over a cell made
+  the compiled cell answer as the override, so the `cells:` entry under it was
+  never renamed and two keys collided. The entries are now read as written.
+  *Only a scalar*: a cell reading `{ $ref: … }` had the definition's body
+  written over its `formula:` map; only a formula written in place is
+  rewritten now, and the definition moves where it is. *Nothing moves*: a
+  layout's `at:` moves now.
+- **A layout drew merges, ranges and bands, and the old code moved those too** —
+  by writing a range string over the layout's own node. Only what the sheet
+  writes by hand moves; a layout moves whole, and a line through one is
+  refused.
+- **A row taken from under a table's header, or that leaves it no row of data,
+  is refused**: yxl will not build a table without both.
+- A reference on something the line takes away is not asked whether it
+  survives, since it goes too.
+- `KEY.print` joins the schema keys; `moved`, `grown` and `held` moved to
+  `shift.ts`, which both modules read; pruning an emptied parent covers
+  sequences as well as mappings.
+- Checked with yxl 0.5.1: a spec with every construct above, a row put in above
+  row 1, a column put in at A, and row 2 taken out once the table is out of
+  its way, all build.
+- 2715 → 2734 tests, run against yxl 0.5.1. Comment shape: export 1010 / 2190
+  (avg 2.2), private 659 / 659 (1.0), inline 147 / 232 (1.6), 0 over.
 
 ### 2026-10-11 — Refactoring pass after 0.2.6–0.2.8 (`AGENTS.md` §8)
 Walked §8's lenses over what #220–#222 added and the code they touched.

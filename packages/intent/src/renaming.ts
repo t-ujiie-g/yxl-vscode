@@ -64,7 +64,7 @@ export function renameSheet(spec: Projection, where: Renaming, read: Reading): I
   }
 
   for (const one of spec.doc.overrides) {
-    const at = spelled(one.at);
+    const at = overrideAt(one.at);
     const read1 = at === null ? null : parseQualifiedAddr(at);
     if (read1 === null || read1.sheet !== where.sheet) continue;
 
@@ -90,7 +90,7 @@ export function renameSheet(spec: Projection, where: Renaming, read: Reading): I
 }
 
 /** What an override's `at:` says, or `null` where a template stands in its place. */
-function spelled(at: Override['at']): string | null {
+export function overrideAt(at: Override['at']): string | null {
   return typeof at === 'string' || !('kind' in at) ? qualified(at.sheet, at.at) : null;
 }
 
@@ -107,7 +107,7 @@ export interface Reference {
 }
 
 /** Every formula the spec writes in place: in a cell, over a `formulas:` range, and in `defs.formulas`. */
-function formulas(doc: SpecDoc): Reference[] {
+export function formulas(doc: SpecDoc): Reference[] {
   const found: Reference[] = [];
 
   for (const sheet of doc.sheets) {

@@ -60,8 +60,11 @@ export type Says = {
   'intent.nothing-frozen': { sheet: string };
   'intent.no-such-band': { axis: string; at: number };
   'intent.nothing-moves': { axis: string; at: number; last: number };
+  'intent.inside-a-layout': { axis: string; at: number; last: number };
   'intent.band-across-files': { axis: string; at: number; last: number };
   'intent.formula-would-break': { at: string; formula: string; why: Saying };
+  'intent.reference-would-break': { at: string; text: string; why: Saying };
+  'intent.table-would-break': { at: string };
   'intent.rows-from-file': { file: string };
   'intent.merge-needs-more': Nothing;
   'intent.already-merged': { range: string };
@@ -264,10 +267,16 @@ const en: Words<Says> = {
   'intent.nothing-frozen': ({ sheet }) => `\`${sheet}\` freezes nothing to take off`,
   'intent.no-such-band': ({ axis, at }) => `there is no ${axis} ${at}`,
   'intent.nothing-moves': (one) => `nothing here moves when ${spanned(one, 'en')} is drawn`,
+  'intent.inside-a-layout': (one) =>
+    `a layout draws ${spanned(one, 'en')}, and moves only whole, so draw lines above or below it`,
   'intent.band-across-files': (one) =>
     `${spanned(one, 'en')} reaches more than one file, which this cannot write at once`,
   'intent.formula-would-break': ({ at, formula, why }, worded) =>
     `\`${at}\` holds \`=${formula}\`, and ${worded(why)}`,
+  'intent.reference-would-break': ({ at, text, why }, worded) =>
+    `\`${at}\` refers to \`${text}\`, and ${worded(why)}`,
+  'intent.table-would-break': ({ at }) =>
+    `the table at \`${at}\` would lose its header row or be left with no row of data`,
   'intent.rows-from-file': ({ file }) =>
     `the rows here come from \`${file}\`, which this cannot open a gap in`,
   'intent.merge-needs-more': () =>
@@ -463,10 +472,16 @@ const ja: Words<Says> = {
   'intent.nothing-frozen': ({ sheet }) => `\`${sheet}\` に解除できる固定はありません`,
   'intent.no-such-band': ({ axis, at }) => `${at} ${axis === 'column' ? '列' : '行'}目はありません`,
   'intent.nothing-moves': (one) => `${spanned(one, 'ja')}を引いても、ここでは何も動きません`,
+  'intent.inside-a-layout': (one) =>
+    `${spanned(one, 'ja')}はレイアウトが描いており、レイアウトは丸ごとしか動かせないので、その上か下で行・列を挿入・削除してください`,
   'intent.band-across-files': (one) =>
     `${spanned(one, 'ja')}は複数のファイルにまたがっており、一度には書けません`,
   'intent.formula-would-break': ({ at, formula, why }, worded) =>
     `\`${at}\` は \`=${formula}\` を持っています: ${worded(why)}`,
+  'intent.reference-would-break': ({ at, text, why }, worded) =>
+    `\`${at}\` は \`${text}\` を参照しています: ${worded(why)}`,
+  'intent.table-would-break': ({ at }) =>
+    `\`${at}\` のテーブルが、見出し行を失うか、データの行がなくなってしまいます`,
   'intent.rows-from-file': ({ file }) =>
     `ここの行は \`${file}\` から来ており、そこに隙間を空けることはできません`,
   'intent.merge-needs-more': () =>
