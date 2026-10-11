@@ -43,6 +43,15 @@ describe('the rules a cell is drawn under', () => {
     expect(wears(RULES, 'C2', 'done')).toEqual([]);
   });
 
+  it('never takes a number for the text that spells it, as Excel does not (#213)', () => {
+    const rules = rulesOf(
+      '      - at: A1:A9\n        cell: { equals: "1" }\n        style: a\n      - at: B1:B9\n        cell: { greater_than: 5 }\n        style: b\n',
+    );
+
+    expect([wears(rules, 'A1', 1), wears(rules, 'A1', '1')]).toEqual([[], ['font.bold']]);
+    expect(wears(rules, 'B1', 'text')).toEqual(['font.italic']);
+  });
+
   it('compares numbers as numbers and text as Excel does, without case', () => {
     expect(wears(RULES, 'A2', 'DONE')).toEqual(['font.bold']);
     expect(wears(RULES, 'B2', 999)).toEqual([]);

@@ -3975,6 +3975,41 @@ than widening it silently.
 
 ## 11. Living changelog
 
+### 2026-10-11 — What a cell shows, as Excel shows it (#209, #210, #211, #213)
+
+Four reports of the preview showing a value unlike Excel; each was in how the
+view turned a value into text.
+
+- **A number with no format is shown in General** (#209): `=1/3` is
+  `0.333333333`, `1234567890123` is `1.23457E+12`, through `numfmt`'s General.
+  Not matched: `1e-7` shows `0.0000001` where the report has Excel at `1E-07`;
+  where Excel's General turns to an exponent for small numbers is not settled
+  here, so it is left to `numfmt`. Nor does General narrow to the column's
+  width, as Excel's does.
+- **A `date1904: true` workbook's dates are the days they are** (#210). The
+  compiler counted from 1904; the view formatted from 1900. Each compiled sheet
+  now says which system its serials count from, the drawn cell carries it, and
+  a date format adds 1462 days first. Whether the engine's `DATE()` and
+  `TODAY()` count right in such a workbook is not checked yet.
+- **Japanese dates** (#211): `g` to `ggg` the era, `e`/`ee` its year, and
+  `aaa`/`aaaa` the weekday, written out as text before `numfmt` — which reads
+  `e` as the Gregorian year and has no `g`. `e` is the era's year only beside a
+  `g` or a Japanese locale tag. Each era starts on its first day: 2019-05-01 is
+  令和1年. `[DBNum1]` is not done.
+- **The small ones** (#213): a truth value shows `TRUE`/`FALSE`; a cell written
+  `type: error` is centred, as a computed error is; a cell's own format reaches
+  its text, so `@"様"` makes `田中様` and `[Blue]@` draws it blue — an inherited
+  format still skips text (§4); underline and strikethrough draw together; and
+  a conditional format's `equals: "1"` no longer matches the number 1, since
+  Excel orders numbers before text and never makes them equal. The formula half
+  of that item — `=A1="1"` — did not reproduce: the engine answers `FALSE`, as
+  Excel does.
+- Checked end to end: the verification files through the host's `project()`
+  with the engine, and what it sends through the view's `drawCell()`.
+- 2770 → 2792 tests, run against yxl 0.5.1; the 17 cell and rule tests fail on
+  the old code. Comment shape: export 1014 / 2204 (avg 2.2), private 670 / 670
+  (1.0), inline 148 / 233 (1.6), 0 over.
+
 ### 2026-10-11 — What a keystroke means, and bands over one another (#205, #208)
 
 Two places the editor read something differently from Excel or from yxl.

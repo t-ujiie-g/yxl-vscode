@@ -37,6 +37,16 @@ Targets **yxl 0.5.1**, as 0.2.8 did.
   (#208): the later band's style replaces the earlier one rather than adding
   to it, and a width set by one band survives a later band that only hides
   the column.
+- **Numbers with no format show as Excel's General** (#209): `=1/3` is
+  `0.333333333`, not sixteen digits.
+- **Dates in a `date1904: true` workbook show the right day** (#210); they
+  were four years and a day early.
+- **Japanese era and weekday formats** (#211): `ggge"年"m"月"d"日"` shows
+  `令和8年10月7日`, and `aaa` shows `水`.
+- **Smaller differences from Excel** (#213): `TRUE`/`FALSE` in capitals, an
+  error value centred, a format's text section applied to text, underline and
+  strikethrough together, and a conditional format comparing `"1"` no longer
+  matching the number 1.
 
 ## 0.2.8 — 2026-10-10
 

@@ -91,6 +91,7 @@ export interface CompiledSheet {
   readonly sparklines: readonly CompiledSparkline[];
   readonly layouts: readonly CompiledLayout[];
   readonly carried: readonly Opaque[];
+  readonly date1904: boolean;
 }
 
 /**

@@ -332,6 +332,8 @@ export interface DrawnCell {
   readonly link: DrawnLink | null;
   readonly validation: DrawnValidation | null;
   readonly sparkline: DrawnSparkline | null;
+  readonly error: boolean;
+  readonly date1904: boolean;
 }
 
 /**

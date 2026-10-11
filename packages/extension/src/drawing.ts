@@ -347,6 +347,8 @@ function drawCells(
       link:
         link === null ? null : { kind: link.target.kind, target: link.target.text, tip: link.tip },
       sparkline,
+      error: cell?.type === 'error',
+      date1904: sheet.date1904,
       validation:
         asked === null
           ? null
