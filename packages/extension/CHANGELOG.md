@@ -30,6 +30,13 @@ Targets **yxl 0.5.1**, as 0.2.8 did.
 - **Sorting Z to A leaves blank cells at the bottom**, as Excel does (#215).
 - **Putting a row in above a layout no longer asks first** because of the
   formulas the layout draws: only what the edit writes is counted.
+- **`0x1F`, `0o17` and `0b101` typed into a cell stay as you typed them**
+  (#205); they were written as the numbers 31, 15 and 5. `TRUE` and `FALSE`
+  are truth values whatever their case, as in Excel.
+- **Where two column or row bands overlap, the preview shows what yxl builds**
+  (#208): the later band's style replaces the earlier one rather than adding
+  to it, and a width set by one band survives a later band that only hides
+  the column.
 
 ## 0.2.8 — 2026-10-10
 

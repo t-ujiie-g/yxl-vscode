@@ -3975,6 +3975,34 @@ than widening it silently.
 
 ## 11. Living changelog
 
+### 2026-10-11 — What a keystroke means, and bands over one another (#205, #208)
+
+Two places the editor read something differently from Excel or from yxl.
+
+- **Only decimal notation is a number** (#205). `meaning()` used `Number()`,
+  so `0x1F` was written as 31, `0o17` as 15 and `0b101` as 5 — a part code or
+  a colour code typed in came back as some other number. They are text now,
+  as Excel takes them; `Infinity` and `1e999` are text too.
+- **`TRUE` and `FALSE` are truth values in any case** (#205), as in Excel, and
+  as the paste entry below already said they were. A paste reads the same way.
+- **Bands over one another on one axis follow yxl** (#208). yxl's emitter
+  writes each column's and row's attributes in band order, each one the band
+  sets replacing the last: the look of the *last* band that has a look, whole,
+  and the size, hidden and outline level each from the last band that sets
+  it. The preview layered every band's look attribute by attribute and took
+  every attribute from the last band covering a column. `styleAt` now takes
+  one band's look per axis, column under row as before; the host sends the
+  view sizes already settled per attribute, as disjoint runs.
+- Checked against `yxl build` then `yxl extract --flat` on the issue's spec:
+  the italic band replaces the fill and format under it, a size survives a
+  later band that only hides, and a row band over a row band does the same.
+- `docs/spec.md` §4 says columns, rows and cells layer, and nothing about two
+  bands on one axis. The compiler is followed here (AGENTS.md §2); whether
+  replacement is the intent is upstream's to say, and has not been asked yet.
+- 2764 → 2770 tests, run against yxl 0.5.1; the five that pin a change fail on
+  the old code. Comment shape: export 1013 / 2199 (avg 2.2), private 664 / 664
+  (1.0), inline 148 / 233 (1.6), 0 over.
+
 ### 2026-10-11 — Refactoring pass after #206, #217 and #215 (`AGENTS.md` §8)
 Walked §8's lenses over what #224–#226 added and the code they touched.
 Findings, and what each came to:

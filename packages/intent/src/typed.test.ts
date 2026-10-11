@@ -30,6 +30,30 @@ describe('what a reader typed', () => {
     ]);
   });
 
+  it('reads only decimal notation as a number, as Excel does (#205)', () => {
+    expect(
+      ['0x1F', '0o17', '0b101', 'Infinity', '1e999', '-1.5e2', '.5', '+3'].map(meaning),
+    ).toEqual([
+      { is: 'value', value: '0x1F' },
+      { is: 'value', value: '0o17' },
+      { is: 'value', value: '0b101' },
+      { is: 'value', value: 'Infinity' },
+      { is: 'value', value: '1e999' },
+      { is: 'value', value: -150 },
+      { is: 'value', value: 0.5 },
+      { is: 'value', value: 3 },
+    ]);
+  });
+
+  it('reads TRUE and FALSE in any case as a truth value, as Excel does (#205)', () => {
+    expect(['TRUE', 'False', 'true', 'FALSE'].map(meaning)).toEqual([
+      { is: 'value', value: true },
+      { is: 'value', value: false },
+      { is: 'value', value: true },
+      { is: 'value', value: false },
+    ]);
+  });
+
   it('is a formula even where nothing follows the `=`', () => {
     expect(meaning('=')).toEqual({ is: 'formula', body: '' });
   });

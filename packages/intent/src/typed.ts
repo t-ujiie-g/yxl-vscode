@@ -15,10 +15,14 @@ export function meaning(typed: string): Meaning {
   return { is: 'value', value: meant(typed) };
 }
 
-/** A bare scalar as YAML reads one: `42` is a number, `true` a boolean. */
+/** A value as Excel reads one typed in: decimal digits are a number, `TRUE` in any case a truth value (#205). */
 function meant(typed: string): string | number | boolean {
-  if (typed === 'true' || typed === 'false') return typed === 'true';
+  const word = typed.trim().toUpperCase();
+  if (word === 'TRUE' || word === 'FALSE') return word === 'TRUE';
 
-  const number = Number(typed);
-  return typed.trim() !== '' && Number.isFinite(number) ? number : typed;
+  const number = DECIMAL.test(typed.trim()) ? Number(typed) : Number.NaN;
+  return Number.isFinite(number) ? number : typed;
 }
+
+/** Excel's own notation for a number: no `0x`, `0o` or `0b`, and no `Infinity`. */
+const DECIMAL = /^[+-]?(\d+\.?\d*|\.\d+)(e[+-]?\d+)?$/i;

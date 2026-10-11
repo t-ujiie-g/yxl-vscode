@@ -170,8 +170,8 @@ function drawSheet(
     charts: chartsOf(sheet, grid),
     images: imagesOf(sheet, beside.file, beside.pictures),
     shapes: shapesOf(sheet),
-    widths: sheet.columns.map(sizedRun),
-    heights: sheet.rows.map(sizedRun),
+    widths: sizedRuns(sheet.columns),
+    heights: sizedRuns(sheet.rows),
     cells: drawCells(sheet, windowOf(sheet, { at, rows, columns, freeze }), evaluation, grid),
     merges: sheet.merges.map(
       (merge): DrawnMerge => ({
@@ -441,14 +441,50 @@ function filledFrom(cell: CompiledCell | null): string | null {
   return across === 0 && down === 0 ? null : origin.anchor;
 }
 
-function sizedRun(band: CompiledSheet['columns'][number]): Sized {
-  return {
-    first: band.first,
-    last: band.last,
-    size: band.size ?? null,
-    hidden: band.hidden ?? false,
-    group: band.group,
-  };
+/**
+ * Bands as the runs Excel is left with: each attribute from the last band that
+ * sets it, as yxl writes them (#208); neighbours alike are one run.
+ */
+export function sizedRuns(bands: readonly CompiledSheet['columns'][number][]): Sized[] {
+  const edges = [...new Set(bands.flatMap((band) => [band.first, band.last + 1]))].sort(
+    (one, than) => one - than,
+  );
+  const runs: Sized[] = [];
+
+  for (const [index, first] of edges.entries()) {
+    const next = edges[index + 1];
+    if (next === undefined) break;
+
+    const over = bands.filter((band) => band.first <= first && next - 1 <= band.last);
+    if (over.length === 0) continue;
+
+    const run: Sized = {
+      first,
+      last: next - 1,
+      size: lastSet(over, (band) => band.size),
+      hidden: lastSet(over, (band) => band.hidden) ?? false,
+      group: lastSet(over, (band) => band.group),
+    };
+    const before = runs.at(-1);
+    if (before !== undefined && before.last === first - 1 && alike(before, run)) {
+      runs[runs.length - 1] = { ...before, last: run.last };
+    } else {
+      runs.push(run);
+    }
+  }
+
+  return runs;
+}
+
+function lastSet<T>(
+  bands: readonly CompiledSheet['columns'][number][],
+  of: (band: CompiledSheet['columns'][number]) => T | null,
+): T | null {
+  return bands.map(of).findLast((one) => one !== null) ?? null;
+}
+
+function alike(one: Sized, than: Sized): boolean {
+  return one.size === than.size && one.hidden === than.hidden && one.group === than.group;
 }
 
 /** Every diagnostic as the view lists it, whether or not it reached a cell. */
