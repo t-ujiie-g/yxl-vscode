@@ -2073,7 +2073,8 @@ here is detectable by analysis.
       cells only, and only where the root file holds `defs:` itself)*
 - [x] Definitions that resolve alike → one the others' readers follow
       *(2026-08-30, found by a reader whose spec held three identical
-      `defs.styles` entries — which of them survives is theirs to choose)*
+      `defs.styles` entries — which of them survives is theirs to choose;
+      2026-10-11, #217: every place a style is named follows, not only cells)*
 - [x] Homogeneous `cells:` rectangles → `data:` with inline `values:`
       *(Phase 11, 2026-08-23, as a gesture on the rectangle)*
 - [x] Columns of translated formulas → a `formulas:` range
@@ -4022,6 +4023,31 @@ not the reason.
   its way, all build.
 - 2715 → 2735 tests, run against yxl 0.5.1. Comment shape: export 1010 / 2190
   (avg 2.2), private 659 / 659 (1.0), inline 147 / 232 (1.6), 0 over.
+
+### 2026-10-11 — Gathering alike definitions reached only cells (#217)
+
+Reported against 0.2.5: *Gather definitions that say the same thing* rewrote
+the `style:` of cells and nothing else, so a definition named by an `extends:`,
+a band, a conditional format, an override or a layout was taken away from
+under it. The gate caught it — after the reader had picked which name to keep —
+and said so in diagnostic codes.
+
+- **Every place a style is named follows the one kept**: a cell's, a band's, a
+  rule's and an override's `style:`, an `extends:` in a definition or in a
+  style written in place, and in a layout its columns, their rules, its header
+  cells, `header_style:` and footer rows, groups included, and the columns of
+  `defs.blocks`.
+- **A set is not offered where it cannot be gathered**: where one of its names
+  is used from a file this cannot write, where one of them extends another —
+  keeping the child would make it extend itself, and dropping the `extends:`
+  would change its look — or where any style is named by a `${...}`, which
+  could be any of them.
+- **A refused tidy-up says why in words**: the diagnostics' messages, not their
+  codes. `tidy.ts` reaches VS Code, so that line has no test.
+- 2735 → 2748 tests, run against yxl 0.5.1; the 13 new ones fail on the old
+  `merge.ts`. Comment shape: export 1010 / 2190 (avg 2.2), private 662 / 662
+  (1.0), inline 148 / 233 (1.6), 0 over. No version bump: releases are batched
+  until the open issues are done.
 
 ### 2026-10-11 — Refactoring pass after 0.2.6–0.2.8 (`AGENTS.md` §8)
 Walked §8's lenses over what #220–#222 added and the code they touched.

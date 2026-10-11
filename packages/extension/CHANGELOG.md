@@ -18,6 +18,10 @@ Targets **yxl 0.5.1**, as 0.2.8 did.
   sheet with an override, a cell whose formula is a `$ref`, or only layouts.
 - **A line through a layout, or one that would take a table's header row, is
   refused** with that reason, rather than writing a spec yxl would not build.
+- **Gathering definitions that say the same thing updates every place they are
+  named** (#217): bands, conditional formats, overrides, layouts and other
+  definitions' `extends:`, not only cells. A set that cannot be gathered safely
+  is no longer offered, and a refused tidy-up says why in words.
 
 ## 0.2.8 — 2026-10-10
 
