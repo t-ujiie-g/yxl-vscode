@@ -1,10 +1,10 @@
 import type { StyleProperty, StyleSays } from '@yxl-vscode/spec';
 import { STYLE_PROPERTIES } from '@yxl-vscode/spec';
 import { decimalsIn, MOST_DECIMALS, withDecimals } from '@yxl-vscode/units';
-import { underFormat } from './cell';
 import { chosen, says } from './menus';
 import type { DrawnCell } from './protocol';
 import { type Asks, cellOf, over, type Showing, wornBy } from './showing';
+import { underFormat } from './shown';
 import { chrome } from './worded';
 
 /** The formats the box offers, the ones both spreadsheets keep at the top of theirs. */

@@ -1,6 +1,6 @@
 import type { StyleValues } from '@yxl-vscode/spec';
-import { shown } from './cell';
 import type { DrawnCell } from './protocol';
+import { shown } from './shown';
 import { PADDING } from './window';
 
 /** How wide a string is drawn in a font — the browser's own answer, injected so it can be stood in for. */

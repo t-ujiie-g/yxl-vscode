@@ -8,7 +8,6 @@ import {
   cellOf,
   type Line,
   type NodeId,
-  parseA1Addr,
   parseA1Range,
   parseQualifiedAddr,
   qualified,
@@ -19,7 +18,7 @@ import {
 } from '@yxl-vscode/units';
 import { located, type Projection, type Reading } from './direct';
 import { formulas, overrideAt, references } from './renaming';
-import { along, type Does, grown, moved, ownSheet } from './shift';
+import { along, type Does, grown, moved, ownSheet, point } from './shift';
 import { say } from './text';
 
 /** One node a line rewrites, and the ops that do it once the node's path is known. */
@@ -208,11 +207,6 @@ function onSheet(spec: Projection, sheet: Sheet, line: Line, read: Reading, to: 
     const at = point(layout.at);
     if (at !== null) set(layout.id, [KEY.at], moved(at, line));
   }
-}
-
-/** An address written as one, or `null` where a template or a layout's name stands in its place. */
-function point(at: unknown): A1Addr | null {
-  return typeof at === 'string' ? parseA1Addr(at) : null;
 }
 
 /** A range once the line is drawn: `goes` where the line takes all of it, `null` where it does not reach. */

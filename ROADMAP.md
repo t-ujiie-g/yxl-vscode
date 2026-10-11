@@ -3890,6 +3890,14 @@ names.
   whether to carry a metrics table for the handful of fonts a default is ever
   set to, or to say plainly that a fitted width is this editor's best guess at
   Excel's.
+- **Q20 — Two bands over one column or row: does the later replace, or layer?**
+  *(Opened 2026-10-11 by #208; upstream's to answer, not asked yet.)* yxl's
+  emitter replaces — the last band with a look wins whole, and the size, hidden
+  and outline level each go to the last band that sets them — and the preview
+  now does the same (AGENTS.md §2). `docs/spec.md` §4 says columns, rows and
+  cells layer and says nothing about two bands on one axis. If layering per
+  attribute is what was meant, the emitter changes upstream and `styleAt` here
+  follows; if replacement is, §4 could say so.
 ## 9. Risks
 
 - **R1 — Schema drift between the two implementations.** The structural
@@ -3974,6 +3982,35 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-10-11 — Refactoring pass over the issue batch, before 0.3.0 (`AGENTS.md` §8)
+Walked §8's lenses over everything since 0.2.5 (#220–#231): the code since the
+last pass read closely, and the mechanical lenses run over the whole tree.
+Findings, and what each came to:
+
+- **§8.2 Duplicates.** `edgeOf()` (#212) and `declarations()` each built a
+  border's CSS; `declarations()` asks `edgeOf()` now. *An address written as
+  one, or `null`* was spelled three times across `anchors.ts`, `line.ts` and
+  `shift.ts`; it is `point()` in `shift.ts`.
+- **§8.2 Exports.** A scan for exports nothing else reads found
+  `sizedRuns` (#208), `focusCell` and `WORTH_MERGING` used only where they are
+  defined — private now — and `grownBy` (#219) exported only for its test. That
+  test now goes through `draw()`, with what jsdom cannot lay out stubbed, and
+  fails where `draw()` stops calling it. **Kept**: `WORTH_EXTRACTING`,
+  `WORTH_RANGING`, `suggestedName`, `naturalSize` and `intoLayout`, which the
+  tests read to name a number or a guard on purpose.
+- **§8.3 File splitting.** `webview/cell.ts` grew from 504 to 548 with
+  #209–#213. What a cell's value comes to as text — `shown`, `formatted`,
+  `underFormat`, `standard`, `tinted` — is one concern and no DOM, and moved to
+  `shown.ts` with its own tests; `cell.ts` is 474. **Not split**:
+  `extension/drawing.ts` at 502, one function over, with no seam a reader
+  would recognise.
+- **§8.5.** #208's upstream question is §8 Q20 now, rather than only a line in
+  this changelog.
+- **§8.6.** Two docs that became private were cut to one line. 0 over.
+- **§8.7 Layers.** Clean.
+- 2807 → 2809 tests, run against yxl 0.5.1. Comment shape: export 1018 / 2212
+  (avg 2.2), private 675 / 675 (1.0), inline 149 / 234 (1.6), 0 over.
 
 ### 2026-10-11 — A file the spec reads, changed outside VS Code (#214)
 

@@ -15,7 +15,7 @@ import { lookOf, type Merging, type Named, type Proposing } from './proposal';
 import { say } from './text';
 
 /** How many definitions must say the same thing before one of them is redundant. */
-export const WORTH_MERGING = 2;
+const WORTH_MERGING = 2;
 
 /**
  * Definitions that resolve to the same look (`ROADMAP.md` Phase 21). Which of
