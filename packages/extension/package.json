@@ -99,7 +99,7 @@
         },
         {
           "command": "yxl.tidy",
-          "when": "resourceFilename =~ /\\\\.yxl\\\\.ya?ml$/ || activeWebviewPanelId == 'yxl.preview'"
+          "when": "resourceFilename =~ /\\.yxl\\.ya?ml$/ || activeWebviewPanelId == 'yxl.preview'"
         }
       ],
       "editor/title": [

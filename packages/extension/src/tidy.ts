@@ -67,7 +67,9 @@ export async function tidy(document: vscode.TextDocument): Promise<void> {
   const { patch, label } = decided;
   const gate = checked(source, patch, nothingChanges, { root, file: root, read: asOpen });
   if (gate.ok !== true) {
-    void vscode.window.showWarningMessage(words(say('host.tidy-refused', { why: why(gate) })));
+    void vscode.window.showWarningMessage(
+      words(say('host.tidy-refused', { why: why(gate, words) })),
+    );
     return;
   }
 
@@ -75,12 +77,12 @@ export async function tidy(document: vscode.TextDocument): Promise<void> {
   await review(document, one, label, after, words);
 }
 
-/** Which cells a refused tidy-up would have moved, which is what makes it a refusal. */
-function why(gate: Exclude<Checked, { ok: true }>): string {
+/** Which cells a refused tidy-up would have moved, or what it would have broken, in the reader's words. */
+function why(gate: Exclude<Checked, { ok: true }>, words: (saying: Saying) => string): string {
   const cells = moved(gate.surprises);
   if (cells.length > 0) return cells.join(', ');
 
-  return gate.ok === false ? gate.diagnostics.map((one) => one.code).join(', ') : '';
+  return gate.ok === false ? gate.diagnostics.map((one) => words(one.message)).join('; ') : '';
 }
 
 /** Every tidy-up this spec allows, from the files as the reader has them. */
