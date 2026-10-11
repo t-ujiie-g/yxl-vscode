@@ -53,6 +53,9 @@ Targets **yxl 0.5.1**, as 0.2.8 did.
   step, and over hidden rows and columns.
 - **The print area, page breaks, charts, images and shapes stay on their rows
   below a row that has grown to fit wrapped text** (#219).
+- **The preview follows a CSV, JSON or `$include` file changed outside VS
+  Code** (#214) — by a script, `git pull` or a checkout — including one that
+  is deleted and comes back.
 
 ## 0.2.8 — 2026-10-10
 
