@@ -4,6 +4,21 @@ Every release names the `yxl` it was built against: the schema is not frozen
 until yxl's v1.0, so the pinned compiler is part of what a version means
 (`ROADMAP.md` §8 Q6).
 
+## 0.2.9 — 2026-10-11
+
+Targets **yxl 0.5.1**, as 0.2.8 did.
+
+- **Putting a row or a column in, or taking one out, moves everything that
+  names a place** (#206): notes, links, conditional formats, drop-down lists,
+  the filter, the print area and page breaks, tables, charts, images, shapes,
+  sparklines, layouts and overrides — and formulas on other sheets and in
+  `defs.formulas` that point into the sheet. Before, only the cells moved, and
+  the rest was left at its old address.
+- **Inserting a row no longer fails with a reason that made no sense** on a
+  sheet with an override, a cell whose formula is a `$ref`, or only layouts.
+- **A line through a layout, or one that would take a table's header row, is
+  refused** with that reason, rather than writing a spec yxl would not build.
+
 ## 0.2.8 — 2026-10-10
 
 Targets **yxl 0.5.1**, as 0.2.7 did.
