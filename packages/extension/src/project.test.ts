@@ -354,6 +354,16 @@ describe('a drawn spec', () => {
     expect(sheet.merges).toEqual([{ top: 1, left: 1, bottom: 1, right: 3 }]);
   });
 
+  it('tells the view a cell holds an error, and which date system its dates count from', () => {
+    const source = `date1904: true\n${SALES}    cells:\n      A1: { value: "#N/A", type: error }\n      A2: 1\n`;
+    const cells = drawn(source).cells.map((one) => [one.row, one.error, one.date1904]);
+
+    expect(cells).toEqual([
+      [1, true, true],
+      [2, false, true],
+    ]);
+  });
+
   it('sizes a column by the last band that sizes it, and hides it by the last that hides it (#208)', () => {
     const source = `${SALES}    columns:\n      - at: E-F\n        width: 30\n      - at: F\n        hidden: true\n      - at: G-H\n        width: 12\n      - at: H\n        style: { font: { italic: true } }\n`;
 

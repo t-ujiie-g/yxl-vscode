@@ -156,6 +156,7 @@ export function compileSheet(ctx: Ctx, sheet: Sheet): Drafted {
       conditional,
       layouts,
       carried: sheet.opaque,
+      date1904: ctx.from1904,
     },
     cells,
   };

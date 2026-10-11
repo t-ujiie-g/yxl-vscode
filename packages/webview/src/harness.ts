@@ -78,6 +78,8 @@ export function cell(row: number, col: number, of: Partial<DrawnCell> = {}): Dra
     rich: null,
     computed: null,
     overridden: false,
+    error: false,
+    date1904: false,
     editable: 'direct',
     style: {},
     bar: null,

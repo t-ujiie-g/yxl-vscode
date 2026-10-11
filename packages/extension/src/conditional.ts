@@ -343,15 +343,21 @@ function inside(said: Extract<Comparison, { kind: 'between' | 'not_between' }>, 
   return order(held, said.low) >= 0 && order(held, said.high) <= 0;
 }
 
-/** How two values order: numbers as numbers, the rest as text, which Excel compares without case. */
+/** How two values order in Excel: numbers, then text without case, then truth values, never equal across kinds (#213). */
 function order(held: ScalarValue, bound: ScalarValue): number {
+  if (kind(held) !== kind(bound)) return kind(held) - kind(bound);
   if (typeof held === 'number' && typeof bound === 'number') return held - bound;
+  if (typeof held === 'boolean' && typeof bound === 'boolean') return Number(held) - Number(bound);
 
   const one = said(held);
   const two = said(bound);
   if (one === two) return 0;
 
   return one < two ? -1 : 1;
+}
+
+function kind(value: ScalarValue): number {
+  return typeof value === 'number' ? 0 : typeof value === 'boolean' ? 2 : 1;
 }
 
 function said(value: ScalarValue): string {

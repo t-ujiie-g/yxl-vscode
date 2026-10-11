@@ -120,6 +120,48 @@ describe('what a cell says', () => {
   });
 });
 
+describe('what a cell shows, as Excel shows it', () => {
+  const says = (of: Partial<DrawnCell>) => drawCell(cell(1, 1, of), undefined).textContent;
+
+  it.each([
+    [1 / 3, '0.333333333'],
+    [(2 / 3) * 100, '66.66666667'],
+    [1234567890123, '1.23457E+12'],
+  ])('shows %s in General where nothing sets a format (#209)', (value, shows) => {
+    expect(says({ value })).toBe(shows);
+  });
+
+  it('shows a date of a 1904 workbook as the day it is, not four years and a day before (#210)', () => {
+    expect(says({ value: 44840, format: 'yyyy-mm-dd', date1904: true })).toBe('2026-10-07');
+    expect(says({ value: 44840, format: '0', date1904: true })).toBe('44840');
+  });
+
+  it.each([
+    ['ggge"年"m"月"d"日"', '令和8年10月7日'],
+    ['[$-411]ggge"年"m"月"d"日"', '令和8年10月7日'],
+    ['gge"年"', '令8年'],
+    ['g ee', 'R 08'],
+    ['m/d(aaa)', '10/7(水)'],
+    ['aaaa', '水曜日'],
+  ])('writes the Japanese codes in %s as Excel in Japanese does (#211)', (format, shows) => {
+    expect(says({ value: 46302, format })).toBe(shows);
+  });
+
+  it('names each era from its first day (#211)', () => {
+    expect(says({ value: 43586, format: 'ggge"年"m"月"d"日"' })).toBe('令和1年5月1日');
+    expect(says({ value: 43585, format: 'ggge"年"m"月"d"日"' })).toBe('平成31年4月30日');
+  });
+
+  it('shows a truth value in capitals (#213)', () => {
+    expect([says({ value: true }), says({ value: false })]).toEqual(['TRUE', 'FALSE']);
+  });
+
+  it("puts text through its own format's text section (#213)", () => {
+    expect(says({ value: '田中', format: '@"様"' })).toBe('田中様');
+    expect(says({ value: '田中', format: '#,##0' })).toBe('田中');
+  });
+});
+
 describe('what a cell looks like', () => {
   it('wears the weight, the fill, and the alignment it was given', () => {
     const style = {
@@ -180,6 +222,10 @@ describe('where a cell with no alignment of its own puts what it shows', () => {
     expect(aligned({ value: 123.4 })).toBe('right');
   });
 
+  it('centres a value written as an error, as it centres a computed one (#213)', () => {
+    expect(aligned({ value: '#N/A', error: true })).toBe('center');
+  });
+
   it('puts a date right, since a date is the number Excel keeps', () => {
     expect(aligned({ value: 46302, format: 'yyyy-mm-dd' })).toBe('right');
   });
@@ -210,6 +256,11 @@ describe('where a cell with no alignment of its own puts what it shows', () => {
 describe('the colour a number format gives the number', () => {
   const coloured = (value: number, format: string, of: Partial<DrawnCell> = {}) =>
     drawCell(cell(1, 1, { value, format, ...of }), undefined).style.color;
+
+  it("draws text in its own format's text section colour (#213)", () => {
+    const drawn = drawCell(cell(1, 1, { value: 'x', format: '0;-0;0;[Blue]@' }), undefined);
+    expect(drawn.style.color).toBe('rgb(0, 0, 255)');
+  });
 
   it("draws a negative number in its section's colour (#200)", () => {
     expect(coloured(-12.3, '0.0_ ;[Red]\\-0.0\\ ')).toBe('rgb(255, 0, 0)');
@@ -316,6 +367,16 @@ describe('the box a reader types in', () => {
     // Typing `*1.1` onto the end of the anchor's formula would write a formula
     // for a row this cell is not on.
     expect(box({ formula: 'C5*D5', filledFrom: 'E2' })).toBe('=C5*D5');
+  });
+});
+
+describe('a cell underlined and struck through', () => {
+  it('draws both lines, not the last one set (#213)', () => {
+    const drawn = drawCell(
+      cell(1, 1, { value: 'x', style: { 'font.underline': true, 'font.strike': true } }),
+      undefined,
+    );
+    expect(drawn.style.textDecoration).toBe('underline line-through');
   });
 });
 
