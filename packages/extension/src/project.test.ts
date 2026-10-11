@@ -353,6 +353,16 @@ describe('a drawn spec', () => {
     expect(sheet.widths).toEqual([{ first: 2, last: 2, size: 18, hidden: false, group: null }]);
     expect(sheet.merges).toEqual([{ top: 1, left: 1, bottom: 1, right: 3 }]);
   });
+
+  it('sizes a column by the last band that sizes it, and hides it by the last that hides it (#208)', () => {
+    const source = `${SALES}    columns:\n      - at: E-F\n        width: 30\n      - at: F\n        hidden: true\n      - at: G-H\n        width: 12\n      - at: H\n        style: { font: { italic: true } }\n`;
+
+    expect(drawn(source).widths).toEqual([
+      { first: 5, last: 5, size: 30, hidden: false, group: null },
+      { first: 6, last: 6, size: 30, hidden: true, group: null },
+      { first: 7, last: 8, size: 12, hidden: false, group: null },
+    ]);
+  });
 });
 
 describe('whether a cell says it can be typed into', () => {

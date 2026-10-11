@@ -76,6 +76,25 @@ describe('a band', () => {
   });
 });
 
+describe('bands over one another on one axis (#208)', () => {
+  const COLUMNS = `${SHEET}    columns:\n      - at: A-C\n        style: { fill: "DDEEFF", format: "#,##0" }\n      - at: B\n        style: { font: { italic: true } }\n      - at: C\n        width: 30\n`;
+
+  it('give a cell the look of the last one that has a look, whole, as yxl writes it', () => {
+    expect(looks(COLUMNS, 'B1')).toEqual({ 'font.italic': true });
+  });
+
+  it('leave a look alone where the later one says nothing about looks', () => {
+    expect(looks(COLUMNS, 'C1')).toEqual({ fill: 'DDEEFF', format: '#,##0' });
+  });
+
+  it('do the same along rows, and a column still sits under a row', () => {
+    const source = `${COLUMNS}    rows:\n      - at: 1-3\n        style: { fill: "FFEEDD" }\n      - at: 2\n        style: { font: { bold: true } }\n`;
+
+    expect(looks(source, 'A2')).toEqual({ fill: 'DDEEFF', format: '#,##0', 'font.bold': true });
+    expect(looks(source, 'A3')).toEqual({ fill: 'FFEEDD', format: '#,##0' });
+  });
+});
+
 describe('what a cell writes', () => {
   it('goes over what a band gave it', () => {
     const source = `${SHEET}    columns:\n      - at: B\n        format: "#,##0"\n    cells:\n      B2: { value: 1, format: "0.0%" }\n`;

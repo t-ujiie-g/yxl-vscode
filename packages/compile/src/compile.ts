@@ -12,7 +12,13 @@ import {
 import { compileFacets, layer, spokenBy } from './cell';
 import { CODE } from './codes';
 import { type Ctx, context, type DataReader, reject, type Setting, text } from './ctx';
-import type { CompiledCell, CompiledGrid, CompiledSheet, DeclaredStyle } from './grid';
+import type {
+  CompiledBand,
+  CompiledCell,
+  CompiledGrid,
+  CompiledSheet,
+  DeclaredStyle,
+} from './grid';
 import { placeAll } from './layout';
 import { byMeaning } from './named';
 import type { FacetOrigin } from './provenance';
@@ -126,17 +132,23 @@ export const REACH = 50_000;
 
 /**
  * Every layer that makes an address look how it looks, in the order they apply
- * — column bands, rows, the cell, an override (`docs/spec.md` §4). An address,
- * not a cell: an empty one has a look too.
+ * — its column's band, its row's, the cell, an override (`docs/spec.md` §4). An
+ * address, not a cell: an empty one has a look too.
  */
 export function styleAt(sheet: CompiledSheet, at: A1Addr): readonly StyleLayer[] {
   const cell = cellOf(at);
-  const bands = [
-    ...sheet.columns.filter((band) => cell.col >= band.first && cell.col <= band.last),
-    ...sheet.rows.filter((band) => cell.row >= band.first && cell.row <= band.last),
-  ];
+  const column = styling(sheet.columns, cell.col);
+  const row = styling(sheet.rows, cell.row);
 
-  return [...bands.flatMap((band) => band.style), ...(sheet.cells.get(at)?.style ?? [])];
+  return [...column, ...row, ...(sheet.cells.get(at)?.style ?? [])];
+}
+
+/** The look of the last band over this column or row that has one, whole; one band does not layer over another (#208). */
+function styling(bands: readonly CompiledBand[], at: number): readonly StyleLayer[] {
+  const over = bands.findLast(
+    (band) => band.first <= at && at <= band.last && band.style.length > 0,
+  );
+  return over?.style ?? [];
 }
 
 /** An override, applied after everything that wrote the cell; facets it does not give are left alone (`docs/spec.md` §23). */
