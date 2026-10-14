@@ -300,6 +300,12 @@ body {
   z-index: 13;
 }
 
+/* The row outline's gutter beside the headings is part of the corner: the
+   headings scrolling left pass under it. */
+.grid thead th.outline {
+  z-index: 14;
+}
+
 /* The bracket over the run, as Google Sheets draws one: a line through the
    middle of the gutter, turned down at the end it starts from, ending at the
    control. */
@@ -617,9 +623,12 @@ body {
    the workbook will not have — a black font on it is invisible here and legible
    there. Everything around the sheet keeps the theme, because that part is
    editor, not workbook. */
+/* `overscroll-behavior` keeps a scroll that reaches the edge in the grid: let
+   through, the page scrolls on or the box bounces, and the frozen panes move. */
 .scroller {
   position: relative;
   overflow: auto;
+  overscroll-behavior: none;
   max-height: 70vh;
   border: 1px solid var(--vscode-panel-border);
   background: #ffffff;

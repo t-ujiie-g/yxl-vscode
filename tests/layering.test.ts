@@ -57,6 +57,17 @@ describe('the order sticky cells paint in (#191)', () => {
     }
   });
 
+  it('keeps the row outline gutter beside the headings with the corner, over every heading that scrolls', () => {
+    expect(level('.grid thead th.outline')).toBe(level('.grid thead th.corner'));
+    expect(level('.grid thead th.outline')).toBeGreaterThan(level('.grid thead th'));
+    expect(level('.grid thead th.outline')).toBeGreaterThan(level('.grid thead th.stays'));
+  });
+
+  it('keeps a scroll that reaches the edge in the grid, so the frozen panes never move with the page', () => {
+    const scroller = /\.scroller \{([^}]*)\}/.exec(css)?.[1] ?? '';
+    expect(scroller).toMatch(/overscroll-behavior: none/);
+  });
+
   it('keeps a note corner under a frozen column', () => {
     expect(level('.grid td .noted')).toBeLessThan(level('.grid td.stays'));
     expect(level('.grid thead td.outline.stays')).toBe(level('.grid thead th.stays'));

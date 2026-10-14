@@ -36,6 +36,13 @@ Targets **yxl 0.6.1**.
   a break's line slid over the frozen columns too; each pane now shows its own
   part, and a column break runs the whole height of the sheet rather than
   stopping at the bottom of the window.
+- **Frozen columns and rows hold still while you scroll.** A scroll that ran
+  past the end of the grid carried on into the page, or bounced on a Mac
+  trackpad, and took the frozen panes with it. It now stops at the grid's
+  edge.
+- **The corner above the row numbers stays clear.** On a sheet with grouped
+  rows, the headings scrolling left showed through the strip beside the
+  corner.
 
 ## 0.3.0 — 2026-10-11
 

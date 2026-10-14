@@ -3985,6 +3985,26 @@ than widening it silently.
 
 ## 11. Living changelog
 
+### 2026-10-15 — Frozen panes hold still while the grid scrolls
+
+Reported by the reader: the frozen columns and rows move a little while
+scrolling. Recorded through CDP's synthesized scroll gesture — the compositor's
+own path, momentum and all — at a device scale of 2: the frozen cells did not
+move a device pixel inside the box, frame by frame. What moved them was outside
+it:
+
+- **The scroll chained to the page.** At the grid's edge the rest of a wheel's
+  travel scrolled the webview, so the whole grid moved, frozen panes included —
+  27px in the test, and a Mac trackpad's elastic bounce does the same at either
+  end. `.scroller` takes `overscroll-behavior: none`; checked in the browser,
+  the page no longer moves.
+- **The row outline's gutter beside the headings** sat at the row numbers'
+  level, under the headings, so on a sheet with grouped rows a heading
+  scrolling left showed in the strip beside the corner. It is at the corner's
+  level now.
+- `tests/layering.test.ts` holds both; each fails on the old stylesheet.
+  2850 → 2852 tests.
+
 ### 2026-10-15 — Refactoring pass over the yxl 0.6.1 move and the frozen panes (`AGENTS.md` §8)
 Walked §8's lenses over everything since the last pass: the pin move and the
 frozen-pane fix read closely, the mechanical lenses run over the whole tree.
