@@ -4,9 +4,10 @@ Every release names the `yxl` it was built against: the schema is not frozen
 until yxl's v1.0, so the pinned compiler is part of what a version means
 (`ROADMAP.md` §8 Q6).
 
-## Unreleased
+## 0.4.0 — 2026-10-15
 
-Targets **yxl 0.6.1**.
+Targets **yxl 0.6.1**, which this release moves to from 0.5.1: an older yxl is
+offered the update, as before.
 
 ### yxl 0.6
 
