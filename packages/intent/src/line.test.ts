@@ -206,6 +206,11 @@ describe('what else names a place, moved with the line (#206)', () => {
     ],
     ['a filter', '    filter: A3:B4\n', '    filter: A4:B5\n'],
     [
+      'a filter with criteria saved in it',
+      '    filter:\n      at: A3:B4\n      columns:\n        - { at: B, at_least: 10 }\n',
+      '    filter:\n      at: A4:B5\n      columns:\n        - { at: B, at_least: 10 }\n',
+    ],
+    [
       'the print area and its breaks',
       '    print:\n      area: A3:B4\n      breaks: [A4]\n',
       '    print:\n      area: A4:B5\n      breaks: [A5]\n',
@@ -223,6 +228,24 @@ describe('what else names a place, moved with the line (#206)', () => {
     ],
   ])('%s', (_label, keys, after) => {
     expect(drawn(`${NAMED}${keys}`, row(1))).toContain(after);
+  });
+
+  it("moves a filter's saved columns with a column put in, and drops the one whose column goes", () => {
+    const spec = `${NAMED}    filter:\n      at: A3:C4\n      columns:\n        - { at: A, values: [APAC] }\n        - { at: B, at_least: 10 }\n        - { at: C, equals: x }\n`;
+
+    expect(drawn(spec, column(2))).toContain(
+      '    filter:\n      at: A3:D4\n      columns:\n        - { at: A, values: [APAC] }\n        - { at: C, at_least: 10 }\n        - { at: D, equals: x }\n',
+    );
+    expect(drawn(spec, column(2, -1))).toContain(
+      '    filter:\n      at: A3:B4\n      columns:\n        - { at: A, values: [APAC] }\n        - { at: B, equals: x }\n',
+    );
+  });
+
+  it("takes a filter's `columns:` away when every column it saved a criterion for goes", () => {
+    const spec = `${NAMED}    filter:\n      at: A3:C4\n      columns:\n        - { at: B, at_least: 10 }\n`;
+
+    expect(drawn(spec, column(2, -1))).toContain('    filter:\n      at: A3:B4\n');
+    expect(drawn(spec, column(2, -1))).not.toContain('columns:');
   });
 
   it('moves a formula on another sheet that names a cell the line moves', () => {

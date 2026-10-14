@@ -1,7 +1,7 @@
-import type { A1Addr, A1Range, Color, SheetName } from '@yxl-vscode/units';
+import type { A1Addr, A1Range, Color, ColumnSpan, SheetName } from '@yxl-vscode/units';
 import type { ColumnBand, RowBand } from './band';
 import type { Cell } from './cell';
-import type { Conditional } from './conditional';
+import type { Comparison, Conditional } from './conditional';
 import type { DataBlock } from './data';
 import type { Chart, Image, Shape } from './float';
 import type { Layout, Named } from './layout';
@@ -40,7 +40,7 @@ export interface Sheet extends SpecNode {
   readonly gridlines: boolean | null;
   readonly split: Split | null;
   readonly conditional: readonly Conditional[];
-  readonly filter: Templated<A1Range> | null;
+  readonly filter: Filter | null;
   readonly print: Print | null;
   readonly protect: Protect | null;
   readonly comments: readonly Note[];
@@ -106,6 +106,24 @@ export interface Table extends SpecNode {
   readonly bandedColumns: boolean;
   readonly firstColumn: boolean;
   readonly lastColumn: boolean;
+}
+
+/**
+ * A sheet's auto filter: the range Excel hangs its dropdowns off, and any
+ * criteria saved with it (`docs/spec.md` §10). `columns` is `null` when the
+ * filter is written as the bare range.
+ */
+export interface Filter extends SpecNode {
+  readonly at: Templated<A1Range>;
+  readonly columns: readonly FilterColumn[] | null;
+}
+
+/** One column's saved criterion: the ticked values as the cells display them, or a comparison. */
+export interface FilterColumn extends SpecNode {
+  readonly at: Templated<ColumnSpan>;
+  readonly criterion:
+    | { readonly kind: 'values'; readonly values: readonly string[] }
+    | { readonly kind: 'compare'; readonly compares: Comparison };
 }
 
 /** One merged region; Excel shows the top-left cell's value across it. */

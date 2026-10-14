@@ -3892,8 +3892,8 @@ names.
   Excel's.
 - **Q20 — Two bands over one column or row: does the later replace, or layer?**
   ✅ *Answered 2026-10-11 by the maintainer: **replace** is intended, and a band
-  that should add to another's look says so with `extends:`. Upstream's
-  t-ujiie-g/yxl#109 asks for §4 to say it.* *(Opened 2026-10-11 by #208.)* yxl's
+  that should add to another's look says so with `extends:`. §4 says it since
+  yxl 0.6.0 (t-ujiie-g/yxl#109).* *(Opened 2026-10-11 by #208.)* yxl's
   emitter replaces — the last band with a look wins whole, and the size, hidden
   and outline level each go to the last band that sets them — and the preview
   now does the same (AGENTS.md §2). `docs/spec.md` §4 says columns, rows and
@@ -3984,6 +3984,30 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-10-15 — The pin moves to yxl 0.6.1
+
+yxl 0.6.0 and 0.6.1 move the schema twice and the compiler's command line once,
+so the move brought five failures — the shipped schema, the coverage table, the
+corpus of carried keys, and `interactive.yxl.yaml`, whose `filter:` is now a
+mapping.
+
+- **`output:`** names where `yxl build` writes (`docs/spec.md` §1). It is carried,
+  and *Build* stops passing its own `-o`, which would win over it: the compiler
+  picks the file and says so (`yxl: wrote …`), and *Open it* opens what it said.
+- **`filter:` with saved criteria** (`docs/spec.md` §10) is read: the range under
+  `at:`, and each column's letter and criterion. The grid's filter carries them
+  by column, and a filtered header says on hover what is saved for it. A line
+  moves the range and each column's letter, and takes a criterion whose column
+  goes — `columns:` with it when none is left. A new header row over a filter
+  with criteria is refused, since it would lose them.
+- **What 0.6 stopped refusing** — a number format beside cell protection, a
+  conditional look with a format or an alignment, a line break in a table's
+  header, form controls Excel did not draw — was never mimicked here, so
+  nothing came out. §4's new paragraph on overlapping bands is Q20's answer,
+  which the preview already followed.
+- 2809 → 2835 tests, run against yxl 0.6.1. Comment shape: export 1027 / 2225
+  (avg 2.2), private 679 / 679 (1.0), inline 149 / 234 (1.6), 0 over.
 
 ### 2026-10-11 — Refactoring pass over the issue batch, before 0.3.0 (`AGENTS.md` §8)
 Walked §8's lenses over everything since 0.2.5 (#220–#231): the code since the

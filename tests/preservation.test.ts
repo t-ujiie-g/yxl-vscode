@@ -150,12 +150,13 @@ describe('the corpus of specs that use what this editor does not model', () => {
       carried(read(sample, sample.source), sample.path).map((one) => one.key),
     );
 
-    // `docs/spec.md` §13's sheet background, §14, §15, §16, §20 and §21.
+    // `docs/spec.md` §1's output, §13's sheet background, §14, §15, §16, §20 and §21.
     expect([...new Set(keys)].sort()).toEqual([
       'active',
       'background',
       'calc',
       'controls',
+      'output',
       'pivots',
       'properties',
       'protect',

@@ -85,6 +85,8 @@ export {
   type StyleValues,
 } from './property';
 export {
+  type Filter,
+  type FilterColumn,
   type FormulaRange,
   type Link,
   type LinkTarget,

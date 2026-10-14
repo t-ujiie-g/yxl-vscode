@@ -51,6 +51,7 @@ export type Says = {
   'intent.nothing-to-empty': Nothing;
   'intent.range-across-files': { files: string };
   'intent.no-filter-to-take-off': { sheet: string };
+  'intent.filter-has-criteria': { sheet: string };
   'intent.one-column-chart': { at: string };
   'intent.floats-from-a-parameter': Nothing;
   'intent.floats-below-a-layout': Nothing;
@@ -253,6 +254,8 @@ const en: Words<Says> = {
   'intent.range-across-files': ({ files }) =>
     `this range is written across ${files}, and this editor empties one file at a time`,
   'intent.no-filter-to-take-off': ({ sheet }) => `\`${sheet}\` has no filter to take off`,
+  'intent.filter-has-criteria': ({ sheet }) =>
+    `\`${sheet}\`'s filter has criteria saved with it, which a new header row would lose; change its \`at:\` in the spec`,
   'intent.one-column-chart': ({ at }) =>
     `\`${at}\` is one column, and a chart plots a column against the labels beside it`,
   'intent.floats-from-a-parameter': () =>
@@ -458,6 +461,8 @@ const ja: Words<Says> = {
   'intent.range-across-files': ({ files }) =>
     `この範囲は ${files} にまたがって書かれており、このエディタは一度に 1 ファイルだけ空にします`,
   'intent.no-filter-to-take-off': ({ sheet }) => `\`${sheet}\` に外せるフィルタはありません`,
+  'intent.filter-has-criteria': ({ sheet }) =>
+    `\`${sheet}\` のフィルタには条件が保存されており、新しい見出し行にすると失われます。スペックの \`at:\` を直接変更してください`,
   'intent.one-column-chart': ({ at }) =>
     `\`${at}\` は 1 列で、グラフは 1 列をその隣のラベルに対して描きます`,
   'intent.floats-from-a-parameter': () =>

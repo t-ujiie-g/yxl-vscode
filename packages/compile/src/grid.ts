@@ -6,6 +6,7 @@ import type {
   Comparison,
   ConditionalTest,
   ErrorStyle,
+  FilterColumn,
   Fit,
   LegendPlace,
   LinkTarget,
@@ -51,6 +52,14 @@ export interface CompiledGrid {
   readonly diagnostics: readonly Diagnostic[];
 }
 
+/** A sheet's auto filter over its range, and each column's saved criterion by column number (`docs/spec.md` §10). */
+export interface CompiledFilter extends Rect {
+  readonly saved: readonly {
+    readonly col: number;
+    readonly criterion: FilterColumn['criterion'];
+  }[];
+}
+
 /** One look the spec declares, by what its name resolves to — what a style write reuses (ADR-037). */
 export interface DeclaredStyle {
   readonly name: StyleName;
@@ -78,7 +87,7 @@ export interface CompiledSheet {
   readonly gridlines: boolean;
   readonly split: Split | null;
   readonly conditional: readonly CompiledRule[];
-  readonly filter: Rect | null;
+  readonly filter: CompiledFilter | null;
   readonly print: CompiledPrint | null;
   readonly protect: CompiledProtect | null;
   readonly notes: ReadonlyMap<string, CompiledNote>;

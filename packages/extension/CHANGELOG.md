@@ -4,6 +4,24 @@ Every release names the `yxl` it was built against: the schema is not frozen
 until yxl's v1.0, so the pinned compiler is part of what a version means
 (`ROADMAP.md` §8 Q6).
 
+## Unreleased
+
+Targets **yxl 0.6.1**.
+
+### yxl 0.6
+
+- **A filter with saved criteria is read and kept.** yxl 0.6 lets `filter:`
+  carry the criteria Excel's dropdowns show ticked (`at:` and `columns:`).
+  Such a spec no longer shows an error in the preview; a filtered header says
+  on hover what is saved for its column. Putting a row or a column in, or
+  taking one out, moves each criterion's column with the rest, and drops the
+  criterion whose column goes. Putting a new filter over one with criteria is
+  refused, since it would lose them; taking it off still works.
+- **Build writes the workbook where the spec says.** yxl 0.6 lets a spec name
+  its `output:`. *Build* no longer passes its own `-o`, so the workbook goes
+  where `output:` points — or beside the spec, as before — and *Open it* opens
+  the file the compiler wrote.
+
 ## 0.3.0 — 2026-10-11
 
 Targets **yxl 0.5.1**, as 0.2.5 did. Every issue reported against 0.2.5, in one

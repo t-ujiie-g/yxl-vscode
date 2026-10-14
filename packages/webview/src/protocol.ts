@@ -52,7 +52,7 @@ export interface DrawnSheet {
   readonly tabColor: string | null;
   readonly gridlines: boolean;
   readonly split: { readonly x: number; readonly y: number } | null;
-  readonly filter: DrawnMerge | null;
+  readonly filter: DrawnFilter | null;
   readonly print: DrawnPrint | null;
   readonly protect: DrawnProtect | null;
   readonly tables: readonly DrawnTable[];
@@ -382,6 +382,11 @@ export interface DrawnMerge {
   readonly left: number;
   readonly bottom: number;
   readonly right: number;
+}
+
+/** A sheet's auto filter, and each saved criterion as the header's hover shows it. */
+export interface DrawnFilter extends DrawnMerge {
+  readonly saved: readonly { readonly col: number; readonly shows: string }[];
 }
 
 /** Where one facet of a cell came from, in a reader's words, and the span in `file` to go to. */

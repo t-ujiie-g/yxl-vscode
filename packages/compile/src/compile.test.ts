@@ -666,6 +666,37 @@ describe('the tables a sheet declares', () => {
   });
 });
 
+describe('the filter a sheet carries', () => {
+  it('reads the range, and each saved criterion by column number', () => {
+    const spec = `${SALES}    filter:\n      at: A1:D9\n      columns:\n        - { at: C, values: [EMEA] }\n`;
+
+    expect(sheet(spec).filter).toEqual({
+      top: 1,
+      left: 1,
+      bottom: 9,
+      right: 4,
+      saved: [{ col: 3, criterion: { kind: 'values', values: ['EMEA'] } }],
+    });
+  });
+
+  it('reads the bare range as a filter with nothing saved', () => {
+    expect(sheet(`${SALES}    filter: B2:C2\n`).filter).toEqual({
+      top: 2,
+      left: 2,
+      bottom: 2,
+      right: 3,
+      saved: [],
+    });
+  });
+
+  it('drops a saved column a parameter turns into no column', () => {
+    const spec = `params:\n  col: "1"\n${SALES}    filter:\n      at: A1:D9\n      columns:\n        - { at: "\${col}", equals: 1 }\n`;
+
+    expect(codes(spec)).toEqual([CODE.badColumn]);
+    expect(sheet(spec).filter?.saved).toEqual([]);
+  });
+});
+
 describe('the validations a sheet carries', () => {
   it('reads the range each covers, and the sheet a list is sourced from', () => {
     const spec = `${SALES}    validations:\n      - at: B2:B9\n        list: [Draft, Sent]\n      - at: C2:C9\n        list: { from: "Statuses!A1:A3" }\n        allow_blank: false\n`;

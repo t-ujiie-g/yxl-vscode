@@ -1,6 +1,6 @@
 import { execFile } from 'node:child_process';
 import { accessSync, constants } from 'node:fs';
-import { delimiter, dirname, isAbsolute, join } from 'node:path';
+import { delimiter, dirname, isAbsolute, join, resolve } from 'node:path';
 import { promisify } from 'node:util';
 import type { Message } from '@yxl-vscode/diag';
 import { say } from './text';
@@ -28,6 +28,12 @@ export async function run(binary: string, args: readonly string[]): Promise<Ran 
 
     return { ok: false, said: `${stdout ?? ''}${stderr ?? ''}`.trim() };
   }
+}
+
+/** The workbook `yxl build` says it wrote, as `yxl: wrote <path>`, resolved against the folder it ran from. */
+export function writtenTo(said: string, from: string): string | null {
+  const wrote = /^yxl: wrote (.+)$/m.exec(said)?.[1];
+  return wrote === undefined ? null : resolve(from, wrote);
 }
 
 /** The version out of `yxl version`, which answers `yxl 0.3.6`. */

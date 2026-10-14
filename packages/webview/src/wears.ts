@@ -112,8 +112,13 @@ export function dropdown(): HTMLElement {
   return mark;
 }
 
-export function filtered(): string {
-  return chrome('view.column-is-filtered');
+/** What a filtered header says on hover: that the preview does not filter, and the criterion saved for its column. */
+export function filtered(sheet: DrawnSheet, col: number): string {
+  const saved = sheet.filter?.saved.find((one) => one.col === col);
+  const lines = [chrome('view.column-is-filtered')];
+  if (saved !== undefined) lines.push(chrome('view.filter-saved', { shows: saved.shows }));
+
+  return lines.join('\n');
 }
 
 /** What a cell says on hover, drawn beside the cell and fixed to the page: a cell clips what is inside it. */

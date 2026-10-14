@@ -508,7 +508,7 @@ function cellAt(
   if (checks !== null) drawn.append(validated(checks));
   if (shows(here)) drawn.classList.add('holds');
   tells(drawn, [
-    filtered ? filterSaid() : '',
+    filtered ? filterSaid(sheet, col) : '',
     heads && table !== null ? tableSaid(table) : '',
     note === null ? '' : noteSaid(note),
     link === null ? '' : linkSaid(link),

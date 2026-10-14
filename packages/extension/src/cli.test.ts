@@ -2,7 +2,7 @@ import { chmodSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { delimiter, join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { folderOf, installation, older, run, versionOf, versionWarning } from './cli';
+import { folderOf, installation, older, run, versionOf, versionWarning, writtenTo } from './cli';
 import { reader } from './words';
 
 const english = reader('en');
@@ -14,6 +14,22 @@ describe('versionOf', () => {
 
   it('is nothing when the answer holds no version', () => {
     expect(versionOf('command not found')).toBeNull();
+  });
+});
+
+describe('writtenTo', () => {
+  it('reads the workbook `yxl build` says it wrote, wherever `output:` put it', () => {
+    expect(writtenTo('yxl: wrote /specs/dist/report-10.xlsx', '/specs')).toBe(
+      '/specs/dist/report-10.xlsx',
+    );
+  });
+
+  it('resolves a relative one against the folder it ran from', () => {
+    expect(writtenTo('a warning\nyxl: wrote out/r.xlsx\n', '/specs')).toBe('/specs/out/r.xlsx');
+  });
+
+  it('is nothing when the compiler said no such thing', () => {
+    expect(writtenTo('yxl 0.6.1', '/specs')).toBeNull();
   });
 });
 
