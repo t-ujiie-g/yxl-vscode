@@ -20,13 +20,28 @@ function styled(): HTMLElement {
   document.head.append(style);
 
   const widths = [{ first: 4, last: 5, size: null, hidden: false, group: 1 }];
-  const one = sheet({ freeze: { row: 3, col: 2 }, widths, cells: [cell(1, 1), cell(2, 1)] });
+  // A table under the freeze, whose header and stripes are the cells' own ground.
+  const tables = [
+    {
+      ...{ top: 2, left: 1, bottom: 5, right: 3, name: null, style: null },
+      ...{ bandedRows: true, bandedColumns: false, firstColumn: false, lastColumn: false },
+    },
+  ];
+  const one = sheet({
+    freeze: { row: 3, col: 2 },
+    rows: 5,
+    widths,
+    tables,
+    cells: [cell(1, 1), cell(2, 1)],
+  });
   return shown({ drawing: drawing({ sheets: [one] }) });
 }
 
-/** Every cell that has to stay put: the headings, gutter and letters alike, and the frozen band. */
+/** Every cell that has to stay put: the headings, gutter and letters alike, and the frozen bands. */
 function staying(into: HTMLElement): HTMLElement[] {
-  return [...into.querySelectorAll<HTMLElement>('thead th, thead td, tbody tr.frozen > *')];
+  return [
+    ...into.querySelectorAll<HTMLElement>('thead th, thead td, tbody tr.frozen > *, tbody .stays'),
+  ];
 }
 
 const named = (at: Element): string => `${at.tagName}.${at.className}`;
@@ -47,5 +62,12 @@ describe('what has to stay put while the rest scrolls', () => {
     const blank = new Set(['', 'transparent', 'rgba(0, 0, 0, 0)']);
     const clear = staying(styled()).filter((at) => blank.has(getComputedStyle(at).backgroundColor));
     expect(clear.map(named)).toEqual([]);
+  });
+
+  it('gives none of them a ground the scrolling cells show through, a table stripe included', () => {
+    const seeThrough = staying(styled()).filter((at) =>
+      /^rgba\(.*, 0(\.\d+)?\)$/.test(getComputedStyle(at).backgroundColor),
+    );
+    expect(seeThrough.map(named)).toEqual([]);
   });
 });

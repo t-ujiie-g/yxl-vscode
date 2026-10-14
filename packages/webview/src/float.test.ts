@@ -2,11 +2,22 @@
 
 import { SHAPE_KINDS } from '@yxl-vscode/spec';
 import { describe, expect, it } from 'vitest';
-import { floats } from './float';
+import { floats as laidOver } from './float';
 import { asks, sheet } from './harness';
+import { layers } from './panes';
 import type { DrawnChart, DrawnImage, DrawnShape } from './protocol';
 
 const AT = { row: 2, col: 3, x: 0, y: 0 };
+
+/** What floats over a sheet, in the layers it is drawn in, or `null` where nothing floats. */
+function floats(...args: Parameters<typeof laidOver>): HTMLElement | null {
+  const laid = laidOver(...args);
+  if (laid.length === 0) return null;
+
+  const over = document.createElement('div');
+  over.append(...layers(laid));
+  return over;
+}
 
 function chart(of: Partial<DrawnChart> = {}): DrawnChart {
   return {
@@ -71,6 +82,34 @@ describe('what floats over a sheet', () => {
   it('moves an image in by the offset it is anchored with', () => {
     const drawn = floats(sheet({ images: [image({ at: { ...AT, x: 4, y: 6 } })] }), asks());
     expect(placed(drawn).left).toBe(176);
+  });
+});
+
+describe('what floats over a frozen sheet', () => {
+  const FROZEN = { freeze: { row: 3, col: 3 } };
+  const at = (row: number, col: number) => ({ at: { row, col, x: 0, y: 0 } });
+
+  it('goes in the pane its anchor cell is in', () => {
+    const drawn = laidOver(
+      sheet({
+        ...FROZEN,
+        charts: [chart({ ...at(5, 5), node: 'scrolls' })],
+        images: [image({ ...at(1, 1), node: 'corner' }), image({ ...at(1, 5), node: 'rows' })],
+        shapes: [shape({ ...at(5, 2), node: 'columns' })],
+      }),
+      asks(),
+    );
+    expect(drawn.map(([pane, layer]) => [pane, layer.querySelectorAll('.float').length])).toEqual([
+      ['scrolls', 1],
+      ['columns', 1],
+      ['rows', 1],
+      ['corner', 1],
+    ]);
+  });
+
+  it('is all in the scrolling pane where nothing is frozen', () => {
+    const drawn = laidOver(sheet({ images: [image(at(1, 1))] }), asks());
+    expect(drawn.map(([pane]) => pane)).toEqual(['scrolls']);
   });
 });
 

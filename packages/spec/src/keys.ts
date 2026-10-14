@@ -1,3 +1,4 @@
+import { COMPARISONS } from './conditional';
 import { ALLOWANCES } from './print';
 import { BORDER_SIDES } from './style';
 
@@ -171,18 +172,7 @@ export const MODELED_KEYS = {
   margins: keySet(['top', 'bottom', 'left', 'right', 'header', 'footer']),
   fit: keySet(['width', 'height']),
   filter: keySet(['at', 'columns']),
-  filterColumn: keySet([
-    'at',
-    'values',
-    'between',
-    'not_between',
-    'equals',
-    'not_equals',
-    'at_least',
-    'at_most',
-    'greater_than',
-    'less_than',
-  ]),
+  filterColumn: keySet(['at', 'values', ...COMPARISONS]),
   protect: keySet(['password', 'allow']),
   allow: keySet(ALLOWANCES),
   said: keySet(['title', 'body']),

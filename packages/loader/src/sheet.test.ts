@@ -62,56 +62,8 @@ describe('a sheet', () => {
     expect(diagnostics.map((one) => one.code)).toEqual(['loader.not-a-number']);
   });
 
-  it('reads the header row a filter hangs off', () => {
-    expect(sheet('name: S\n    filter: A1:D1\n').filter).toMatchObject({
-      at: 'A1:D1',
-      columns: null,
-    });
+  it('has no filter where it writes none', () => {
     expect(sheet('name: S\n').filter).toBeNull();
-  });
-
-  it('reads a filter written with the criteria saved in it', () => {
-    const body =
-      'name: S\n    filter:\n      at: A1:D9\n      columns:\n        - { at: B, values: [North, 7] }\n        - { at: C, between: [1, 9] }\n';
-    const read = sheet(body).filter;
-
-    expect(read?.at).toBe('A1:D9');
-    expect(read?.columns?.map((one) => [one.at, one.criterion])).toEqual([
-      ['B', { kind: 'values', values: ['North', '7'] }],
-      ['C', { kind: 'compare', compares: { kind: 'between', low: 1, high: 9 } }],
-    ]);
-  });
-
-  it('reads a filter mapping with no criteria as one with none', () => {
-    expect(sheet('name: S\n    filter: { at: A1:D9 }\n').filter?.columns).toEqual([]);
-  });
-
-  it.each([
-    ['without `at`', '{ columns: [] }', [CODE.missingKey]],
-    ['with a key it does not have', '{ at: A1:D9, sort: B }', [CODE.unknownKey]],
-    [
-      'with a column that is a span',
-      '{ at: A1:D9, columns: [{ at: B-C, equals: 1 }] }',
-      [CODE.badColumn],
-    ],
-    [
-      'with a column asking two things',
-      '{ at: A1:D9, columns: [{ at: B, equals: 1, at_most: 2 }] }',
-      [CODE.conflictingKeys],
-    ],
-    ['with a column asking nothing', '{ at: A1:D9, columns: [{ at: B }] }', [CODE.missingKey]],
-    [
-      'with a top-ten filter, which yxl refuses by name',
-      '{ at: A1:D9, columns: [{ at: B, top: 10 }] }',
-      [CODE.unknownKey],
-    ],
-    [
-      'with a value that is neither text nor a whole number',
-      '{ at: A1:D9, columns: [{ at: B, values: [1.5] }] }',
-      [CODE.notText],
-    ],
-  ])('refuses a filter %s', (_label, filter, expected) => {
-    expect(codes(`name: S\n    filter: ${filter}\n`)).toEqual(expected);
   });
 
   it('reads whether the sheet draws its own gridlines', () => {

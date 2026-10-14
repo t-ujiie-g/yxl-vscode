@@ -4,9 +4,10 @@ Every release names the `yxl` it was built against: the schema is not frozen
 until yxl's v1.0, so the pinned compiler is part of what a version means
 (`ROADMAP.md` §8 Q6).
 
-## Unreleased
+## 0.4.0 — 2026-10-15
 
-Targets **yxl 0.6.1**.
+Targets **yxl 0.6.1**, which this release moves to from 0.5.1: an older yxl is
+offered the update, as before.
 
 ### yxl 0.6
 
@@ -21,6 +22,29 @@ Targets **yxl 0.6.1**.
   its `output:`. *Build* no longer passes its own `-o`, so the workbook goes
   where `output:` points — or beside the spec, as before — and *Open it* opens
   the file the compiler wrote.
+
+### Frozen panes
+
+- **A frozen column or row inside a table no longer shows what scrolls under
+  it.** A table's header row and stripes were drawn see-through, so with the
+  panes frozen over a table the text of the cells scrolling past showed through
+  the frozen ones. They look the same and hide what passes beneath.
+- **Charts, images and shapes stay in their own pane.** One in the scrolling
+  part of the sheet slid over the frozen columns as you scrolled sideways; it
+  now goes under them, as it goes under the frozen rows. One placed in a frozen
+  pane stays there, as Excel keeps it.
+- **The print area and page breaks are drawn in every pane.** The outline and
+  a break's line slid over the frozen columns too; each pane now shows its own
+  part, and a column break runs the whole height of the sheet rather than
+  stopping at the bottom of the window.
+- **Frozen columns and rows hold still while you scroll.** A scroll that ran
+  past the end of the grid carried on into the page, or bounced on a Mac
+  trackpad, and took the frozen panes with it; it now stops at the grid's edge.
+  A chart, image, shape or print line in a frozen pane no longer bobs a little
+  behind the scroll.
+- **The corner above the row numbers stays clear.** On a sheet with grouped
+  rows, the headings scrolling left showed through the strip beside the
+  corner.
 
 ## 0.3.0 — 2026-10-11
 

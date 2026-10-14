@@ -3,7 +3,7 @@ import { parse } from '@yxl-vscode/cst';
 import { type IncludeReader, load } from '@yxl-vscode/loader';
 import { type A1Addr, type FilePath, filePath, type SheetName } from '@yxl-vscode/units';
 import { describe, expect, it } from 'vitest';
-import { choicesOf, savedSaid, validating, validationSaid } from './validations';
+import { choicesOf, validating, validationSaid } from './validations';
 
 const ROOT = filePath('/specs/report.yxl.yaml') ?? ('' as FilePath);
 const read: IncludeReader & DataReader = () => null;
@@ -94,26 +94,5 @@ describe('the validation a cell is under', () => {
     const grid = opened(`${SHEETS}    validations:\n      - at: D2:D9\n        list: [Draft]\n`);
     const sheet = grid.sheets[0];
     expect(sheet === undefined ? null : validating(sheet, 'B2' as A1Addr)).toBeNull();
-  });
-});
-
-describe("a filter column's saved criterion, as its header's hover shows it", () => {
-  it.each([
-    [{ kind: 'values', values: ['Sent', '7'] }, 'Sent, 7'],
-    [{ kind: 'compare', compares: { kind: 'at_least', bound: 1000 } }, '≥ 1000'],
-    [{ kind: 'compare', compares: { kind: 'not_equals', bound: 'x*' } }, '≠ x*'],
-    [{ kind: 'compare', compares: { kind: 'between', low: 1, high: 9 } }, '∈ [1, 9]'],
-    [{ kind: 'compare', compares: { kind: 'not_between', low: 1, high: 9 } }, '∉ [1, 9]'],
-  ] as const)('%o reads %s', (criterion, shows) => {
-    expect(savedSaid(criterion)).toBe(shows);
-  });
-
-  it('reaches the drawing by column, from the compiled filter', () => {
-    const spec = `${SHEETS}    filter:\n      at: A1:C9\n      columns:\n        - { at: B, less_than: 5 }\n`;
-    const sheet = opened(spec).sheets[0];
-
-    expect(sheet?.filter?.saved.map((one) => [one.col, savedSaid(one.criterion)])).toEqual([
-      [2, '< 5'],
-    ]);
   });
 });

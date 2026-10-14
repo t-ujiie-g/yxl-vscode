@@ -300,6 +300,12 @@ body {
   z-index: 13;
 }
 
+/* The row outline's gutter beside the headings is part of the corner: the
+   headings scrolling left pass under it. */
+.grid thead th.outline {
+  z-index: 14;
+}
+
 /* The bracket over the run, as Google Sheets draws one: a line through the
    middle of the gutter, turned down at the end it starts from, ending at the
    control. */
@@ -617,9 +623,12 @@ body {
    the workbook will not have — a black font on it is invisible here and legible
    there. Everything around the sheet keeps the theme, because that part is
    editor, not workbook. */
+/* `overscroll-behavior` keeps a scroll that reaches the edge in the grid: let
+   through, the page scrolls on or the box bounces, and the frozen panes move. */
 .scroller {
   position: relative;
   overflow: auto;
+  overscroll-behavior: none;
   max-height: 70vh;
   border: 1px solid var(--vscode-panel-border);
   background: #ffffff;
@@ -1289,30 +1298,63 @@ body {
 }
 
 /* A table's region: the header filled, the stripes its toggles ask for, and a
-   cell's own fill above either (`docs/spec.md` §11, ADR-029). */
+   cell's own fill above either (`docs/spec.md` §11, ADR-029). Opaque, as grey
+   at 30% and 12% over white: a frozen cell must hide what scrolls under it. */
 .grid td.tabled.heads {
-  background: rgb(128 128 128 / 30%);
+  background: #d9d9d9;
   font-weight: 700;
 }
 
 .grid td.tabled.banded {
-  background: rgb(128 128 128 / 12%);
+  background: #f0f0f0;
 }
 
 .grid td.tabled.edging {
   font-weight: 700;
 }
 
+/* The grid and what is drawn over it share one cell, so every pane's layer
+   starts at the grid's corner, after the grid, and a frozen pane's layer sticks
+   as that pane's cells do (`docs/spec.md` §2). */
+.sheet {
+  display: inline-grid;
+}
+
+.sheet > * {
+  grid-area: 1 / 1;
+}
+
+.sheet > .pane {
+  position: relative;
+  z-index: 1;
+  align-self: start;
+  justify-self: start;
+  width: 0;
+  height: 0;
+}
+
+.sheet > .pane.columns {
+  position: sticky;
+  left: 0;
+  z-index: 3;
+}
+
+.sheet > .pane.rows {
+  position: sticky;
+  top: 0;
+  z-index: 7;
+}
+
+.sheet > .pane.corner {
+  position: sticky;
+  top: 0;
+  left: 0;
+  z-index: 9;
+}
+
 /* What floats above the grid, drawn where it sits and at the size it takes.
    A sketch, never Excel's rendering of one (ADR-029): outlines, greys, and the
    words the spec wrote. */
-.floats {
-  position: absolute;
-  top: 0;
-  left: 0;
-  z-index: 4;
-}
-
 .float {
   position: absolute;
   box-sizing: border-box;
@@ -1519,7 +1561,6 @@ body {
    page break. The preview draws the edges; it does not paginate. */
 .paper .area {
   position: absolute;
-  z-index: 2;
   outline: 2px dashed #5c7fb8;
   outline-offset: -1px;
   pointer-events: none;
@@ -1527,7 +1568,6 @@ body {
 
 .paper .break {
   position: absolute;
-  z-index: 2;
   border-color: #5c7fb8;
   border-style: dashed;
   pointer-events: none;
@@ -1535,12 +1575,10 @@ body {
 
 .paper .break.column {
   top: 0;
-  bottom: 0;
   border-left-width: 1px;
 }
 
 .paper .break.row {
-  right: 0;
   left: 0;
   border-top-width: 1px;
 }

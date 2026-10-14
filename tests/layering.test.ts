@@ -40,9 +40,48 @@ describe('the order sticky cells paint in (#191)', () => {
     expect(new Set(ladder).size).toBe(ladder.length);
   });
 
-  it('keeps what floats over the cells under the frozen rows, and a note corner under a frozen column', () => {
-    expect(level('.floats')).toBeGreaterThan(level('.grid td.stays.spilling'));
-    expect(level('.floats')).toBeLessThan(level('.grid tr.frozen td'));
+  it("puts each pane's floats over that pane's cells and under the panes in front of it", () => {
+    const panes = [
+      ['.sheet > .pane', '.spill', '.grid td.stays'],
+      ['.sheet > .pane.columns', '.grid td.stays.spilling', '.grid tr.frozen td'],
+      ['.sheet > .pane.rows', '.grid tr.frozen td.spilling', '.grid tr.frozen td.stays'],
+      ['.sheet > .pane.corner', '.grid tr.frozen td.stays.spilling', '.grid tr.frozen th'],
+    ];
+
+    for (const [pane = '', over = '', under = ''] of panes) {
+      expect([pane, level(pane) >= level(over), level(pane) < level(under)]).toEqual([
+        pane,
+        true,
+        true,
+      ]);
+    }
+  });
+
+  it("holds a frozen pane's layer still with sticky, as its cells are, never by script on scroll", () => {
+    const rule = (selector: string) =>
+      new RegExp(`${selector.replace(/[.>]/g, '\\$&')} \\{([^}]*)\\}`).exec(css)?.[1] ?? '';
+    const sticks = (selector: string) => {
+      const said = rule(selector);
+      return [/position: sticky/.test(said), /\btop: 0/.test(said), /\bleft: 0/.test(said)];
+    };
+
+    expect(sticks('.sheet > .pane.columns')).toEqual([true, false, true]);
+    expect(sticks('.sheet > .pane.rows')).toEqual([true, true, false]);
+    expect(sticks('.sheet > .pane.corner')).toEqual([true, true, true]);
+  });
+
+  it('keeps the row outline gutter beside the headings with the corner, over every heading that scrolls', () => {
+    expect(level('.grid thead th.outline')).toBe(level('.grid thead th.corner'));
+    expect(level('.grid thead th.outline')).toBeGreaterThan(level('.grid thead th'));
+    expect(level('.grid thead th.outline')).toBeGreaterThan(level('.grid thead th.stays'));
+  });
+
+  it('keeps a scroll that reaches the edge in the grid, so the frozen panes never move with the page', () => {
+    const scroller = /\.scroller \{([^}]*)\}/.exec(css)?.[1] ?? '';
+    expect(scroller).toMatch(/overscroll-behavior: none/);
+  });
+
+  it('keeps a note corner under a frozen column', () => {
     expect(level('.grid td .noted')).toBeLessThan(level('.grid td.stays'));
     expect(level('.grid thead td.outline.stays')).toBe(level('.grid thead th.stays'));
   });

@@ -1,6 +1,7 @@
 import { apply } from './cell';
 import { node, SVG } from './marks';
 import { gutterOf } from './outline';
+import { type Laid, PANES, paneAt } from './panes';
 import type {
   DrawnAt,
   DrawnChart,
@@ -18,18 +19,31 @@ import { chrome } from './worded';
  * Everything that floats above a sheet, laid over the grid where it sits and at
  * the size it takes. A sketch of each, never Excel's rendering of one (ADR-029).
  */
-export function floats(sheet: DrawnSheet, asks: Asks): HTMLElement | null {
+export function floats(sheet: DrawnSheet, asks: Asks): Laid[] {
   const drawn = [
-    ...sheet.charts.map((one) => dragged(chart(sheet, one), sheet, one, asks)),
-    ...sheet.images.map((one) => dragged(image(sheet, one), sheet, one, asks)),
-    ...sheet.shapes.map((one) => dragged(shape(sheet, one), sheet, one, asks)),
+    ...sheet.charts.map((one) => ({
+      at: one.at,
+      box: dragged(chart(sheet, one), sheet, one, asks),
+    })),
+    ...sheet.images.map((one) => ({
+      at: one.at,
+      box: dragged(image(sheet, one), sheet, one, asks),
+    })),
+    ...sheet.shapes.map((one) => ({
+      at: one.at,
+      box: dragged(shape(sheet, one), sheet, one, asks),
+    })),
   ];
-  if (drawn.length === 0) return null;
 
-  const layer = document.createElement('div');
-  layer.className = 'floats';
-  layer.append(...drawn);
-  return layer;
+  return PANES.flatMap((pane) => {
+    const held = drawn.filter((one) => paneAt(sheet, one.at) === pane).map((one) => one.box);
+    if (held.length === 0) return [];
+
+    const layer = document.createElement('div');
+    layer.className = 'floats';
+    layer.append(...held);
+    return [[pane, layer] as const];
+  });
 }
 
 /** What a float carries for a drag to act on: where it hangs from, and the entry it was drawn from. */

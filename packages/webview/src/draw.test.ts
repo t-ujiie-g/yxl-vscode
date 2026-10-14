@@ -405,6 +405,34 @@ describe('where the paper falls', () => {
     expect(paper({}).querySelector('.paper')).toBeNull();
   });
 
+  it('runs a break the whole length of the sheet, not only as far as the box shows', () => {
+    const into = paper({ breaks: [{ row: 21, col: 3 }] });
+    const along = (axis: string, size: 'height' | 'width') =>
+      Number.parseFloat(
+        into.querySelector<HTMLElement>(`.paper .break.${axis}`)?.style[size] ?? '',
+      );
+
+    // Forty rows of 20px under the 24px of headings; twenty 64px columns right of the 44px row numbers.
+    expect(Math.round(along('column', 'height'))).toBe(24 + 40 * 20);
+    expect(Math.round(along('row', 'width'))).toBe(Math.round(44 + 20 * 64.01));
+  });
+
+  it('draws over a frozen sheet once per pane, so each pane shows its own part', () => {
+    const one = { area: { top: 1, left: 1, bottom: 9, right: 9 }, breaks: [], says: 'said' };
+    const frozen = sheet({ ...roomy, freeze: { row: 3, col: 2 }, print: one });
+    const into = shown({ drawing: drawing({ sheets: [frozen] }) });
+    const panes = [...into.querySelectorAll<HTMLElement>('.sheet > .pane')];
+
+    expect(
+      panes.map((pane) => [pane.className, pane.querySelectorAll('.paper .area').length]),
+    ).toEqual([
+      ['pane scrolls', 1],
+      ['pane columns', 1],
+      ['pane rows', 1],
+      ['pane corner', 1],
+    ]);
+  });
+
   it('moves down by what a wrapped row above it grew, and stretches over one inside it (#219)', () => {
     const area = { area: { top: 5, left: 1, bottom: 6, right: 2 }, breaks: [{ row: 8, col: 1 }] };
     const placed = (into: HTMLElement) => {

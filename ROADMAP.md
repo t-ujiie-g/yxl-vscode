@@ -3985,6 +3985,97 @@ than widening it silently.
 
 ## 11. Living changelog
 
+### 2026-10-15 — Frozen panes hold still while the grid scrolls
+
+Reported by the reader: the frozen columns and rows move a little while
+scrolling. Recorded through CDP's synthesized scroll gesture — the compositor's
+own path, momentum and all — at a device scale of 2: the frozen cells did not
+move a device pixel inside the box, frame by frame. What moved them was outside
+it:
+
+- **The scroll chained to the page.** At the grid's edge the rest of a wheel's
+  travel scrolled the webview, so the whole grid moved, frozen panes included —
+  27px in the test, and a Mac trackpad's elastic bounce does the same at either
+  end. `.scroller` takes `overscroll-behavior: none`; checked in the browser,
+  the page no longer moves.
+- **The row outline's gutter beside the headings** sat at the row numbers'
+  level, under the headings, so on a sheet with grouped rows a heading
+  scrolling left showed in the strip beside the corner. It is at the corner's
+  level now.
+- **The frozen panes' floats and print lines lagged a frame.** The reader's
+  screen recording showed it: the `corner` shape and the print area's line in
+  the frozen rows bobbing as the grid scrolled. Their layers were held by a
+  `transform` set from the `scroll` event, which runs after the compositor has
+  already drawn the frame. The grid and its layers now share one grid cell
+  (`.sheet`), so each layer starts at the grid's corner after the grid in the
+  DOM, and a frozen pane's layer is `position: sticky` like its cells; no
+  script moves anything on scroll. Recorded the same way: over a gesture the
+  `corner` shape took 5 different pictures in 26 frames before, 1 after.
+- `tests/layering.test.ts` holds all three; each fails on the old stylesheet.
+  2850 → 2853 tests.
+
+### 2026-10-15 — Refactoring pass over the yxl 0.6.1 move and the frozen panes (`AGENTS.md` §8)
+Walked §8's lenses over everything since the last pass: the pin move and the
+frozen-pane fix read closely, the mechanical lenses run over the whole tree.
+Findings, and what each came to:
+
+- **§8.1 Constants.** The eight comparison names were spelled twice — the
+  loader's list and `MODELED_KEYS.filterColumn`. `COMPARISONS` in `spec` now,
+  read by both, and `Comparison`'s single-bound kinds are derived from it.
+- **§8.2 Placement.** A filter criterion's hover text sat in `validations.ts`
+  and its conversion for the view in `drawing.ts`. Both are in `panes.ts`,
+  beside the filter gesture, with their own tests; `drawing.ts` is back to
+  500. Moving a criterion's column built an address (`B` + `1`) to read a
+  letter back out of it; it uses the column number.
+- **§8.2 Exports.** The scan for exports nothing else reads found only types
+  that name a public signature and the ones the last pass kept for a reason.
+  Nothing from this work.
+- **§8.3 File splitting.** `webview/float.ts` had grown to 599 with the panes.
+  Which pane a cell is in, a pane's layer, holding the layers as the box
+  scrolls, and drawing a thing once per pane are their own subject, used by
+  the floats and the print area alike: `webview/panes.ts`, with its own tests.
+  A float's pane is read from its anchor, so the `data-col` it wore for that
+  is gone. `float.ts` is 542. **Not split**: `extension/preview.ts` (779), one
+  class over the panel's state, for the reason `webview/index.ts` was not;
+  `webview/table.ts` (684), the grid's own drawing, whose seams — the outline,
+  what a cell wears — were taken out by earlier passes.
+- **§8.4 Tests.** The loader's filter cases moved to `filter.test.ts`; a print
+  test that restated the clip arithmetic now checks only that each pane has its
+  copy, the arithmetic being `panes.test.ts`'s.
+- **§8.6.** One doc carried its rationale (`… so the hover reads …`); cut to
+  what it is. 0 over.
+- **§8.7.** Nothing upward; the filter column writes go through `drawLine`,
+  and so through `verify`.
+- 2842 → 2850 tests. Comment shape: export 1036 / 2235 (avg 2.2), private
+  679 / 679 (1.0), inline 149 / 234 (1.6), 0 over.
+
+### 2026-10-15 — Frozen panes hide what scrolls under them
+
+Reported by the reader: with columns frozen, scrolling sideways showed the
+scrolling cells' text over the frozen ones. Reproduced by drawing specs through
+the real bundles in a browser and scrolling them. Three causes:
+
+- **A table's header and stripes were see-through** — grey at 30% and 12% — and
+  their selectors outrank the frozen cells' white ground, so a frozen cell
+  inside a table let the text under it through. They are the same greys made
+  opaque over white. `tests/staying.test.ts` now freezes over a table and
+  refuses any frozen ground with an alpha; it fails on the old stylesheet.
+- **Floats sat over the frozen columns.** The layer was one level, above a
+  frozen column and below a frozen row. Each float now goes in the pane its
+  anchor is in, a level just over that pane's cells, and a frozen pane's layer
+  is translated by the scroll so it stays with its cells.
+- **The print area and column breaks** were on the frozen columns' own level,
+  and painted later. They are drawn once per pane now, each frozen copy clipped
+  to its pane. A column break's `bottom: 0` had measured the box rather than
+  the sheet, so it stopped at the window; both breaks take the sheet's length.
+
+Not changed: a pixel scroll can leave part of a column showing beside the
+freeze line, where Excel scrolls a whole column at a time; and a merge that
+crosses the freeze line stays whole in the frozen band rather than splitting.
+
+- 2835 → 2842 tests. Comment shape: export 1030 / 2228 (avg 2.2), private
+  680 / 680 (1.0), inline 149 / 234 (1.6), 0 over.
+
 ### 2026-10-15 — The pin moves to yxl 0.6.1
 
 yxl 0.6.0 and 0.6.1 move the schema twice and the compiler's command line once,

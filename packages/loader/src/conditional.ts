@@ -1,6 +1,7 @@
 import type { Entry, Node, Path } from '@yxl-vscode/cst';
 import type { Saying } from '@yxl-vscode/diag';
 import {
+  COMPARISONS,
   type ColumnRule,
   type Comparison,
   type Conditional,
@@ -136,17 +137,6 @@ function readTest(rule: Opened, what: Saying): ConditionalTest | null {
   return null;
 }
 
-const COMPARES = [
-  'between',
-  'not_between',
-  'equals',
-  'not_equals',
-  'at_least',
-  'at_most',
-  'greater_than',
-  'less_than',
-] as const;
-
 /** A comparison as a `cell:` rule and a validation both spell it (`docs/spec.md` §10). */
 export function readComparison(ctx: Ctx, node: Node, what: Saying): Comparison | null {
   const opened = openEntries(ctx, node, [], what);
@@ -157,7 +147,7 @@ export function readComparison(ctx: Ctx, node: Node, what: Saying): Comparison |
 /** One entry read as a comparison, keyed by its kind; `null` when the key names none. */
 export function comparisonOf(ctx: Ctx, entry: Entry, what: Saying): Comparison | null {
   const key = keyOf(entry);
-  const known = COMPARES.find((one) => one === key);
+  const known = COMPARISONS.find((one) => one === key);
   if (known === undefined) return null;
 
   if (known === 'between' || known === 'not_between') {

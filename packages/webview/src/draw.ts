@@ -15,6 +15,7 @@ import {
   tabs,
   uncomputed,
 } from './panels';
+import { type Laid, layers, paned, sheetSize } from './panes';
 import { pointing } from './pointing';
 import type { DrawnSheet } from './protocol';
 import {
@@ -219,13 +220,10 @@ function scroller(sheet: DrawnSheet, showing: Showing, asks: Asks): HTMLElement 
   const box = document.createElement('div');
   box.className = 'scroller';
   box.setAttribute('data-of', looking(showing));
-  box.append(grid(sheet, showing, asks));
-
-  const over = floats(sheet, asks);
-  if (over !== null) box.append(over);
-
-  const paper = printed(sheet);
-  if (paper !== null) box.append(paper);
+  const drawn = document.createElement('div');
+  drawn.className = 'sheet';
+  drawn.append(grid(sheet, showing, asks), ...layers([...printed(sheet), ...floats(sheet, asks)]));
+  box.append(drawn);
 
   const bars = splitter(sheet);
   if (bars !== null) box.append(bars);
@@ -239,40 +237,46 @@ function scroller(sheet: DrawnSheet, showing: Showing, asks: Asks): HTMLElement 
 }
 
 /** Where the paper falls: the area outlined and a line at each break; the preview does not paginate. */
-function printed(sheet: DrawnSheet): HTMLElement | null {
+function printed(sheet: DrawnSheet): Laid[] {
   const print = sheet.print;
-  if (print === null || (print.area === null && print.breaks.length === 0)) return null;
+  if (print === null || (print.area === null && print.breaks.length === 0)) return [];
 
   const left = gutterOf(sheet, 'row') + GUTTER;
   const top = gutterOf(sheet, 'column') + HEADING;
-  const drawn = document.createElement('div');
-  drawn.className = 'paper';
+  const whole = sheetSize(sheet);
+  const area = print.area;
 
-  if (print.area !== null) {
-    const box = document.createElement('div');
-    box.className = 'area';
-    box.style.left = `${left + across(sheet, print.area.left)}px`;
-    box.style.top = `${top + down(sheet, print.area.top)}px`;
-    box.style.width = `${across(sheet, print.area.right + 1) - across(sheet, print.area.left)}px`;
-    box.style.height = `${down(sheet, print.area.bottom + 1) - down(sheet, print.area.top)}px`;
-    hangs(box, print.area.top, print.area.bottom + 1);
-    drawn.append(box);
-  }
+  const pieces = (): HTMLElement[] => {
+    const drawn: HTMLElement[] = [];
+    if (area !== null) {
+      const box = document.createElement('div');
+      box.className = 'area';
+      box.style.left = `${left + across(sheet, area.left)}px`;
+      box.style.top = `${top + down(sheet, area.top)}px`;
+      box.style.width = `${across(sheet, area.right + 1) - across(sheet, area.left)}px`;
+      box.style.height = `${down(sheet, area.bottom + 1) - down(sheet, area.top)}px`;
+      drawn.push(hangs(box, area.top, area.bottom + 1));
+    }
 
-  for (const at of print.breaks) {
-    // A break starts a page above and left of the cell it names, so each one is
-    // two lines where neither edge is the sheet's own (`docs/spec.md` §5).
-    if (at.col > 1) drawn.append(page('column', left + across(sheet, at.col)));
-    if (at.row > 1) drawn.append(hangs(page('row', top + down(sheet, at.row)), at.row));
-  }
+    for (const at of print.breaks) {
+      // A break starts a page above and left of the cell it names, so each one is
+      // two lines where neither edge is the sheet's own (`docs/spec.md` §5).
+      if (at.col > 1) drawn.push(page('column', left + across(sheet, at.col), whole.height));
+      if (at.row > 1) {
+        drawn.push(hangs(page('row', top + down(sheet, at.row), whole.width), at.row));
+      }
+    }
+    return drawn;
+  };
 
-  return drawn;
+  return paned(sheet, 'paper', pieces);
 }
 
-function page(axis: 'column' | 'row', at: number): HTMLElement {
+function page(axis: 'column' | 'row', at: number, long: number): HTMLElement {
   const line = document.createElement('div');
   line.className = `break ${axis}`;
   line.style.setProperty(axis === 'column' ? 'left' : 'top', `${at}px`);
+  line.style.setProperty(axis === 'column' ? 'height' : 'width', `${long}px`);
   return line;
 }
 
