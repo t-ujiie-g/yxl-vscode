@@ -4002,8 +4002,17 @@ it:
   level, under the headings, so on a sheet with grouped rows a heading
   scrolling left showed in the strip beside the corner. It is at the corner's
   level now.
-- `tests/layering.test.ts` holds both; each fails on the old stylesheet.
-  2850 → 2852 tests.
+- **The frozen panes' floats and print lines lagged a frame.** The reader's
+  screen recording showed it: the `corner` shape and the print area's line in
+  the frozen rows bobbing as the grid scrolled. Their layers were held by a
+  `transform` set from the `scroll` event, which runs after the compositor has
+  already drawn the frame. The grid and its layers now share one grid cell
+  (`.sheet`), so each layer starts at the grid's corner after the grid in the
+  DOM, and a frozen pane's layer is `position: sticky` like its cells; no
+  script moves anything on scroll. Recorded the same way: over a gesture the
+  `corner` shape took 5 different pictures in 26 frames before, 1 after.
+- `tests/layering.test.ts` holds all three; each fails on the old stylesheet.
+  2850 → 2853 tests.
 
 ### 2026-10-15 — Refactoring pass over the yxl 0.6.1 move and the frozen panes (`AGENTS.md` §8)
 Walked §8's lenses over everything since the last pass: the pin move and the

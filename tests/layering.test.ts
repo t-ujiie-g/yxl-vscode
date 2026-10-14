@@ -42,10 +42,10 @@ describe('the order sticky cells paint in (#191)', () => {
 
   it("puts each pane's floats over that pane's cells and under the panes in front of it", () => {
     const panes = [
-      ['.scroller .pane', '.spill', '.grid td.stays'],
-      ['.scroller .pane.columns', '.grid td.stays.spilling', '.grid tr.frozen td'],
-      ['.scroller .pane.rows', '.grid tr.frozen td.spilling', '.grid tr.frozen td.stays'],
-      ['.scroller .pane.corner', '.grid tr.frozen td.stays.spilling', '.grid tr.frozen th'],
+      ['.sheet > .pane', '.spill', '.grid td.stays'],
+      ['.sheet > .pane.columns', '.grid td.stays.spilling', '.grid tr.frozen td'],
+      ['.sheet > .pane.rows', '.grid tr.frozen td.spilling', '.grid tr.frozen td.stays'],
+      ['.sheet > .pane.corner', '.grid tr.frozen td.stays.spilling', '.grid tr.frozen th'],
     ];
 
     for (const [pane = '', over = '', under = ''] of panes) {
@@ -55,6 +55,19 @@ describe('the order sticky cells paint in (#191)', () => {
         true,
       ]);
     }
+  });
+
+  it("holds a frozen pane's layer still with sticky, as its cells are, never by script on scroll", () => {
+    const rule = (selector: string) =>
+      new RegExp(`${selector.replace(/[.>]/g, '\\$&')} \\{([^}]*)\\}`).exec(css)?.[1] ?? '';
+    const sticks = (selector: string) => {
+      const said = rule(selector);
+      return [/position: sticky/.test(said), /\btop: 0/.test(said), /\bleft: 0/.test(said)];
+    };
+
+    expect(sticks('.sheet > .pane.columns')).toEqual([true, false, true]);
+    expect(sticks('.sheet > .pane.rows')).toEqual([true, true, false]);
+    expect(sticks('.sheet > .pane.corner')).toEqual([true, true, true]);
   });
 
   it('keeps the row outline gutter beside the headings with the corner, over every heading that scrolls', () => {

@@ -2,11 +2,22 @@
 
 import { SHAPE_KINDS } from '@yxl-vscode/spec';
 import { describe, expect, it } from 'vitest';
-import { floats } from './float';
+import { floats as laidOver } from './float';
 import { asks, sheet } from './harness';
+import { layers } from './panes';
 import type { DrawnChart, DrawnImage, DrawnShape } from './protocol';
 
 const AT = { row: 2, col: 3, x: 0, y: 0 };
+
+/** What floats over a sheet, in the layers it is drawn in, or `null` where nothing floats. */
+function floats(...args: Parameters<typeof laidOver>): HTMLElement | null {
+  const laid = laidOver(...args);
+  if (laid.length === 0) return null;
+
+  const over = document.createElement('div');
+  over.append(...layers(laid));
+  return over;
+}
 
 function chart(of: Partial<DrawnChart> = {}): DrawnChart {
   return {
@@ -79,7 +90,7 @@ describe('what floats over a frozen sheet', () => {
   const at = (row: number, col: number) => ({ at: { row, col, x: 0, y: 0 } });
 
   it('goes in the pane its anchor cell is in', () => {
-    const drawn = floats(
+    const drawn = laidOver(
       sheet({
         ...FROZEN,
         charts: [chart({ ...at(5, 5), node: 'scrolls' })],
@@ -88,21 +99,17 @@ describe('what floats over a frozen sheet', () => {
       }),
       asks(),
     );
-    const panes = [...(drawn?.querySelectorAll('.pane') ?? [])];
-
-    expect(panes.map((one) => [one.className, one.children.length])).toEqual([
-      ['pane scrolls', 1],
-      ['pane columns', 1],
-      ['pane rows', 1],
-      ['pane corner', 1],
+    expect(drawn.map(([pane, layer]) => [pane, layer.querySelectorAll('.float').length])).toEqual([
+      ['scrolls', 1],
+      ['columns', 1],
+      ['rows', 1],
+      ['corner', 1],
     ]);
   });
 
   it('is all in the scrolling pane where nothing is frozen', () => {
-    const drawn = floats(sheet({ images: [image(at(1, 1))] }), asks());
-    expect([...(drawn?.querySelectorAll('.pane') ?? [])].map((one) => one.className)).toEqual([
-      'pane scrolls',
-    ]);
+    const drawn = laidOver(sheet({ images: [image(at(1, 1))] }), asks());
+    expect(drawn.map(([pane]) => pane)).toEqual(['scrolls']);
   });
 });
 

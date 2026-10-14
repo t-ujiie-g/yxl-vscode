@@ -15,7 +15,7 @@ import {
   tabs,
   uncomputed,
 } from './panels';
-import { holdPanes, paned, sheetSize } from './panes';
+import { type Laid, layers, paned, sheetSize } from './panes';
 import { pointing } from './pointing';
 import type { DrawnSheet } from './protocol';
 import {
@@ -70,7 +70,6 @@ export function draw(into: HTMLElement, showing: Showing, asks: Asks): void {
     // and a frozen row has no measured height until it is laid out.
     box.scrollTop = kept.top;
     box.scrollLeft = kept.left;
-    holdPanes(box);
     pinned(box);
     grownBy(box, sheet);
   }
@@ -221,19 +220,15 @@ function scroller(sheet: DrawnSheet, showing: Showing, asks: Asks): HTMLElement 
   const box = document.createElement('div');
   box.className = 'scroller';
   box.setAttribute('data-of', looking(showing));
-  box.append(grid(sheet, showing, asks));
-
-  const paper = printed(sheet);
-  if (paper !== null) box.append(paper);
-
-  const over = floats(sheet, asks);
-  if (over !== null) box.append(over);
+  const drawn = document.createElement('div');
+  drawn.className = 'sheet';
+  drawn.append(grid(sheet, showing, asks), ...layers([...printed(sheet), ...floats(sheet, asks)]));
+  box.append(drawn);
 
   const bars = splitter(sheet);
   if (bars !== null) box.append(bars);
 
   box.addEventListener('scroll', () => {
-    holdPanes(box);
     const at = wanted(sheet, { top: box.scrollTop, left: box.scrollLeft });
     if (at !== null) asks.showWindow(at.row, at.col);
   });
@@ -242,9 +237,9 @@ function scroller(sheet: DrawnSheet, showing: Showing, asks: Asks): HTMLElement 
 }
 
 /** Where the paper falls: the area outlined and a line at each break; the preview does not paginate. */
-function printed(sheet: DrawnSheet): HTMLElement | null {
+function printed(sheet: DrawnSheet): Laid[] {
   const print = sheet.print;
-  if (print === null || (print.area === null && print.breaks.length === 0)) return null;
+  if (print === null || (print.area === null && print.breaks.length === 0)) return [];
 
   const left = gutterOf(sheet, 'row') + GUTTER;
   const top = gutterOf(sheet, 'column') + HEADING;
@@ -274,10 +269,7 @@ function printed(sheet: DrawnSheet): HTMLElement | null {
     return drawn;
   };
 
-  const drawn = document.createElement('div');
-  drawn.className = 'paper';
-  drawn.append(...paned(sheet, pieces));
-  return drawn;
+  return paned(sheet, 'paper', pieces);
 }
 
 function page(axis: 'column' | 'row', at: number, long: number): HTMLElement {

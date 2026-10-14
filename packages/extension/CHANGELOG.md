@@ -38,8 +38,9 @@ Targets **yxl 0.6.1**.
   stopping at the bottom of the window.
 - **Frozen columns and rows hold still while you scroll.** A scroll that ran
   past the end of the grid carried on into the page, or bounced on a Mac
-  trackpad, and took the frozen panes with it. It now stops at the grid's
-  edge.
+  trackpad, and took the frozen panes with it; it now stops at the grid's edge.
+  A chart, image, shape or print line in a frozen pane no longer bobs a little
+  behind the scroll.
 - **The corner above the row numbers stays clear.** On a sheet with grouped
   rows, the headings scrolling left showed through the strip beside the
   corner.

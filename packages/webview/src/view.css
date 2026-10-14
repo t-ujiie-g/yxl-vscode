@@ -1313,30 +1313,48 @@ body {
   font-weight: 700;
 }
 
-/* What floats above the grid, drawn where it sits and at the size it takes.
-   A sketch, never Excel's rendering of one (ADR-029): outlines, greys, and the
-   words the spec wrote. */
-.scroller .pane {
-  position: absolute;
-  top: 0;
-  left: 0;
-  z-index: 1;
+/* The grid and what is drawn over it share one cell, so every pane's layer
+   starts at the grid's corner, after the grid, and a frozen pane's layer sticks
+   as that pane's cells do (`docs/spec.md` §2). */
+.sheet {
+  display: inline-grid;
 }
 
-/* What is drawn over a frozen pane stays with it, as Excel keeps it there, just
-   over that pane's cells and under the panes in front of it (`docs/spec.md` §2). */
-.scroller .pane.columns {
+.sheet > * {
+  grid-area: 1 / 1;
+}
+
+.sheet > .pane {
+  position: relative;
+  z-index: 1;
+  align-self: start;
+  justify-self: start;
+  width: 0;
+  height: 0;
+}
+
+.sheet > .pane.columns {
+  position: sticky;
+  left: 0;
   z-index: 3;
 }
 
-.scroller .pane.rows {
+.sheet > .pane.rows {
+  position: sticky;
+  top: 0;
   z-index: 7;
 }
 
-.scroller .pane.corner {
+.sheet > .pane.corner {
+  position: sticky;
+  top: 0;
+  left: 0;
   z-index: 9;
 }
 
+/* What floats above the grid, drawn where it sits and at the size it takes.
+   A sketch, never Excel's rendering of one (ADR-029): outlines, greys, and the
+   words the spec wrote. */
 .float {
   position: absolute;
   box-sizing: border-box;

@@ -421,9 +421,11 @@ describe('where the paper falls', () => {
     const one = { area: { top: 1, left: 1, bottom: 9, right: 9 }, breaks: [], says: 'said' };
     const frozen = sheet({ ...roomy, freeze: { row: 3, col: 2 }, print: one });
     const into = shown({ drawing: drawing({ sheets: [frozen] }) });
-    const panes = [...into.querySelectorAll<HTMLElement>('.paper .pane')];
+    const panes = [...into.querySelectorAll<HTMLElement>('.sheet > .pane')];
 
-    expect(panes.map((pane) => [pane.className, pane.querySelectorAll('.area').length])).toEqual([
+    expect(
+      panes.map((pane) => [pane.className, pane.querySelectorAll('.paper .area').length]),
+    ).toEqual([
       ['pane scrolls', 1],
       ['pane columns', 1],
       ['pane rows', 1],
