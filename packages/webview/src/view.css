@@ -1289,14 +1289,15 @@ body {
 }
 
 /* A table's region: the header filled, the stripes its toggles ask for, and a
-   cell's own fill above either (`docs/spec.md` §11, ADR-029). */
+   cell's own fill above either (`docs/spec.md` §11, ADR-029). Opaque, as grey
+   at 30% and 12% over white: a frozen cell must hide what scrolls under it. */
 .grid td.tabled.heads {
-  background: rgb(128 128 128 / 30%);
+  background: #d9d9d9;
   font-weight: 700;
 }
 
 .grid td.tabled.banded {
-  background: rgb(128 128 128 / 12%);
+  background: #f0f0f0;
 }
 
 .grid td.tabled.edging {
@@ -1306,11 +1307,25 @@ body {
 /* What floats above the grid, drawn where it sits and at the size it takes.
    A sketch, never Excel's rendering of one (ADR-029): outlines, greys, and the
    words the spec wrote. */
-.floats {
+.scroller .pane {
   position: absolute;
   top: 0;
   left: 0;
-  z-index: 4;
+  z-index: 1;
+}
+
+/* What is drawn over a frozen pane stays with it, as Excel keeps it there, just
+   over that pane's cells and under the panes in front of it (`docs/spec.md` §2). */
+.scroller .pane.columns {
+  z-index: 3;
+}
+
+.scroller .pane.rows {
+  z-index: 7;
+}
+
+.scroller .pane.corner {
+  z-index: 9;
 }
 
 .float {
@@ -1519,7 +1534,6 @@ body {
    page break. The preview draws the edges; it does not paginate. */
 .paper .area {
   position: absolute;
-  z-index: 2;
   outline: 2px dashed #5c7fb8;
   outline-offset: -1px;
   pointer-events: none;
@@ -1527,7 +1541,6 @@ body {
 
 .paper .break {
   position: absolute;
-  z-index: 2;
   border-color: #5c7fb8;
   border-style: dashed;
   pointer-events: none;
@@ -1535,12 +1548,10 @@ body {
 
 .paper .break.column {
   top: 0;
-  bottom: 0;
   border-left-width: 1px;
 }
 
 .paper .break.row {
-  right: 0;
   left: 0;
   border-top-width: 1px;
 }

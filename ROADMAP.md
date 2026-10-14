@@ -3985,6 +3985,33 @@ than widening it silently.
 
 ## 11. Living changelog
 
+### 2026-10-15 — Frozen panes hide what scrolls under them
+
+Reported by the reader: with columns frozen, scrolling sideways showed the
+scrolling cells' text over the frozen ones. Reproduced by drawing specs through
+the real bundles in a browser and scrolling them. Three causes:
+
+- **A table's header and stripes were see-through** — grey at 30% and 12% — and
+  their selectors outrank the frozen cells' white ground, so a frozen cell
+  inside a table let the text under it through. They are the same greys made
+  opaque over white. `tests/staying.test.ts` now freezes over a table and
+  refuses any frozen ground with an alpha; it fails on the old stylesheet.
+- **Floats sat over the frozen columns.** The layer was one level, above a
+  frozen column and below a frozen row. Each float now goes in the pane its
+  anchor is in, a level just over that pane's cells, and a frozen pane's layer
+  is translated by the scroll so it stays with its cells.
+- **The print area and column breaks** were on the frozen columns' own level,
+  and painted later. They are drawn once per pane now, each frozen copy clipped
+  to its pane. A column break's `bottom: 0` had measured the box rather than
+  the sheet, so it stopped at the window; both breaks take the sheet's length.
+
+Not changed: a pixel scroll can leave part of a column showing beside the
+freeze line, where Excel scrolls a whole column at a time; and a merge that
+crosses the freeze line stays whole in the frozen band rather than splitting.
+
+- 2835 → 2842 tests. Comment shape: export 1030 / 2228 (avg 2.2), private
+  680 / 680 (1.0), inline 149 / 234 (1.6), 0 over.
+
 ### 2026-10-15 — The pin moves to yxl 0.6.1
 
 yxl 0.6.0 and 0.6.1 move the schema twice and the compiler's command line once,

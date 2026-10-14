@@ -40,9 +40,24 @@ describe('the order sticky cells paint in (#191)', () => {
     expect(new Set(ladder).size).toBe(ladder.length);
   });
 
-  it('keeps what floats over the cells under the frozen rows, and a note corner under a frozen column', () => {
-    expect(level('.floats')).toBeGreaterThan(level('.grid td.stays.spilling'));
-    expect(level('.floats')).toBeLessThan(level('.grid tr.frozen td'));
+  it("puts each pane's floats over that pane's cells and under the panes in front of it", () => {
+    const panes = [
+      ['.scroller .pane', '.spill', '.grid td.stays'],
+      ['.scroller .pane.columns', '.grid td.stays.spilling', '.grid tr.frozen td'],
+      ['.scroller .pane.rows', '.grid tr.frozen td.spilling', '.grid tr.frozen td.stays'],
+      ['.scroller .pane.corner', '.grid tr.frozen td.stays.spilling', '.grid tr.frozen th'],
+    ];
+
+    for (const [pane = '', over = '', under = ''] of panes) {
+      expect([pane, level(pane) >= level(over), level(pane) < level(under)]).toEqual([
+        pane,
+        true,
+        true,
+      ]);
+    }
+  });
+
+  it('keeps a note corner under a frozen column', () => {
     expect(level('.grid td .noted')).toBeLessThan(level('.grid td.stays'));
     expect(level('.grid thead td.outline.stays')).toBe(level('.grid thead th.stays'));
   });

@@ -22,6 +22,21 @@ Targets **yxl 0.6.1**.
   where `output:` points — or beside the spec, as before — and *Open it* opens
   the file the compiler wrote.
 
+### Frozen panes
+
+- **A frozen column or row inside a table no longer shows what scrolls under
+  it.** A table's header row and stripes were drawn see-through, so with the
+  panes frozen over a table the text of the cells scrolling past showed through
+  the frozen ones. They look the same and hide what passes beneath.
+- **Charts, images and shapes stay in their own pane.** One in the scrolling
+  part of the sheet slid over the frozen columns as you scrolled sideways; it
+  now goes under them, as it goes under the frozen rows. One placed in a frozen
+  pane stays there, as Excel keeps it.
+- **The print area and page breaks are drawn in every pane.** The outline and
+  a break's line slid over the frozen columns too; each pane now shows its own
+  part, and a column break runs the whole height of the sheet rather than
+  stopping at the bottom of the window.
+
 ## 0.3.0 — 2026-10-11
 
 Targets **yxl 0.5.1**, as 0.2.5 did. Every issue reported against 0.2.5, in one

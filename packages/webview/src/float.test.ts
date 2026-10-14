@@ -2,7 +2,7 @@
 
 import { SHAPE_KINDS } from '@yxl-vscode/spec';
 import { describe, expect, it } from 'vitest';
-import { floats } from './float';
+import { floats, holdPanes } from './float';
 import { asks, sheet } from './harness';
 import type { DrawnChart, DrawnImage, DrawnShape } from './protocol';
 
@@ -71,6 +71,61 @@ describe('what floats over a sheet', () => {
   it('moves an image in by the offset it is anchored with', () => {
     const drawn = floats(sheet({ images: [image({ at: { ...AT, x: 4, y: 6 } })] }), asks());
     expect(placed(drawn).left).toBe(176);
+  });
+});
+
+describe('what floats over a frozen sheet', () => {
+  const FROZEN = { freeze: { row: 3, col: 3 } };
+  const at = (row: number, col: number) => ({ at: { row, col, x: 0, y: 0 } });
+
+  it('goes in the pane its anchor cell is in', () => {
+    const drawn = floats(
+      sheet({
+        ...FROZEN,
+        charts: [chart({ ...at(5, 5), node: 'scrolls' })],
+        images: [image({ ...at(1, 1), node: 'corner' }), image({ ...at(1, 5), node: 'rows' })],
+        shapes: [shape({ ...at(5, 2), node: 'columns' })],
+      }),
+      asks(),
+    );
+    const panes = [...(drawn?.querySelectorAll('.pane') ?? [])];
+
+    expect(panes.map((one) => [one.className, one.children.length])).toEqual([
+      ['pane scrolls', 1],
+      ['pane columns', 1],
+      ['pane rows', 1],
+      ['pane corner', 1],
+    ]);
+  });
+
+  it('is all in the scrolling pane where nothing is frozen', () => {
+    const drawn = floats(sheet({ images: [image(at(1, 1))] }), asks());
+    expect([...(drawn?.querySelectorAll('.pane') ?? [])].map((one) => one.className)).toEqual([
+      'pane scrolls',
+    ]);
+  });
+
+  it('is held by each frozen pane as far as the box has scrolled along the axes it freezes', () => {
+    const box = document.createElement('div');
+    const drawn = floats(
+      sheet({
+        ...FROZEN,
+        images: [image(at(1, 1)), image(at(1, 5)), image(at(5, 1)), image(at(5, 5))],
+      }),
+      asks(),
+    );
+    if (drawn !== null) box.append(drawn);
+    box.scrollLeft = 40;
+    box.scrollTop = 70;
+
+    holdPanes(box);
+    const held = (pane: string) => box.querySelector<HTMLElement>(`.pane.${pane}`)?.style.transform;
+    expect([held('scrolls'), held('columns'), held('rows'), held('corner')]).toEqual([
+      '',
+      'translate(40px, 0)',
+      'translate(0, 70px)',
+      'translate(40px, 70px)',
+    ]);
   });
 });
 

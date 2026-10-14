@@ -28,7 +28,76 @@ export function floats(sheet: DrawnSheet, asks: Asks): HTMLElement | null {
 
   const layer = document.createElement('div');
   layer.className = 'floats';
-  layer.append(...drawn);
+  for (const which of PANES) {
+    const held = drawn.filter((one) => paneOf(sheet, one) === which);
+    if (held.length > 0) layer.append(pane(which, held));
+  }
+  return layer;
+}
+
+/** The pane a float is anchored in: the scrolling one, or one of the three a freeze holds still. */
+type Pane = 'scrolls' | 'columns' | 'rows' | 'corner';
+
+const PANES: readonly Pane[] = ['scrolls', 'columns', 'rows', 'corner'];
+
+function paneOf(sheet: DrawnSheet, drawn: HTMLElement): Pane {
+  const row = Number(drawn.dataset['hangs']);
+  const col = Number(drawn.dataset['col']);
+  const rows = sheet.freeze !== null && row < sheet.freeze.row;
+  const columns = sheet.freeze !== null && col < sheet.freeze.col;
+
+  if (rows && columns) return 'corner';
+  if (rows) return 'rows';
+  return columns ? 'columns' : 'scrolls';
+}
+
+/** Hold each frozen pane's floats where the pane's cells are held, at the scroll the box has reached. */
+export function holdPanes(box: HTMLElement): void {
+  const by = { x: box.scrollLeft, y: box.scrollTop };
+  const held: Record<Exclude<Pane, 'scrolls'>, string> = {
+    columns: `translate(${by.x}px, 0)`,
+    rows: `translate(0, ${by.y}px)`,
+    corner: `translate(${by.x}px, ${by.y}px)`,
+  };
+
+  for (const [pane, transform] of Object.entries(held)) {
+    for (const layer of box.querySelectorAll<HTMLElement>(`.pane.${pane}`)) {
+      layer.style.transform = transform;
+    }
+  }
+}
+
+/** What is drawn over every pane alike: once per pane, each frozen pane's copy cut to the pane, so it shows its own part. */
+export function paned(sheet: DrawnSheet, pieces: () => HTMLElement[]): HTMLElement[] {
+  const layers = [pane('scrolls', pieces())];
+  const freeze = sheet.freeze;
+  if (freeze === null) return layers;
+
+  const wide = gutterOf(sheet, 'row') + GUTTER + across(sheet, freeze.col);
+  const tall = gutterOf(sheet, 'column') + HEADING + down(sheet, freeze.row);
+  const whole = sheetSize(sheet);
+  if (freeze.col > 1) layers.push(pane('columns', pieces(), { x: wide, y: whole.height }));
+  if (freeze.row > 1) layers.push(pane('rows', pieces(), { x: whole.width, y: tall }));
+  if (freeze.col > 1 && freeze.row > 1) layers.push(pane('corner', pieces(), { x: wide, y: tall }));
+
+  return layers;
+}
+
+/** How far the drawn sheet reaches, headings and gutters included: what a line across all of it spans. */
+export function sheetSize(sheet: DrawnSheet): { width: number; height: number } {
+  return {
+    width: gutterOf(sheet, 'row') + GUTTER + across(sheet, sheet.of.columns + 1),
+    height: gutterOf(sheet, 'column') + HEADING + down(sheet, sheet.of.rows + 1),
+  };
+}
+
+function pane(which: Pane, held: HTMLElement[], cut?: { x: number; y: number }): HTMLElement {
+  const layer = document.createElement('div');
+  layer.className = `pane ${which}`;
+  if (cut !== undefined) {
+    layer.style.clipPath = `polygon(0 0, ${cut.x}px 0, ${cut.x}px ${cut.y}px, 0 ${cut.y}px)`;
+  }
+  layer.append(...held);
   return layer;
 }
 
@@ -139,6 +208,7 @@ function box(
     drawn.style.width = `${size.width}px`;
     drawn.style.height = `${size.height}px`;
   }
+  drawn.dataset['col'] = String(at.col);
   return hangs(drawn, at.row);
 }
 
