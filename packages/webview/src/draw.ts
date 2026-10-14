@@ -1,5 +1,5 @@
 import { findBar, formulaBar, told } from './boxes';
-import { floats, hangs, holdPanes, paned, sheetSize } from './float';
+import { floats, hangs } from './float';
 import { heldBy, keyboard } from './keyboard';
 import { takingAll, wearing } from './keys';
 import { fit } from './menus';
@@ -15,6 +15,7 @@ import {
   tabs,
   uncomputed,
 } from './panels';
+import { holdPanes, paned, sheetSize } from './panes';
 import { pointing } from './pointing';
 import type { DrawnSheet } from './protocol';
 import {

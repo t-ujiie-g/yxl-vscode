@@ -417,25 +417,17 @@ describe('where the paper falls', () => {
     expect(Math.round(along('row', 'width'))).toBe(Math.round(44 + 20 * 64.01));
   });
 
-  it('draws over a frozen sheet once per pane, each frozen copy cut to its own pane', () => {
+  it('draws over a frozen sheet once per pane, so each pane shows its own part', () => {
     const one = { area: { top: 1, left: 1, bottom: 9, right: 9 }, breaks: [], says: 'said' };
     const frozen = sheet({ ...roomy, freeze: { row: 3, col: 2 }, print: one });
     const into = shown({ drawing: drawing({ sheets: [frozen] }) });
     const panes = [...into.querySelectorAll<HTMLElement>('.paper .pane')];
 
-    // The row numbers and column A across; the headings and rows 1 and 2 down.
-    const wide = Math.round(44 + 64.01);
-    const cutAt = (pane: HTMLElement) =>
-      [...pane.style.clipPath.matchAll(/([\d.]+)px/g)]
-        .slice(0, 3)
-        .map((one) => Math.round(Number(one[1])));
-    expect(
-      panes.map((pane) => [pane.className, pane.querySelectorAll('.area').length, cutAt(pane)]),
-    ).toEqual([
-      ['pane scrolls', 1, []],
-      ['pane columns', 1, [wide, wide, 24 + 40 * 20]],
-      ['pane rows', 1, [Math.round(44 + 20 * 64.01), Math.round(44 + 20 * 64.01), 24 + 2 * 20]],
-      ['pane corner', 1, [wide, wide, 24 + 2 * 20]],
+    expect(panes.map((pane) => [pane.className, pane.querySelectorAll('.area').length])).toEqual([
+      ['pane scrolls', 1],
+      ['pane columns', 1],
+      ['pane rows', 1],
+      ['pane corner', 1],
     ]);
   });
 

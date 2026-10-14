@@ -4,7 +4,19 @@ import type { SpecNode, Templated } from './node';
 import type { StyleUse } from './style';
 import type { ScalarValue } from './value';
 
-/** The comparisons a `cell:` rule and a validation are both spelled in (`docs/spec.md` §10). */
+/** The eight comparisons a `cell:` rule, a validation and a filter column are spelled in (`docs/spec.md` §10). */
+export const COMPARISONS = [
+  'between',
+  'not_between',
+  'equals',
+  'not_equals',
+  'at_least',
+  'at_most',
+  'greater_than',
+  'less_than',
+] as const;
+
+/** One comparison as written; the two ranges take a pair of bounds, the rest one. */
 export type Comparison =
   | {
       readonly kind: 'between' | 'not_between';
@@ -12,13 +24,7 @@ export type Comparison =
       readonly high: ScalarValue;
     }
   | {
-      readonly kind:
-        | 'equals'
-        | 'not_equals'
-        | 'at_least'
-        | 'at_most'
-        | 'greater_than'
-        | 'less_than';
+      readonly kind: Exclude<(typeof COMPARISONS)[number], 'between' | 'not_between'>;
       readonly bound: ScalarValue;
     };
 

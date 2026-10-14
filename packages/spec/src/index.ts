@@ -8,11 +8,12 @@ export {
   type FormulaBody,
   type RichRun,
 } from './cell';
-export type {
-  Comparison,
-  Conditional,
-  ConditionalTest,
-  TextTest,
+export {
+  COMPARISONS,
+  type Comparison,
+  type Conditional,
+  type ConditionalTest,
+  type TextTest,
 } from './conditional';
 export {
   type Covered,

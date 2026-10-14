@@ -7,7 +7,7 @@ import {
   sheetOf,
 } from '@yxl-vscode/compile';
 import { reading, setValidation } from '@yxl-vscode/intent';
-import type { Comparison, FilterColumn, Saying } from '@yxl-vscode/spec';
+import type { Comparison, Saying } from '@yxl-vscode/spec';
 import { type A1Addr, addrAt, cellOf, rangeOf, type SheetName, within } from '@yxl-vscode/units';
 import type { Validated } from '@yxl-vscode/webview/protocol';
 import { applied, type Port, rectIn, type Spec, sheetNamed } from './write';
@@ -99,27 +99,3 @@ function compared(compares: Comparison): string {
       return `${compares.kind.replace('_', ' ')} ${String(compares.bound)}`;
   }
 }
-
-/** A filter column's saved criterion, in symbols rather than words, so the hover reads in either language. */
-export function savedSaid(criterion: FilterColumn['criterion']): string {
-  if (criterion.kind === 'values') return criterion.values.join(', ');
-
-  const compares = criterion.compares;
-  switch (compares.kind) {
-    case 'between':
-      return `∈ [${String(compares.low)}, ${String(compares.high)}]`;
-    case 'not_between':
-      return `∉ [${String(compares.low)}, ${String(compares.high)}]`;
-    default:
-      return `${SYMBOLS[compares.kind]} ${String(compares.bound)}`;
-  }
-}
-
-const SYMBOLS = {
-  equals: '=',
-  not_equals: '≠',
-  greater_than: '>',
-  less_than: '<',
-  at_least: '≥',
-  at_most: '≤',
-} as const;

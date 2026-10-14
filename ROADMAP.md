@@ -3985,6 +3985,41 @@ than widening it silently.
 
 ## 11. Living changelog
 
+### 2026-10-15 — Refactoring pass over the yxl 0.6.1 move and the frozen panes (`AGENTS.md` §8)
+Walked §8's lenses over everything since the last pass: the pin move and the
+frozen-pane fix read closely, the mechanical lenses run over the whole tree.
+Findings, and what each came to:
+
+- **§8.1 Constants.** The eight comparison names were spelled twice — the
+  loader's list and `MODELED_KEYS.filterColumn`. `COMPARISONS` in `spec` now,
+  read by both, and `Comparison`'s single-bound kinds are derived from it.
+- **§8.2 Placement.** A filter criterion's hover text sat in `validations.ts`
+  and its conversion for the view in `drawing.ts`. Both are in `panes.ts`,
+  beside the filter gesture, with their own tests; `drawing.ts` is back to
+  500. Moving a criterion's column built an address (`B` + `1`) to read a
+  letter back out of it; it uses the column number.
+- **§8.2 Exports.** The scan for exports nothing else reads found only types
+  that name a public signature and the ones the last pass kept for a reason.
+  Nothing from this work.
+- **§8.3 File splitting.** `webview/float.ts` had grown to 599 with the panes.
+  Which pane a cell is in, a pane's layer, holding the layers as the box
+  scrolls, and drawing a thing once per pane are their own subject, used by
+  the floats and the print area alike: `webview/panes.ts`, with its own tests.
+  A float's pane is read from its anchor, so the `data-col` it wore for that
+  is gone. `float.ts` is 542. **Not split**: `extension/preview.ts` (779), one
+  class over the panel's state, for the reason `webview/index.ts` was not;
+  `webview/table.ts` (684), the grid's own drawing, whose seams — the outline,
+  what a cell wears — were taken out by earlier passes.
+- **§8.4 Tests.** The loader's filter cases moved to `filter.test.ts`; a print
+  test that restated the clip arithmetic now checks only that each pane has its
+  copy, the arithmetic being `panes.test.ts`'s.
+- **§8.6.** One doc carried its rationale (`… so the hover reads …`); cut to
+  what it is. 0 over.
+- **§8.7.** Nothing upward; the filter column writes go through `drawLine`,
+  and so through `verify`.
+- 2842 → 2850 tests. Comment shape: export 1036 / 2235 (avg 2.2), private
+  679 / 679 (1.0), inline 149 / 234 (1.6), 0 over.
+
 ### 2026-10-15 — Frozen panes hide what scrolls under them
 
 Reported by the reader: with columns frozen, scrolling sideways showed the

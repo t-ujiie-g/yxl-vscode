@@ -2,7 +2,7 @@
 
 import { SHAPE_KINDS } from '@yxl-vscode/spec';
 import { describe, expect, it } from 'vitest';
-import { floats, holdPanes } from './float';
+import { floats } from './float';
 import { asks, sheet } from './harness';
 import type { DrawnChart, DrawnImage, DrawnShape } from './protocol';
 
@@ -102,29 +102,6 @@ describe('what floats over a frozen sheet', () => {
     const drawn = floats(sheet({ images: [image(at(1, 1))] }), asks());
     expect([...(drawn?.querySelectorAll('.pane') ?? [])].map((one) => one.className)).toEqual([
       'pane scrolls',
-    ]);
-  });
-
-  it('is held by each frozen pane as far as the box has scrolled along the axes it freezes', () => {
-    const box = document.createElement('div');
-    const drawn = floats(
-      sheet({
-        ...FROZEN,
-        images: [image(at(1, 1)), image(at(1, 5)), image(at(5, 1)), image(at(5, 5))],
-      }),
-      asks(),
-    );
-    if (drawn !== null) box.append(drawn);
-    box.scrollLeft = 40;
-    box.scrollTop = 70;
-
-    holdPanes(box);
-    const held = (pane: string) => box.querySelector<HTMLElement>(`.pane.${pane}`)?.style.transform;
-    expect([held('scrolls'), held('columns'), held('rows'), held('corner')]).toEqual([
-      '',
-      'translate(40px, 0)',
-      'translate(0, 70px)',
-      'translate(40px, 70px)',
     ]);
   });
 });

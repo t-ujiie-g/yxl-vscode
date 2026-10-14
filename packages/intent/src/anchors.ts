@@ -7,9 +7,9 @@ import {
   addrAt,
   cellOf,
   columnLabel,
+  columnsOf,
   type Line,
   type NodeId,
-  parseA1Addr,
   parseA1Range,
   parseQualifiedAddr,
   qualified,
@@ -233,18 +233,18 @@ function filtered(sheet: Sheet, filter: Filter, line: Line, to: Collecting): voi
   if (line.axis !== 'column' || filter.columns === null) return;
 
   const columns = filter.columns.map((one) => {
-    const at = typeof one.at === 'string' ? parseA1Addr(`${one.at}1`) : null;
-    return { at, does: at === null ? null : along(line).at(cellOf(at)) };
+    const col = typeof one.at === 'string' ? columnsOf(one.at).first : null;
+    return { col, does: col === null ? null : along(line).run(col, col) };
   });
   if (columns.length > 0 && columns.every((one) => one.does === 'goes')) {
     to.remove(sheet.id, [KEY.filter, KEY.columns]);
     return;
   }
-  columns.forEach(({ at, does }, index) => {
+  columns.forEach(({ col, does }, index) => {
     const under: Path = [KEY.filter, KEY.columns, index];
-    if (at === null || does === null) return;
+    if (col === null || does === null) return;
     if (does === 'goes') to.remove(sheet.id, under);
-    else to.set(sheet.id, [...under, KEY.at], columnLabel(cellOf(moved(at, line)).col));
+    else to.set(sheet.id, [...under, KEY.at], columnLabel(col + line.by));
   });
 }
 
