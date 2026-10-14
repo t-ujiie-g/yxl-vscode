@@ -31,4 +31,13 @@ describe('a sheet auto filter', () => {
     expect(filtered(already, null)).toBe(SHEET);
     expect(filtered(SHEET, null)).toBe('refused: `S` has no filter to take off');
   });
+
+  it('refuses a new header row over a filter with criteria saved in it, and still takes it off', () => {
+    const saved = `${SHEET}    filter:\n      at: A1:B9\n      columns:\n        - { at: A, values: [EMEA] }\n`;
+
+    expect(filtered(saved, { top: 2, left: 1, bottom: 2, right: 3 })).toBe(
+      "refused: `S`'s filter has criteria saved with it, which a new header row would lose; change its `at:` in the spec",
+    );
+    expect(filtered(saved, null)).toBe(SHEET);
+  });
 });

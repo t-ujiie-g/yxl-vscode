@@ -2,6 +2,7 @@ import {
   addressesIn,
   type CompiledBand,
   type CompiledCell,
+  type CompiledFilter,
   type CompiledGrid,
   type CompiledSheet,
   cellAt,
@@ -29,6 +30,7 @@ import {
 import type {
   Drawing,
   DrawnCell,
+  DrawnFilter,
   DrawnMerge,
   DrawnParam,
   DrawnSheet,
@@ -44,7 +46,7 @@ import { type Nodes, nodeUnder } from './inspect';
 import type { PictureReader } from './pictures';
 import { printed } from './print';
 import { locked } from './protect';
-import { choicesOf, validating, validationSaid } from './validations';
+import { choicesOf, savedSaid, validating, validationSaid } from './validations';
 
 /** Where a sheet is being looked at, 1-based, as the view last asked. */
 export type Window = { readonly row: number; readonly col: number };
@@ -164,7 +166,7 @@ function drawSheet(
     tabColor: sheet.tabColor,
     gridlines: sheet.gridlines,
     split: sheet.split,
-    filter: sheet.filter,
+    filter: filterOf(sheet.filter),
     print: printed(sheet.print),
     protect: locked(sheet.protect),
     tables: sheet.tables.map((one) => ({ ...one.rect, ...tabled(one) })),
@@ -496,4 +498,14 @@ export function listed(diagnostics: readonly Diagnostic[]): Drawing['diagnostics
     start: one.span.start,
     end: one.span.end,
   }));
+}
+
+function filterOf(filter: CompiledFilter | null): DrawnFilter | null {
+  if (filter === null) return null;
+
+  const { saved, ...rect } = filter;
+  return {
+    ...rect,
+    saved: saved.map((one) => ({ col: one.col, shows: savedSaid(one.criterion) })),
+  };
 }

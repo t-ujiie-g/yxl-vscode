@@ -6,9 +6,9 @@ beside its text, and translates grid gestures back into edits on the spec — no
 into a workbook.
 
 > **Status: published, and the everyday gestures write back.**
-> [**`t-ujiie-g.yxl-vscode`**][listing] 0.3.0, targeting yxl 0.5.1. *yxl: Open
-> the Grid Beside the Spec* draws a spec as a grid next to the text and redraws
-> it as you type. Under it: YAML parses into a span-carrying tree, edits apply
+> [**`t-ujiie-g.yxl-vscode`**][listing] 0.3.0, targeting yxl 0.5.1; `main`
+> targets yxl 0.6.1. *yxl: Open the Grid Beside the Spec* draws a spec as a grid
+> next to the text and redraws it as you type. Under it: YAML parses into a span-carrying tree, edits apply
 > as minimal byte patches that leave every untouched byte alone, a whole spec —
 > `$include`, `csv:`, and all — reads into a model of itself, and that model
 > projects to a grid where every value and every property of every look says
@@ -60,6 +60,7 @@ written from the code, so it cannot drift from it.
 | Key | | |
 |---|---|---|
 | `sheets` | **edited** | the workbook itself: added, renamed, reordered, deleted |
+| `output` | carried | where `yxl build` writes the workbook |
 | `active` | carried | which sheet opens first |
 | `params` | drawn | turned in the preview, which redraws without touching the file |
 | `defs` | **edited** | a look lands here where the normalizer finds it a home |
@@ -88,7 +89,7 @@ written from the code, so it cannot drift from it.
 | `gridlines` | **edited** | switched from the tab; the key goes away at Excel default |
 | `tab_color` | **edited** | picked from the tab |
 | `print` | drawn | the area outlined and the page breaks drawn; the rest said under the grid |
-| `filter` | **edited** | put on the header row and taken off; per-column criteria are not in the schema |
+| `filter` | **edited** | put on the header row and taken off; criteria saved with it said on the header |
 | `validations` | **edited** | a `list:` written over a selection; every kind read and said |
 | `links` | **edited** | written, followed and taken off; the kind is asked, never guessed |
 | `conditional` | drawn | every kind of rule applied in the grid, over the computed values |
@@ -124,7 +125,7 @@ Host.
 
 The **Build** and **Check** buttons beside it need the `yxl` compiler on your
 `PATH`, or `yxl.path` set to it, and so does making a new spec; the grid itself
-needs nothing. This editor targets **yxl 0.5.1** — an older or newer compiler is
+needs nothing. This editor targets **yxl 0.6.1** — an older or newer compiler is
 a warning rather than a refusal, and a release says which one it was built
 against. Where the one it finds is older, it offers to run yxl's own installer
 for the targeted version; nothing is installed until you say so.
@@ -163,7 +164,7 @@ merging, filling, sorting a block of rows, and the whole of the tab bar — addi
 renaming, deleting and reordering a sheet, hiding one, colouring its tab.
 Conditional formatting is **applied in the grid** — every kind of rule, over the
 computed values — and a sheet's auto filter is drawn and can be put on and taken
-off. A cell's note wears Excel's red corner, shows what it says on hover, and
+off, with the criteria saved in it said on its header. A cell's note wears Excel's red corner, shows what it says on hover, and
 can be written, changed, or taken off from the cell's own menu, and so can a
 link: a linked cell is drawn as one, `Cmd`+click follows it out to the page or
 in to the cell it names, and which of the two a target is, is asked rather than

@@ -21,7 +21,6 @@ import {
   parseA1Range,
   parseColumnSpan,
   parseRowSpan,
-  type Rect,
   rangeOf,
   rectOf,
   rowsOf,
@@ -51,6 +50,7 @@ import type {
   CompiledBlock,
   CompiledCell,
   CompiledFill,
+  CompiledFilter,
   CompiledLayout,
   CompiledLink,
   CompiledMerge,
@@ -396,16 +396,26 @@ function table(ctx: Ctx, one: Table, sheet: SheetName): CompiledTable | null {
   };
 }
 
-/** The header row a sheet hangs its filter off, as the range it is written as (`docs/spec.md` §10). */
-function filterOf(ctx: Ctx, sheet: Sheet): Rect | null {
+/** A sheet's auto filter: the range, whose top row Excel reads as the header, and the criteria saved with it (`docs/spec.md` §10). */
+function filterOf(ctx: Ctx, sheet: Sheet): CompiledFilter | null {
   if (sheet.filter === null) return null;
 
-  const spelled = text(ctx, sheet.filter, sheet);
+  const spelled = text(ctx, sheet.filter.at, sheet.filter);
   const read = parseA1Range(spelled);
   if (read === null) {
-    reject(ctx, CODE.badRange, say('compile.not-a-range', { spelled }), sheet);
+    reject(ctx, CODE.badRange, say('compile.not-a-range', { spelled }), sheet.filter);
     return null;
   }
 
-  return rectOf(read);
+  const saved = (sheet.filter.columns ?? []).flatMap((one) => {
+    const letter = text(ctx, one.at, one);
+    const span = parseColumnSpan(letter);
+    if (span === null) {
+      reject(ctx, CODE.badColumn, say('compile.not-a-column', { spelled: letter }), one);
+      return [];
+    }
+    return [{ col: columnsOf(span).first, criterion: one.criterion }];
+  });
+
+  return { ...rectOf(read), saved };
 }

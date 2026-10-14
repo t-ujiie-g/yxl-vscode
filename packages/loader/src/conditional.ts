@@ -1,4 +1,4 @@
-import type { Node, Path } from '@yxl-vscode/cst';
+import type { Entry, Node, Path } from '@yxl-vscode/cst';
 import type { Saying } from '@yxl-vscode/diag';
 import {
   type ColumnRule,
@@ -151,21 +151,24 @@ const COMPARES = [
 export function readComparison(ctx: Ctx, node: Node, what: Saying): Comparison | null {
   const opened = openEntries(ctx, node, [], what);
   const entry = opened?.entries[0];
-  if (opened === null || entry === undefined) return null;
+  return opened === null || entry === undefined ? null : comparisonOf(opened.ctx, entry, what);
+}
 
+/** One entry read as a comparison, keyed by its kind; `null` when the key names none. */
+export function comparisonOf(ctx: Ctx, entry: Entry, what: Saying): Comparison | null {
   const key = keyOf(entry);
   const known = COMPARES.find((one) => one === key);
   if (known === undefined) return null;
 
   if (known === 'between' || known === 'not_between') {
-    const pair = readEach(opened.ctx, entry.value, [], what, (site) =>
+    const pair = readEach(ctx, entry.value, [], what, (site) =>
       expectValue(site.ctx, site.node, what),
     );
     const [low, high] = pair;
     return low === undefined || high === undefined ? null : { kind: known, low, high };
   }
 
-  const bound = expectValue(opened.ctx, entry.value, what);
+  const bound = expectValue(ctx, entry.value, what);
   return bound === null ? null : { kind: known, bound };
 }
 

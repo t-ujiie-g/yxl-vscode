@@ -31,6 +31,7 @@ import { CODE } from './codes';
 import { readConditional } from './conditional';
 import { type Ctx, identify, keyOf, reject, type Site } from './ctx';
 import { readDataBlocks } from './data';
+import { readFilter } from './filter';
 import { readCharts, readImages, readShapes } from './float';
 import { readLayouts } from './layout';
 import { readLinks } from './link';
@@ -151,7 +152,7 @@ function readSheet(site: Site): Sheet | null {
         conditional = readConditional(here, entry.value, at);
         break;
       case 'filter':
-        filter = readAs(here, entry.value, under(what, 'filter'), RANGE);
+        filter = readFilter(here, entry.value, at, under(what, 'filter'));
         break;
       case 'print':
         print = readPrint(here, entry.value, under(what, 'print'));

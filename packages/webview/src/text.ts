@@ -136,6 +136,7 @@ export type Says = {
   'view.heads-a-table': Nothing;
   'view.heads-the-table': { name: string };
   'view.column-is-filtered': Nothing;
+  'view.filter-saved': { shows: string };
   'view.a-note': Nothing;
   'view.a-list': Nothing;
   'view.a-chart': { type: string };
@@ -297,6 +298,7 @@ const en: Words<Says> = {
   'view.heads-a-table': () => 'This row heads a table',
   'view.heads-the-table': ({ name }) => `This row heads the table ${name}`,
   'view.column-is-filtered': () => 'This column has a filter; the preview does not filter by it',
+  'view.filter-saved': ({ shows }) => `Saved to show: ${shows}`,
   'view.a-note': () => 'a note',
   'view.a-list': () => 'Draft, Sent, Paid',
   'view.a-chart': ({ type }) => `A ${type} chart. This preview sketches it; Excel draws it.`,
@@ -462,6 +464,7 @@ const ja: Words<Says> = {
   'view.heads-the-table': ({ name }) => `この行はテーブル ${name} の見出しです`,
   'view.column-is-filtered': () =>
     'この列にはフィルタがあります。プレビューはフィルタで絞り込みません',
+  'view.filter-saved': ({ shows }) => `保存された条件: ${shows}`,
   'view.a-note': () => 'メモ',
   'view.a-list': () => '下書き, 送付済, 入金済',
   'view.a-chart': ({ type }) =>

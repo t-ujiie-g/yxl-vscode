@@ -19,6 +19,7 @@ export type {
   CompiledChart,
   CompiledChartAxis,
   CompiledFill,
+  CompiledFilter,
   CompiledGrid,
   CompiledImage,
   CompiledLink,

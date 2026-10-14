@@ -1204,7 +1204,7 @@ describe('a sheet with a filter on its header row', () => {
         sheet({
           rows: 2,
           columns: 2,
-          filter: { top: 1, left: 1, bottom: 1, right: 2 },
+          filter: { top: 1, left: 1, bottom: 1, right: 2, saved: [] },
           cells: [cell(1, 1, { value: 'Region' }), cell(2, 1, { value: 'EMEA' })],
         }),
       ],
@@ -1218,7 +1218,9 @@ describe('a sheet with a filter on its header row', () => {
 
   it('says what the mark is while the pointer is over the header', () => {
     const held = drawing({
-      sheets: [sheet({ rows: 1, columns: 1, filter: { top: 1, left: 1, bottom: 1, right: 1 } })],
+      sheets: [
+        sheet({ rows: 1, columns: 1, filter: { top: 1, left: 1, bottom: 1, right: 1, saved: [] } }),
+      ],
     });
     const cell = at(shown({ drawing: held }), 1, 1);
 
@@ -1226,6 +1228,26 @@ describe('a sheet with a filter on its header row', () => {
     expect(cell?.querySelector('.notice')?.textContent).toBe(
       'This column has a filter; the preview does not filter by it',
     );
+  });
+
+  it("adds the criterion saved for the column under the pointer, and only that column's", () => {
+    const saved = [{ col: 2, shows: 'Sent, Paid' }];
+    const held = drawing({
+      sheets: [
+        sheet({ rows: 1, columns: 2, filter: { top: 1, left: 1, bottom: 3, right: 2, saved } }),
+      ],
+    });
+    const into = shown({ drawing: held });
+    const said = (col: number) => {
+      const cell = at(into, 1, col);
+      cell?.dispatchEvent(new MouseEvent('mouseenter'));
+      return cell?.querySelector('.notice')?.textContent;
+    };
+
+    expect(said(2)).toBe(
+      'This column has a filter; the preview does not filter by it\nSaved to show: Sent, Paid',
+    );
+    expect(said(1)).toBe('This column has a filter; the preview does not filter by it');
   });
 });
 

@@ -20,6 +20,9 @@ export function setFilter(spec: Projection, where: Filtering, read: Reading): In
   if (found.kind === 'refused') return found;
 
   const rect = where.rect;
+  if (rect !== null && (found.sheet.filter?.saved.length ?? 0) > 0) {
+    return refused(say('intent.filter-has-criteria', { sheet: where.sheet }));
+  }
   const header = rect === null ? null : rangeOf({ ...rect, bottom: rect.top });
   const ops = keyed(found.path, KEY.filter, header, found.node);
   if (ops.length === 0) {

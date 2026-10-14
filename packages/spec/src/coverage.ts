@@ -22,6 +22,7 @@ export const DOCUMENT_KEYS: readonly Covered[] = [
     standing: 'editable',
     says: 'the workbook itself: added, renamed, reordered, deleted',
   },
+  { key: 'output', standing: 'opaque', says: 'where `yxl build` writes the workbook' },
   { key: 'active', standing: 'opaque', says: 'which sheet opens first' },
   {
     key: 'params',
@@ -108,7 +109,7 @@ export const SHEET_KEYS: readonly Covered[] = [
   {
     key: 'filter',
     standing: 'editable',
-    says: 'put on the header row and taken off; per-column criteria are not in the schema',
+    says: 'put on the header row and taken off; criteria saved with it said on the header',
   },
   {
     key: 'validations',

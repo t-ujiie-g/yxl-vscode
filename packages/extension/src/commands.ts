@@ -1,8 +1,8 @@
 import { homedir } from 'node:os';
-import { basename, dirname, join } from 'node:path';
+import { basename, dirname } from 'node:path';
 import type { Message } from '@yxl-vscode/diag';
 import * as vscode from 'vscode';
-import { folderOf, installation, older, run, versionOf, versionWarning } from './cli';
+import { folderOf, installation, older, run, versionOf, versionWarning, writtenTo } from './cli';
 import { say } from './text';
 import { reader } from './words';
 
@@ -41,19 +41,18 @@ export class Compiler {
     else this.show(ran.said);
   }
 
+  /** The workbook built where the spec's `output:` says, or beside it — the compiler decides, so `-o` is never passed. */
   async build(spec: vscode.Uri): Promise<void> {
-    const workbook = join(dirname(spec.fsPath), `${basename(spec.fsPath, '.yaml')}.xlsx`).replace(
-      /\.yxl\.xlsx$/,
-      '.xlsx',
-    );
-
-    const ran = await this.ask(['build', spec.fsPath, '-o', workbook]);
+    const ran = await this.ask(['build', spec.fsPath]);
     if (ran === null) return;
 
     if (!ran.ok) {
       this.show(ran.said);
       return;
     }
+
+    const workbook = writtenTo(ran.said, dirname(spec.fsPath));
+    if (workbook === null) return;
 
     const open = await vscode.window.showInformationMessage(
       this.worded(say('host.built', { file: basename(workbook) })),

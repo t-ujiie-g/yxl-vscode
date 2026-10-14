@@ -1,13 +1,15 @@
 import { sheetOf } from '@yxl-vscode/compile';
 import { holds, type Op, type Path } from '@yxl-vscode/cst';
 import type { Saying } from '@yxl-vscode/diag';
-import { KEY, type Sheet } from '@yxl-vscode/spec';
+import { type Filter, KEY, type Sheet } from '@yxl-vscode/spec';
 import {
   type A1Addr,
   addrAt,
   cellOf,
+  columnLabel,
   type Line,
   type NodeId,
+  parseA1Addr,
   parseA1Range,
   parseQualifiedAddr,
   qualified,
@@ -145,9 +147,7 @@ function onSheet(spec: Projection, sheet: Sheet, line: Line, read: Reading, to: 
     }
   }
 
-  const filter = area(sheet.filter, line);
-  if (filter === 'goes') remove(sheet.id, [KEY.filter]);
-  else if (filter !== null) set(sheet.id, [KEY.filter], filter);
+  if (sheet.filter !== null) filtered(sheet, sheet.filter, line, to);
 
   // The print node's own id is not a path into the file; the sheet's is.
   if (sheet.print !== null) {
@@ -219,6 +219,33 @@ function area(at: unknown, line: Line): string | 'goes' | null {
   if (does === null) return null;
 
   return does === 'goes' ? 'goes' : rangeOf(grown(rect, line, does));
+}
+
+/** A filter's range, and the column each saved criterion names, moved with the line; a criterion whose column goes goes too. */
+function filtered(sheet: Sheet, filter: Filter, line: Line, to: Collecting): void {
+  const now = area(filter.at, line);
+  if (now === 'goes') {
+    to.remove(sheet.id, [KEY.filter]);
+    return;
+  }
+  if (now !== null)
+    to.set(sheet.id, filter.columns === null ? [KEY.filter] : [KEY.filter, KEY.at], now);
+  if (line.axis !== 'column' || filter.columns === null) return;
+
+  const columns = filter.columns.map((one) => {
+    const at = typeof one.at === 'string' ? parseA1Addr(`${one.at}1`) : null;
+    return { at, does: at === null ? null : along(line).at(cellOf(at)) };
+  });
+  if (columns.length > 0 && columns.every((one) => one.does === 'goes')) {
+    to.remove(sheet.id, [KEY.filter, KEY.columns]);
+    return;
+  }
+  columns.forEach(({ at, does }, index) => {
+    const under: Path = [KEY.filter, KEY.columns, index];
+    if (at === null || does === null) return;
+    if (does === 'goes') to.remove(sheet.id, under);
+    else to.set(sheet.id, [...under, KEY.at], columnLabel(cellOf(moved(at, line)).col));
+  });
 }
 
 /** Where a floating object's corner lands: moved with its cell, or onto the line that took its cell's place. */
