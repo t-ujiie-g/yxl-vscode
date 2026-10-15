@@ -16,6 +16,7 @@ export interface Layout extends SpecNode {
   readonly rows: number | null;
   readonly source: DataSource | null;
   readonly headerStyle: StyleUse | null;
+  readonly headerMerge: boolean | null;
   readonly columns: readonly LayoutEntry[];
   readonly footer: readonly FooterEntry[];
 }

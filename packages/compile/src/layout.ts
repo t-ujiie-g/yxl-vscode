@@ -62,6 +62,9 @@ function place(ctx: Ctx, layout: Layout, sheet: SheetName): Placed | null {
   if (layout.headerStyle !== null && depth === 0) {
     reject(ctx, CODE.badLayout, say('compile.header-style-with-no-header'), layout);
   }
+  if (layout.headerMerge !== null && depth === 0) {
+    reject(ctx, CODE.badLayout, say('compile.header-merge-with-no-header'), layout);
+  }
 
   const bodyFirst = corner.row + depth;
   const bodyLast = Math.min(LAST_ROW, bodyFirst + rows - 1);

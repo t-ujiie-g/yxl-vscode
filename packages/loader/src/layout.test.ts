@@ -60,6 +60,22 @@ describe('a layout', () => {
     expect(json?.source).toEqual({ kind: 'json', path: 'data/x.json', columns: null });
   });
 
+  it('reads `header_merge` as written, and leaves it null when not', () => {
+    const [off, unsaid] = layouts(
+      '      - at: A1\n        header_merge: false\n        rows: 1\n        columns: [{ name: a, header: A }]\n      - at: C1\n        rows: 1\n        columns: [{ name: b, header: B }]\n',
+    );
+    expect(off?.headerMerge).toBe(false);
+    expect(unsaid?.headerMerge).toBeNull();
+  });
+
+  it('refuses a `header_merge` that is not a boolean', () => {
+    expect(
+      codes(
+        '      - at: A1\n        header_merge: no way\n        rows: 1\n        columns: [{ name: a }]\n',
+      ),
+    ).toHaveLength(1);
+  });
+
   it('takes its rows from one source, reporting a second', () => {
     expect(
       codes(
