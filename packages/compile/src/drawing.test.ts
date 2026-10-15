@@ -45,6 +45,15 @@ describe('a layout drawn', () => {
     expect(resolve(styleAt(drawn, 'B3' as A1Addr))['font.bold']).toBe(true);
   });
 
+  it('with `header_merge: false`, writes the same header cells and no merge', () => {
+    const unmerged = YOY.replace('header_style:', 'header_merge: false\n        header_style:');
+    expect(sheet(unmerged).merges).toEqual([]);
+    expect(holds(unmerged, 'C2')).toBe('売上');
+    expect(holds(unmerged, 'D2')).toBeNull();
+    expect(resolve(styleAt(sheet(unmerged), 'D2' as A1Addr))['font.bold']).toBe(true);
+    expect(resolve(styleAt(sheet(unmerged), 'B3' as A1Addr))['font.bold']).toBe(true);
+  });
+
   it('says a drawn cell came from the layout, naming what wrote it', () => {
     const drawn = sheet(YOY);
     expect(cellAt(drawn, 'B4' as A1Addr)?.provenance.value.kind).toBe('layout');

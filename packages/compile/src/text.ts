@@ -47,6 +47,7 @@ export type Says = {
   'compile.layout-needs-rows': Nothing;
   'compile.rows-must-be-whole': Nothing;
   'compile.header-style-with-no-header': Nothing;
+  'compile.header-merge-with-no-header': Nothing;
   'compile.no-such-column': { name: string };
   'compile.unclosed-column-ref': Nothing;
   'compile.text-spells-no-group': { name: string };
@@ -129,6 +130,8 @@ const en: Words<Says> = {
   'compile.rows-must-be-whole': () => '`rows` must be a whole number of at least 1',
   'compile.header-style-with-no-header': () =>
     'the layout has a `header_style`, but no column has a `header` to wear it',
+  'compile.header-merge-with-no-header': () =>
+    'the layout has a `header_merge`, but no column has a `header` to merge',
   'compile.no-such-column': ({ name }) => `\`${name}\` is not a column of this layout`,
   'compile.unclosed-column-ref': () => 'a `{{` is never closed with `}}`',
   'compile.text-spells-no-group': ({ name }) =>
@@ -225,6 +228,8 @@ const ja: Words<Says> = {
   'compile.rows-must-be-whole': () => '`rows` は 1 以上の整数である必要があります',
   'compile.header-style-with-no-header': () =>
     'レイアウトに `header_style` がありますが、`header` を持つ列がありません',
+  'compile.header-merge-with-no-header': () =>
+    'レイアウトに `header_merge` がありますが、`header` を持つ列がありません',
   'compile.no-such-column': ({ name }) => `\`${name}\` はこのレイアウトの列ではありません`,
   'compile.unclosed-column-ref': () => '`{{` が `}}` で閉じられていません',
   'compile.text-spells-no-group': ({ name }) =>

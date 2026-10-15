@@ -73,6 +73,15 @@ describe('a layout reading its rows', () => {
       CODE.badLayout,
     ]);
   });
+
+  it('refuses a `header_merge` with no header to merge', () => {
+    const source = laidOut(
+      '      - at: A1\n        header_merge: false\n        rows: 1\n        columns: [{ name: a }]\n',
+    );
+    expect(said(source)).toEqual([
+      'the layout has a `header_merge`, but no column has a `header` to merge',
+    ]);
+  });
 });
 
 describe('where a body cell was read from', () => {

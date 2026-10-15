@@ -67,6 +67,7 @@ function readLayout(site: Site): Layout | null {
   let rows: number | null = null;
   let source: DataSource | null = null;
   let headerStyle: StyleUse | null = null;
+  let headerMerge: boolean | null = null;
   let footer: FooterEntry[] = [];
 
   for (const entry of opened.entries) {
@@ -81,6 +82,9 @@ function readLayout(site: Site): Layout | null {
         break;
       case 'header_style':
         headerStyle = readStyleUse(here, entry.value, said);
+        break;
+      case 'header_merge':
+        headerMerge = expectBool(here, entry.value, said);
         break;
       case 'footer':
         footer = readFooter(here, entry.value, [...opened.path, key], what);
@@ -102,6 +106,7 @@ function readLayout(site: Site): Layout | null {
     rows,
     source,
     headerStyle,
+    headerMerge,
     columns,
     footer,
   };

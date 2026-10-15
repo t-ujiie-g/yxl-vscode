@@ -2129,6 +2129,9 @@ reference; ADR-057 is how they project.
       shorter text first (`b` before `aa`). This editor follows the compiler
       (§6 of `AGENTS.md`); reported as yxl#104 *(2026-09-24)*, fixed in yxl
       0.5.1 and followed here with the pin *(2026-09-24)*
+- [x] `header_merge: false` (yxl 0.6.2): the header drawn with the same cells
+      and look and no merged range; refused without a header, as
+      `header_style` is *(2026-10-15)*
 
 ### Taken out (2026-08-23)
 Two phases that were here are not any more, and not because they were hard:
@@ -3984,6 +3987,20 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-10-15 — The pin moves to yxl 0.6.2
+
+yxl 0.6.2 adds one key, so the move brought two failures — the shipped schema
+and the release's named pin — and one silent gap: upstream's
+`columns.yxl.yaml` gained a sheet the loader refused.
+
+- **`header_merge: false`** on a layout (`docs/spec.md` §25) is read. The
+  header keeps every cell and its look, the blanks a merge would cover
+  included, and only the merged ranges go. Without a header it is refused, as
+  `header_style` is. Tier 3 compares the new sheet against yxl cell by cell,
+  merges included.
+- 2853 → 2857 tests, run against yxl 0.6.2. Comment shape: export 1036 / 2238
+  (avg 2.2), private 679 / 679 (1.0), inline 149 / 234 (1.6), 0 over.
 
 ### 2026-10-15 — Frozen panes hold still while the grid scrolls
 

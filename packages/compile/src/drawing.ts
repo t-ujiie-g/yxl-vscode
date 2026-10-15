@@ -33,7 +33,7 @@ export function draw(ctx: Ctx, placed: Placed): Drawn {
   const { layout } = placed;
   const merge = (rect: Rect) => merges.push({ rect, node: layout.id });
 
-  drawHeader(ctx, placed, cells, merge);
+  drawHeader(ctx, placed, cells, layout.headerMerge === false ? () => {} : merge);
   drawBody(placed, cells);
   for (const line of placed.footer) drawFooterRow(ctx, placed, line, cells, merge);
 

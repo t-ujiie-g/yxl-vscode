@@ -4,6 +4,15 @@ Every release names the `yxl` it was built against: the schema is not frozen
 until yxl's v1.0, so the pinned compiler is part of what a version means
 (`ROADMAP.md` §8 Q6).
 
+## Unreleased
+
+Targets **yxl 0.6.2**.
+
+- **A layout header without merged cells is drawn as yxl builds it.** yxl
+  0.6.2 adds `header_merge: false` to a layout. Such a spec no longer shows an
+  error in the preview: the header has the same cells and look, with no merged
+  range.
+
 ## 0.4.0 — 2026-10-15
 
 Targets **yxl 0.6.1**, which this release moves to from 0.5.1: an older yxl is
