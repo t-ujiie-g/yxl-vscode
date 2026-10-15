@@ -6,9 +6,9 @@ beside its text, and translates grid gestures back into edits on the spec — no
 into a workbook.
 
 > **Status: published, and the everyday gestures write back.**
-> [**`t-ujiie-g.yxl-vscode`**][listing] 0.4.0, targeting yxl 0.6.1; `main`
-> targets yxl 0.6.2. *yxl: Open the Grid Beside the Spec* draws a spec as a grid
-> next to the text and redraws it as you type. Under it: YAML parses into a span-carrying tree, edits apply
+> [**`t-ujiie-g.yxl-vscode`**][listing] 0.4.1, targeting yxl 0.6.2. *yxl: Open
+> the Grid Beside the Spec* draws a spec as a grid next to the text and redraws
+> it as you type. Under it: YAML parses into a span-carrying tree, edits apply
 > as minimal byte patches that leave every untouched byte alone, a whole spec —
 > `$include`, `csv:`, and all — reads into a model of itself, and that model
 > projects to a grid where every value and every property of every look says
