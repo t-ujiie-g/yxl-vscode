@@ -4,7 +4,7 @@ import { type Link, type LinkTarget, MODELED_KEYS } from '@yxl-vscode/spec';
 import { readListed } from './anchor';
 import { CODE } from './codes';
 import { type Ctx, identify, keyOf, reject } from './ctx';
-import { expectText, findEntry, type Opened, openEntries, rejectUnknownKey } from './read';
+import { expectText, findEntry, type Opened, open, openEntries } from './read';
 import { ADDRESS, readTextAs } from './template';
 import { about, entryOf, say, under } from './text';
 
@@ -43,13 +43,8 @@ function readLink(ctx: Ctx, entry: Entry, path: Path): Link | null {
       : { ...site, at, listed: false, target: { kind: 'url', text: url }, tip: null };
   }
 
-  const opened = openEntries(ctx, entry.value, [], what);
+  const opened = open({ ctx, node: entry.value, path: [] }, what, MODELED_KEYS.link);
   if (opened === null) return null;
-  for (const one of opened.entries) {
-    if (!MODELED_KEYS.link.has(keyOf(one))) {
-      rejectUnknownKey(opened.ctx, one, what, MODELED_KEYS.link);
-    }
-  }
 
   const written = fromEntries(opened, what);
   return written === null ? null : { ...site, at, listed: false, ...written };

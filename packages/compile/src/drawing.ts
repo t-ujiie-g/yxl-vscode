@@ -9,15 +9,17 @@ import { addrAt, type CellRef, cellOf, type Rect } from '@yxl-vscode/units';
 import { compileFacets, decides } from './cell';
 import { type Ctx, text } from './ctx';
 import { drawFooterRow } from './footer';
-import type {
-  CompiledBand,
-  CompiledCell,
-  CompiledFill,
-  CompiledLayout,
-  CompiledMerge,
-  CompiledRule,
+import {
+  type CompiledBand,
+  type CompiledCell,
+  type CompiledFill,
+  type CompiledLayout,
+  type CompiledMerge,
+  type CompiledRule,
+  REACH,
 } from './grid';
 import { headerStyles } from './layout';
+import { extentOf, partRows } from './named';
 import { type Column, edges, type Placed } from './placed';
 import type { DataOrigin, FacetOrigin } from './provenance';
 import { blankAt, origin, refs } from './refs';
@@ -60,7 +62,8 @@ export function draw(ctx: Ctx, placed: Placed): Drawn {
   );
 
   const { left, right } = edges(placed);
-  const span = (top: number, bottom: number): Rect => ({ top, bottom, left, right });
+  const span = (rows: { first: number; last: number } | null): Rect | null =>
+    rows === null ? null : { top: rows.first, bottom: rows.last, left, right };
 
   return {
     cells,
@@ -72,11 +75,11 @@ export function draw(ctx: Ctx, placed: Placed): Drawn {
     rules: placed.columns.flatMap((column) => rulesOf(ctx, placed, column)),
     layout: {
       name: layout.name,
-      rect: span(placed.top, placed.lastRow),
-      title: placed.headerFirst > placed.top ? span(placed.top, placed.headerFirst - 1) : null,
-      header: placed.depth === 0 ? null : span(placed.headerFirst, placed.bodyFirst - 1),
-      body: span(placed.bodyFirst, placed.bodyLast),
-      footer: placed.lastRow > placed.bodyLast ? span(placed.bodyLast + 1, placed.lastRow) : null,
+      rect: extentOf(placed),
+      title: span(partRows(placed, 'title')),
+      header: span(partRows(placed, 'header')),
+      body: { top: placed.bodyFirst, bottom: placed.bodyLast, left, right },
+      footer: span(partRows(placed, 'footer')),
       columns: placed.columns.map((one) => ({
         col: one.col,
         node: one.spec.id,
@@ -87,7 +90,7 @@ export function draw(ctx: Ctx, placed: Placed): Drawn {
   };
 }
 
-/** Which edges of a cell face into the block it spans, and lose their border where nothing merges it (#122). */
+/** Which edges of a cell face into the block it spans, and lose their border where nothing merges it. */
 interface Inner {
   readonly left: boolean;
   readonly right: boolean;
@@ -240,9 +243,6 @@ function sameness(cell: HeaderCell): string {
   return JSON.stringify({ value, formula, rich, type, format, clearsFormat, style });
 }
 
-/** How many style-only body cells a layout draws past its data; `rows: 1048576` must not become a million cells (ADR-019). */
-const STYLED_BLANKS = 50_000;
-
 /** What one column's body cells wear: the layout's `body_style`, then the column's own over it. */
 function bodyLook(ctx: Ctx, placed: Placed, column: Column): readonly StyleLayer[] {
   const { layout } = placed;
@@ -262,7 +262,8 @@ function drawBody(
   looks: readonly (readonly StyleLayer[])[],
 ): void {
   const rows = placed.bodyLast - placed.bodyFirst + 1;
-  const styled = Math.max(placed.data.length, Math.floor(STYLED_BLANKS / placed.inputs.length));
+  // `rows: 1048576` under a `body_style` must not become a million blanks (ADR-019).
+  const styled = Math.max(placed.data.length, Math.floor(REACH / placed.inputs.length));
   for (const [field, column] of placed.inputs.entries()) {
     const style = looks[placed.columns.indexOf(column)] ?? [];
     const { spec } = column;

@@ -40,6 +40,9 @@ import type {
 import type { CellProvenance } from './provenance';
 import type { StyleLayer } from './style';
 
+/** How many addresses one walk of a sheet looks at; past it, the inside of a range is dropped. */
+export const REACH = 50_000;
+
 /**
  * The workbook as the grid draws it: a projection computed forward from the
  * spec, never edited (ADR-001). Every part carries the `NodeId` that produced

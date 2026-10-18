@@ -18,7 +18,7 @@ import {
   UniverFormulaEnginePlugin,
 } from '@univerjs/engine-formula';
 import type { ScalarValue } from '@yxl-vscode/spec';
-import { cellOf, type SheetName, sheetName } from '@yxl-vscode/units';
+import { cellOf, SHEET_COLUMNS, SHEET_ROWS, type SheetName, sheetName } from '@yxl-vscode/units';
 import type { About, Asked, Computed, Engine, Held, HeldSheet } from './engine';
 
 /**
@@ -63,7 +63,7 @@ export function univerEngine(): Engine {
       const sheet = idOf(sheets, asked.sheet, `${born}-${loaded}`);
 
       runtime.reset();
-      runtime.setCurrent(at.row - 1, at.col - 1, ROWS, COLUMNS, sheet, BOOK);
+      runtime.setCurrent(at.row - 1, at.col - 1, SHEET_ROWS, SHEET_COLUMNS, sheet, BOOK);
       return computed(asked, lexer, parser, interpreter);
     },
   };
@@ -161,8 +161,6 @@ let engines = 0;
 
 /** One workbook, big enough that a reference never falls off the edge of it. */
 const BOOK = 'yxl';
-const ROWS = 1_048_576;
-const COLUMNS = 16_384;
 
 function sheetData(book: readonly HeldSheet[], loaded: string) {
   const data: Record<string, ReturnType<typeof sheetItem>> = {};
@@ -181,8 +179,8 @@ function sheetItem(cells: readonly Held[]) {
 
   return {
     cellData: new ObjectMatrix<ICellData>(rows),
-    rowCount: ROWS,
-    columnCount: COLUMNS,
+    rowCount: SHEET_ROWS,
+    columnCount: SHEET_COLUMNS,
     rowData: {},
     columnData: {},
   };

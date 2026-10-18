@@ -199,23 +199,24 @@ const NO_STYLE: Style = {
   cleared: new Set(),
 };
 
-/** Which of a cell's three facets a construct spoke of (`docs/spec.md` §2, §23). */
+/**
+ * Which of a cell's two facets a construct spoke of: what it holds, and how it
+ * looks, which is its `style` and `format` together (`docs/spec.md` §2, §4, §23).
+ */
 export interface Spoke {
   readonly holds: boolean;
-  readonly format: boolean;
-  readonly style: boolean;
+  readonly looks: boolean;
 }
 
-/** What an entry said of a cell: what it holds, its format, its look — each separately. */
+/** What an entry said of a cell: what it holds, and whether it gave a look. */
 export function spokenBy(node: CellFacets): Spoke {
   return {
     holds: node.value !== null || node.formula !== null || node.rich !== null,
-    format: node.format !== null || node.clearsFormat,
-    style: node.style !== null,
+    looks: node.format !== null || node.clearsFormat || node.style !== null,
   };
 }
 
-/** A construct laid over what an earlier one said: each facet is the last that spoke of it. */
+/** A construct laid over what an earlier one said: each facet is the last that spoke of it, a look replaced whole. */
 export function layer(under: CompiledCell, over: CompiledCell, said: Spoke): CompiledCell {
   return {
     at: under.at,
@@ -223,11 +224,11 @@ export function layer(under: CompiledCell, over: CompiledCell, said: Spoke): Com
     type: said.holds ? over.type : under.type,
     formula: said.holds ? over.formula : under.formula,
     rich: said.holds ? over.rich : under.rich,
-    format: said.format ? over.format : under.format,
-    style: [...under.style, ...over.style],
+    format: said.looks ? over.format : under.format,
+    style: said.looks ? over.style : under.style,
     provenance: {
       value: said.holds ? over.provenance.value : under.provenance.value,
-      format: said.format ? over.provenance.format : under.provenance.format,
+      format: said.looks ? over.provenance.format : under.provenance.format,
     },
   };
 }

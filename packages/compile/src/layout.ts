@@ -1,6 +1,6 @@
 import type { Saying } from '@yxl-vscode/diag';
 import type { ColumnType, DataRow, Layout, ScalarValue, Sheet, StyleUse } from '@yxl-vscode/spec';
-import { cellOf, type SheetName } from '@yxl-vscode/units';
+import { cellOf, SHEET_ROWS, type SheetName } from '@yxl-vscode/units';
 import { CODE } from './codes';
 import { type Ctx, filled, openData, reject } from './ctx';
 import { lines } from './footer';
@@ -9,9 +9,6 @@ import type { Column, FooterLine, Placed, Taken } from './placed';
 import { dateSerial, durationSerial } from './serial';
 import { infer, readHeadedCsv, readJson } from './table';
 import { say } from './text';
-
-/** Excel's grid ends here. */
-const LAST_ROW = 1_048_576;
 
 /** Place every sheet's layouts in the order written, before any sheet is drawn (`docs/spec.md` §25). */
 export function placeAll(ctx: Ctx, sheets: readonly (readonly [SheetName, Sheet])[]): void {
@@ -82,7 +79,7 @@ function place(ctx: Ctx, layout: Layout, sheet: SheetName): Placed | null {
 
   const headerFirst = corner.row + (layout.title === null ? 0 : 1);
   const bodyFirst = headerFirst + depth;
-  const bodyLast = Math.min(LAST_ROW, bodyFirst + rows - 1);
+  const bodyLast = Math.min(SHEET_ROWS, bodyFirst + rows - 1);
   const scope = { ctx, layout, columns, inputs, data };
   const footer: FooterLine[] = [];
   const next = lines(scope, layout.footer, [], [...data.keys()], bodyLast + 1, footer);

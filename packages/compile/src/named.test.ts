@@ -172,3 +172,27 @@ describe('a cell found by meaning, beyond the body', () => {
     ]);
   });
 });
+
+describe('what a layout has not got', () => {
+  const BARE = (keys: string, rest = '') =>
+    `sheets:\n  - name: S\n${keys}    layouts:\n      - { at: A1, name: u, rows: 1, columns: [{ name: a }] }\n${rest}`;
+
+  it('refuses a freeze that would freeze nothing, at A1 with no header and no columns', () => {
+    expect(said(BARE('    freeze: { layout: u }\n'))).toEqual([
+      'freezing at the layout `u` would freeze nothing: it starts at A1 with no header, and `columns` is 0',
+    ]);
+  });
+
+  it('refuses a title or a footer row that is not there', () => {
+    const at = (where: string) => BARE('', `overrides:\n  - at: ${where}\n    value: x\n`);
+    expect(said(at('{ layout: u, title: true }'))).toEqual(['the layout has no `title`']);
+    expect(said(at('{ layout: u, column: a, footer: last }'))).toEqual([
+      'the layout has no footer',
+    ]);
+  });
+
+  it('refuses a footer row past the footer', () => {
+    const source = `sheets:\n  - name: S\n    layouts:\n      - { at: A1, name: u, values: [[1]], columns: [{ name: a }], footer: [{ row: { a: { total: sum } } }] }\noverrides:\n  - at: { layout: u, column: a, footer: 2 }\n    value: x\n`;
+    expect(said(source)).toEqual(['`footer` is 2, but the footer has rows 1 to 1']);
+  });
+});

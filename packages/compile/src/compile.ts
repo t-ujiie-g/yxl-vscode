@@ -127,9 +127,6 @@ export function addressesIn(sheet: CompiledSheet, most: number): A1Addr[] {
   return [...all] as A1Addr[];
 }
 
-/** How many addresses one walk of a sheet looks at; past it, the inside of a range is dropped. */
-export const REACH = 50_000;
-
 /**
  * Every layer that makes an address look how it looks, in the order they apply
  * — its column's band, its row's, the cell, an override (`docs/spec.md` §4). An

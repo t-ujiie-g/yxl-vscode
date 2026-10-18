@@ -4,10 +4,12 @@ Every release names the `yxl` it was built against: the schema is not frozen
 until yxl's v1.0, so the pinned compiler is part of what a version means
 (`ROADMAP.md` §8 Q6).
 
-## Unreleased
+## 0.5.0 — 2026-10-19
 
-Targets **yxl 0.7.0**, which this moves to from 0.6.2: an older yxl is offered
-the update, as before.
+Targets **yxl 0.7.1**, which this release moves to from 0.6.2: an older yxl is
+offered the update, as before.
+
+### yxl 0.7
 
 - **Every layout key yxl 0.7 adds is drawn as yxl builds it.** A layout's
   `title`, a `header_style` per header row, `body_style` on a layout and on a
@@ -27,10 +29,18 @@ the update, as before.
   shape.
 - **A `formulas:` range may carry `style` and `format`**, and every cell of it
   shows them.
+
+### Fixes
+
 - **A merged cell across the freeze line scrolls as Excel's does.** Its part in
   the frozen columns stays, and the rest scrolls with the sheet; it used to stay
   whole and run past the columns it covers. A layout's `title` under
   `freeze: { layout, columns }` is where this showed.
+- **A later look replaces an earlier one, as the workbook does.** A `cells:`
+  entry or an override that gives a `style` or a `format` over a cell another
+  construct wrote now shows only its own look over the bands; the grid used to
+  keep the earlier look too. yxl 0.7.1 builds an override the same way, the
+  bands under it included.
 
 ## 0.4.1 — 2026-10-15
 

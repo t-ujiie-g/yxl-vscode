@@ -10,7 +10,7 @@ import { readCsv, readJson } from './table';
 import { say } from './text';
 
 /** A field of a data block speaks of what the cell holds and of nothing else (`docs/spec.md` §9). */
-const HOLDS: Spoke = { holds: true, format: false, style: false };
+const HOLDS: Spoke = { holds: true, looks: false };
 
 /** A `data:` block's rows laid down from its anchor; a `null` field writes no cell (`docs/spec.md` §9). */
 export function placeData(

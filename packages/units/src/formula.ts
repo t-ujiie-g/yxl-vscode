@@ -1,6 +1,6 @@
 import type { Saying } from '@yxl-vscode/diag';
 import type { Axis } from './band';
-import { columnIndex, columnLabel } from './grid';
+import { columnIndex, columnLabel, SHEET_COLUMNS, SHEET_ROWS } from './grid';
 import type { SheetName } from './name';
 import { say } from './text';
 
@@ -143,10 +143,6 @@ function walked(formula: string, rule: Rule): Moved {
 
   return { ok: true, formula: out.join('') };
 }
-
-/** Excel's own limits, which is what a moved reference has to stay inside. */
-const COLUMNS = 16384;
-const ROWS = 1048576;
 
 /** Everything that ends a word: the operators, the separators, the brackets, and space. */
 const BREAKS = new Set([...' \t\r\n+-*/^%=<>&,;:!()[]{}"\'']);
@@ -302,11 +298,11 @@ function movedRow(text: string, rows: number): string | null {
 }
 
 function offColumn(col: number): boolean {
-  return col < 1 || col > COLUMNS;
+  return col < 1 || col > SHEET_COLUMNS;
 }
 
 function offRow(row: number): boolean {
-  return row < 1 || row > ROWS;
+  return row < 1 || row > SHEET_ROWS;
 }
 
 /** Where a word ends: at the next operator, separator, bracket or space. */
