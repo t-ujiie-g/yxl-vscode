@@ -240,6 +240,9 @@ function sameness(cell: HeaderCell): string {
   return JSON.stringify({ value, formula, rich, type, format, clearsFormat, style });
 }
 
+/** How many style-only body cells a layout draws past its data; `rows: 1048576` must not become a million cells (ADR-019). */
+const STYLED_BLANKS = 50_000;
+
 /** What one column's body cells wear: the layout's `body_style`, then the column's own over it. */
 function bodyLook(ctx: Ctx, placed: Placed, column: Column): readonly StyleLayer[] {
   const { layout } = placed;
@@ -259,6 +262,7 @@ function drawBody(
   looks: readonly (readonly StyleLayer[])[],
 ): void {
   const rows = placed.bodyLast - placed.bodyFirst + 1;
+  const styled = Math.max(placed.data.length, Math.floor(STYLED_BLANKS / placed.inputs.length));
   for (const [field, column] of placed.inputs.entries()) {
     const style = looks[placed.columns.indexOf(column)] ?? [];
     const { spec } = column;
@@ -270,7 +274,7 @@ function drawBody(
       const value = placed.data[index]?.[field] ?? null;
       const from = origin(column.spec, placed.layout, readFrom(placed, index, field));
       if (value === null) {
-        if (style.length > 0) cells.push(blankAt(at, style, from));
+        if (style.length > 0 && index < styled) cells.push(blankAt(at, style, from));
         continue;
       }
       cells.push({ ...blankAt(at, style, from), ...typedValue(ctx, column, value, formatted) });

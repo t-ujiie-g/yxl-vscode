@@ -174,3 +174,14 @@ describe('a column that merges its repeats', () => {
     expect([holds(MERGED, 'A2'), holds(MERGED, 'A3')]).toEqual(['東京', '東京']);
   });
 });
+
+describe('a body look over rows the data leaves empty', () => {
+  it('draws a bounded number of blanks, however many rows are reserved', () => {
+    const huge = laidOut(
+      '      - at: A1\n        body_style: { fill: "EEEEEE" }\n        rows: 1000000\n        values: [[x]]\n        columns: [{ name: a }, { name: b }]\n',
+    );
+    const drawn = sheet(huge);
+    expect(drawn.cells.size).toBe(50_000);
+    expect(resolve(styleAt(drawn, 'B2' as A1Addr)).fill).toBe('EEEEEE');
+  });
+});
