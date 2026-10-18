@@ -200,6 +200,35 @@ describe('a merge reaching past the window drawn of it', () => {
     ]);
     expect(row.map((one) => one.className.includes('pad'))).toEqual([false, true, false, true]);
   });
+  it('draws a piece either side of the freeze line, so the frozen piece stays and the rest scrolls', () => {
+    const split = sheet({
+      rows: 2,
+      columns: 5,
+      at: { row: 1, col: 3 },
+      of: { rows: 2, columns: 7 },
+      freeze: { row: 2, col: 3 },
+      merges: [{ top: 1, left: 1, bottom: 1, right: 7 }],
+      cells: [
+        cell(1, 1, {
+          value: 'title',
+          style: { 'border.left.style': 'thin', 'border.right.style': 'thin' },
+        }),
+      ],
+    });
+    const into = shown({ drawing: drawing({ sheets: [split] }) });
+    const pieces = [...(into.querySelector('tbody tr')?.querySelectorAll('td') ?? [])].filter(
+      (one) => !one.className.includes('pad'),
+    );
+
+    expect(anchors(into)).toEqual([
+      [2, 1, 'title'],
+      [5, 1, 'title'],
+    ]);
+    expect(pieces.map((one) => one.classList.contains('stays'))).toEqual([true, false]);
+    // The border is the merge's outline, not a line where the two pieces meet.
+    expect(pieces.map((one) => one.style.borderRight !== '')).toEqual([false, true]);
+    expect(pieces.map((one) => one.querySelector('.edges') !== null)).toEqual([true, false]);
+  });
 });
 
 describe('a sheet larger than the window drawn of it', () => {

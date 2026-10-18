@@ -27,6 +27,10 @@ the update, as before.
   shape.
 - **A `formulas:` range may carry `style` and `format`**, and every cell of it
   shows them.
+- **A merged cell across the freeze line scrolls as Excel's does.** Its part in
+  the frozen columns stays, and the rest scrolls with the sheet; it used to stay
+  whole and run past the columns it covers. A layout's `title` under
+  `freeze: { layout, columns }` is where this showed.
 
 ## 0.4.1 — 2026-10-15
 

@@ -9,13 +9,17 @@ import { chrome } from './worded';
 
 /**
  * A merge as the piece of it a `<td>` draws: its rows and columns that are drawn, and the pixels
- * those rows are tall. `cut` is where a piece sits in a merge the window drew only part of, in pixels.
+ * those rows are tall. `cut` is where a piece sits in a merge drawn in more than one piece, in pixels.
  */
 export interface SpannedMerge extends DrawnMerge {
   readonly rows: number;
   readonly cols: number;
   readonly height: number;
-  readonly cut: { readonly before: number; readonly wide: number } | null;
+  readonly cut: {
+    readonly before: number;
+    readonly wide: number;
+    readonly drawn: number;
+  } | null;
 }
 
 /** One cell as a `<td>`: what it says, and the look it was sent wearing. */
@@ -78,7 +82,7 @@ export function drawCell(
   const tint = hidden || cell.rich !== null ? null : tinted(cell);
   if (tint !== null) drawn.style.setProperty('color', tint);
 
-  const over = edges(cell);
+  const over = edges(cell, merge?.cut != null && merge.cut.before > 0);
   if (over !== null) drawn.append(over);
 
   return drawn;
@@ -118,9 +122,10 @@ function spilling(text: string, width: number): HTMLElement {
   return over;
 }
 
-/** A first-row cell's top edge and a first-column cell's left one, which no neighbour's gridline carries. */
-function edges(cell: DrawnCell): HTMLElement | null {
-  const outer = [cell.row === 1 ? 'border-top' : null, cell.col === 1 ? 'border-left' : null];
+/** A first-row cell's top edge and a first-column cell's left one, which no neighbour's gridline carries; a later piece of a merge has no left one. */
+function edges(cell: DrawnCell, continues: boolean): HTMLElement | null {
+  const left = cell.col === 1 && !continues;
+  const outer = [cell.row === 1 ? 'border-top' : null, left ? 'border-left' : null];
   const drawn = declarations(cell.style).filter(([name]) => outer.includes(name));
   if (drawn.length === 0) return null;
 

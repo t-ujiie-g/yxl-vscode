@@ -4056,7 +4056,11 @@ upstream's `columns` and `subtotals` examples, which now use the new keys.
 - A body look draws its style-only blanks past the data up to 50 000 cells a
   layout, so `rows: 1048576` with a `body_style` stays a sheet the grid can
   hold (ADR-019); rows past that show no body look.
-- 2857 → 2904 tests, run against yxl 0.7.0. Comment shape: export 1051 / 2266
+- **A merge across the freeze line** is drawn as two pieces, the frozen one
+  holding still and the other scrolling, with no edge where they meet. It was
+  one frozen piece that ran past its columns once the sheet scrolled — found by
+  the reader with a layout `title` under `freeze: { layout, columns: 2 }`.
+- 2857 → 2905 tests, run against yxl 0.7.0. Comment shape: export 1051 / 2266
   (avg 2.2), private 701 / 701 (1.0), inline 150 / 235 (1.6), 0 over.
 
 ### 2026-10-15 — The pin moves to yxl 0.6.2
