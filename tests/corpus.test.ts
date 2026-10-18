@@ -108,6 +108,7 @@ describe.each(corpus)('$name', (sample) => {
     expect(after[moved[0] as number]).toContain('SENTINEL');
   });
 
+  // Two whole-file patches per entry, which on a CI runner outlasts the 5 s default.
   it('puts back every entry a removal takes out, or does not take it out', () => {
     // Every entry and item in the file, one at a time: a removal either comes
     // back byte for byte or never happens (ADR-026).
@@ -130,7 +131,7 @@ describe.each(corpus)('$name', (sample) => {
     }
 
     putBack.push(undone);
-  });
+  }, 30_000);
 
   it('comes back byte for byte when the edit is undone', () => {
     // The same file, not one that parses the same (ADR-010).
