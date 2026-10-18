@@ -41,6 +41,20 @@ describe("a sheet's print setup", () => {
     expect([one.header, one.footer]).toEqual(['&CQuarterly', '&LPage &P']);
   });
 
+  it('reads an area and title rows given as a layout', () => {
+    const one = print('      area: stores\n      titles: stores\n');
+    expect([one.area, one.titles]).toEqual([
+      { kind: 'named', text: 'stores' },
+      { kind: 'named', text: 'stores' },
+    ]);
+  });
+
+  it('reads title rows as a row, written as a number or not, or a span', () => {
+    expect(print('      titles: 1\n').titles).toBe('1');
+    expect(print('      titles: 1-3\n').titles).toBe('1-3');
+    expect(codes('print', '      titles: 3-1\n')).toEqual([CODE.badRow]);
+  });
+
   it('reads the two halves of the scaling control, one at a time', () => {
     expect(print('      scale: 80\n').scale).toBe(80);
     expect(print('      fit: { width: 1, height: 0 }\n').fit).toEqual({ width: 1, height: 0 });

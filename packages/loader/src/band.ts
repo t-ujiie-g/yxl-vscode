@@ -8,6 +8,7 @@ import {
   type StyleUse,
   type Templated,
 } from '@yxl-vscode/spec';
+import { readPartOf } from './anchor';
 import { CODE } from './codes';
 import { type Ctx, identify, keyOf, reject } from './ctx';
 import {
@@ -50,7 +51,11 @@ export function readRowBands(ctx: Ctx, node: Node, path: Path): RowBand[] {
     const band = openEntries(site.ctx, site.node, site.path, what);
     if (band === null) return null;
 
-    const at = readSelector(band, what, ROW);
+    const written = findEntry(band.entries, 'at');
+    const at =
+      written?.value.kind === 'map'
+        ? readPartOf(band.ctx, written.value, under(what, 'at'))
+        : readSelector(band, what, ROW);
     if (at === null) return null;
 
     const body = readBandBody(band, what, BAND_KEYS.row.size, MODELED_KEYS.rowBand);

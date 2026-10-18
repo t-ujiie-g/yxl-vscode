@@ -73,10 +73,11 @@ interface Naming {
 /** Every place the spec names a style, wherever a look can be named (`docs/spec.md` §6, §25). */
 function namings(doc: SpecDoc): Naming[] {
   const found: Naming[] = [];
-  const use = (id: NodeId, key: string, style: StyleUse | null) => {
-    if (style?.kind === 'ref') found.push({ id, under: [key], name: style.name });
+  const use = (id: NodeId, key: string | Path, style: StyleUse | null) => {
+    const under = typeof key === 'string' ? [key] : key;
+    if (style?.kind === 'ref') found.push({ id, under, name: style.name });
     if (style?.kind === 'inline' && style.style.extends !== null) {
-      found.push({ id, under: [key, KEY.extends], name: style.style.extends });
+      found.push({ id, under: [...under, KEY.extends], name: style.style.extends });
     }
   };
   const header = (cells: readonly (HeaderCell | null)[] | null) => {
@@ -84,6 +85,7 @@ function namings(doc: SpecDoc): Naming[] {
   };
   const column = (one: LayoutColumn) => {
     use(one.id, KEY.style, one.style);
+    use(one.id, KEY.bodyStyle, one.bodyStyle);
     header(one.header);
     for (const rule of one.conditional) use(rule.id, KEY.style, rule.style);
   };
@@ -99,11 +101,21 @@ function namings(doc: SpecDoc): Naming[] {
   };
 
   for (const sheet of doc.sheets) {
-    for (const one of [...sheet.cells, ...sheet.columns, ...sheet.rows, ...sheet.conditional]) {
-      use(one.id, KEY.style, one.style);
-    }
+    const styled = [
+      ...sheet.cells,
+      ...sheet.formulas,
+      ...sheet.columns,
+      ...sheet.rows,
+      ...sheet.conditional,
+    ];
+    for (const one of styled) use(one.id, KEY.style, one.style);
     for (const layout of sheet.layouts) {
-      use(layout.id, KEY.headerStyle, layout.headerStyle);
+      const written = layout.headerStyle;
+      if (written === null || 'kind' in written) use(layout.id, KEY.headerStyle, written);
+      else
+        for (const [index, one] of written.entries()) use(layout.id, [KEY.headerStyle, index], one);
+      use(layout.id, KEY.bodyStyle, layout.bodyStyle);
+      if (layout.title !== null) use(layout.title.id, KEY.style, layout.title.style);
       for (const entry of layout.columns) {
         if (entry.kind === 'column') column(entry);
         else header(entry.header);

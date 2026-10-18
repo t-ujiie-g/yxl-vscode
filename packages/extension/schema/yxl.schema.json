@@ -1580,14 +1580,14 @@
     "filter": {
       "anyOf": [
         {
-          "$ref": "#/definitions/range"
+          "$ref": "#/definitions/layout_range"
         },
         {
           "type": "object",
           "additionalProperties": false,
           "properties": {
             "at": {
-              "$ref": "#/definitions/range"
+              "$ref": "#/definitions/layout_range"
             },
             "columns": {
               "anyOf": [
@@ -2157,6 +2157,27 @@
           "description": "**Required.** The formula body; a leading `=` is accepted and stripped.",
           "markdownDescription": "**Required.** The formula body; a leading `=` is accepted and stripped."
         },
+        "style": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/style"
+            }
+          ],
+          "description": "The look of every cell the range fills, laid over the bands as a cell's own `style` / `format` is (§4).",
+          "markdownDescription": "The look of every cell the range fills, laid over the bands as a cell's own `style` / `format` is (§4)."
+        },
+        "format": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/text"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The look of every cell the range fills, laid over the bands as a cell's own `style` / `format` is (§4).",
+          "markdownDescription": "The look of every cell the range fills, laid over the bands as a cell's own `style` / `format` is (§4)."
+        },
         "$include": {
           "type": "string",
           "description": "Another document, pasted in place of this node (§8)."
@@ -2328,8 +2349,26 @@
               "$ref": "#/definitions/anchor"
             }
           ],
-          "description": "**Required.** The top-left cell. The header rows start here when any column has a `header`; otherwise the body starts here.",
-          "markdownDescription": "**Required.** The top-left cell. The header rows start here when any column has a `header`; otherwise the body starts here."
+          "description": "**Required.** The top-left cell. The title sits here when there is one, and the header rows start below it; otherwise they start here, or the body does when no column has a `header`.",
+          "markdownDescription": "**Required.** The top-left cell. The title sits here when there is one, and the header rows start below it; otherwise they start here, or the body does when no column has a `header`."
+        },
+        "title": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/cell_value"
+            }
+          ],
+          "description": "A cell (§3) across the layout's width, in its first row. See below.",
+          "markdownDescription": "A cell (§3) across the layout's width, in its first row. See below."
+        },
+        "page_break_on": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/text"
+            }
+          ],
+          "description": "A column the data fills: a printed page starts wherever its value changes down the body. See below.",
+          "markdownDescription": "A column the data fills: a printed page starts wherever its value changes down the body. See below."
         },
         "rows": {
           "allOf": [
@@ -2408,13 +2447,26 @@
           "markdownDescription": "Makes each column's body a workbook defined name, `name.column`, and lets an override find a cell by meaning. See below."
         },
         "header_style": {
-          "allOf": [
+          "anyOf": [
             {
               "$ref": "#/definitions/style"
+            },
+            {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/style"
+                  }
+                },
+                {
+                  "$ref": "#/definitions/include"
+                }
+              ]
             }
           ],
-          "description": "A style (bareword or inline) for every header cell. Needs at least one `header`.",
-          "markdownDescription": "A style (bareword or inline) for every header cell. Needs at least one `header`."
+          "description": "A style (bareword or inline) for every header cell, or a list of them, one per header row. Needs at least one `header`.",
+          "markdownDescription": "A style (bareword or inline) for every header cell, or a list of them, one per header row. Needs at least one `header`."
         },
         "header_merge": {
           "allOf": [
@@ -2422,8 +2474,17 @@
               "$ref": "#/definitions/boolean"
             }
           ],
-          "description": "`false` writes the header without merged cells. Default `true`. Needs at least one `header`.",
-          "markdownDescription": "`false` writes the header without merged cells. Default `true`. Needs at least one `header`."
+          "description": "`false` writes the header, and the title, without merged cells. Default `true`. Needs a `header` or a `title`.",
+          "markdownDescription": "`false` writes the header, and the title, without merged cells. Default `true`. Needs a `header` or a `title`."
+        },
+        "body_style": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/style"
+            }
+          ],
+          "description": "A style for every body cell, and for nothing outside the body. See below.",
+          "markdownDescription": "A style for every body cell, and for nothing outside the body. See below."
         },
         "columns": {
           "anyOf": [
@@ -2493,6 +2554,32 @@
         "row": {
           "$ref": "#/definitions/integer"
         },
+        "header": {
+          "$ref": "#/definitions/integer"
+        },
+        "footer": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/integer"
+            },
+            {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": [
+                    "last"
+                  ]
+                },
+                {
+                  "$ref": "#/definitions/parameterized"
+                }
+              ]
+            }
+          ]
+        },
+        "title": {
+          "$ref": "#/definitions/boolean"
+        },
         "$include": {
           "type": "string",
           "description": "Another document, pasted in place of this node (§8)."
@@ -2501,8 +2588,7 @@
       "anyOf": [
         {
           "required": [
-            "layout",
-            "column"
+            "layout"
           ]
         },
         {
@@ -2534,6 +2620,25 @@
           ],
           "description": "The CSV or JSON field this column reads, when it differs from `name`. Only for a `csv`, or `json` of objects.",
           "markdownDescription": "The CSV or JSON field this column reads, when it differs from `name`. Only for a `csv`, or `json` of objects."
+        },
+        "type": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "text",
+                "number",
+                "bool",
+                "date",
+                "duration"
+              ]
+            },
+            {
+              "$ref": "#/definitions/parameterized"
+            }
+          ],
+          "description": "What each field of the column is: `text`, `number`, `bool`, `date` or `duration`, read as a cell's `type` reads its value (§3). Not with a `formula`.",
+          "markdownDescription": "What each field of the column is: `text`, `number`, `bool`, `date` or `duration`, read as a cell's `type` reads its value (§3). Not with a `formula`."
         },
         "header": {
           "allOf": [
@@ -2845,6 +2950,24 @@
           "description": "Conditional formats (§10) over the body, written without `at`.",
           "markdownDescription": "Conditional formats (§10) over the body, written without `at`."
         },
+        "body_style": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/style"
+            }
+          ],
+          "description": "A style for this column's body cells, laid over the layout's `body_style`.",
+          "markdownDescription": "A style for this column's body cells, laid over the layout's `body_style`."
+        },
+        "merge_equal": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/boolean"
+            }
+          ],
+          "description": "`true` merges runs of equal values down the body. See below. Only for a column the data fills.",
+          "markdownDescription": "`true` merges runs of equal values down the body. See below. Only for a column the data fills."
+        },
         "width": {
           "allOf": [
             {
@@ -2926,6 +3049,49 @@
       "pattern": "^[A-Za-z_\\u0080-\\uFFFF][A-Za-z0-9_.\\u0080-\\uFFFF]*$",
       "description": "A named layout, or one of its columns (§25)."
     },
+    "layout_rows": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "The title, header, body or footer rows of a named layout (§25).",
+      "properties": {
+        "layout": {
+          "$ref": "#/definitions/text"
+        },
+        "part": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "title",
+                "header",
+                "body",
+                "footer"
+              ]
+            },
+            {
+              "$ref": "#/definitions/parameterized"
+            }
+          ]
+        },
+        "$include": {
+          "type": "string",
+          "description": "Another document, pasted in place of this node (§8)."
+        }
+      },
+      "anyOf": [
+        {
+          "required": [
+            "layout",
+            "part"
+          ]
+        },
+        {
+          "required": [
+            "$include"
+          ]
+        }
+      ]
+    },
     "link": {
       "anyOf": [
         {
@@ -2967,6 +3133,120 @@
               "description": "Another document, pasted in place of this node (§8)."
             }
           }
+        }
+      ]
+    },
+    "listed_comment": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "at": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/cell"
+            },
+            {
+              "$ref": "#/definitions/layout_cell"
+            }
+          ],
+          "description": "In the list form only, as for a link: the cell, as A1 or as a named layout's cell (§25).",
+          "markdownDescription": "In the list form only, as for a link: the cell, as A1 or as a named layout's cell (§25)."
+        },
+        "text": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/text"
+            }
+          ],
+          "description": "**Required** in the expanded form; a bare value is the text.",
+          "markdownDescription": "**Required** in the expanded form; a bare value is the text."
+        },
+        "author": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/text"
+            }
+          ],
+          "description": "Shown above the text. A note always carries one in the file, so leaving it out does not omit it — Excel writes a generic name instead.",
+          "markdownDescription": "Shown above the text. A note always carries one in the file, so leaving it out does not omit it — Excel writes a generic name instead."
+        },
+        "$include": {
+          "type": "string",
+          "description": "Another document, pasted in place of this node (§8)."
+        }
+      },
+      "anyOf": [
+        {
+          "required": [
+            "at",
+            "text"
+          ]
+        },
+        {
+          "required": [
+            "$include"
+          ]
+        }
+      ]
+    },
+    "listed_link": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "at": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/cell"
+            },
+            {
+              "$ref": "#/definitions/layout_cell"
+            }
+          ],
+          "description": "In the list form only: the cell, as A1 or as a named layout's cell (§25).",
+          "markdownDescription": "In the list form only: the cell, as A1 or as a named layout's cell (§25)."
+        },
+        "url": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/text"
+            }
+          ],
+          "description": "A target outside the workbook. Exactly one of `url` / `to`.",
+          "markdownDescription": "A target outside the workbook. Exactly one of `url` / `to`."
+        },
+        "to": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/text"
+            }
+          ],
+          "description": "A target inside it.",
+          "markdownDescription": "A target inside it."
+        },
+        "tip": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/text"
+            }
+          ],
+          "description": "The hover tooltip.",
+          "markdownDescription": "The hover tooltip."
+        },
+        "$include": {
+          "type": "string",
+          "description": "Another document, pasted in place of this node (§8)."
+        }
+      },
+      "anyOf": [
+        {
+          "required": [
+            "at"
+          ]
+        },
+        {
+          "required": [
+            "$include"
+          ]
         }
       ]
     },
@@ -3498,7 +3778,7 @@
       "description": "What Excel prints, and how (§5).",
       "properties": {
         "area": {
-          "$ref": "#/definitions/range"
+          "$ref": "#/definitions/layout_range"
         },
         "orientation": {
           "anyOf": [
@@ -3539,6 +3819,20 @@
             },
             {
               "$ref": "#/definitions/include"
+            }
+          ]
+        },
+        "titles": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/integer"
+            },
+            {
+              "type": "string",
+              "pattern": "^[0-9]+(-[0-9]+)?$"
+            },
+            {
+              "$ref": "#/definitions/layout_ref"
             }
           ]
         },
@@ -3766,14 +4060,21 @@
         "at": {
           "anyOf": [
             {
-              "type": "string",
-              "pattern": "^([A-Za-z]{1,3}(-[A-Za-z]{1,3})?|[0-9]+(-[0-9]+)?)$"
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^([A-Za-z]{1,3}(-[A-Za-z]{1,3})?|[0-9]+(-[0-9]+)?)$"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "$ref": "#/definitions/parameterized"
+                }
+              ]
             },
             {
-              "type": "integer"
-            },
-            {
-              "$ref": "#/definitions/parameterized"
+              "$ref": "#/definitions/layout_rows"
             }
           ]
         },
@@ -4191,13 +4492,41 @@
           "markdownDescription": "`hidden` can be undone in Excel's UI; `very_hidden` only via VBA. **At least one sheet must stay visible.**"
         },
         "freeze": {
-          "allOf": [
+          "anyOf": [
             {
               "$ref": "#/definitions/cell"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "layout": {
+                  "$ref": "#/definitions/layout_ref"
+                },
+                "columns": {
+                  "$ref": "#/definitions/integer"
+                },
+                "$include": {
+                  "type": "string",
+                  "description": "Another document, pasted in place of this node (§8)."
+                }
+              },
+              "anyOf": [
+                {
+                  "required": [
+                    "layout"
+                  ]
+                },
+                {
+                  "required": [
+                    "$include"
+                  ]
+                }
+              ]
             }
           ],
-          "description": "Rows above and columns left of it stay put. `A1` freezes nothing and is an error.",
-          "markdownDescription": "Rows above and columns left of it stay put. `A1` freezes nothing and is an error."
+          "description": "Rows above and columns left of it stay put. `A1` freezes nothing and is an error. The mapping freezes above a named layout's body, and through its first `columns` (default 0). §25.",
+          "markdownDescription": "Rows above and columns left of it stay put. `A1` freezes nothing and is an error. The mapping freezes above a named layout's body, and through its first `columns` (default 0). §25."
         },
         "split": {
           "type": "object",
@@ -4265,16 +4594,33 @@
         "links": {
           "anyOf": [
             {
-              "type": "object",
-              "propertyNames": {
-                "$ref": "#/definitions/cell"
-              },
-              "additionalProperties": {
-                "$ref": "#/definitions/link"
-              }
+              "anyOf": [
+                {
+                  "type": "object",
+                  "propertyNames": {
+                    "$ref": "#/definitions/cell"
+                  },
+                  "additionalProperties": {
+                    "$ref": "#/definitions/link"
+                  }
+                },
+                {
+                  "$ref": "#/definitions/include"
+                }
+              ]
             },
             {
-              "$ref": "#/definitions/include"
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/listed_link"
+                  }
+                },
+                {
+                  "$ref": "#/definitions/include"
+                }
+              ]
             }
           ],
           "description": "Hyperlinks, by cell. §10.",
@@ -4298,16 +4644,33 @@
         "comments": {
           "anyOf": [
             {
-              "type": "object",
-              "propertyNames": {
-                "$ref": "#/definitions/cell"
-              },
-              "additionalProperties": {
-                "$ref": "#/definitions/comment"
-              }
+              "anyOf": [
+                {
+                  "type": "object",
+                  "propertyNames": {
+                    "$ref": "#/definitions/cell"
+                  },
+                  "additionalProperties": {
+                    "$ref": "#/definitions/comment"
+                  }
+                },
+                {
+                  "$ref": "#/definitions/include"
+                }
+              ]
             },
             {
-              "$ref": "#/definitions/include"
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/listed_comment"
+                  }
+                },
+                {
+                  "$ref": "#/definitions/include"
+                }
+              ]
             }
           ],
           "description": "Notes, by cell. §10.",

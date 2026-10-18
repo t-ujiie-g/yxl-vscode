@@ -87,3 +87,12 @@ describe('a link on a cell', () => {
     );
   });
 });
+
+describe('a link on a sheet that lists its links', () => {
+  it('is refused rather than written into the list as if it were a mapping', () => {
+    const listed = `${SHEET}    links:\n      - { at: A1, url: https://example.com }\n`;
+    expect(linked(listed, 'A1', null)).toBe(
+      'refused: the sheet `S` writes its `links` as a list, each entry with its own `at:`; edit that list in the spec',
+    );
+  });
+});

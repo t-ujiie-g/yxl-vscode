@@ -4,10 +4,11 @@ import type { Cell } from './cell';
 import type { Comparison, Conditional } from './conditional';
 import type { DataBlock } from './data';
 import type { Chart, Image, Shape } from './float';
-import type { Layout, Named } from './layout';
+import type { ByMeaning, FreezeAt, Layout, Named } from './layout';
 import type { Opaque, SpecNode, Templated } from './node';
 import type { Print, Protect } from './print';
 import type { SparklineGroup } from './sparkline';
+import type { StyleUse } from './style';
 import type { Validation } from './validation';
 
 /** A sheet's splitter, in points from the top-left; `0` on an axis leaves it unsplit (`docs/spec.md` §2). */
@@ -34,7 +35,7 @@ export interface Sheet extends SpecNode {
   readonly columns: readonly ColumnBand[];
   readonly rows: readonly RowBand[];
   readonly merges: readonly Merge[];
-  readonly freeze: Templated<A1Addr> | null;
+  readonly freeze: Templated<A1Addr> | FreezeAt | null;
   readonly visibility: Templated<Visibility> | null;
   readonly tabColor: Templated<Color> | null;
   readonly gridlines: boolean | null;
@@ -57,21 +58,25 @@ export interface Sheet extends SpecNode {
 
 /**
  * One formula filled across a region, written as it applies at the top-left
- * cell and shifted into every other (`docs/spec.md` §3). No leading `=`, and
- * never a `$ref`.
+ * cell and shifted into every other, and the look every cell of it wears
+ * (`docs/spec.md` §3). No leading `=`, and never a `$ref`.
  */
 export interface FormulaRange extends SpecNode {
   readonly at: Templated<A1Range>;
   readonly formula: string;
+  readonly style: StyleUse | null;
+  readonly format: string | null;
+  readonly clearsFormat: boolean;
 }
 
 /**
- * One note on a cell, which Excel shows on hover and keeps beside the value
- * rather than in place of it (`docs/spec.md` §10). A note in the file always
- * carries an author, so `null` leaves Excel to write its generic one.
+ * One note on a cell, shown on hover beside its value (`docs/spec.md` §10).
+ * `null` leaves Excel to write its generic author; `listed` is the list form,
+ * where `at:` is a key inside the entry.
  */
 export interface Note extends SpecNode {
-  readonly at: Templated<A1Addr>;
+  readonly at: Templated<A1Addr> | ByMeaning;
+  readonly listed: boolean;
   readonly text: string;
   readonly author: string | null;
 }
@@ -79,10 +84,11 @@ export interface Note extends SpecNode {
 /**
  * One link on a cell, which decorates it as a note does: the cell shows its own
  * value still. Which kind of target it is, is written rather than inferred —
- * `Summary!A1` and a URL are both just text (`docs/spec.md` §10).
+ * `Summary!A1` and a URL are both just text (`docs/spec.md` §10). `listed` as a note's.
  */
 export interface Link extends SpecNode {
-  readonly at: Templated<A1Addr>;
+  readonly at: Templated<A1Addr> | ByMeaning;
+  readonly listed: boolean;
   readonly target: LinkTarget;
   readonly tip: string | null;
 }
@@ -111,16 +117,16 @@ export interface Table extends SpecNode {
 /**
  * A sheet's auto filter: the range Excel hangs its dropdowns off, and any
  * criteria saved with it (`docs/spec.md` §10). `columns` is `null` when the
- * filter is written as the bare range.
+ * filter is written as the bare range; a column may be named over a layout.
  */
 export interface Filter extends SpecNode {
-  readonly at: Templated<A1Range>;
+  readonly at: Templated<A1Range> | Named;
   readonly columns: readonly FilterColumn[] | null;
 }
 
 /** One column's saved criterion: the ticked values as the cells display them, or a comparison. */
 export interface FilterColumn extends SpecNode {
-  readonly at: Templated<ColumnSpan>;
+  readonly at: Templated<ColumnSpan> | Named;
   readonly criterion:
     | { readonly kind: 'values'; readonly values: readonly string[] }
     | { readonly kind: 'compare'; readonly compares: Comparison };

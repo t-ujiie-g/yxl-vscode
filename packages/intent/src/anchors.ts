@@ -123,6 +123,7 @@ function onSheet(spec: Projection, sheet: Sheet, line: Line, read: Reading, to: 
     if (at === null || does === null) continue;
 
     if (does === 'goes') remove(one.id);
+    else if (one.listed) set(one.id, [KEY.at], moved(at, line));
     else to.rename(one.id, moved(at, line));
   }
 

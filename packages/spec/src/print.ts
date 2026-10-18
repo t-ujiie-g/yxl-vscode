@@ -1,4 +1,5 @@
-import type { A1Addr, A1Range } from '@yxl-vscode/units';
+import type { A1Addr, A1Range, RowSpan } from '@yxl-vscode/units';
+import type { Named } from './layout';
 import type { SpecNode, Templated } from './node';
 
 /** Which way round the paper goes (`docs/spec.md` §5). */
@@ -28,7 +29,8 @@ export interface Fit {
  * `&`-code syntax (`docs/spec.md` §5).
  */
 export interface Print extends SpecNode {
-  readonly area: Templated<A1Range> | null;
+  readonly area: Templated<A1Range> | Named | null;
+  readonly titles: Templated<RowSpan> | Named | null;
   readonly orientation: Templated<Orientation> | null;
   readonly margins: Margins | null;
   readonly scale: number | null;

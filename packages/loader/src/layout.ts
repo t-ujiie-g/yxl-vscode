@@ -3,6 +3,7 @@ import type { Saying } from '@yxl-vscode/diag';
 import {
   type BlockDef,
   type BlockPlacement,
+  COLUMN_TYPES,
   type DataSource,
   FOOTER_TOTALS,
   type FooterCell,
@@ -64,10 +65,13 @@ function readLayout(site: Site): Layout | null {
   if (at === null || columns === null) return null;
 
   let name: string | null = null;
+  let title: HeaderCell | null = null;
   let rows: number | null = null;
   let source: DataSource | null = null;
-  let headerStyle: StyleUse | null = null;
+  let headerStyle: Layout['headerStyle'] = null;
   let headerMerge: boolean | null = null;
+  let bodyStyle: StyleUse | null = null;
+  let pageBreakOn: string | null = null;
   let footer: FooterEntry[] = [];
 
   for (const entry of opened.entries) {
@@ -77,14 +81,23 @@ function readLayout(site: Site): Layout | null {
       case 'name':
         name = readLayoutName(here, entry.value, said);
         break;
+      case 'title':
+        title = readHeaderCell(here, entry.value, [...opened.path, key], said);
+        break;
       case 'rows':
         rows = expectNumber(here, entry.value, said);
         break;
+      case 'page_break_on':
+        pageBreakOn = expectText(here, entry.value, said);
+        break;
       case 'header_style':
-        headerStyle = readStyleUse(here, entry.value, said);
+        headerStyle = readHeaderStyles(here, entry.value, said);
         break;
       case 'header_merge':
         headerMerge = expectBool(here, entry.value, said);
+        break;
+      case 'body_style':
+        bodyStyle = readStyleUse(here, entry.value, said);
         break;
       case 'footer':
         footer = readFooter(here, entry.value, [...opened.path, key], what);
@@ -103,13 +116,30 @@ function readLayout(site: Site): Layout | null {
     ...identify(here, opened.path, opened.node.span),
     at,
     name,
+    title,
     rows,
     source,
     headerStyle,
     headerMerge,
+    bodyStyle,
+    pageBreakOn,
     columns,
     footer,
   };
+}
+
+/** `header_style:` as one style for every header row, or a list of them, one per row. */
+function readHeaderStyles(ctx: Ctx, node: Node, what: Saying): Layout['headerStyle'] {
+  if (node.kind !== 'seq') return readStyleUse(ctx, node, what);
+  if (node.items.length === 0) {
+    reject(ctx, CODE.missingKey, say('loader.no-levels', { what }), node.span);
+    return null;
+  }
+
+  return node.items.flatMap((item, index) => {
+    const use = readStyleUse(ctx, item, say('loader.row-of', { what, index: index + 1 }));
+    return use === null ? [] : [use];
+  });
 }
 
 /** `defs.blocks`: each a named group of layout columns, placed where a layout names it. */
@@ -171,9 +201,12 @@ function readColumn(site: Site, of: Saying): LayoutColumn | null {
     kind: 'column',
     name,
     field: null,
+    type: null,
     header: null,
     formula: null,
     conditional: [],
+    bodyStyle: null,
+    mergeEqual: false,
     width: null,
     style: null,
     format: null,
@@ -188,6 +221,17 @@ function readColumn(site: Site, of: Saying): LayoutColumn | null {
     switch (key) {
       case 'field':
         column.field = expectText(here, entry.value, said);
+        break;
+      case 'type': {
+        const type = readAs(here, entry.value, said, spelling(COLUMN_TYPES));
+        column.type = typeof type === 'string' ? type : null;
+        break;
+      }
+      case 'body_style':
+        column.bodyStyle = readStyleUse(here, entry.value, said);
+        break;
+      case 'merge_equal':
+        column.mergeEqual = expectBool(here, entry.value, said) ?? false;
         break;
       case 'header':
         column.header = readHeader(here, entry.value, [...opened.path, key], said);
@@ -221,8 +265,15 @@ function readColumn(site: Site, of: Saying): LayoutColumn | null {
     }
   }
 
-  if (column.field !== null && column.formula !== null) {
-    reject(here, CODE.conflictingKeys, say('loader.field-and-formula', { what }), opened.node.span);
+  const conflicts = [
+    column.field !== null && say('loader.field-and-formula', { what }),
+    column.type !== null && say('loader.type-and-formula', { what }),
+    column.mergeEqual && say('loader.merge-equal-and-formula', { what }),
+  ];
+  for (const conflict of conflicts) {
+    if (conflict !== false && column.formula !== null) {
+      reject(here, CODE.conflictingKeys, conflict, opened.node.span);
+    }
   }
   return column;
 }

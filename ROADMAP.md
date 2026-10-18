@@ -2132,6 +2132,22 @@ reference; ADR-057 is how they project.
 - [x] `header_merge: false` (yxl 0.6.2): the header drawn with the same cells
       and look and no merged range; refused without a header, as
       `header_style` is *(2026-10-15)*
+- [x] **yxl 0.7.0's layout keys**, drawn as yxl builds them: `title`, a
+      `header_style` per header row, `body_style` on a layout and a column, a
+      column's `type` (a CSV field read as written), `merge_equal`,
+      `page_break_on`, and an unmerged header keeping its groups' outline
+      *(2026-10-19)*
+- [x] **The sheet's keys by a layout's name** (yxl 0.7.0): `freeze: { layout,
+      columns }`, `filter:` with criteria by column name, `print.area`,
+      `print.titles`, a `rows:` band over a layout's part, notes and links
+      listed with their own `at:`, a cell by meaning in the header, the footer
+      or the title, and `style`/`format` on a `formulas:` range. Written as
+      they are by a line; a grid note or link is refused on a sheet that
+      lists them (ADR-061) *(2026-10-19)*
+- [ ] **An override's `style` replaces the cell's style**, as yxl builds it:
+      `{ style: { font: { italic: true } } }` over a bold, filled cell leaves
+      it italic alone, where the grid draws all three. Found by the 0.7.0
+      Tier 3 fixture; older than the move
 
 ### Taken out (2026-08-23)
 Two phases that were here are not any more, and not because they were hard:
@@ -3668,6 +3684,22 @@ edit, a `set` of `at:` itself; removing it, or writing under it, is still
 refused. An `at: { below: … }` is never written: it follows the layout it
 names.
 
+### ADR-061 — What follows a layout is left as written
+**Accepted** 2026-10-19. With the pin move to yxl 0.7.0.
+
+yxl 0.7 lets a sheet's own keys name a layout — `freeze`, `filter`, `print`, a
+`rows:` band, a note or a link by meaning — so that none of them moves when the
+layout does. A line drawn above the layout already moves it by its `at:`
+(ADR-060); everything that names it then follows by itself. So a line writes
+none of them: rewriting `freeze: { layout: 店舗 }` as the cell it lands on today
+would be correct once and wrong the next time the data grows.
+
+A gesture that sets one of these keys outright — *Freeze Panes* at a cell —
+still writes the cell it was asked for, since that is the answer the reader
+gave. Notes and links are the exception: written as a list they have no key a
+cell's address can find, so adding or changing one from the grid is refused
+with the reason, rather than written into the list in the mapping's shape.
+
 ## 8. Open questions
 
 - **Q1 — `cells:` A1 keys and row insertion.** ✅ *Answered 2026-08-23.*
@@ -3987,6 +4019,49 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-10-19 — The pin moves to yxl 0.7.0
+
+yxl 0.7.0 is a layout release: what a probe of 0.6.2 found a layout could not
+say. The move brought six failures — the shipped schema, the named pin, and
+upstream's `columns` and `subtotals` examples, which now use the new keys.
+
+- **A layout's new keys** (`docs/spec.md` §25) are read and drawn: a `title`
+  merged across the layout, `header_style` as a list, one per header row,
+  `body_style` on the layout and on a column, a column's `type` (a CSV field
+  then read as written, so `007` stays text; a date or a duration drawn as
+  its serial under its default format), `merge_equal`, and `page_break_on`.
+  With `header_merge: false` each header group, and the title, keeps its
+  outline: the border edges inside it go, as yxl 0.7 draws them.
+- **The sheet's keys by a layout's name**: `freeze: { layout, columns }`,
+  `filter: 店舗` with criteria by column name, `print.area: 店舗` and the new
+  `print.titles`, and a `rows:` band at `{ layout, part }`. `comments:` and
+  `links:` may be lists, each entry with its own `at:`, which may be a cell by
+  meaning. A cell by meaning takes `header: n`, `footer: n | last` and
+  `title: true`, and one inside a merge is refused. A `formulas:` range takes
+  `style` and `format`.
+- **What gestures do with them** (ADR-061): a line leaves a layout-relative
+  freeze and row band as written, moves a listed note's `at:` rather than
+  renaming a key, and a grid note or link on a sheet that lists them is
+  refused with the reason.
+- **Tier 3 sees more.** `tests/layouts.test.ts` now compares borders, row
+  heights, the freeze, the filter, the print area, titles and breaks, and the
+  notes and links, besides what it compared before; a typed cell's own format
+  counts as the one it shows. `tests/fixtures/layouts/report.yxl.yaml` tries
+  every key above against yxl, and matches cell by cell.
+- Found, not fixed: an override's `style` replaces a cell's whole style in
+  yxl, where this editor lays it over the cell's. That predates 0.7, so it is
+  an open row in the layouts phase rather than part of this move, and the new
+  fixture avoids it.
+- A body look draws its style-only blanks past the data up to 50 000 cells a
+  layout, so `rows: 1048576` with a `body_style` stays a sheet the grid can
+  hold (ADR-019); rows past that show no body look.
+- **A merge across the freeze line** is drawn as two pieces, the frozen one
+  holding still and the other scrolling, with no edge where they meet. It was
+  one frozen piece that ran past its columns once the sheet scrolled — found by
+  the reader with a layout `title` under `freeze: { layout, columns: 2 }`.
+- 2857 → 2905 tests, run against yxl 0.7.0. Comment shape: export 1051 / 2266
+  (avg 2.2), private 701 / 701 (1.0), inline 150 / 235 (1.6), 0 over.
 
 ### 2026-10-15 — The pin moves to yxl 0.6.2
 

@@ -46,6 +46,11 @@ export type Says = {
 
   'loader.a-column-of': { what: Saying };
   'loader.where-or-row': { what: Saying };
+  'loader.title-and-a-column': { what: Saying };
+  'loader.title-must-be-true': { what: Saying };
+  'loader.finder-needs-a-column': { what: Saying; key: string };
+  'loader.type-and-formula': { what: Saying };
+  'loader.merge-equal-and-formula': { what: Saying };
   'loader.blocks-do-not-nest': { what: Saying };
   'loader.field-and-formula': { what: Saying };
   'loader.no-levels': { what: Saying };
@@ -72,6 +77,7 @@ export type Says = {
   'loader.a-range-or-a-layout': Nothing;
   'loader.a-column': Nothing;
   'loader.a-row': Nothing;
+  'loader.rows-or-a-layout': Nothing;
   'loader.a-hex-colour': Nothing;
   'loader.a-name': Nothing;
   'loader.a-style-name': Nothing;
@@ -175,7 +181,16 @@ const en: Words<Says> = {
 
   'loader.a-column-of': ({ what }, worded) => `a column of ${worded(what)}`,
   'loader.where-or-row': ({ what }, worded) =>
-    `${worded(what)} finds its row by exactly one of \`where\` or \`row\``,
+    `${worded(what)} finds its cell by exactly one of \`where\`, \`row\`, \`header\`, \`footer\`, or \`title\``,
+  'loader.title-and-a-column': ({ what }, worded) =>
+    `${worded(what)} names a \`column\` and the \`title\`, which spans them all`,
+  'loader.title-must-be-true': ({ what }, worded) => `${worded(what)} \`title\` must be true`,
+  'loader.finder-needs-a-column': ({ what, key }, worded) =>
+    `${worded(what)} needs a \`column\` to go with its \`${key}\``,
+  'loader.type-and-formula': ({ what }, worded) =>
+    `${worded(what)} has a \`type\` and a \`formula\`; a formula column takes no data`,
+  'loader.merge-equal-and-formula': ({ what }, worded) =>
+    `${worded(what)} has \`merge_equal\` and a \`formula\`; only data merges`,
   'loader.blocks-do-not-nest': ({ what }, worded) =>
     `${worded(what)} places another block; blocks do not nest`,
   'loader.field-and-formula': ({ what }, worded) =>
@@ -210,6 +225,7 @@ const en: Words<Says> = {
   'loader.a-range-or-a-layout': () => 'a range, or a named layout or one of its columns',
   'loader.a-column': () => 'a column or a range of columns',
   'loader.a-row': () => 'a row or a range of rows',
+  'loader.rows-or-a-layout': () => 'a row, a `first-last` span, or a named layout',
   'loader.a-hex-colour': () => 'a hex colour',
   'loader.a-name': () => 'a name',
   'loader.a-style-name': () => 'a style name',
@@ -287,7 +303,17 @@ const ja: Words<Says> = {
 
   'loader.a-column-of': ({ what }, worded) => `${worded(what)}の列`,
   'loader.where-or-row': ({ what }, worded) =>
-    `${worded(what)}は \`where\` と \`row\` のどちらか一方だけで行を探します`,
+    `${worded(what)}は \`where\`・\`row\`・\`header\`・\`footer\`・\`title\` のどれか 1 つだけでセルを探します`,
+  'loader.title-and-a-column': ({ what }, worded) =>
+    `${worded(what)}は \`column\` と、すべての列にまたがる \`title\` の両方を指しています`,
+  'loader.title-must-be-true': ({ what }, worded) =>
+    `${worded(what)}の \`title\` は true である必要があります`,
+  'loader.finder-needs-a-column': ({ what, key }, worded) =>
+    `${worded(what)}には \`${key}\` と組になる \`column\` が必要です`,
+  'loader.type-and-formula': ({ what }, worded) =>
+    `${worded(what)}には \`type\` と \`formula\` の両方があります。数式の列はデータを取りません`,
+  'loader.merge-equal-and-formula': ({ what }, worded) =>
+    `${worded(what)}には \`merge_equal\` と \`formula\` の両方があります。結合するのはデータだけです`,
   'loader.blocks-do-not-nest': ({ what }, worded) =>
     `${worded(what)}は別のブロックを置いています。ブロックは入れ子にできません`,
   'loader.field-and-formula': ({ what }, worded) =>
@@ -323,6 +349,7 @@ const ja: Words<Says> = {
   'loader.a-range-or-a-layout': () => '範囲、または名前付きレイアウトかその列',
   'loader.a-column': () => '列または列の範囲',
   'loader.a-row': () => '行または行の範囲',
+  'loader.rows-or-a-layout': () => '行、`first-last` の範囲、または名前付きレイアウト',
   'loader.a-hex-colour': () => '16 進の色',
   'loader.a-name': () => '名前',
   'loader.a-style-name': () => 'スタイル名',

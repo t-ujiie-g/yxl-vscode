@@ -22,12 +22,15 @@ export function readCsv(source: string): Table {
 
 /**
  * A CSV whose first row names its fields, as a layout reads one: the names as
- * written, and the rows under them read as `readCsv` reads them (`docs/spec.md` §25).
+ * written, and the rows under them read as `readCsv` reads them and as written
+ * (`docs/spec.md` §25).
  */
-export function readHeadedCsv(
-  source: string,
-):
-  | { readonly names: readonly string[]; readonly rows: readonly DataRow[] }
+export function readHeadedCsv(source: string):
+  | {
+      readonly names: readonly string[];
+      readonly rows: readonly DataRow[];
+      readonly texts: readonly (readonly string[])[];
+    }
   | { readonly problem: Saying } {
   const scanned = scanCsv(source);
   if (scanned.problem !== null) return { problem: scanned.problem };
@@ -38,6 +41,7 @@ export function readHeadedCsv(
   return {
     names: header.map((field) => field.text),
     rows: body.map((row) => row.map((field) => field.value)),
+    texts: body.map((row) => row.map((field) => field.text)),
   };
 }
 

@@ -119,6 +119,7 @@ export type Says = {
   'intent.list-needs-a-choice': Nothing;
   'intent.already-validated': { range: string };
   'intent.no-note-to-take-off': { at: string };
+  'intent.listed-by-cell': { key: string; sheet: string };
   'intent.note-needs-something': Nothing;
   'intent.note-not-text': { at: string };
   'intent.change-the-parameter': { name: string };
@@ -353,6 +354,8 @@ const en: Words<Says> = {
   'intent.already-validated': ({ range }) =>
     `\`${range}\` already has a validation, and a cell takes one at a time`,
   'intent.no-note-to-take-off': ({ at }) => `\`${at}\` has no note to take off`,
+  'intent.listed-by-cell': ({ key, sheet }) =>
+    `the sheet \`${sheet}\` writes its \`${key}\` as a list, each entry with its own \`at:\`; edit that list in the spec`,
   'intent.note-needs-something': () => 'a note needs something to say',
   'intent.note-not-text': ({ at }) => `the note on \`${at}\` is not written as text`,
   'intent.change-the-parameter': ({ name }) =>
@@ -566,6 +569,8 @@ const ja: Words<Says> = {
   'intent.already-validated': ({ range }) =>
     `\`${range}\` にはすでに入力規則があります。セルが持てるのは一度に 1 つです`,
   'intent.no-note-to-take-off': ({ at }) => `\`${at}\` に外せるメモはありません`,
+  'intent.listed-by-cell': ({ key, sheet }) =>
+    `シート \`${sheet}\` は \`${key}\` を、エントリごとに \`at:\` を持つリストで書いています。そのリストは spec で編集してください`,
   'intent.note-needs-something': () => 'メモには何か文字が必要です',
   'intent.note-not-text': ({ at }) => `\`${at}\` のメモはテキストとして書かれていません`,
   'intent.change-the-parameter': ({ name }) =>

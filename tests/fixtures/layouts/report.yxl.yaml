@@ -1,0 +1,98 @@
+# The layout keys yxl 0.7.0 added (`docs/spec.md` §25), each compared cell by
+# cell against what yxl builds: a title, a header style per row, a body look,
+# typed CSV fields, merged repeats, page breaks, and the sheet's own keys
+# given by a layout's name.
+defs:
+  styles:
+    head: { font: { bold: true }, fill: "1F3864", border: thin }
+    sub: { font: { italic: true }, fill: "D9E1F2", border: thin }
+    grid: { border: thin }
+
+sheets:
+  - name: 店舗
+    freeze: { layout: 店舗, columns: 2 }
+    filter:
+      at: 店舗
+      columns:
+        - { at: branch, values: [東京] }
+    print: { area: 店舗, titles: 店舗, breaks: [A40] }
+    rows:
+      - { at: { layout: 店舗, part: title }, height: 24 }
+      - { at: { layout: 店舗, part: header }, height: 18 }
+      - { at: { layout: 店舗, part: footer }, height: 20 }
+    comments:
+      - { at: { layout: 店舗, column: store, where: { store: 渋谷 } }, text: 改装中 }
+      - { at: { layout: 店舗, column: cy, header: 2 }, text: 税抜, author: 経理 }
+      - { at: { layout: 店舗, title: true }, text: 上期 }
+      - { at: K1, text: 欄外 }
+    links:
+      - { at: { layout: 店舗, column: cy, footer: last }, to: "店舗!A1", tip: 先頭へ }
+      - { at: { layout: 店舗, column: code, row: 3 }, url: "https://example.com/030" }
+    layouts:
+      - at: A1
+        name: 店舗
+        title: { value: 2026年度 上期 店舗別実績, style: { font: { bold: true }, border: thin } }
+        page_break_on: branch
+        header_style: [head, sub]
+        body_style: grid
+        csv: typed.csv
+        columns:
+          - { name: branch, header: 支店, merge_equal: true, width: 8 }
+          - { name: channel, header: 区分, merge_equal: true }
+          - { name: code, header: [店舗, 番号], type: text }
+          - { name: store, header: [店舗, 名前] }
+          - { name: opened, header: [日付, 開店], type: date }
+          - { name: hours, header: [日付, 時間], type: duration, body_style: { format: "h:mm" } }
+          - { name: open, header: 営業, type: bool }
+          - { name: cy, header: [売上, 当年], type: number, body_style: { format: "#,##0" } }
+          - name: share
+            header: [売上, 比]
+            formula: 'IF({{cy}}="","",{{cy}}/SUM(H:H))'
+            body_style: { format: "0.0%", fill: "FFF2CC" }
+        footer:
+          - row: { branch: { value: 合計, merge_to: store }, cy: { total: sum } }
+            style: sub
+          - row: { branch: 店数, cy: { total: count } }
+
+  - name: 結合なし
+    formulas:
+      - at: D2:D4
+        formula: "B2*C2"
+        style: { border: thin, fill: "FFF2CC" }
+        format: "#,##0"
+    layouts:
+      - at: A6
+        name: 平
+        title: { value: 結合なし, style: { border: thin, fill: "DDEBF7" } }
+        header_style: { font: { bold: true }, border: medium }
+        header_merge: false
+        rows: 2
+        columns:
+          - { name: a, header: [区分, 甲] }
+          - { name: b, header: [区分, 乙] }
+          - { name: c, header: 丙 }
+      - at: { below: 平, gap: 1 }
+        header_style: [head]
+        body_style: { fill: "EEEEEE" }
+        values:
+          - [x, 1]
+          - [null, 2]
+        columns:
+          - { name: k, header: [上, 下], type: text }
+          - { name: v, header: [上, 値], type: text }
+    cells:
+      B2: 2
+      C2: 3
+      B3: 4
+      C3: 5
+      B4: 6
+      C4: 7
+
+overrides:
+  - at: { layout: 店舗, column: store, header: 2 }
+    value: 店名
+    reason: 見出しの言い換え
+  - at: { layout: 店舗, column: branch, footer: 2 }
+    value: 店舗数
+  - at: { layout: 店舗, title: true }
+    value: 2026年度 上期 店舗別実績（確定）

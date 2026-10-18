@@ -10,6 +10,7 @@ import {
   refused,
   writtenSheet,
 } from './direct';
+import { say } from './text';
 
 /** A link on a cell as a gesture asks for it: where it goes, or `null` to take it off. */
 export interface Linking {
@@ -31,6 +32,9 @@ export function setLink(spec: Projection, where: Linking, read: Reading): Intent
   if (away !== null) return refused(away);
 
   const links = entryOf(found.node, KEY.links)?.value ?? null;
+  if (links?.kind === 'seq') {
+    return refused(say('intent.listed-by-cell', { key: KEY.links, sheet: where.sheet }));
+  }
 
   const already = links === null ? null : (entryOf(links, where.at)?.value ?? null);
   const ops = writing(where, { links, already, under: [...found.path, KEY.links] }, found.path);

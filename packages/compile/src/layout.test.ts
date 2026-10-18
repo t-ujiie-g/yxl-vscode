@@ -79,7 +79,7 @@ describe('a layout reading its rows', () => {
       '      - at: A1\n        header_merge: false\n        rows: 1\n        columns: [{ name: a }]\n',
     );
     expect(said(source)).toEqual([
-      'the layout has a `header_merge`, but no column has a `header` to merge',
+      'the layout has a `header_merge`, but no `title` or column `header` to merge',
     ]);
   });
 });
@@ -106,5 +106,92 @@ describe('where a body cell was read from', () => {
     expect(origin(source, 'A1', read)).toMatchObject({
       from: { kind: 'external', file: 's.csv', row: 1, col: 2 },
     });
+  });
+});
+
+describe("a layout column's type", () => {
+  const typed = (columns: string, csv: string) =>
+    [
+      laidOut(`      - at: A1\n        csv: t.csv\n        columns: ${columns}\n`),
+      files({ 't.csv': csv }),
+    ] as const;
+
+  it('reads a CSV field as written: `007` stays text, and `true` a boolean only where asked', () => {
+    const [source, read] = typed(
+      '[{ name: code, type: text }, { name: n, type: number }, { name: ok, type: bool }]',
+      'code,n,ok\n007,12,true\n',
+    );
+    expect([
+      holds(source, 'A1', read),
+      holds(source, 'B1', read),
+      holds(source, 'C1', read),
+    ]).toEqual(['007', 12, true]);
+  });
+
+  it('draws a date or a duration as its serial, under the format it reads unless the column sets one', () => {
+    const [source, read] = typed(
+      '[{ name: d, type: date }, { name: t, type: duration }, { name: f, type: date, format: "d/m" }]',
+      'd,t,f\n2026-04-01,1:30,2026-04-01\n',
+    );
+    const drawn = sheet(source, read);
+    const at = (addr: string) => cellAt(drawn, addr as A1Addr);
+    expect([at('A1')?.value, at('A1')?.type, at('A1')?.format]).toEqual([
+      46113,
+      'date',
+      'yyyy-mm-dd',
+    ]);
+    expect([at('B1')?.value, at('B1')?.format]).toEqual([1.5 / 24, '[h]:mm:ss']);
+    expect(at('C1')?.format).toBeNull();
+  });
+
+  it('refuses a field the type cannot read, naming its row and column', () => {
+    const [source, read] = typed('[{ name: n, type: number }]', 'n\n1\nabc\n');
+    expect(said(source, read)).toEqual(['row 2 of column `n` cannot be read as `number`: `abc`']);
+  });
+});
+
+describe('what a layout needs data for', () => {
+  it('refuses `merge_equal` and `page_break_on` with no data to read', () => {
+    expect(
+      said(
+        laidOut(
+          '      - at: A1\n        rows: 2\n        columns: [{ name: a, merge_equal: true }]\n',
+        ),
+      ),
+    ).toEqual(['column `a` has `merge_equal`, but the layout reads no data to merge']);
+    expect(
+      said(
+        laidOut(
+          '      - at: A1\n        rows: 2\n        page_break_on: a\n        columns: [{ name: a }]\n',
+        ),
+      ),
+    ).toEqual(['the layout has a `page_break_on`, but reads no data to break on']);
+  });
+
+  it('breaks pages above each body row whose value differs from the row above', () => {
+    const source = laidOut(
+      '      - at: A2\n        page_break_on: a\n        values: [[x], [x], [y], [z]]\n        columns: [{ name: a, header: A }]\n',
+    );
+    expect(sheet(source).print?.breaks).toEqual([
+      { col: 1, row: 5 },
+      { col: 1, row: 6 },
+    ]);
+    expect(
+      said(
+        laidOut(
+          '      - at: A1\n        values: [[x]]\n        page_break_on: b\n        columns: [{ name: a }, { name: b, formula: "1" }]\n',
+        ),
+      ),
+    ).toEqual(['`b` must be a column the data fills (one without a `formula`)']);
+  });
+
+  it('refuses a header style list longer than the header is deep', () => {
+    expect(
+      said(
+        laidOut(
+          '      - at: A1\n        header_style: [x, y]\n        rows: 1\n        columns: [{ name: a, header: A }]\n',
+        ),
+      ),
+    ).toContain('`header_style` lists 2 styles, but the header is 1 rows deep');
   });
 });

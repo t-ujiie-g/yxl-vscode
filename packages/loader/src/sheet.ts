@@ -25,6 +25,7 @@ import {
   type Validation,
   VISIBILITIES,
 } from '@yxl-vscode/spec';
+import { readFreezeAt } from './anchor';
 import { readColumnBands, readRowBands } from './band';
 import { readCells, withoutLeadingEquals } from './cell';
 import { CODE } from './codes';
@@ -42,6 +43,7 @@ import {
   expectBool,
   expectText,
   findEntry,
+  isCleared,
   openEntries,
   optionalNumber,
   readEach,
@@ -49,6 +51,7 @@ import {
   scalarText,
 } from './read';
 import { readSparklines } from './sparkline';
+import { readStyleUse } from './style';
 import { readTables } from './table';
 import { ADDRESS, COLOR, RANGE, readAs, SHEET_NAME, spelling } from './template';
 import { about, entryOf, say, under } from './text';
@@ -134,7 +137,10 @@ function readSheet(site: Site): Sheet | null {
         merges = readMerges(here, entry.value, at, what);
         break;
       case 'freeze':
-        freeze = readAs(here, entry.value, under(what, 'freeze'), ADDRESS);
+        freeze =
+          entry.value.kind === 'map'
+            ? readFreezeAt(here, entry.value, under(what, 'freeze'))
+            : readAs(here, entry.value, under(what, 'freeze'), ADDRESS);
         break;
       case 'visibility':
         visibility = readAs(here, entry.value, under(what, 'visibility'), spelling(VISIBILITIES));
@@ -270,6 +276,19 @@ function readFormulaRange(site: Site): FormulaRange | null {
   const formula = expectText(here, written.value, under(what, 'formula'));
   if (at === null || formula === null) return null;
 
+  const styled = findEntry(entries, 'style');
+  const formatted = findEntry(entries, 'format');
+  const clearsFormat = formatted !== undefined && isCleared(formatted.value);
   const range = identify(here, opened.path, opened.node.span);
-  return { ...range, at, formula: withoutLeadingEquals(formula) };
+  return {
+    ...range,
+    at,
+    formula: withoutLeadingEquals(formula),
+    style: styled === undefined ? null : readStyleUse(here, styled.value, under(what, 'style')),
+    format:
+      formatted === undefined || clearsFormat
+        ? null
+        : expectText(here, formatted.value, under(what, 'format')),
+    clearsFormat,
+  };
 }

@@ -1,8 +1,8 @@
 import { reading } from '@yxl-vscode/diag';
-import { filePath, nodeId, rangeOf, type SheetName } from '@yxl-vscode/units';
+import { type A1Addr, filePath, nodeId, rangeOf, type SheetName } from '@yxl-vscode/units';
 import { describe, expect, it } from 'vitest';
 import { CODE } from './codes';
-import { addressesIn, REACH, sheetOf } from './compile';
+import { addressesIn, REACH, sheetOf, styleAt } from './compile';
 import type { DataReader } from './ctx';
 import { cell as at, codes, given, grid, sheet } from './harness';
 import { reaches } from './impact';
@@ -305,6 +305,17 @@ describe('a `formulas:` range', () => {
   it('answers for nothing outside it', () => {
     expect(at(spec, 'E37')).toBeNull();
     expect(at(spec, 'D501')).toBeNull();
+  });
+
+  it('dresses every cell it fills in its own look, over the bands', () => {
+    const styled = `${SALES}    columns:\n      - { at: D, style: { fill: "EEEEEE" } }\n    formulas:\n      - at: D2:D3\n        formula: "B2*C2"\n        style: { border: thin }\n        format: "0.0"\n`;
+    const said = (where: string) => resolve(styleAt(sheet(styled), where as A1Addr));
+    expect([said('D3').fill, said('D3')['border.top.style'], said('D3').format]).toEqual([
+      'EEEEEE',
+      'thin',
+      '0.0',
+    ]);
+    expect(said('D4')['border.top.style']).toBeUndefined();
   });
 });
 

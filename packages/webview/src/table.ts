@@ -143,14 +143,13 @@ function mergedIn(sheet: DrawnSheet): Merged {
 
         const before = widthAcross(sheet, merge.left, left - 1);
         const wide = widthAcross(sheet, merge.left, merge.right);
-        const whole =
-          before === 0 && wide === cols.reduce((sum, col) => sum + widthOf(sheet, col), 0);
+        const drawn = cols.reduce((sum, col) => sum + widthOf(sheet, col), 0);
         anchored.set(cellKey(left, top), {
           ...merge,
           rows: rows.length,
           cols: cols.length,
           height,
-          cut: whole ? null : { before, wide },
+          cut: before === 0 && wide === drawn ? null : { before, wide, drawn },
         });
         for (const row of rows) {
           for (const col of cols) if (row !== top || col !== left) covered.add(cellKey(col, row));
@@ -177,12 +176,18 @@ function shownIn(
   return lines.filter((at) => at >= first && at <= last && sizeOf(at) > 0);
 }
 
-/** The runs of lines drawn side by side, which a pad with any size to it breaks. */
+/** The runs of lines drawn side by side, which a pad with any size to it breaks, as does the freeze line. */
 function stretchesOf(along: readonly Along[]): number[][] {
   const runs: number[][] = [[]];
+  let stays: boolean | null = null;
   for (const one of along) {
-    if (!('pad' in one)) runs[runs.length - 1]?.push(one.at);
-    else if (one.pad > 0) runs.push([]);
+    if ('pad' in one) {
+      if (one.pad > 0) runs.push([]);
+      continue;
+    }
+    if (stays !== null && stays !== one.stays) runs.push([]);
+    stays = one.stays;
+    runs[runs.length - 1]?.push(one.at);
   }
 
   return runs.filter((run) => run.length > 0);
@@ -489,11 +494,11 @@ function cellAt(
     sheet.protect !== null,
   );
   if (drawn.querySelector('.spill') !== null) drawn.classList.add('spilling');
-  const right = gridline(
-    here?.style,
-    held.get(cellKey((merge?.right ?? col) + 1, row))?.style,
-    'right',
-  );
+  // A piece of a merge another piece continues has no edge there, as the one merged cell has none.
+  const continued = merge?.cut != null && merge.cut.before + merge.cut.drawn < merge.cut.wide;
+  const right = continued
+    ? null
+    : gridline(here?.style, held.get(cellKey((merge?.right ?? col) + 1, row))?.style, 'right');
   const bottom = gridline(
     here?.style,
     held.get(cellKey(col, (merge?.bottom ?? row) + 1))?.style,

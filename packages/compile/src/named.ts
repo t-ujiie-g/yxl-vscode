@@ -1,13 +1,26 @@
-import type { Anchor, ByMeaning, Named, ScalarValue, SpecNode, Templated } from '@yxl-vscode/spec';
+import type { Saying } from '@yxl-vscode/diag';
+import type {
+  Anchor,
+  ByMeaning,
+  Finder,
+  LayoutPart,
+  Named,
+  ScalarValue,
+  SpecNode,
+  Templated,
+} from '@yxl-vscode/spec';
 import {
   type A1Addr,
   addrAt,
+  type CellRef,
   parseA1Range,
   parseQualifiedRange,
   type QualifiedAddr,
   type Rect,
+  rangeOf,
   rectOf,
   type SheetName,
+  within,
 } from '@yxl-vscode/units';
 import { address } from './cell';
 import { CODE } from './codes';
@@ -47,8 +60,6 @@ export function anchored(ctx: Ctx, at: Anchor, node: SpecNode, sheet: SheetName)
 /** Every defined name the named layouts make: each one's table, and each column's body (`docs/spec.md` §25). */
 export function definedNames(ctx: Ctx): CompiledName[] {
   return [...ctx.layouts].flatMap(([name, placed]) => {
-    const { left, right } = edges(placed);
-    const top = placed.depth > 0 ? placed.bodyFirst - 1 : placed.bodyFirst;
     const body = (col: number) => ({
       top: placed.bodyFirst,
       bottom: placed.bodyLast,
@@ -56,7 +67,7 @@ export function definedNames(ctx: Ctx): CompiledName[] {
       right: col,
     });
     return [
-      { name, sheet: placed.sheet, rect: { top, bottom: placed.bodyLast, left, right } },
+      { name, sheet: placed.sheet, rect: tableOf(placed) },
       ...placed.columns.map((column) => ({
         name: `${name}.${column.name}`,
         sheet: placed.sheet,
@@ -102,7 +113,55 @@ export function covered(
   return rectOf(read);
 }
 
-/** An override's cell given by meaning: the named layout's column, in the one row `where` finds or the `row`th. */
+/** The named layout on `sheet`, or `null` with the reason reported (`docs/spec.md` §25). */
+export function layoutHere(
+  ctx: Ctx,
+  name: string,
+  sheet: SheetName,
+  node: SpecNode,
+): Placed | null {
+  const placed = ctx.layouts.get(name);
+  if (placed === undefined) {
+    reject(ctx, CODE.unknownLayout, say('compile.no-such-layout', { name }), node);
+    return null;
+  }
+  if (placed.sheet !== sheet) {
+    const message = say('compile.layout-on-another-sheet', { name, sheet: placed.sheet });
+    reject(ctx, CODE.unknownLayout, message, node);
+    return null;
+  }
+  return placed;
+}
+
+/** The rows of a layout's title, header, body or footer; `null` where it has none. */
+export function partRows(placed: Placed, part: LayoutPart): { first: number; last: number } | null {
+  const rows: Record<LayoutPart, { first: number; last: number }> = {
+    title: { first: placed.top, last: placed.headerFirst - 1 },
+    header: { first: placed.headerFirst, last: placed.bodyFirst - 1 },
+    body: { first: placed.bodyFirst, last: placed.bodyLast },
+    footer: { first: placed.bodyLast + 1, last: placed.lastRow },
+  };
+  const found = rows[part];
+  return found.first <= found.last ? found : null;
+}
+
+/** A layout's table: its bottom header row, or its first body row, down to its last body row. */
+export function tableOf(placed: Placed): Rect {
+  const { left, right } = edges(placed);
+  const top = placed.depth > 0 ? placed.bodyFirst - 1 : placed.bodyFirst;
+  return { top, bottom: placed.bodyLast, left, right };
+}
+
+/** All of a layout: its title and header rows, the body and the footer. */
+export function extentOf(placed: Placed): Rect {
+  const { left, right } = edges(placed);
+  return { top: placed.top, bottom: placed.lastRow, left, right };
+}
+
+/**
+ * A cell given by meaning: a named layout's column in the row its finder names,
+ * or its title. One a merge covers is refused (`docs/spec.md` §25).
+ */
 export function byMeaning(ctx: Ctx, at: ByMeaning, node: SpecNode): QualifiedAddr | null {
   const placed = ctx.layouts.get(at.layout);
   if (placed === undefined) {
@@ -110,26 +169,86 @@ export function byMeaning(ctx: Ctx, at: ByMeaning, node: SpecNode): QualifiedAdd
     return null;
   }
 
-  const column = placed.columns.find((one) => one.name === at.column);
-  if (column === undefined) {
-    reject(ctx, CODE.unknownColumn, say('compile.no-such-column', { name: at.column }), node);
+  const cell = locate(ctx, placed, at, node);
+  if (cell === null) return null;
+
+  const inside = (ctx.merged.get(placed.layout.id) ?? []).find(
+    (rect) => within(cell, rect) && (cell.col !== rect.left || cell.row !== rect.top),
+  );
+  if (inside !== undefined) {
+    reject(ctx, CODE.badLayout, say('compile.inside-a-merge', { range: rangeOf(inside) }), node);
+    return null;
+  }
+  return { sheet: placed.sheet, at: addrAt(cell) };
+}
+
+function locate(ctx: Ctx, placed: Placed, at: ByMeaning, node: SpecNode): CellRef | null {
+  const { finds } = at;
+  if (finds.kind === 'title') {
+    if (placed.headerFirst > placed.top) return { col: edges(placed).left, row: placed.top };
+    reject(ctx, CODE.badLayout, say('compile.no-title'), node);
     return null;
   }
 
-  const index =
-    at.where === null
-      ? counted(ctx, placed, at.row ?? 0, node)
-      : matched(ctx, placed, at.where, node);
-  if (index === null) return null;
+  const column = placed.columns.find((one) => one.name === at.column);
+  if (column === undefined) {
+    reject(ctx, CODE.unknownColumn, say('compile.no-such-column', { name: at.column ?? '' }), node);
+    return null;
+  }
 
-  return { sheet: placed.sheet, at: addrAt({ col: column.col, row: placed.bodyFirst + index }) };
+  const row = rowOf(ctx, placed, finds, node);
+  return row === null ? null : { col: column.col, row };
 }
 
-function counted(ctx: Ctx, placed: Placed, row: number, node: SpecNode): number | null {
-  const rows = placed.bodyLast - placed.bodyFirst + 1;
-  if (Number.isInteger(row) && row >= 1 && row <= rows) return row - 1;
+function rowOf(
+  ctx: Ctx,
+  placed: Placed,
+  finds: Exclude<Finder, { kind: 'title' }>,
+  node: SpecNode,
+): number | null {
+  switch (finds.kind) {
+    case 'where': {
+      const index = matched(ctx, placed, finds.pairs, node);
+      return index === null ? null : placed.bodyFirst + index;
+    }
+    case 'row': {
+      const rows = placed.bodyLast - placed.bodyFirst + 1;
+      const said = say('compile.no-such-body-row', { row: finds.count, rows });
+      return counted(ctx, placed.bodyFirst, finds.count, rows, said, node);
+    }
+    case 'header': {
+      const rows = placed.depth;
+      const said =
+        rows === 0
+          ? say('compile.no-such-part', { part: 'header', name: placed.layout.name ?? '' })
+          : say('compile.no-such-header-row', { row: finds.count, rows });
+      return counted(ctx, placed.headerFirst, finds.count, rows, said, node);
+    }
+    case 'footer': {
+      const rows = placed.lastRow - placed.bodyLast;
+      if (rows === 0) {
+        reject(ctx, CODE.badLayout, say('compile.no-footer'), node);
+        return null;
+      }
+      if (finds.count === 'last') return placed.lastRow;
+      const said = say('compile.no-such-footer-row', { row: finds.count, rows });
+      return counted(ctx, placed.bodyLast + 1, finds.count, rows, said, node);
+    }
+  }
+}
 
-  reject(ctx, CODE.badLayout, say('compile.no-such-body-row', { row, rows }), node);
+/** The `count`th of `rows` rows from `first`, or `null` with `said` reported. */
+function counted(
+  ctx: Ctx,
+  first: number,
+  count: number,
+  rows: number,
+  said: Saying,
+  node: SpecNode,
+): number | null {
+  if (Number.isInteger(count) && count >= 1 && count <= rows) return first + count - 1;
+
+  reject(ctx, CODE.badLayout, said, node);
   return null;
 }
 

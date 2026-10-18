@@ -70,6 +70,15 @@ describe('a row inserted', () => {
     expect(done).toContain('merges: [A7:B7]');
   });
 
+  it('moves a layout above which the freeze and a row band are given, and leaves both as written', () => {
+    const spec = `${SALES}    freeze: { layout: t }\n    rows:\n      - { at: { layout: t, part: header }, height: 20 }\n    layouts:\n      - { at: A6, name: t, rows: 1, columns: [{ name: a, header: A }] }\n`;
+    const done = drawn(spec, row(5));
+
+    expect(done).toContain('freeze: { layout: t }');
+    expect(done).toContain('{ at: { layout: t, part: header }, height: 20 }');
+    expect(done).toContain('at: A7');
+  });
+
   it('says so where nothing it reaches moves', () => {
     expect(drawn(`${SALES}    cells:\n      A1: 1\n`, row(9))).toBe(
       'refused: nothing here moves when row 9 is drawn',
@@ -193,6 +202,11 @@ describe('what else names a place, moved with the line (#206)', () => {
 
   it.each([
     ['a note', '    comments:\n      A3: "check this"\n', '      A4: "check this"\n'],
+    [
+      'a note written as a list',
+      '    comments:\n      - { at: A3, text: "check this" }\n',
+      '      - { at: A4, text: "check this" }\n',
+    ],
     ['a link', '    links:\n      A3: { to: "Sales!B3" }\n', '      A4: { to: "Sales!B4" }\n'],
     [
       'a rule, its range and its formula',

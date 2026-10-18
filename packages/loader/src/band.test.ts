@@ -74,6 +74,20 @@ describe('a row band', () => {
     expect(codes('    rows:\n      - at: 4-2\n')).toEqual([CODE.badRow]);
   });
 
+  it('reads a part of a layout, and refuses one a layout does not have', () => {
+    expect(
+      rows('      - at: { layout: stores, part: title }\n        height: 24\n')[0]?.at,
+    ).toEqual({
+      kind: 'part',
+      layout: 'stores',
+      part: 'title',
+    });
+    expect(codes('    rows:\n      - at: { layout: stores, part: side }\n')).toEqual([
+      CODE.unknownSpelling,
+    ]);
+    expect(codes('    rows:\n      - at: { layout: stores }\n')).toEqual([CODE.missingKey]);
+  });
+
   it('has no `width`, which belongs to a column', () => {
     expect(codes('    rows:\n      - at: 1\n        width: 18\n')).toEqual([CODE.unknownKey]);
   });

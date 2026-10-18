@@ -33,7 +33,17 @@ import {
   refused,
 } from './direct';
 import type { Candidate } from './resolve';
-import { along, grown, handWritten, held, moved, ownSheet, point, shifting } from './shift';
+import {
+  along,
+  followsALayout,
+  grown,
+  handWritten,
+  held,
+  moved,
+  ownSheet,
+  point,
+  shifting,
+} from './shift';
 import { say } from './text';
 
 /**
@@ -250,7 +260,7 @@ function writing(
     );
   }
 
-  if (sheet.freeze !== null && of.at(cellOf(sheet.freeze)) !== null) {
+  if (sheet.freeze !== null && !followsALayout(own) && of.at(cellOf(sheet.freeze)) !== null) {
     const at = sheet.freeze;
     const does = of.at(cellOf(at));
     put(located(sheet.node, read), (path) =>

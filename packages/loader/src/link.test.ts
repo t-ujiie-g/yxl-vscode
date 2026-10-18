@@ -54,3 +54,28 @@ describe('a link', () => {
     expect(codes('      C3: { url: https://example.com, hint: no }\n')).toEqual([CODE.unknownKey]);
   });
 });
+
+describe('links written as a list', () => {
+  it('read each entry at its own `at:`, an A1 cell or a cell by meaning', () => {
+    const read = loaded(
+      '      - { at: A2, url: https://example.com }\n      - { at: { layout: stores, title: true }, to: "S!A1", tip: top }\n',
+    ).doc?.sheets[0]?.links;
+    expect(read?.map((one) => [one.at, one.listed, one.target, one.tip])).toEqual([
+      ['A2', true, { kind: 'url', text: 'https://example.com' }, null],
+      [
+        { kind: 'layout', layout: 'stores', column: null, finds: { kind: 'title' } },
+        true,
+        { kind: 'to', text: 'S!A1' },
+        'top',
+      ],
+    ]);
+  });
+
+  it('need an `at:`, exactly one target, and no key of their own invention', () => {
+    expect(codes('      - { url: https://example.com }\n')).toEqual([CODE.missingKey]);
+    expect(codes('      - { at: A2 }\n')).toEqual([CODE.missingKey]);
+    expect(codes('      - { at: A2, url: https://example.com, hint: no }\n')).toEqual([
+      CODE.unknownKey,
+    ]);
+  });
+});

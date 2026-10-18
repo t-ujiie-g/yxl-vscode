@@ -28,6 +28,7 @@ function printSaid(one: CompiledPrint): string {
     one.orientation ?? '',
     scaled,
     one.margins === null ? '' : `margins ${inches(one.margins)}`,
+    one.titles === null ? '' : `rows ${repeated(one.titles)} repeated atop every page`,
     one.breaks.length === 0 ? '' : `${one.breaks.length} page break(s)`,
   ].filter((piece) => piece !== '');
 
@@ -38,6 +39,10 @@ function printSaid(one: CompiledPrint): string {
 
   const rest = running.length === 0 ? '' : ` Its ${running.join(' and ')}.`;
   return `${said.join(', ')}.${rest} The preview outlines the area and the breaks; it does not paginate.`;
+}
+
+function repeated({ first, last }: { first: number; last: number }): string {
+  return first === last ? String(first) : `${first}-${last}`;
 }
 
 /** How many pages an axis is squeezed into; `0` and unset both leave it alone. */

@@ -6,9 +6,9 @@ beside its text, and translates grid gestures back into edits on the spec — no
 into a workbook.
 
 > **Status: published, and the everyday gestures write back.**
-> [**`t-ujiie-g.yxl-vscode`**][listing] 0.4.1, targeting yxl 0.6.2. *yxl: Open
-> the Grid Beside the Spec* draws a spec as a grid next to the text and redraws
-> it as you type. Under it: YAML parses into a span-carrying tree, edits apply
+> [**`t-ujiie-g.yxl-vscode`**][listing] 0.4.1, targeting yxl 0.6.2; `main`
+> targets yxl 0.7.0. *yxl: Open the Grid Beside the Spec* draws a spec as a grid
+> next to the text and redraws it as you type. Under it: YAML parses into a span-carrying tree, edits apply
 > as minimal byte patches that leave every untouched byte alone, a whole spec —
 > `$include`, `csv:`, and all — reads into a model of itself, and that model
 > projects to a grid where every value and every property of every look says
@@ -84,16 +84,16 @@ written from the code, so it cannot drift from it.
 | `layouts` | **edited** | drawn whole; a row typed back into `values:` or its CSV, a column dragged wider |
 | `merges` | **edited** | merged and taken apart, losing no value either way |
 | `visibility` | **edited** | hidden and shown from the tab; `very_hidden` is drawn, not offered |
-| `freeze` | **edited** | set at the selected cell, and honoured while scrolling |
+| `freeze` | **edited** | set at the selected cell, and honoured while scrolling; one at a layout follows it |
 | `split` | drawn | the splitter drawn where it sits; the panes do not come apart |
 | `gridlines` | **edited** | switched from the tab; the key goes away at Excel default |
 | `tab_color` | **edited** | picked from the tab |
-| `print` | drawn | the area outlined and the page breaks drawn; the rest said under the grid |
+| `print` | drawn | the area outlined and the page breaks drawn, a layout's included; the rest said under the grid |
 | `filter` | **edited** | put on the header row and taken off; criteria saved with it said on the header |
 | `validations` | **edited** | a `list:` written over a selection; every kind read and said |
-| `links` | **edited** | written, followed and taken off; the kind is asked, never guessed |
+| `links` | **edited** | written, followed and taken off; the kind is asked, never guessed; a list is drawn, not written |
 | `conditional` | drawn | every kind of rule applied in the grid, over the computed values |
-| `comments` | **edited** | written in a box over the cell, and shown on Excel's red corner |
+| `comments` | **edited** | written in a box over the cell, and shown on Excel's red corner; a list is drawn, not written |
 | `tables` | **edited** | made over a selection and taken apart; drawn as Excel bands one |
 | `charts` | **edited** | put in over a selection, moved, resized; sketched, never rendered |
 | `images` | **edited** | put in from a file, moved, scaled by a drag on the corner |
@@ -125,7 +125,7 @@ Host.
 
 The **Build** and **Check** buttons beside it need the `yxl` compiler on your
 `PATH`, or `yxl.path` set to it, and so does making a new spec; the grid itself
-needs nothing. This editor targets **yxl 0.6.2** — an older or newer compiler is
+needs nothing. This editor targets **yxl 0.7.0** — an older or newer compiler is
 a warning rather than a refusal, and a release says which one it was built
 against. Where the one it finds is older, it offers to run yxl's own installer
 for the targeted version; nothing is installed until you say so.
