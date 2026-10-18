@@ -32,6 +32,11 @@ the update, as before.
   whole and run past the columns it covers. A layout's `title` under
   `freeze: { layout, columns }` is where this showed.
 
+- **A later look replaces an earlier one, as the workbook does.** A `cells:`
+  entry or an override that gives a `style` or a `format` over a cell another
+  construct wrote now shows only its own look over the bands; the grid used to
+  keep the earlier look too.
+
 ## 0.4.1 — 2026-10-15
 
 Targets **yxl 0.6.2**, which this release moves to from 0.6.1: an older yxl is

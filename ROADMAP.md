@@ -2144,10 +2144,14 @@ reference; ADR-057 is how they project.
       or the title, and `style`/`format` on a `formulas:` range. Written as
       they are by a line; a grid note or link is refused on a sheet that
       lists them (ADR-061) *(2026-10-19)*
-- [ ] **An override's `style` replaces the cell's style**, as yxl builds it:
-      `{ style: { font: { italic: true } } }` over a bold, filled cell leaves
-      it italic alone, where the grid draws all three. Found by the 0.7.0
-      Tier 3 fixture; older than the move
+- [x] **A later look replaces an earlier one whole**, as yxl builds it: a
+      `cells:` entry or an override that gives a `style` or a `format`
+      replaces the look the construct before it gave, and one that gives only
+      a value keeps it (ADR-062). Found by the 0.7.0 Tier 3 fixture *(2026-10-19)*
+- [ ] **Upstream:** an override that gives a look also drops the bands under
+      the cell in yxl, where a `cells:` entry keeps them — reported as
+      [yxl#137](https://github.com/t-ujiie-g/yxl/issues/137). This editor keeps
+      the bands until it is settled
 
 ### Taken out (2026-08-23)
 Two phases that were here are not any more, and not because they were hard:
@@ -3700,6 +3704,19 @@ gave. Notes and links are the exception: written as a list they have no key a
 cell's address can find, so adding or changing one from the grid is refused
 with the reason, rather than written into the list in the mapping's shape.
 
+### ADR-062 — A cell's look is one facet, replaced whole by the construct that last gives one
+**Accepted** 2026-10-19. Narrows ADR-005; the layer list stays.
+
+A cell has two facets a later construct can replace: what it holds, and how it
+looks — its `style` and `format` together. yxl writes the later one's look in
+place of the earlier one's, as a later band replaces an earlier band's look
+whole (`docs/spec.md` §4), and a construct that gives only a value leaves the
+look alone. The grid used to append the later look to the earlier, so a
+`format:` over a bold header kept the bold the workbook drops. Now the layers a
+cell carries are those of the last construct that gave a look; the bands under
+the cell are still laid under it, per attribute, as §4 says. ADR-005's layer
+list is unchanged in kind: it is shorter where a look was replaced.
+
 ## 8. Open questions
 
 - **Q1 — `cells:` A1 keys and row insertion.** ✅ *Answered 2026-08-23.*
@@ -4019,6 +4036,23 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-10-19 — A later look replaces an earlier one whole
+
+Found by the 0.7.0 Tier 3 fixture, and older than it: where two constructs wrote
+one cell, the grid laid the later one's look over the earlier one's. yxl
+replaces it, as a later band replaces a band's look (ADR-062).
+
+- A `cells:` entry after a layout, a `data:` block or another entry, and an
+  override, that gives a `style` or a `format` now replaces the look the cell
+  had; one that gives only a value keeps it. A layout cell drawn over an
+  earlier one replaces its look only where it gives one.
+- The bands under the cell still show through. yxl drops them under an
+  override's look but not under a `cells:` entry's, which is reported upstream
+  as yxl#137 and left as an open row.
+- `tests/fixtures/layouts/report.yxl.yaml` adds both cases, and Tier 3 matches
+  yxl on them; on the old layering it fails at the first.
+- 2905 → 2908 tests.
 
 ### 2026-10-19 — The pin moves to yxl 0.7.0
 

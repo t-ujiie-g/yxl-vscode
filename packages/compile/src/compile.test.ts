@@ -400,10 +400,16 @@ describe('an override, which is the last thing to speak of a cell', () => {
     expect([at(off, 'A2')?.value, at(off, 'A2')?.format]).toEqual([1, null]);
   });
 
-  it('leaves the format alone where it says nothing about one', () => {
+  it('replaces the whole look where it gives a style, the format with it, as a later key does', () => {
     const bold = `${spec}overrides:\n  - at: Sales!A2\n    style: { font: { bold: true } }\n`;
 
-    expect(at(bold, 'A2')?.format).toBe('0.00');
+    expect(at(bold, 'A2')?.format).toBeNull();
+  });
+
+  it('leaves the look alone where it gives only a value', () => {
+    const valued = `${spec}overrides:\n  - at: Sales!A2\n    value: 2\n`;
+
+    expect([at(valued, 'A2')?.value, at(valued, 'A2')?.format]).toEqual([2, '0.00']);
   });
 });
 

@@ -121,7 +121,7 @@ export function compileSheet(ctx: Ctx, sheet: Sheet): Drafted {
       const drawn = draw(ctx, placed);
       for (const cell of drawn.cells) {
         const under = cells.get(cell.at);
-        cells.set(cell.at, under === undefined ? cell : layer(under, cell, DRAWS));
+        cells.set(cell.at, under === undefined ? cell : layer(under, cell, drawnOver(cell)));
       }
       fills.push(...drawn.fills);
       for (const fill of drawn.fills) written.set(fill, layout);
@@ -185,8 +185,10 @@ function kept<T, U>(written: readonly T[], read: (one: T) => U | null): U[] {
   return written.map(read).filter((one): one is U => one !== null);
 }
 
-/** A layout writes a cell as the hand-written key would: what it holds, and the look laid over what was there. */
-const DRAWS: Spoke = { holds: true, format: false, style: true };
+/** A layout writes a cell as the hand-written key would: what it holds, and its look where it gives one. */
+function drawnOver(cell: CompiledCell): Spoke {
+  return { holds: true, looks: cell.style.length > 0 || cell.format !== null };
+}
 
 function placeFill(ctx: Ctx, range: FormulaRange): CompiledFill | null {
   const spelled = text(ctx, range.at, range);

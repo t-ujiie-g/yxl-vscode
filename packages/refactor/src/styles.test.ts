@@ -168,7 +168,7 @@ overrides:
   });
 
   it('counts a cell and an exception together, since one name serves both', () => {
-    const source = `${MARKED.replace('      A3: { value: 3 }', '      A3: { value: 3, style: { font: { italic: true }, fill: "FCE4D6" } }')}`;
+    const source = `${MARKED.replace('      A3: { value: 3 }\n', '      A3: { value: 3 }\n      A4: { value: 4, style: { font: { italic: true }, fill: "FCE4D6" } }\n')}`;
     const [one] = gatherStyles(spec(source));
 
     expect(one?.at.length).toBe(4);

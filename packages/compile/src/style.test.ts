@@ -143,11 +143,24 @@ describe('a border', () => {
   });
 });
 
-describe('an override', () => {
-  it('lays its look over everything else', () => {
+describe('a later look over an earlier one', () => {
+  const BANDED = `${SHEET}    columns:\n      - { at: A, style: { font: { italic: true } } }\n`;
+
+  it("replaces an earlier key's look whole, and the bands stay under it", () => {
+    const source = `${BANDED}    layouts:\n      - { at: A1, header_style: { font: { bold: true } }, rows: 1, columns: [{ name: a, header: A }, { name: b, header: B }] }\n    cells:\n      A1: { style: { fill: "FFFF00" } }\n      B1: { format: "0.0" }\n`;
+    expect(looks(source, 'A1')).toEqual({ 'font.italic': true, fill: 'FFFF00' });
+    expect(looks(source, 'B1')).toEqual({ format: '0.0' });
+  });
+
+  it('keeps the earlier look where the later key gives only a value', () => {
+    const source = `${SHEET}    layouts:\n      - { at: A1, header_style: { font: { bold: true } }, rows: 1, columns: [{ name: a, header: A }] }\n    cells:\n      A1: X\n`;
+    expect(looks(source, 'A1')).toEqual({ 'font.bold': true });
+  });
+
+  it('is an override too, which replaces the look the cell had', () => {
     const source = `${SHEET}    cells:\n      A1: { value: 1, style: { font: { bold: true } } }\noverrides:\n  - at: Sales!A1\n    style: { fill: "FFFF00" }\n`;
-    expect(layers(source, 'A1').map((layer) => layer.through)).toEqual(['cell', 'override']);
-    expect(looks(source, 'A1')).toEqual({ 'font.bold': true, fill: 'FFFF00' });
+    expect(layers(source, 'A1').map((layer) => layer.through)).toEqual(['override']);
+    expect(looks(source, 'A1')).toEqual({ fill: 'FFFF00' });
   });
 });
 
