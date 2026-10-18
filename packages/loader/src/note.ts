@@ -4,7 +4,7 @@ import { MODELED_KEYS, type Note } from '@yxl-vscode/spec';
 import { readListed } from './anchor';
 import { CODE } from './codes';
 import { type Ctx, identify, keyOf, reject } from './ctx';
-import { expectText, findEntry, type Opened, openEntries, rejectUnknownKey } from './read';
+import { expectText, findEntry, type Opened, open, openEntries } from './read';
 import { ADDRESS, readTextAs } from './template';
 import { about, entryOf, say, under } from './text';
 
@@ -41,13 +41,8 @@ function readNote(ctx: Ctx, entry: Entry, path: Path): Note | null {
     return text === null ? null : { ...site, at, listed: false, text, author: null };
   }
 
-  const opened = openEntries(ctx, entry.value, [], what);
+  const opened = open({ ctx, node: entry.value, path: [] }, what, MODELED_KEYS.note);
   if (opened === null) return null;
-  for (const one of opened.entries) {
-    if (!MODELED_KEYS.note.has(keyOf(one))) {
-      rejectUnknownKey(opened.ctx, one, what, MODELED_KEYS.note);
-    }
-  }
 
   const written = fromEntries(opened, what);
   return written === null ? null : { ...site, at, listed: false, ...written };

@@ -4037,6 +4037,33 @@ than widening it silently.
 
 ## 11. Living changelog
 
+### 2026-10-19 — Refactor after the 0.7.0 move
+
+A pass over the day's work, the lenses of `AGENTS.md` §8 in order.
+
+- **Constants.** Excel's grid size is `SHEET_ROWS` and `SHEET_COLUMNS` in
+  `units`, where `units`, `compile` and `evaluate` each spelt it on their own.
+  The cap on a body look's blanks is `REACH`, now in `compile/grid.ts`, where
+  it was a second 50 000.
+- **Duplicates.** `anchored` finds its layout through `layoutHere`, as every
+  key that names a layout on its sheet now does. A drawn layout's title,
+  header and footer rows come from `partRows`, which row bands also read. A
+  note's and a link's expanded form report unknown keys through `open`, not a
+  loop of their own. `compile.layout-not-yet`, said nowhere since 0.5.0, is
+  gone.
+- **Splitting.** `compile/sheet.ts` (533 lines) gives notes, links,
+  validations, tables and the filter to `compile/decorations.ts`.
+- **Tests.** A freeze that freezes nothing, a missing title or footer, and a
+  footer row past the footer each have a case.
+- **Comments.** A doc that cited `#122` named yxl's issue as if it were this
+  repository's; the reference is gone.
+- **CI.** `tests/corpus.test.ts`'s removal sweep, two whole-file patches per
+  entry, outlasted vitest's 5 s default on a runner once yxl 0.7's `subtotals`
+  grew to 244 entries (1.3 s locally). It has a 30 s timeout; the work is
+  linear in the file.
+- 2908 → 2911 tests. Comment shape: export 1057 / 2275 (avg 2.2), private
+  694 / 694 (1.0), inline 152 / 237 (1.6), 0 over.
+
 ### 2026-10-19 — A later look replaces an earlier one whole
 
 Found by the 0.7.0 Tier 3 fixture, and older than it: where two constructs wrote

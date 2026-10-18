@@ -31,6 +31,8 @@ export {
   rangeOf,
   rectOf,
   rowsOf,
+  SHEET_COLUMNS,
+  SHEET_ROWS,
   within,
 } from './grid';
 export {

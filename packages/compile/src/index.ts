@@ -4,7 +4,6 @@ export {
   cellAt,
   compile,
   type Options,
-  REACH,
   sheetOf,
   styleAt,
 } from './compile';
@@ -40,6 +39,7 @@ export type {
   CompiledValidation,
   DeclaredStyle,
 } from './grid';
+export { REACH } from './grid';
 export { type FullAddr, reaches } from './impact';
 export { namesParam } from './params';
 export { type CellProvenance, type DataOrigin, type FacetOrigin, through } from './provenance';

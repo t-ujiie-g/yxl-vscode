@@ -60,7 +60,6 @@ export type Says = {
   'compile.order-leaves-out': { value: string };
   'compile.no-such-layout': { name: string };
   'compile.layout-on-another-sheet': { name: string; sheet: string };
-  'compile.layout-not-yet': { name: string };
   'compile.layout-named-twice': { name: string };
   'compile.gap-must-be-whole': Nothing;
   'compile.no-such-body-row': { row: number; rows: number };
@@ -165,8 +164,6 @@ const en: Words<Says> = {
   'compile.no-such-layout': ({ name }) => `no layout is named \`${name}\``,
   'compile.layout-on-another-sheet': ({ name, sheet }) =>
     `the layout \`${name}\` is on the sheet \`${sheet}\`, not this one`,
-  'compile.layout-not-yet': ({ name }) =>
-    `the layout \`${name}\` is declared after the layout that follows it`,
   'compile.layout-named-twice': ({ name }) => `\`${name}\` is already the name of another layout`,
   'compile.gap-must-be-whole': () => '`gap` must be a whole number of rows, 0 or more',
   'compile.no-such-body-row': ({ row, rows }) =>
@@ -285,8 +282,6 @@ const ja: Words<Says> = {
   'compile.no-such-layout': ({ name }) => `\`${name}\` という名前のレイアウトはありません`,
   'compile.layout-on-another-sheet': ({ name, sheet }) =>
     `レイアウト \`${name}\` はこのシートではなく \`${sheet}\` にあります`,
-  'compile.layout-not-yet': ({ name }) =>
-    `レイアウト \`${name}\` は、それに続くレイアウトより後に宣言されています`,
   'compile.layout-named-twice': ({ name }) => `\`${name}\` は既に別のレイアウトの名前です`,
   'compile.gap-must-be-whole': () => '`gap` は 0 以上の整数の行数である必要があります',
   'compile.no-such-body-row': ({ row, rows }) =>

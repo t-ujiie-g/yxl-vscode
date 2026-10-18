@@ -36,19 +36,8 @@ import { say } from './text';
 export function anchored(ctx: Ctx, at: Anchor, node: SpecNode, sheet: SheetName): A1Addr | null {
   if (typeof at === 'string' || at.kind === 'template') return address(ctx, at, node);
 
-  const placed = ctx.layouts.get(at.layout);
-  if (placed === undefined) {
-    reject(ctx, CODE.unknownLayout, say('compile.no-such-layout', { name: at.layout }), node);
-    return null;
-  }
-  if (placed.sheet !== sheet) {
-    const message = say('compile.layout-on-another-sheet', {
-      name: at.layout,
-      sheet: placed.sheet,
-    });
-    reject(ctx, CODE.unknownLayout, message, node);
-    return null;
-  }
+  const placed = layoutHere(ctx, at.layout, sheet, node);
+  if (placed === null) return null;
   if (!Number.isInteger(at.gap) || at.gap < 0) {
     reject(ctx, CODE.badLayout, say('compile.gap-must-be-whole'), node);
     return null;

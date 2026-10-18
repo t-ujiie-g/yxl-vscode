@@ -1,6 +1,10 @@
 import type { A1Addr, A1Range } from './a1';
 import type { ColumnSpan, RowSpan } from './band';
 
+/** Excel's grid: rows run to 1048576, columns to XFD. */
+export const SHEET_ROWS = 1_048_576;
+export const SHEET_COLUMNS = 16_384;
+
 /** A cell as two 1-based numbers: `A1` is column 1, row 1. */
 export interface CellRef {
   readonly col: number;
