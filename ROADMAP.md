@@ -2148,10 +2148,10 @@ reference; ADR-057 is how they project.
       `cells:` entry or an override that gives a `style` or a `format`
       replaces the look the construct before it gave, and one that gives only
       a value keeps it (ADR-062). Found by the 0.7.0 Tier 3 fixture *(2026-10-19)*
-- [ ] **Upstream:** an override that gives a look also drops the bands under
-      the cell in yxl, where a `cells:` entry keeps them — reported as
-      [yxl#137](https://github.com/t-ujiie-g/yxl/issues/137). This editor keeps
-      the bands until it is settled
+- [x] **Upstream:** an override that gave a look also dropped the bands under
+      the cell in yxl, where a `cells:` entry kept them — reported as
+      [yxl#137](https://github.com/t-ujiie-g/yxl/issues/137), fixed in yxl
+      0.7.1 and followed here with the pin *(2026-10-19)*
 
 ### Taken out (2026-08-23)
 Two phases that were here are not any more, and not because they were hard:
@@ -4036,6 +4036,16 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-10-19 — The pin moves to yxl 0.7.1
+
+yxl 0.7.1 settles yxl#137 as this editor already drew it: an override's
+`style` or `format` replaces the cell's own look whole, and the column and row
+bands stay under it (`docs/spec.md` §23). Nothing in the projection changes.
+The pin, the READMEs and the changelog follow; the shipped schema is
+byte-identical to 0.7.0's. `tests/fixtures/layouts/report.yxl.yaml` gains a
+style override on a banded cell, which Tier 3 now matches against yxl, where
+0.7.0 would have dropped the band.
 
 ### 2026-10-19 — Refactor after the 0.7.0 move
 

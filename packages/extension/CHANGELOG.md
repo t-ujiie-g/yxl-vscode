@@ -6,7 +6,7 @@ until yxl's v1.0, so the pinned compiler is part of what a version means
 
 ## Unreleased
 
-Targets **yxl 0.7.0**, which this moves to from 0.6.2: an older yxl is offered
+Targets **yxl 0.7.1**, which this moves to from 0.6.2: an older yxl is offered
 the update, as before.
 
 - **Every layout key yxl 0.7 adds is drawn as yxl builds it.** A layout's
@@ -35,7 +35,8 @@ the update, as before.
 - **A later look replaces an earlier one, as the workbook does.** A `cells:`
   entry or an override that gives a `style` or a `format` over a cell another
   construct wrote now shows only its own look over the bands; the grid used to
-  keep the earlier look too.
+  keep the earlier look too. yxl 0.7.1 builds an override the same way, the
+  bands under it included.
 
 ## 0.4.1 — 2026-10-15
 

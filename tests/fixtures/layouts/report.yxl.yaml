@@ -55,6 +55,8 @@ sheets:
           - row: { branch: 店数, cy: { total: count } }
 
   - name: 結合なし
+    columns:
+      - { at: D, style: { fill: "E2EFDA" } }
     formulas:
       - at: D2:D4
         formula: "B2*C2"
@@ -102,4 +104,7 @@ overrides:
   - at: { layout: 店舗, title: true }
     value: 2026年度 上期 店舗別実績（確定）
   - at: { layout: 店舗, column: store, row: 1 }
+    style: { font: { italic: true } }
+  # Over a banded cell: the cell's own look goes, the band stays under it.
+  - at: 結合なし!D3
     style: { font: { italic: true } }

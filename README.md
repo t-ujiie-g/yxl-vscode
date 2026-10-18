@@ -7,7 +7,7 @@ into a workbook.
 
 > **Status: published, and the everyday gestures write back.**
 > [**`t-ujiie-g.yxl-vscode`**][listing] 0.4.1, targeting yxl 0.6.2; `main`
-> targets yxl 0.7.0. *yxl: Open the Grid Beside the Spec* draws a spec as a grid
+> targets yxl 0.7.1. *yxl: Open the Grid Beside the Spec* draws a spec as a grid
 > next to the text and redraws it as you type. Under it: YAML parses into a span-carrying tree, edits apply
 > as minimal byte patches that leave every untouched byte alone, a whole spec —
 > `$include`, `csv:`, and all — reads into a model of itself, and that model
@@ -125,7 +125,7 @@ Host.
 
 The **Build** and **Check** buttons beside it need the `yxl` compiler on your
 `PATH`, or `yxl.path` set to it, and so does making a new spec; the grid itself
-needs nothing. This editor targets **yxl 0.7.0** — an older or newer compiler is
+needs nothing. This editor targets **yxl 0.7.1** — an older or newer compiler is
 a warning rather than a refusal, and a release says which one it was built
 against. Where the one it finds is older, it offers to run yxl's own installer
 for the targeted version; nothing is installed until you say so.
