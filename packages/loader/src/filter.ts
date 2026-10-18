@@ -1,20 +1,22 @@
 import type { Entry, Node } from '@yxl-vscode/cst';
 import type { Saying } from '@yxl-vscode/diag';
-import { type Filter, type FilterColumn, MODELED_KEYS } from '@yxl-vscode/spec';
+import { type Filter, type FilterColumn, MODELED_KEYS, type Named } from '@yxl-vscode/spec';
 import { type ColumnSpan, parseColumnSpan } from '@yxl-vscode/units';
 import { CODE } from './codes';
 import { comparisonOf } from './conditional';
 import { type Ctx, identify, keyOf, reject, type Site } from './ctx';
 import { follow } from './include';
 import { expectValue, type Opened, open, readEach, required } from './read';
-import { type Kind, RANGE, readAs } from './template';
+import { isName, type Kind, RANGE_OR_NAME, readAs } from './template';
 import { say, under } from './text';
 
-/** One column letter, never a span: a filter keeps one criterion per column. */
-const ONE_COLUMN: Kind<ColumnSpan> = {
+/** One column letter, never a span, or a layout column's name: a filter keeps one criterion per column. */
+const ONE_COLUMN: Kind<ColumnSpan | Named> = {
   code: CODE.badColumn,
   noun: say('loader.a-column'),
-  read: (text) => (text.includes('-') ? null : parseColumnSpan(text)),
+  read: (text) =>
+    (text.includes('-') ? null : parseColumnSpan(text)) ??
+    (isName(text, false) ? { kind: 'named', text } : null),
 };
 
 /** A sheet's `filter:`, the bare range or `{ at, columns }` (`docs/spec.md` §10). */
@@ -23,7 +25,7 @@ export function readFilter(ctx: Ctx, node: Node, path: Site['path'], what: Sayin
   if (here === null) return null;
 
   if (here.node.kind !== 'map') {
-    const at = readAs(here.ctx, here.node, what, RANGE);
+    const at = readAs(here.ctx, here.node, what, RANGE_OR_NAME);
     return at === null
       ? null
       : { ...identify(here.ctx, here.path, here.node.span), at, columns: null };
@@ -33,7 +35,7 @@ export function readFilter(ctx: Ctx, node: Node, path: Site['path'], what: Sayin
   if (opened === null) return null;
 
   const at = required(opened, 'at', what, (entry) =>
-    readAs(opened.ctx, entry, under(what, 'at'), RANGE),
+    readAs(opened.ctx, entry, under(what, 'at'), RANGE_OR_NAME),
   );
   if (at === null) return null;
 

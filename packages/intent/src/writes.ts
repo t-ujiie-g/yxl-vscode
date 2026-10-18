@@ -111,8 +111,8 @@ function onCell(
   const cell = cellAt(sheet, at);
   const from = cell?.provenance.value ?? null;
 
-  // A `formulas:` range cannot carry a look and cannot be overlapped by a cell
-  // either, so there is nowhere here to put one (`docs/spec.md` §3).
+  // A `formulas:` range's look is every cell's, and no cell may overlap it, so
+  // one cell's look is an exception (`docs/spec.md` §3, §23).
   if (from?.kind === 'formulaRange') return null;
 
   // Where a data block writes the value, the cell's own keys live in the

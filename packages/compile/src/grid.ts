@@ -104,13 +104,14 @@ export interface CompiledSheet {
 }
 
 /**
- * Where one `layouts:` entry landed: all of it, and its header, body and
+ * Where one `layouts:` entry landed: all of it, and its title, header, body and
  * footer rows, `null` where it has none (`docs/spec.md` §25). Each column says
  * the node its keys are written in, `shared` where that is a block's.
  */
 export interface CompiledLayout {
   readonly name: string | null;
   readonly rect: Rect;
+  readonly title: Rect | null;
   readonly header: Rect | null;
   readonly body: Rect;
   readonly footer: Rect | null;
@@ -130,12 +131,13 @@ export interface CompiledName {
 }
 
 /**
- * One `print:` setup, its area and its breaks read. Everything else is the
- * spec's own words: a preview outlines where the paper falls, it does not
+ * One `print:` setup: its area, repeated rows and breaks read, a layout's
+ * included, and the rest in the spec's own words — a preview does not
  * paginate (`docs/spec.md` §5).
  */
 export interface CompiledPrint {
   readonly area: Rect | null;
+  readonly titles: { readonly first: number; readonly last: number } | null;
   readonly orientation: Orientation | null;
   readonly margins: Margins | null;
   readonly scale: number | null;
@@ -337,12 +339,14 @@ export interface CompiledBlock {
 
 /**
  * One `formulas:` range, kept as a range: `D2:D1048576` is two words, not a
- * million cells (ADR-019). `layout` is set where a layout column filled it.
+ * million cells (ADR-019). `layout` is set where a layout column filled it;
+ * `style` is the look every cell of it wears.
  */
 export interface CompiledFill {
   readonly rect: Rect;
   readonly anchor: A1Addr;
   readonly formula: string;
+  readonly style: readonly StyleLayer[];
   readonly node: NodeId;
   readonly layout: NodeId | null;
 }

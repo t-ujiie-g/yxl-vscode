@@ -1,7 +1,9 @@
 import {
+  type ByMeaning,
   type ColumnBand,
   type Conditional,
   ERROR_STYLES,
+  type Filter,
   type FormulaRange,
   type Link,
   type Note,
@@ -9,18 +11,22 @@ import {
   type Sheet,
   type SpecNode,
   type Table,
+  type Templated,
   type Validation,
   VISIBILITIES,
   type Visibility,
 } from '@yxl-vscode/spec';
 import {
+  type A1Addr,
   addrAt,
   cellOf,
   columnsOf,
+  type NodeId,
   overlapping,
   parseA1Range,
   parseColumnSpan,
   parseRowSpan,
+  type Rect,
   rangeOf,
   rectOf,
   rowsOf,
@@ -60,7 +66,8 @@ import type {
   CompiledTable,
   CompiledValidation,
 } from './grid';
-import { covered, readRange } from './named';
+import { byMeaning, covered, layoutHere, partRows, readRange, tableOf } from './named';
+import { colOf, edges, type Placed } from './placed';
 import { printing } from './print';
 import { protecting } from './protect';
 import { layersOf } from './style';
@@ -135,18 +142,18 @@ export function compileSheet(ctx: Ctx, sheet: Sheet): Drafted {
       fills,
       blocks,
       columns,
-      rows: sheet.rows.map((band) => rowBand(ctx, band)).filter((band) => band !== null),
+      rows: sheet.rows.map((band) => rowBand(ctx, band, name)).filter((band) => band !== null),
       merges,
-      freeze: sheet.freeze === null ? null : address(ctx, sheet.freeze, sheet),
+      freeze: frozenAt(ctx, sheet, name),
       visibility: shown(ctx, sheet),
       tabColor: sheet.tabColor === null ? null : colour(ctx, sheet.tabColor, sheet),
       gridlines: sheet.gridlines ?? true,
       split: sheet.split,
-      filter: filterOf(ctx, sheet),
-      print: sheet.print === null ? null : printing(ctx, sheet.print),
+      filter: filterOf(ctx, sheet, name),
+      print: printing(ctx, sheet.print, name, breaksOf(ctx, sheet)),
       protect: sheet.protect === null ? null : protecting(sheet.protect),
-      notes: notesOf(ctx, sheet.comments),
-      links: linksOf(ctx, sheet.links),
+      notes: notesOf(ctx, sheet.comments, name),
+      links: linksOf(ctx, sheet.links, name),
       validations: kept(sheet.validations, (one) => validation(ctx, one, name)),
       tables: kept(sheet.tables, (one) => table(ctx, one, name)),
       charts: kept(sheet.charts, (one) => chart(ctx, one, name)),
@@ -194,9 +201,45 @@ function placeFill(ctx: Ctx, range: FormulaRange): CompiledFill | null {
     rect,
     anchor: addrAt({ col: rect.left, row: rect.top }),
     formula: text(ctx, range.formula, range),
+    style: layersOf(ctx, range, 'cell', range.style, range.format, range.clearsFormat),
     node: range.id,
     layout: null,
   };
+}
+
+/** Where the panes freeze: a cell, or above a named layout's body and through its first `columns` (`docs/spec.md` §25). */
+function frozenAt(ctx: Ctx, sheet: Sheet, name: SheetName): A1Addr | null {
+  const at = sheet.freeze;
+  if (at === null) return null;
+  if (typeof at === 'string' || at.kind === 'template') return address(ctx, at, sheet);
+
+  const placed = layoutHere(ctx, at.layout, name, sheet);
+  if (placed === null) return null;
+
+  const count = placed.columns.length;
+  if (!Number.isInteger(at.columns) || at.columns < 0 || at.columns > count) {
+    reject(
+      ctx,
+      CODE.badLayout,
+      say('compile.freeze-columns', { columns: at.columns, count }),
+      sheet,
+    );
+    return null;
+  }
+
+  const col = at.columns === 0 ? 1 : edges(placed).left + at.columns;
+  if (col === 1 && placed.bodyFirst === 1) {
+    reject(ctx, CODE.badLayout, say('compile.freezes-nothing', { name: at.layout }), sheet);
+    return null;
+  }
+  return addrAt({ col, row: placed.bodyFirst });
+}
+
+/** The rows the sheet's layouts start a printed page at, each with the layout that asked. */
+function breaksOf(ctx: Ctx, sheet: Sheet): { row: number; node: NodeId }[] {
+  return sheet.layouts.flatMap((layout) =>
+    (ctx.placed.get(layout.id)?.breaks ?? []).map((row) => ({ row, node: layout.id })),
+  );
 }
 
 /** A filled range may share no cell with another range or with a written cell (`docs/spec.md` §3). */
@@ -255,15 +298,11 @@ function columnBand(ctx: Ctx, band: ColumnBand): CompiledBand | null {
   };
 }
 
-function rowBand(ctx: Ctx, band: RowBand): CompiledBand | null {
-  const spelled = text(ctx, band.at, band);
-  const read = parseRowSpan(spelled);
-  if (read === null) {
-    reject(ctx, CODE.badRow, say('compile.not-a-row', { spelled }), band);
-    return null;
-  }
+function rowBand(ctx: Ctx, band: RowBand, sheet: SheetName): CompiledBand | null {
+  const rows = bandRows(ctx, band, sheet);
+  if (rows === null) return null;
 
-  const { first, last } = rowsOf(read);
+  const { first, last } = rows;
   return {
     first,
     last,
@@ -273,6 +312,56 @@ function rowBand(ctx: Ctx, band: RowBand): CompiledBand | null {
     style: layersOf(ctx, band, 'row', band.style, band.format, band.clearsFormat),
     node: band.id,
   };
+}
+
+/** The rows a band covers: as written, or a part of a named layout on the sheet (`docs/spec.md` §4). */
+function bandRows(
+  ctx: Ctx,
+  band: RowBand,
+  sheet: SheetName,
+): { first: number; last: number } | null {
+  const at = band.at;
+  if (typeof at !== 'string' && at.kind === 'part') {
+    const placed = layoutHere(ctx, at.layout, sheet, band);
+    if (placed === null) return null;
+
+    const rows = partRows(placed, at.part);
+    if (rows === null) {
+      reject(
+        ctx,
+        CODE.badLayout,
+        say('compile.no-such-part', { part: at.part, name: at.layout }),
+        band,
+      );
+    }
+    return rows;
+  }
+
+  const spelled = text(ctx, at, band);
+  const read = parseRowSpan(spelled);
+  if (read === null) {
+    reject(ctx, CODE.badRow, say('compile.not-a-row', { spelled }), band);
+    return null;
+  }
+  return rowsOf(read);
+}
+
+/** A note's or a link's cell: as written, or by meaning in a layout on the sheet (`docs/spec.md` §10, §25). */
+function decorated(
+  ctx: Ctx,
+  at: Templated<A1Addr> | ByMeaning,
+  node: SpecNode,
+  sheet: SheetName,
+): A1Addr | null {
+  if (typeof at === 'string' || at.kind === 'template') return address(ctx, at, node);
+
+  const found = byMeaning(ctx, at, node);
+  if (found === null) return null;
+  if (found.sheet === sheet) return found.at;
+
+  const message = say('compile.layout-on-another-sheet', { name: at.layout, sheet: found.sheet });
+  reject(ctx, CODE.unknownLayout, message, node);
+  return null;
 }
 
 function mergedRegion(ctx: Ctx, merge: Sheet['merges'][number]): CompiledMerge | null {
@@ -303,11 +392,11 @@ function conditionalRule(ctx: Ctx, rule: Conditional, sheet: SheetName): Compile
 }
 
 /** Each note by the address it sits on; the later of two notes on one cell is the one Excel keeps. */
-function notesOf(ctx: Ctx, comments: readonly Note[]): Map<string, CompiledNote> {
+function notesOf(ctx: Ctx, comments: readonly Note[], sheet: SheetName): Map<string, CompiledNote> {
   const notes = new Map<string, CompiledNote>();
 
   for (const note of comments) {
-    const at = address(ctx, note.at, note);
+    const at = decorated(ctx, note.at, note, sheet);
     if (at === null) continue;
 
     notes.set(at, {
@@ -358,11 +447,11 @@ function asking(ctx: Ctx, one: Validation): CompiledAsk | null {
 }
 
 /** Each link by the address it sits on; the later of two links on one cell is the one Excel keeps. */
-function linksOf(ctx: Ctx, links: readonly Link[]): Map<string, CompiledLink> {
+function linksOf(ctx: Ctx, links: readonly Link[], sheet: SheetName): Map<string, CompiledLink> {
   const drawn = new Map<string, CompiledLink>();
 
   for (const link of links) {
-    const at = address(ctx, link.at, link);
+    const at = decorated(ctx, link.at, link, sheet);
     if (at === null) continue;
 
     const target = text(ctx, link.target.text, link);
@@ -397,25 +486,46 @@ function table(ctx: Ctx, one: Table, sheet: SheetName): CompiledTable | null {
 }
 
 /** A sheet's auto filter: the range, whose top row Excel reads as the header, and the criteria saved with it (`docs/spec.md` §10). */
-function filterOf(ctx: Ctx, sheet: Sheet): CompiledFilter | null {
-  if (sheet.filter === null) return null;
+function filterOf(ctx: Ctx, sheet: Sheet, name: SheetName): CompiledFilter | null {
+  const filter = sheet.filter;
+  if (filter === null) return null;
 
-  const spelled = text(ctx, sheet.filter.at, sheet.filter);
-  const read = parseA1Range(spelled);
-  if (read === null) {
-    reject(ctx, CODE.badRange, say('compile.not-a-range', { spelled }), sheet.filter);
-    return null;
-  }
+  const over = filtered(ctx, filter, name);
+  if (over === null) return null;
 
-  const saved = (sheet.filter.columns ?? []).flatMap((one) => {
-    const letter = text(ctx, one.at, one);
-    const span = parseColumnSpan(letter);
-    if (span === null) {
-      reject(ctx, CODE.badColumn, say('compile.not-a-column', { spelled: letter }), one);
+  const saved = (filter.columns ?? []).flatMap((one) => {
+    const spelled =
+      typeof one.at !== 'string' && one.at.kind === 'named' ? one.at.text : text(ctx, one.at, one);
+    const span = parseColumnSpan(spelled);
+    const col =
+      (over.placed === null ? undefined : colOf(over.placed, spelled)) ??
+      (span === null ? undefined : columnsOf(span).first);
+    if (col === undefined) {
+      reject(ctx, CODE.badColumn, say('compile.not-a-column', { spelled }), one);
       return [];
     }
-    return [{ col: columnsOf(span).first, criterion: one.criterion }];
+    return [{ col, criterion: one.criterion }];
   });
 
-  return { ...rectOf(read), saved };
+  return { ...over.rect, saved };
+}
+
+/** The range a filter covers, and the layout it was given as, whose columns it may name. */
+function filtered(
+  ctx: Ctx,
+  filter: Filter,
+  sheet: SheetName,
+): { rect: Rect; placed: Placed | null } | null {
+  if (typeof filter.at !== 'string' && filter.at.kind === 'named') {
+    const placed = layoutHere(ctx, filter.at.text, sheet, filter);
+    return placed === null ? null : { rect: tableOf(placed), placed };
+  }
+
+  const spelled = text(ctx, filter.at, filter);
+  const read = parseA1Range(spelled);
+  if (read === null) {
+    reject(ctx, CODE.badRange, say('compile.not-a-range', { spelled }), filter);
+    return null;
+  }
+  return { rect: rectOf(read), placed: null };
 }

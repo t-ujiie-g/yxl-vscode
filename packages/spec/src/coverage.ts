@@ -88,7 +88,7 @@ export const SHEET_KEYS: readonly Covered[] = [
   {
     key: 'freeze',
     standing: 'editable',
-    says: 'set at the selected cell, and honoured while scrolling',
+    says: 'set at the selected cell, and honoured while scrolling; one at a layout follows it',
   },
   {
     key: 'split',
@@ -104,7 +104,7 @@ export const SHEET_KEYS: readonly Covered[] = [
   {
     key: 'print',
     standing: 'preview',
-    says: 'the area outlined and the page breaks drawn; the rest said under the grid',
+    says: "the area outlined and the page breaks drawn, a layout's included; the rest said under the grid",
   },
   {
     key: 'filter',
@@ -119,7 +119,7 @@ export const SHEET_KEYS: readonly Covered[] = [
   {
     key: 'links',
     standing: 'editable',
-    says: 'written, followed and taken off; the kind is asked, never guessed',
+    says: 'written, followed and taken off; the kind is asked, never guessed; a list is drawn, not written',
   },
   {
     key: 'conditional',
@@ -129,7 +129,7 @@ export const SHEET_KEYS: readonly Covered[] = [
   {
     key: 'comments',
     standing: 'editable',
-    says: "written in a box over the cell, and shown on Excel's red corner",
+    says: "written in a box over the cell, and shown on Excel's red corner; a list is drawn, not written",
   },
   {
     key: 'tables',

@@ -8,12 +8,14 @@ import {
 } from '@yxl-vscode/compile';
 import {
   type Below,
+  type ByMeaning,
   type Comparison,
   type ConditionalTest,
   coverageOf,
   type FooterEntry,
   type FooterRow,
   type Layout,
+  type PartOf,
   type Sheet,
   type SpecDoc,
   type SpecNode,
@@ -275,6 +277,7 @@ function inLayout(layout: Layout, put: (node: SpecNode, what: string) => void): 
       ? `the layout at \`${spelled(layout.at)}\``
       : `the layout \`${layout.name}\``;
   put(layout, named);
+  if (layout.title !== null) put(layout.title, `the title of ${named}`);
 
   for (const entry of layout.columns) {
     const column = entry.kind === 'column' ? entry.name : (entry.as ?? entry.block);
@@ -292,7 +295,10 @@ function footerRows(entries: readonly FooterEntry[]): FooterRow[] {
 }
 
 /** A value the loader kept as a template reads back as the text the spec wrote; `below:` as the layout it follows. */
-function spelled(value: string | { readonly text: string } | Below): string {
+function spelled(value: string | { readonly text: string } | Below | PartOf | ByMeaning): string {
   if (typeof value === 'string') return value;
-  return 'text' in value ? value.text : `below ${value.layout}`;
+  if ('text' in value) return value.text;
+  if (value.kind === 'below') return `below ${value.layout}`;
+  if (value.kind === 'part') return `the ${value.part} of ${value.layout}`;
+  return value.column === null ? `the title of ${value.layout}` : `${value.layout}.${value.column}`;
 }

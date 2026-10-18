@@ -26,6 +26,14 @@ describe("a sheet's print setup handed to the view", () => {
     expect(print?.says).toContain('does not paginate');
   });
 
+  it("names the rows repeated atop every page, and a layout's page breaks with no `print:` of its own", () => {
+    const titled = `${FIGURES}    print:\n      titles: 1-2\n`;
+    expect(drawn(titled).print?.says).toContain('rows 1-2 repeated atop every page');
+
+    const broken = `${FIGURES}    layouts:\n      - { at: A1, page_break_on: k, values: [[a], [b]], columns: [{ name: k }] }\n`;
+    expect(drawn(broken).print?.breaks).toEqual([{ row: 2, col: 1 }]);
+  });
+
   it('says the whole sheet prints where no area is named, and how it is fitted', () => {
     const source = `${FIGURES}    print:\n      fit: { width: 1, height: 0 }\n`;
     expect(drawn(source).print?.says).toContain('The whole sheet prints, fitted to 1 page across');

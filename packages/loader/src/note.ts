@@ -1,14 +1,22 @@
 import type { Entry, Node, Path } from '@yxl-vscode/cst';
 import type { Saying } from '@yxl-vscode/diag';
 import { MODELED_KEYS, type Note } from '@yxl-vscode/spec';
+import { readListed } from './anchor';
 import { CODE } from './codes';
 import { type Ctx, identify, keyOf, reject } from './ctx';
-import { expectText, findEntry, openEntries, rejectUnknownKey } from './read';
+import { expectText, findEntry, type Opened, openEntries, rejectUnknownKey } from './read';
 import { ADDRESS, readTextAs } from './template';
 import { about, entryOf, say, under } from './text';
 
-/** A sheet's `comments:` mapping: one note per addressed cell (`docs/spec.md` §10). */
+/** A sheet's `comments:`: one note per addressed cell, or a list whose entries carry their own `at:` (`docs/spec.md` §10). */
 export function readNotes(ctx: Ctx, node: Node, path: Path): Note[] {
+  if (node.kind === 'seq') {
+    return readListed(ctx, node, path, about('note', ''), MODELED_KEYS.listedNote, (opened, at) => {
+      const written = fromEntries(opened, about('note', ''));
+      return written === null ? null : { at, listed: true, ...written };
+    });
+  }
+
   const opened = openEntries(ctx, node, path, '`comments`');
   if (opened === null) return [];
 
@@ -30,29 +38,24 @@ function readNote(ctx: Ctx, entry: Entry, path: Path): Note | null {
 
   if (entry.value.kind !== 'map') {
     const text = expectText(ctx, entry.value, what);
-    return text === null ? null : { ...site, at, text, author: null };
+    return text === null ? null : { ...site, at, listed: false, text, author: null };
   }
 
-  const written = expanded(ctx, entry.value, what);
-  return written === null ? null : { ...site, at, ...written };
-}
-
-/** The `{ text:, author: }` form; a note written that way needs its `text` (`docs/spec.md` §10). */
-function expanded(
-  ctx: Ctx,
-  node: Node,
-  what: Saying,
-): { text: string; author: string | null } | null {
-  const opened = openEntries(ctx, node, [], what);
+  const opened = openEntries(ctx, entry.value, [], what);
   if (opened === null) return null;
-
-  const here = opened.ctx;
-  for (const entry of opened.entries) {
-    if (!MODELED_KEYS.note.has(keyOf(entry))) {
-      rejectUnknownKey(here, entry, what, MODELED_KEYS.note);
+  for (const one of opened.entries) {
+    if (!MODELED_KEYS.note.has(keyOf(one))) {
+      rejectUnknownKey(opened.ctx, one, what, MODELED_KEYS.note);
     }
   }
 
+  const written = fromEntries(opened, what);
+  return written === null ? null : { ...site, at, listed: false, ...written };
+}
+
+/** The `{ text:, author: }` form; a note written that way needs its `text` (`docs/spec.md` §10). */
+function fromEntries(opened: Opened, what: Saying): { text: string; author: string | null } | null {
+  const here = opened.ctx;
   const written = findEntry(opened.entries, 'text');
   if (written === undefined) {
     reject(here, CODE.missingKey, say('loader.needs', { what, key: 'text' }), opened.node.span);

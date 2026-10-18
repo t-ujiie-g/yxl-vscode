@@ -85,6 +85,21 @@ describe('a sheet', () => {
     expect(codes('name: S\n    visibility: shy\n')).toEqual([CODE.unknownSpelling]);
   });
 
+  it('reads a freeze at a layout, with how many of its columns', () => {
+    expect(sheet('name: S\n    freeze: { layout: stores, columns: 1 }\n').freeze).toEqual({
+      kind: 'layout',
+      layout: 'stores',
+      columns: 1,
+    });
+    expect(sheet('name: S\n    freeze: { layout: stores }\n').freeze).toEqual({
+      kind: 'layout',
+      layout: 'stores',
+      columns: 0,
+    });
+    expect(codes('name: S\n    freeze: { columns: 1 }\n')).toEqual([CODE.missingKey]);
+    expect(codes('name: S\n    freeze: { layout: stores, rows: 1 }\n')).toEqual([CODE.unknownKey]);
+  });
+
   it('refuses a freeze that is not a cell', () => {
     const { diagnostics } = load(parse('sheets:\n  - name: S\n    freeze: B2:C3\n', { file: 'f' }));
     expect(diagnostics.map((one) => one.code)).toEqual(['loader.bad-address']);
@@ -118,6 +133,22 @@ describe('a filled formula range', () => {
       'name: S\n    formulas:\n      - at: D2:D3\n        formula: "=B2*C2"\n',
     ).formulas;
     expect(range?.formula).toBe('B2*C2');
+  });
+
+  it('reads the look every cell of it wears, and a format taken away', () => {
+    const [range] = sheet(
+      'name: S\n    formulas:\n      - at: D2:D3\n        formula: "B2"\n        style: { border: thin }\n        format: "0.0%"\n',
+    ).formulas;
+    expect([range?.style?.kind, range?.format, range?.clearsFormat]).toEqual([
+      'inline',
+      '0.0%',
+      false,
+    ]);
+
+    const [cleared] = sheet(
+      'name: S\n    formulas:\n      - at: D2:D3\n        formula: "B2"\n        format: null\n',
+    ).formulas;
+    expect([cleared?.style, cleared?.format, cleared?.clearsFormat]).toEqual([null, null, true]);
   });
 
   it('needs both keys', () => {

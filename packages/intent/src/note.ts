@@ -33,6 +33,9 @@ export function setNote(spec: Projection, where: Noting, read: Reading): Intent 
   if (away !== null) return refused(away);
 
   const comments = entryOf(found.node, KEY.comments)?.value ?? null;
+  if (comments?.kind === 'seq') {
+    return refused(say('intent.listed-by-cell', { key: KEY.comments, sheet: where.sheet }));
+  }
 
   const already = comments === null ? null : (entryOf(comments, where.at)?.value ?? null);
   const under: Path = [...found.path, KEY.comments];

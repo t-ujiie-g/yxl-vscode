@@ -29,6 +29,14 @@ describe("a sheet's filter", () => {
     ]);
   });
 
+  it("reads a layout's name, whose columns its criteria may name", () => {
+    const one = read(
+      '\n      at: stores\n      columns:\n        - { at: branch, values: [東京] }',
+    );
+    expect(one?.at).toEqual({ kind: 'named', text: 'stores' });
+    expect(one?.columns?.map((column) => column.at)).toEqual([{ kind: 'named', text: 'branch' }]);
+  });
+
   it('reads a mapping with no `columns:` as one with no criteria', () => {
     expect(read('{ at: A1:D9 }')?.columns).toEqual([]);
   });

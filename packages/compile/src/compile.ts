@@ -103,7 +103,7 @@ export function cellAt(sheet: CompiledSheet, at: A1Addr): CompiledCell | null {
     formula: shifted.ok ? shifted.formula : fill.formula,
     format: null,
     rich: null,
-    style: [],
+    style: fill.style,
     provenance: { value: origin, format: null },
   };
 }
@@ -140,7 +140,7 @@ export function styleAt(sheet: CompiledSheet, at: A1Addr): readonly StyleLayer[]
   const column = styling(sheet.columns, cell.col);
   const row = styling(sheet.rows, cell.row);
 
-  return [...column, ...row, ...(sheet.cells.get(at)?.style ?? [])];
+  return [...column, ...row, ...(cellAt(sheet, at)?.style ?? [])];
 }
 
 /** The look of the last band over this column or row that has one, whole; one band does not layer over another (#208). */

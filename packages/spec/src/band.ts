@@ -1,4 +1,5 @@
 import type { Axis, ColumnSpan, RowSpan } from '@yxl-vscode/units';
+import type { PartOf } from './layout';
 import type { SpecNode, Templated } from './node';
 import type { StyleUse } from './style';
 
@@ -20,9 +21,9 @@ export interface ColumnBand extends BandBase {
   readonly width: number | null;
 }
 
-/** The same, over rows, sized in points rather than character units. */
+/** The same, over rows, sized in points rather than character units; `at` may name a part of a layout. */
 export interface RowBand extends BandBase {
-  readonly at: Templated<RowSpan>;
+  readonly at: Templated<RowSpan> | PartOf;
   readonly height: number | null;
 }
 

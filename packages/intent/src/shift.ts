@@ -97,7 +97,7 @@ export function shifting(spec: Projection, sheet: CompiledSheet, line: Line): Sh
     }
   }
 
-  if (sheet.freeze !== null) {
+  if (sheet.freeze !== null && !followsALayout(own)) {
     const does = of.at(cellOf(sheet.freeze));
     if (does !== null) moves.push({ of: 'freeze', node: sheet.node, at: sheet.freeze, does });
   }
@@ -115,13 +115,25 @@ export function ownSheet(spec: Projection, line: Line): Sheet | undefined {
   return spec.doc.sheets.find((one) => nameOf(one) === line.sheet);
 }
 
-/** The ranges, merges and bands a sheet writes by hand; a layout draws its own, and they move with it. */
+/**
+ * The ranges, merges and bands a sheet writes by hand; a layout draws its own,
+ * and they move with it, as does a row band given as a layout's part.
+ */
 export function handWritten(own: Sheet | undefined): ReadonlySet<NodeId> {
+  const rows = (own?.rows ?? []).filter(
+    (one) => typeof one.at === 'string' || one.at.kind !== 'part',
+  );
   return new Set(
-    [own?.formulas, own?.merges, own?.columns, own?.rows].flatMap(
+    [own?.formulas, own?.merges, own?.columns, rows].flatMap(
       (list) => list?.map((one) => one.id) ?? [],
     ),
   );
+}
+
+/** Whether the sheet freezes at a layout, which moves with the layout rather than with a line. */
+export function followsALayout(own: Sheet | undefined): boolean {
+  const at = own?.freeze ?? null;
+  return at !== null && typeof at !== 'string' && at.kind === 'layout';
 }
 
 /** Whether a cell's formula could be written again where the line leaves it, and why not. */

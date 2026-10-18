@@ -9,7 +9,7 @@ import type {
   Template,
   ValueDef,
 } from '@yxl-vscode/spec';
-import { type FilePath, filePath, type NodeId } from '@yxl-vscode/units';
+import { type FilePath, filePath, type NodeId, type Rect } from '@yxl-vscode/units';
 import { CODE, type Code } from './codes';
 import type { CompiledName } from './grid';
 import { asIs, behind, type Filled, fill, resolveParams } from './params';
@@ -31,8 +31,8 @@ export type DataReader = (from: FilePath, path: FilePath) => DataFile | null;
 
 /**
  * What compiling has in hand throughout: parameters, definitions, layouts (by
- * name and by node) and the names they make, the sheets declared, the way out
- * to a data file, and somewhere to put what it could not draw.
+ * name and by node), the merges each drew and the names they make, the sheets
+ * declared, the way out to a data file, and somewhere to put what it could not draw.
  */
 export interface Ctx {
   readonly diagnostics: Diagnostic[];
@@ -47,6 +47,7 @@ export interface Ctx {
   readonly blocks: ReadonlyMap<string, BlockDef>;
   readonly layouts: Map<string, Placed>;
   readonly placed: Map<NodeId, Placed>;
+  readonly merged: Map<NodeId, readonly Rect[]>;
   readonly names: Map<string, CompiledName>;
   readonly sheets: Set<string>;
 }
@@ -84,6 +85,7 @@ export function context(doc: SpecDoc, read: DataReader | null, set: Setting): Ct
     blocks: new Map(doc.defs.blocks.map((def) => [def.name, def])),
     layouts: new Map(),
     placed: new Map(),
+    merged: new Map(),
     names: new Map(),
     sheets: new Set(),
   };

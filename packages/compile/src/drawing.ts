@@ -1,5 +1,11 @@
-import type { HeaderCell, SpecNode } from '@yxl-vscode/spec';
-import { addrAt, type Rect } from '@yxl-vscode/units';
+import {
+  BORDER_EDGES,
+  type HeaderCell,
+  type ScalarValue,
+  type SpecNode,
+  type StyleSays,
+} from '@yxl-vscode/spec';
+import { addrAt, type CellRef, cellOf, type Rect } from '@yxl-vscode/units';
 import { compileFacets, decides } from './cell';
 import { type Ctx, text } from './ctx';
 import { drawFooterRow } from './footer';
@@ -11,10 +17,18 @@ import type {
   CompiledMerge,
   CompiledRule,
 } from './grid';
+import { headerStyles } from './layout';
 import { type Column, edges, type Placed } from './placed';
-import type { DataOrigin } from './provenance';
+import type { DataOrigin, FacetOrigin } from './provenance';
 import { blankAt, origin, refs } from './refs';
-import { layersOf, type StyleLayer } from './style';
+import {
+  DATE_FORMAT,
+  DATETIME_FORMAT,
+  DURATION_FORMAT,
+  dateSerial,
+  durationSerial,
+} from './serial';
+import { layersOf, resolve, type StyleLayer } from './style';
 
 /** What one layout draws: its cells, filled formulas, bands, merges and rules, and where it landed. */
 export interface Drawn {
@@ -31,25 +45,36 @@ export function draw(ctx: Ctx, placed: Placed): Drawn {
   const cells: CompiledCell[] = [];
   const merges: CompiledMerge[] = [];
   const { layout } = placed;
+  const merging = layout.headerMerge !== false;
   const merge = (rect: Rect) => merges.push({ rect, node: layout.id });
 
-  drawHeader(ctx, placed, cells, layout.headerMerge === false ? () => {} : merge);
-  drawBody(placed, cells);
+  drawTitle(ctx, placed, cells, merging ? merge : null);
+  drawHeader(ctx, placed, cells, merging ? merge : null);
+  const body = placed.columns.map((column) => bodyLook(ctx, placed, column));
+  drawBody(ctx, placed, cells, body);
+  mergeEqual(placed, merge);
   for (const line of placed.footer) drawFooterRow(ctx, placed, line, cells, merge);
+  ctx.merged.set(
+    layout.id,
+    merges.map((one) => one.rect),
+  );
 
   const { left, right } = edges(placed);
   const span = (top: number, bottom: number): Rect => ({ top, bottom, left, right });
 
   return {
     cells,
-    fills: placed.columns.flatMap((column) => fillOf(ctx, placed, column)),
+    fills: placed.columns.flatMap((column, index) =>
+      fillOf(ctx, placed, column, body[index] ?? []),
+    ),
     bands: placed.columns.flatMap((column) => bandOf(ctx, column)),
     merges,
     rules: placed.columns.flatMap((column) => rulesOf(ctx, placed, column)),
     layout: {
       name: layout.name,
       rect: span(placed.top, placed.lastRow),
-      header: placed.depth === 0 ? null : span(placed.top, placed.bodyFirst - 1),
+      title: placed.headerFirst > placed.top ? span(placed.top, placed.headerFirst - 1) : null,
+      header: placed.depth === 0 ? null : span(placed.headerFirst, placed.bodyFirst - 1),
       body: span(placed.bodyFirst, placed.bodyLast),
       footer: placed.lastRow > placed.bodyLast ? span(placed.bodyLast + 1, placed.lastRow) : null,
       columns: placed.columns.map((one) => ({
@@ -62,21 +87,102 @@ export function draw(ctx: Ctx, placed: Placed): Drawn {
   };
 }
 
+/** Which edges of a cell face into the block it spans, and lose their border where nothing merges it (#122). */
+interface Inner {
+  readonly left: boolean;
+  readonly right: boolean;
+  readonly top: boolean;
+  readonly bottom: boolean;
+}
+
+/** `style` with every border edge `inner` flags taken away, where the style draws one at all. */
+function withoutInner(
+  style: readonly StyleLayer[],
+  inner: Inner,
+  node: SpecNode,
+): readonly StyleLayer[] {
+  const said = resolve(style);
+  const gives: { -readonly [K in keyof StyleSays]: StyleSays[K] } = {};
+  for (const edge of BORDER_EDGES) {
+    const drawn = said[`border.${edge}.style`];
+    if (!inner[edge] || drawn === undefined || drawn === null) continue;
+    gives[`border.${edge}.style`] = null;
+    gives[`border.${edge}.color`] = null;
+  }
+  if (Object.keys(gives).length === 0) return style;
+  return [...style, { through: 'cell', key: 'style', node: node.id, name: null, gives }];
+}
+
+/** A title, header or footer cell over the block from its own cell to `last`: merged, or each its own cell. */
+function spanOf(
+  cells: CompiledCell[],
+  written: CompiledCell,
+  last: CellRef,
+  merge: ((rect: Rect) => void) | null,
+  from: FacetOrigin,
+  node: SpecNode,
+): void {
+  const first = cellOf(written.at);
+  const styleAt = (at: CellRef) =>
+    merge === null
+      ? withoutInner(
+          written.style,
+          {
+            left: at.col > first.col,
+            right: at.col < last.col,
+            top: at.row > first.row,
+            bottom: at.row < last.row,
+          },
+          node,
+        )
+      : written.style;
+
+  cells.push({ ...written, style: styleAt(first) });
+  for (let row = first.row; row <= last.row; row += 1) {
+    for (let col = first.col; col <= last.col; col += 1) {
+      if (row === first.row && col === first.col) continue;
+      const style = styleAt({ col, row });
+      if (style.length > 0) cells.push(blankAt(addrAt({ col, row }), style, from));
+    }
+  }
+  if (merge !== null && (last.col > first.col || last.row > first.row)) {
+    merge({ top: first.row, bottom: last.row, left: first.col, right: last.col });
+  }
+}
+
+/** A `title:` across the layout's width in its first row (`docs/spec.md` §25). */
+function drawTitle(
+  ctx: Ctx,
+  placed: Placed,
+  cells: CompiledCell[],
+  merge: ((rect: Rect) => void) | null,
+): void {
+  const { layout } = placed;
+  if (layout.title === null) return;
+
+  const { left, right } = edges(placed);
+  const at = addrAt({ col: left, row: placed.top });
+  const from = origin(layout.title, layout);
+  const written = compileFacets(ctx, layout.title, at, from, 'cell');
+  spanOf(cells, written, { col: right, row: placed.top }, merge, from, layout.title);
+}
+
 /** Header levels over `depth` rows, merged across where neighbours agree and down where a column runs out. */
 function drawHeader(
   ctx: Ctx,
   placed: Placed,
   cells: CompiledCell[],
-  merge: (rect: Rect) => void,
+  merge: ((rect: Rect) => void) | null,
 ): void {
-  const { layout, columns, depth, top } = placed;
-  const worn = layersOf(ctx, layout, 'cell', layout.headerStyle, null);
+  const { layout, columns, depth, headerFirst: top } = placed;
+  const styles = headerStyles(layout).map((use) => layersOf(ctx, layout, 'cell', use, null));
+  const wornAt = (row: number) => styles[Math.min(row, styles.length - 1)] ?? [];
   const levels = columns.map((one) => one.header);
   const keyOf = (cell: HeaderCell | null | undefined) => (cell == null ? null : sameness(cell));
   const colAt = (index: number) => columns[index]?.col ?? 0;
   const at = (index: number, row: number) => addrAt({ col: colAt(index), row: top + row });
-  const blank = (index: number, row: number, style: readonly StyleLayer[], node: SpecNode) => {
-    if (style.length > 0) cells.push(blankAt(at(index, row), style, origin(node, layout)));
+  const blank = (index: number, row: number, style: readonly StyleLayer[]) => {
+    if (style.length > 0) cells.push(blankAt(at(index, row), style, origin(layout, layout)));
   };
   const stretches = (index: number, row: number) =>
     row === (levels[index]?.length ?? 0) - 1 && row < depth - 1;
@@ -98,18 +204,17 @@ function drawHeader(
       const cell = column[row] ?? null;
       if (cell === null) {
         const below = stretches(index, row) ? depth - 1 : row;
-        for (let down = row; down <= below; down += 1) blank(index, down, worn, layout);
+        for (let down = row; down <= below; down += 1) blank(index, down, wornAt(row));
         index += 1;
         continue;
       }
 
-      const written = compileFacets(ctx, cell, at(index, row), origin(cell, layout), 'cell');
-      const style = [...worn, ...written.style];
-      cells.push({ ...written, style });
+      const from = origin(cell, layout);
+      const written = compileFacets(ctx, cell, at(index, row), from, 'cell');
+      const worn = { ...written, style: [...wornAt(row), ...written.style] };
 
       if (stretches(index, row)) {
-        for (let down = row + 1; down < depth; down += 1) blank(index, down, style, cell);
-        merge({ top: top + row, bottom: top + depth - 1, left: colAt(index), right: colAt(index) });
+        spanOf(cells, worn, { col: colAt(index), row: top + depth - 1 }, merge, from, cell);
         index += 1;
         continue;
       }
@@ -123,10 +228,7 @@ function drawHeader(
       ) {
         last += 1;
       }
-      for (let covered = index + 1; covered <= last; covered += 1) blank(covered, row, style, cell);
-      if (last > index) {
-        merge({ top: top + row, bottom: top + row, left: colAt(index), right: colAt(last) });
-      }
+      spanOf(cells, worn, { col: colAt(last), row: top + row }, merge, from, cell);
       index = last + 1;
     }
   }
@@ -138,16 +240,91 @@ function sameness(cell: HeaderCell): string {
   return JSON.stringify({ value, formula, rich, type, format, clearsFormat, style });
 }
 
-function drawBody(placed: Placed, cells: CompiledCell[]): void {
-  for (const [index, row] of placed.data.entries()) {
-    for (const [field, value] of row.entries()) {
-      const column = placed.inputs[field];
-      if (value === null || column === undefined) continue;
+/** What one column's body cells wear: the layout's `body_style`, then the column's own over it. */
+function bodyLook(ctx: Ctx, placed: Placed, column: Column): readonly StyleLayer[] {
+  const { layout } = placed;
+  return [
+    ...(layout.bodyStyle === null ? [] : layersOf(ctx, layout, 'cell', layout.bodyStyle, null)),
+    ...(column.spec.bodyStyle === null
+      ? []
+      : layersOf(ctx, column.spec, 'cell', column.spec.bodyStyle, null)),
+  ];
+}
 
+/** Every input column's body: each field the data holds, and a blank in the body's look where it holds none. */
+function drawBody(
+  ctx: Ctx,
+  placed: Placed,
+  cells: CompiledCell[],
+  looks: readonly (readonly StyleLayer[])[],
+): void {
+  const rows = placed.bodyLast - placed.bodyFirst + 1;
+  for (const [field, column] of placed.inputs.entries()) {
+    const style = looks[placed.columns.indexOf(column)] ?? [];
+    const { spec } = column;
+    const band = layersOf(ctx, spec, 'column', spec.style, spec.format, spec.clearsFormat);
+    const formatted = [band, style].some((one) => resolve(one).format != null);
+
+    for (let index = 0; index < rows; index += 1) {
       const at = addrAt({ col: column.col, row: placed.bodyFirst + index });
+      const value = placed.data[index]?.[field] ?? null;
       const from = origin(column.spec, placed.layout, readFrom(placed, index, field));
-      cells.push({ ...blankAt(at, [], from), value });
+      if (value === null) {
+        if (style.length > 0) cells.push(blankAt(at, style, from));
+        continue;
+      }
+      cells.push({ ...blankAt(at, style, from), ...typedValue(ctx, column, value, formatted) });
     }
+  }
+}
+
+/** A field as the cell holds it: a typed date or duration as its serial, under the format it reads unless the column sets one. */
+function typedValue(
+  ctx: Ctx,
+  column: Column,
+  value: ScalarValue,
+  formatted: boolean,
+): Pick<CompiledCell, 'value' | 'type' | 'format'> {
+  const type = column.spec.type;
+  if (typeof value === 'string' && type === 'date') {
+    const read = dateSerial(value, ctx.from1904);
+    if (read !== null) {
+      const format = read.withTime ? DATETIME_FORMAT : DATE_FORMAT;
+      return { value: read.serial, type, format: formatted ? null : format };
+    }
+  }
+  if (typeof value === 'string' && type === 'duration') {
+    const read = durationSerial(value);
+    if (read !== null) return { value: read, type, format: formatted ? null : DURATION_FORMAT };
+  }
+  return { value, type: null, format: null };
+}
+
+/** Each `merge_equal` column's runs of one value down the body, cut where one left of it changes (`docs/spec.md` §25). */
+function mergeEqual(placed: Placed, merge: (rect: Rect) => void): void {
+  const { data, inputs } = placed;
+  const at = (row: number, field: number) => data[row]?.[field] ?? null;
+  const outer: number[] = [];
+
+  for (const [field, column] of inputs.entries()) {
+    if (!column.spec.mergeEqual) continue;
+
+    let start = 0;
+    for (let row = 1; row <= data.length; row += 1) {
+      const continues =
+        row < data.length &&
+        at(row, field) !== null &&
+        at(row, field) === at(start, field) &&
+        outer.every((left) => at(row, left) === at(row - 1, left));
+      if (continues) continue;
+
+      if (row - start > 1 && at(start, field) !== null) {
+        const top = placed.bodyFirst + start;
+        merge({ top, bottom: placed.bodyFirst + row - 1, left: column.col, right: column.col });
+      }
+      start = row;
+    }
+    outer.push(field);
   }
 }
 
@@ -160,7 +337,12 @@ function readFrom(placed: Placed, row: number, field: number): DataOrigin {
   return { kind: 'external', node, file, row: row + 1, col: picks[field] ?? field };
 }
 
-function fillOf(ctx: Ctx, placed: Placed, column: Column): CompiledFill[] {
+function fillOf(
+  ctx: Ctx,
+  placed: Placed,
+  column: Column,
+  style: readonly StyleLayer[],
+): CompiledFill[] {
   if (column.spec.formula === null) return [];
 
   const written = text(ctx, column.spec.formula, column.spec);
@@ -172,6 +354,7 @@ function fillOf(ctx: Ctx, placed: Placed, column: Column): CompiledFill[] {
       rect: { top: placed.bodyFirst, bottom: placed.bodyLast, left: column.col, right: column.col },
       anchor: addrAt({ col: column.col, row: placed.bodyFirst }),
       formula,
+      style,
       node: column.spec.id,
       layout: placed.layout.id,
     },

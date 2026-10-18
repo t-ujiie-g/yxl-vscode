@@ -81,3 +81,96 @@ describe('a layout drawn', () => {
     expect(holds(source, 'A2')).toBe('y');
   });
 });
+
+describe("a layout's title", () => {
+  const TITLED = (merge: string) =>
+    laidOut(
+      `      - at: A1\n        title: { value: 実績, style: { border: thin } }\n${merge}        rows: 1\n        columns: [{ name: a, header: A }, { name: b, header: B }, { name: c, header: C }]\n`,
+    );
+  const edges = (source: string, at: string) => {
+    const said = resolve(styleAt(sheet(source), at as A1Addr));
+    return [said['border.left.style'], said['border.right.style']].map((one) => one ?? null);
+  };
+
+  it('sits in the first row, merged across the layout, and moves the header down a row', () => {
+    const source = TITLED('');
+    expect([holds(source, 'A1'), holds(source, 'A2'), holds(source, 'A3')]).toEqual([
+      '実績',
+      'A',
+      null,
+    ]);
+    expect(sheet(source).merges.map((one) => rangeOf(one.rect))).toEqual(['A1:C1']);
+    expect(sheet(source).layouts[0]?.title).toEqual({ top: 1, bottom: 1, left: 1, right: 3 });
+  });
+
+  it('without merges keeps its outline: the edges between its cells go', () => {
+    const source = TITLED('        header_merge: false\n');
+    expect(sheet(source).merges).toEqual([]);
+    expect([edges(source, 'A1'), edges(source, 'B1'), edges(source, 'C1')]).toEqual([
+      ['thin', null],
+      [null, null],
+      [null, 'thin'],
+    ]);
+  });
+});
+
+describe("a layout's header styled row by row", () => {
+  const STYLED = laidOut(
+    '      - at: A1\n        header_style: [{ font: { bold: true } }, { font: { italic: true } }]\n        rows: 1\n        columns: [{ name: a, header: 部門 }, { name: b, header: [売上, 当年] }, { name: c, header: [売上, 前年] }]\n',
+  );
+  const look = (at: string) => {
+    const said = resolve(styleAt(sheet(STYLED), at as A1Addr));
+    return [said['font.bold'] ?? null, said['font.italic'] ?? null];
+  };
+
+  it('wears each row its own style, and a cell running down the style of the row it starts in', () => {
+    expect([look('B1'), look('B2'), look('A1'), look('A2')]).toEqual([
+      [true, null],
+      [null, true],
+      [true, null],
+      [true, null],
+    ]);
+  });
+});
+
+describe("a layout's body look", () => {
+  const BODY = laidOut(
+    '      - at: A1\n        body_style: { fill: "EEEEEE" }\n        rows: 3\n        values: [[x, 1]]\n        columns:\n          - { name: k }\n          - { name: n, body_style: { format: "0.0" } }\n          - { name: f, formula: "{{n}}*2", body_style: { font: { bold: true } } }\n',
+  );
+  const said = (at: string) => resolve(styleAt(sheet(BODY), at as A1Addr));
+
+  it('reaches every body cell, the blanks and the filled formulas, and stops where the body does', () => {
+    expect([said('A1').fill, said('A3').fill, said('C3').fill, said('A4').fill]).toEqual([
+      'EEEEEE',
+      'EEEEEE',
+      'EEEEEE',
+      undefined,
+    ]);
+  });
+
+  it("lays a column's own body look over the layout's", () => {
+    expect([said('B2').format, said('C1')['font.bold'], said('A1').format]).toEqual([
+      '0.0',
+      true,
+      undefined,
+    ]);
+  });
+});
+
+describe('a column that merges its repeats', () => {
+  const MERGED = laidOut(
+    '      - at: A1\n        values:\n          - [東京, 直営]\n          - [東京, 直営]\n          - [東京, FC]\n          - [大阪, 直営]\n          - [大阪, null]\n          - [大阪, null]\n        columns: [{ name: a, merge_equal: true }, { name: b, merge_equal: true }]\n',
+  );
+
+  it('merges each run down the body, cut where a column left of it changes, and never a blank', () => {
+    expect(
+      sheet(MERGED)
+        .merges.map((one) => rangeOf(one.rect))
+        .sort(),
+    ).toEqual(['A1:A3', 'A4:A6', 'B1:B2']);
+  });
+
+  it('keeps every covered value, so a total over the column still sees it', () => {
+    expect([holds(MERGED, 'A2'), holds(MERGED, 'A3')]).toEqual(['東京', '東京']);
+  });
+});

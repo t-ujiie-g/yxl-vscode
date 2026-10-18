@@ -72,3 +72,12 @@ describe('a note on a cell', () => {
     );
   });
 });
+
+describe('a note on a sheet that lists its notes', () => {
+  it('is refused rather than written into the list as if it were a mapping', () => {
+    const listed = `${SHEET}    comments:\n      - { at: A1, text: sourced upstream }\n`;
+    expect(noted(listed, 'B2', 'and this one')).toBe(
+      'refused: the sheet `S` writes its `comments` as a list, each entry with its own `at:`; edit that list in the spec',
+    );
+  });
+});

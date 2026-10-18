@@ -9,9 +9,9 @@ import type {
 import type { FilePath, SheetName } from '@yxl-vscode/units';
 
 /**
- * A layout placed ahead of every sheet, which is what lets a spec name it from
- * anywhere (`docs/spec.md` §25): its columns where they landed, the rows its
- * data holds over the input columns, and the rows its footer takes.
+ * A layout placed ahead of every sheet, so a spec can name it from anywhere:
+ * its columns, its data, and the rows each part takes; `breaks` are where
+ * `page_break_on` starts a page (`docs/spec.md` §25).
  */
 export interface Placed {
   readonly layout: Layout;
@@ -21,11 +21,13 @@ export interface Placed {
   readonly data: readonly DataRow[];
   readonly taken: Taken;
   readonly top: number;
+  readonly headerFirst: number;
   readonly depth: number;
   readonly bodyFirst: number;
   readonly bodyLast: number;
   readonly footer: readonly FooterLine[];
   readonly lastRow: number;
+  readonly breaks: readonly number[];
 }
 
 /**

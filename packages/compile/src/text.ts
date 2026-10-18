@@ -65,6 +65,19 @@ export type Says = {
   'compile.gap-must-be-whole': Nothing;
   'compile.no-such-body-row': { row: number; rows: number };
   'compile.where-matches': { count: number };
+  'compile.header-styles-past-header': { styles: number; depth: number };
+  'compile.field-is-not': { row: number; column: string; type: string; value: string };
+  'compile.merge-with-no-data': { column: string };
+  'compile.break-with-no-data': Nothing;
+  'compile.no-such-part': { part: string; name: string };
+  'compile.no-header-to-repeat': { name: string };
+  'compile.freeze-columns': { columns: number; count: number };
+  'compile.freezes-nothing': { name: string };
+  'compile.no-title': Nothing;
+  'compile.no-footer': Nothing;
+  'compile.no-such-header-row': { row: number; rows: number };
+  'compile.no-such-footer-row': { row: number; rows: number };
+  'compile.inside-a-merge': { range: string };
 };
 
 export const say = speaking<Says>();
@@ -131,7 +144,7 @@ const en: Words<Says> = {
   'compile.header-style-with-no-header': () =>
     'the layout has a `header_style`, but no column has a `header` to wear it',
   'compile.header-merge-with-no-header': () =>
-    'the layout has a `header_merge`, but no column has a `header` to merge',
+    'the layout has a `header_merge`, but no `title` or column `header` to merge',
   'compile.no-such-column': ({ name }) => `\`${name}\` is not a column of this layout`,
   'compile.unclosed-column-ref': () => 'a `{{` is never closed with `}}`',
   'compile.text-spells-no-group': ({ name }) =>
@@ -160,6 +173,29 @@ const en: Words<Says> = {
     `\`row\` is ${row}, but the body has rows 1 to ${rows}`,
   'compile.where-matches': ({ count }) =>
     `\`where\` matches ${count} rows of the data; it must find exactly one`,
+  'compile.header-styles-past-header': ({ styles, depth }) =>
+    `\`header_style\` lists ${styles} styles, but the header is ${depth} rows deep`,
+  'compile.field-is-not': ({ row, column, type, value }) =>
+    `row ${row} of column \`${column}\` cannot be read as \`${type}\`: \`${value}\``,
+  'compile.merge-with-no-data': ({ column }) =>
+    `column \`${column}\` has \`merge_equal\`, but the layout reads no data to merge`,
+  'compile.break-with-no-data': () =>
+    'the layout has a `page_break_on`, but reads no data to break on',
+  'compile.no-such-part': ({ part, name }) => `the layout \`${name}\` has no ${part} rows`,
+  'compile.no-header-to-repeat': ({ name }) =>
+    `the layout \`${name}\` has no header rows to repeat`,
+  'compile.freeze-columns': ({ columns, count }) =>
+    `\`columns\` is ${columns}, but the layout has ${count}`,
+  'compile.freezes-nothing': ({ name }) =>
+    `freezing at the layout \`${name}\` would freeze nothing: it starts at A1 with no header, and \`columns\` is 0`,
+  'compile.no-title': () => 'the layout has no `title`',
+  'compile.no-footer': () => 'the layout has no footer',
+  'compile.no-such-header-row': ({ row, rows }) =>
+    `\`header\` is ${row}, but the header has rows 1 to ${rows}`,
+  'compile.no-such-footer-row': ({ row, rows }) =>
+    `\`footer\` is ${row}, but the footer has rows 1 to ${rows}`,
+  'compile.inside-a-merge': ({ range }) =>
+    `the cell lands inside the merged cells \`${range}\`; name their first cell`,
 };
 
 const ja: Words<Says> = {
@@ -229,7 +265,7 @@ const ja: Words<Says> = {
   'compile.header-style-with-no-header': () =>
     'レイアウトに `header_style` がありますが、`header` を持つ列がありません',
   'compile.header-merge-with-no-header': () =>
-    'レイアウトに `header_merge` がありますが、`header` を持つ列がありません',
+    'レイアウトに `header_merge` がありますが、結合する `title` も `header` を持つ列もありません',
   'compile.no-such-column': ({ name }) => `\`${name}\` はこのレイアウトの列ではありません`,
   'compile.unclosed-column-ref': () => '`{{` が `}}` で閉じられていません',
   'compile.text-spells-no-group': ({ name }) =>
@@ -257,6 +293,30 @@ const ja: Words<Says> = {
     `\`row\` は ${row} ですが、本体の行は 1 から ${rows} までです`,
   'compile.where-matches': ({ count }) =>
     `\`where\` がデータの ${count} 行に一致します。ちょうど 1 行である必要があります`,
+  'compile.header-styles-past-header': ({ styles, depth }) =>
+    `\`header_style\` には ${styles} 個のスタイルがありますが、見出しは ${depth} 行です`,
+  'compile.field-is-not': ({ row, column, type, value }) =>
+    `列 \`${column}\` の ${row} 行目は \`${type}\` として読めません: \`${value}\``,
+  'compile.merge-with-no-data': ({ column }) =>
+    `列 \`${column}\` に \`merge_equal\` がありますが、レイアウトは結合するデータを読みません`,
+  'compile.break-with-no-data': () =>
+    'レイアウトに `page_break_on` がありますが、改ページの基準になるデータを読みません',
+  'compile.no-such-part': ({ part, name }) =>
+    `レイアウト \`${name}\` には ${part} の行がありません`,
+  'compile.no-header-to-repeat': ({ name }) =>
+    `レイアウト \`${name}\` には繰り返す見出し行がありません`,
+  'compile.freeze-columns': ({ columns, count }) =>
+    `\`columns\` は ${columns} ですが、レイアウトの列は ${count} 個です`,
+  'compile.freezes-nothing': ({ name }) =>
+    `レイアウト \`${name}\` で固定しても何も固定されません。A1 から始まり見出しがなく、\`columns\` が 0 です`,
+  'compile.no-title': () => 'レイアウトに `title` がありません',
+  'compile.no-footer': () => 'レイアウトにフッターがありません',
+  'compile.no-such-header-row': ({ row, rows }) =>
+    `\`header\` は ${row} ですが、見出しの行は 1 から ${rows} までです`,
+  'compile.no-such-footer-row': ({ row, rows }) =>
+    `\`footer\` は ${row} ですが、フッターの行は 1 から ${rows} までです`,
+  'compile.inside-a-merge': ({ range }) =>
+    `セルが結合セル \`${range}\` の内側にあります。結合の先頭のセルを指定してください`,
 };
 
 /** This package's sentences in every language, for the edge that words them. */

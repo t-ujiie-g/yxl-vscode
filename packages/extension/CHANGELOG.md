@@ -4,6 +4,30 @@ Every release names the `yxl` it was built against: the schema is not frozen
 until yxl's v1.0, so the pinned compiler is part of what a version means
 (`ROADMAP.md` §8 Q6).
 
+## Unreleased
+
+Targets **yxl 0.7.0**, which this moves to from 0.6.2: an older yxl is offered
+the update, as before.
+
+- **Every layout key yxl 0.7 adds is drawn as yxl builds it.** A layout's
+  `title`, a `header_style` per header row, `body_style` on a layout and on a
+  column, a column's `type`, `merge_equal` and `page_break_on`. A header
+  without merges keeps each group's outline, as yxl 0.7 now draws it. Such a
+  spec no longer shows an error in the preview.
+- **The sheet's own keys may name a layout.** `freeze: { layout, columns }`,
+  `filter:` over a layout with criteria by column name, `print.area` and the
+  new `print.titles`, and a `rows:` band over a layout's title, header, body
+  or footer all follow the layout. Putting a row or a column in, or taking one
+  out, leaves them written as they are.
+- **A cell found by meaning reaches further.** An override, and now a note or
+  a link written in the new list form, may name a header row, a footer row
+  (`footer: last` included) or the title. A cell a merge covers is refused, as
+  yxl refuses it. Adding or changing a note or a link from the grid is refused
+  on a sheet that lists them, with a reason, rather than written in the wrong
+  shape.
+- **A `formulas:` range may carry `style` and `format`**, and every cell of it
+  shows them.
+
 ## 0.4.1 — 2026-10-15
 
 Targets **yxl 0.6.2**, which this release moves to from 0.6.1: an older yxl is

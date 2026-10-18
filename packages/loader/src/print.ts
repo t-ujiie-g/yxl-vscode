@@ -3,8 +3,25 @@ import type { Saying } from '@yxl-vscode/diag';
 import { type Fit, type Margins, MODELED_KEYS, ORIENTATIONS, type Print } from '@yxl-vscode/spec';
 import { CODE } from './codes';
 import { type Ctx, identify, keyOf, reject } from './ctx';
-import { type Opened, open, optional, optionalNumber, optionalText, readEach } from './read';
-import { ADDRESS, RANGE, readAs, spelling } from './template';
+import {
+  type Opened,
+  open,
+  optional,
+  optionalNumber,
+  optionalText,
+  readEach,
+  scalarText,
+} from './read';
+import {
+  ADDRESS,
+  isLayoutName,
+  type Kind,
+  RANGE_OR_NAME,
+  ROW,
+  readAs,
+  readTextAs,
+  spelling,
+} from './template';
 import { say, under } from './text';
 
 /** A sheet's `print:` setup (`docs/spec.md` §5). */
@@ -22,8 +39,9 @@ export function readPrint(ctx: Ctx, node: Node, what: Saying): Print | null {
   return {
     ...identify(opened.ctx, opened.path, opened.node.span),
     area: optional(opened, 'area', (entry) =>
-      readAs(opened.ctx, entry, under(what, 'area'), RANGE),
+      readAs(opened.ctx, entry, under(what, 'area'), RANGE_OR_NAME),
     ),
+    titles: optional(opened, 'titles', (entry) => readTitles(opened.ctx, entry, what)),
     orientation: optional(opened, 'orientation', (entry) =>
       readAs(opened.ctx, entry, under(what, 'orientation'), spelling(ORIENTATIONS)),
     ),
@@ -36,6 +54,21 @@ export function readPrint(ctx: Ctx, node: Node, what: Saying): Print | null {
     footer: optionalText(opened, 'footer', what),
     breaks: readBreaks(opened, what),
   };
+}
+
+/** A row, a `first-last` span or a layout's name, which a row may write as a number. */
+const TITLE_ROWS: Kind<Print['titles'] & {}> = {
+  ...ROW,
+  noun: say('loader.rows-or-a-layout'),
+  read: (text) => ROW.read(text) ?? (isLayoutName(text) ? { kind: 'named', text } : null),
+};
+
+/** `print.titles`: the rows repeated atop every page (`docs/spec.md` §5). */
+function readTitles(ctx: Ctx, node: Node, of: Saying): Print['titles'] {
+  const what = under(of, 'titles');
+  const text = scalarText(node);
+  if (text === null) return readAs(ctx, node, what, TITLE_ROWS);
+  return readTextAs(ctx, text, node.span, what, TITLE_ROWS);
 }
 
 /** The cells a page starts at, each breaking above and left of itself; `A1` breaks nothing. */

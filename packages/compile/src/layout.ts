@@ -1,12 +1,13 @@
 import type { Saying } from '@yxl-vscode/diag';
-import type { DataRow, Layout, Sheet } from '@yxl-vscode/spec';
+import type { ColumnType, DataRow, Layout, ScalarValue, Sheet, StyleUse } from '@yxl-vscode/spec';
 import { cellOf, type SheetName } from '@yxl-vscode/units';
 import { CODE } from './codes';
 import { type Ctx, filled, openData, reject } from './ctx';
 import { lines } from './footer';
 import { anchored, definedNames } from './named';
 import type { Column, FooterLine, Placed, Taken } from './placed';
-import { readHeadedCsv, readJson } from './table';
+import { dateSerial, durationSerial } from './serial';
+import { infer, readHeadedCsv, readJson } from './table';
 import { say } from './text';
 
 /** Excel's grid ends here. */
@@ -53,20 +54,34 @@ function place(ctx: Ctx, layout: Layout, sheet: SheetName): Placed | null {
   const inputs = columns.filter((one) => one.spec.formula === null);
   const got = rowsOf(ctx, layout, inputs);
   if (got === null) return null;
-  const data = got.rows;
+  const data = typed(ctx, layout, inputs, got.rows);
+  if (data === null) return null;
 
   const rows = bodyRows(ctx, layout, data);
   if (rows === null) return null;
 
   const depth = Math.max(0, ...columns.map((one) => one.header.length));
-  if (layout.headerStyle !== null && depth === 0) {
+  const styles = headerStyles(layout).length;
+  if (styles > 0 && depth === 0) {
     reject(ctx, CODE.badLayout, say('compile.header-style-with-no-header'), layout);
   }
-  if (layout.headerMerge !== null && depth === 0) {
+  if (styles > depth && depth > 0) {
+    reject(
+      ctx,
+      CODE.badLayout,
+      say('compile.header-styles-past-header', { styles, depth }),
+      layout,
+    );
+  }
+  if (layout.headerMerge !== null && depth === 0 && layout.title === null) {
     reject(ctx, CODE.badLayout, say('compile.header-merge-with-no-header'), layout);
   }
+  if (!mergesData(ctx, layout, inputs, data)) return null;
+  const breaks = pageBreaks(ctx, layout, inputs, data);
+  if (breaks === null) return null;
 
-  const bodyFirst = corner.row + depth;
+  const headerFirst = corner.row + (layout.title === null ? 0 : 1);
+  const bodyFirst = headerFirst + depth;
   const bodyLast = Math.min(LAST_ROW, bodyFirst + rows - 1);
   const scope = { ctx, layout, columns, inputs, data };
   const footer: FooterLine[] = [];
@@ -80,12 +95,117 @@ function place(ctx: Ctx, layout: Layout, sheet: SheetName): Placed | null {
     data,
     taken: got.taken,
     top: corner.row,
+    headerFirst,
     depth,
     bodyFirst,
     bodyLast,
     footer,
     lastRow: next === null ? bodyLast : next - 1,
+    breaks: breaks.map((index) => bodyFirst + index),
   };
+}
+
+/** A layout's `header_style` as one style per header row, top first; the last stands for every row past it. */
+export function headerStyles(layout: Layout): readonly StyleUse[] {
+  const written = layout.headerStyle;
+  if (written === null) return [];
+  return 'kind' in written ? [written] : written;
+}
+
+/** Each field of a typed column read as its `type` reads it; one it cannot read is refused (`docs/spec.md` §25). */
+function typed(
+  ctx: Ctx,
+  layout: Layout,
+  inputs: readonly Column[],
+  rows: readonly DataRow[],
+): DataRow[] | null {
+  const out: DataRow[] = [];
+  for (const [index, row] of rows.entries()) {
+    const read: ScalarValue[] = [];
+    for (const [field, value] of row.entries()) {
+      const column = inputs[field];
+      const type = column?.spec.type ?? null;
+      if (column === undefined || type === null || value === null) {
+        read.push(value);
+        continue;
+      }
+
+      const as = readAsType(ctx, type, value);
+      if (as === undefined) {
+        const message = say('compile.field-is-not', {
+          row: index + 1,
+          column: column.name,
+          type,
+          value: String(value),
+        });
+        reject(ctx, CODE.badLayout, message, layout);
+        return null;
+      }
+      read.push(as);
+    }
+    out.push(read);
+  }
+  return out;
+}
+
+/** A field as `type` reads it, or `undefined`; a date or a duration stays the text it was, drawn as its serial. */
+function readAsType(ctx: Ctx, type: ColumnType, value: ScalarValue): ScalarValue | undefined {
+  switch (type) {
+    case 'text':
+      return typeof value === 'boolean' ? (value ? 'true' : 'false') : String(value);
+    case 'number': {
+      if (typeof value === 'number') return value;
+      const read = typeof value === 'string' ? infer(value) : value;
+      return typeof read === 'number' ? read : undefined;
+    }
+    case 'bool':
+      if (typeof value === 'boolean') return value;
+      return value === 'true' ? true : value === 'false' ? false : undefined;
+    case 'date':
+      return typeof value === 'string' && dateSerial(value, ctx.from1904) !== null
+        ? value
+        : undefined;
+    case 'duration':
+      return typeof value === 'string' && durationSerial(value) !== null ? value : undefined;
+  }
+}
+
+/** Whether every `merge_equal` column has data to merge (`docs/spec.md` §25). */
+function mergesData(
+  ctx: Ctx,
+  layout: Layout,
+  inputs: readonly Column[],
+  data: readonly DataRow[],
+): boolean {
+  const merging = inputs.find((one) => one.spec.mergeEqual);
+  if (merging === undefined || data.length > 0) return true;
+
+  reject(ctx, CODE.badLayout, say('compile.merge-with-no-data', { column: merging.name }), layout);
+  return false;
+}
+
+/** The body rows, counted from 0, whose `page_break_on` column differs from the row above. */
+function pageBreaks(
+  ctx: Ctx,
+  layout: Layout,
+  inputs: readonly Column[],
+  data: readonly DataRow[],
+): number[] | null {
+  const name = layout.pageBreakOn;
+  if (name === null) return [];
+
+  const field = inputs.findIndex((one) => one.name === name);
+  if (field < 0) {
+    reject(ctx, CODE.unknownColumn, say('compile.not-an-input-column', { name }), layout);
+    return null;
+  }
+  if (data.length === 0) {
+    reject(ctx, CODE.badLayout, say('compile.break-with-no-data'), layout);
+    return null;
+  }
+
+  const at = (row: number) => data[row]?.[field] ?? null;
+  return [...data.keys()].filter((row) => row > 0 && at(row) !== at(row - 1));
 }
 
 /** A layout's `columns:`, every block placed as the columns it stands for, left to right from `left`. */
@@ -204,7 +324,13 @@ function rowsOf(
       }
       picks.push(index);
     }
-    const rows = table.rows.map((row) => picks.map((index) => row[index] ?? null));
+    // A typed column reads the field as written, so `007` stays text.
+    const fieldAt = (row: number, pick: number, index: number): ScalarValue => {
+      if ((inputs[pick]?.spec.type ?? null) === null) return table.rows[row]?.[index] ?? null;
+      const written = table.texts[row]?.[index] ?? '';
+      return written === '' ? null : written;
+    };
+    const rows = table.rows.map((_, row) => picks.map((index, pick) => fieldAt(row, pick, index)));
     return { rows, taken: { file: opened.file, picks } };
   }
 

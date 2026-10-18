@@ -256,34 +256,119 @@ describe('an anchor that follows a layout', () => {
   });
 });
 
-describe('an override found by meaning', () => {
+describe('a cell found by meaning', () => {
   const override = (at: string) =>
     loaded(`sheets:\n  - name: S\noverrides:\n  - at: ${at}\n    value: 1\n`);
+  const found = (at: string) => override(at).doc?.overrides[0]?.at;
+  const codesOf = (at: string) => override(at).diagnostics.map((one) => one.code);
 
-  it('reads the layout, the column, and `where` or `row`', () => {
-    expect(
-      override('{ layout: stores, column: cy, where: { store: 渋谷 } }').doc?.overrides[0]?.at,
-    ).toEqual({
+  it('reads the layout, the column, and the body row `where` finds', () => {
+    expect(found('{ layout: stores, column: cy, where: { store: 渋谷 } }')).toEqual({
       kind: 'layout',
       layout: 'stores',
       column: 'cy',
-      where: [['store', '渋谷']],
-      row: null,
-    });
-    expect(override('{ layout: stores, column: cy, row: 2 }').doc?.overrides[0]?.at).toEqual({
-      kind: 'layout',
-      layout: 'stores',
-      column: 'cy',
-      where: null,
-      row: 2,
+      finds: { kind: 'where', pairs: [['store', '渋谷']] },
     });
   });
 
-  it('needs exactly one of `where` and `row`', () => {
-    const codesOf = (at: string) => override(at).diagnostics.map((one) => one.code);
+  it('reads a row counted within the body, the header or the footer', () => {
+    const finds = (at: string) => {
+      const read = found(at);
+      return read !== undefined && 'finds' in read ? read.finds : null;
+    };
+    expect(finds('{ layout: stores, column: cy, row: 2 }')).toEqual({ kind: 'row', count: 2 });
+    expect(finds('{ layout: stores, column: cy, header: 1 }')).toEqual({
+      kind: 'header',
+      count: 1,
+    });
+    expect(finds('{ layout: stores, column: cy, footer: 2 }')).toEqual({
+      kind: 'footer',
+      count: 2,
+    });
+    expect(finds('{ layout: stores, column: cy, footer: last }')).toEqual({
+      kind: 'footer',
+      count: 'last',
+    });
+  });
+
+  it('reads the title, which names no column', () => {
+    expect(found('{ layout: stores, title: true }')).toEqual({
+      kind: 'layout',
+      layout: 'stores',
+      column: null,
+      finds: { kind: 'title' },
+    });
+  });
+
+  it('needs exactly one finder', () => {
     expect(codesOf('{ layout: stores, column: cy }')).toEqual([CODE.conflictingKeys]);
-    expect(codesOf('{ layout: stores, column: cy, row: 1, where: { a: 1 } }')).toEqual([
+    expect(codesOf('{ layout: stores, column: cy, row: 1, header: 1 }')).toEqual([
       CODE.conflictingKeys,
+    ]);
+  });
+
+  it('refuses a title beside a column, a title that is not true, and a row with no column', () => {
+    expect(codesOf('{ layout: stores, column: cy, title: true }')).toEqual([CODE.conflictingKeys]);
+    expect(codesOf('{ layout: stores, title: false }')).toEqual([CODE.notABoolean]);
+    expect(
+      said(
+        `sheets:\n  - name: S\noverrides:\n  - at: { layout: stores, header: 1 }\n    value: 1\n`,
+      ),
+    ).toEqual(['override `at` needs a `column` to go with its `header`']);
+  });
+});
+
+describe("a layout's title, page breaks and body look", () => {
+  it('reads them', () => {
+    const [one] = layouts(
+      '      - at: A1\n        title: { value: 実績, style: { font: { bold: true } } }\n        page_break_on: branch\n        body_style: { border: thin }\n        values: [[東京]]\n        columns: [{ name: branch }]\n',
+    );
+    expect(one?.title?.value).toEqual({ kind: 'literal', value: '実績' });
+    expect(one?.pageBreakOn).toBe('branch');
+    expect(one?.bodyStyle?.kind).toBe('inline');
+  });
+
+  it('reads one header style, or a list of them, one per header row', () => {
+    const style = (written: string) =>
+      layouts(
+        `      - at: A1\n        header_style: ${written}\n        rows: 1\n        columns: [{ name: a, header: A }]\n`,
+      )[0]?.headerStyle;
+    expect(style('head')).toEqual({ kind: 'ref', name: 'head' });
+    expect(style('[head, sub]')).toEqual([
+      { kind: 'ref', name: 'head' },
+      { kind: 'ref', name: 'sub' },
+    ]);
+    expect(
+      codes(
+        '      - at: A1\n        header_style: []\n        rows: 1\n        columns: [{ name: a }]\n',
+      ),
+    ).toEqual([CODE.missingKey]);
+  });
+});
+
+describe("a layout column's type, body look and merging", () => {
+  it('reads them', () => {
+    const [one] = layouts(
+      '      - at: A1\n        values: [[a]]\n        columns:\n          - { name: code, type: text, body_style: { format: "@" }, merge_equal: true }\n',
+    );
+    const read = column(one?.columns[0]);
+    expect([read.type, read.bodyStyle?.kind, read.mergeEqual]).toEqual(['text', 'inline', true]);
+  });
+
+  it('refuses a type it does not know', () => {
+    expect(
+      codes('      - at: A1\n        rows: 1\n        columns: [{ name: a, type: error }]\n'),
+    ).toEqual([CODE.unknownSpelling]);
+  });
+
+  it('refuses a `type` or `merge_equal` on a formula column, which takes no data', () => {
+    expect(
+      said(
+        'sheets:\n  - name: S\n    layouts:\n      - at: A1\n        rows: 1\n        columns:\n          - { name: a, formula: "1", type: number, merge_equal: true }\n',
+      ),
+    ).toEqual([
+      'a column of a `layouts` entry has a `type` and a `formula`; a formula column takes no data',
+      'a column of a `layouts` entry has `merge_equal` and a `formula`; only data merges',
     ]);
   });
 });

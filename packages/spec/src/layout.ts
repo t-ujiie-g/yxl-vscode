@@ -8,15 +8,19 @@ import type { ScalarValue } from './value';
 
 /**
  * One `layouts:` entry: named columns anchored at one cell, the body filled from
- * data, formulas written by column name (`docs/spec.md` §25).
+ * data, formulas written by column name (`docs/spec.md` §25). `headerStyle` is
+ * one style for every header row, or a list of them, one per row, top first.
  */
 export interface Layout extends SpecNode {
   readonly at: Anchor;
   readonly name: string | null;
+  readonly title: HeaderCell | null;
   readonly rows: number | null;
   readonly source: DataSource | null;
-  readonly headerStyle: StyleUse | null;
+  readonly headerStyle: StyleUse | readonly StyleUse[] | null;
   readonly headerMerge: boolean | null;
+  readonly bodyStyle: StyleUse | null;
+  readonly pageBreakOn: string | null;
   readonly columns: readonly LayoutEntry[];
   readonly footer: readonly FooterEntry[];
 }
@@ -49,9 +53,12 @@ export interface LayoutColumn extends SpecNode {
   readonly kind: 'column';
   readonly name: string;
   readonly field: string | null;
+  readonly type: ColumnType | null;
   readonly header: readonly (HeaderCell | null)[] | null;
   readonly formula: string | null;
   readonly conditional: readonly ColumnRule[];
+  readonly bodyStyle: StyleUse | null;
+  readonly mergeEqual: boolean;
   readonly width: number | null;
   readonly style: StyleUse | null;
   readonly format: string | null;
@@ -60,7 +67,12 @@ export interface LayoutColumn extends SpecNode {
   readonly group: number | null;
 }
 
-/** A header cell, written as any cell is (`docs/spec.md` §3). */
+/** What a layout column's fields are read as; a cell's `type` less `error` (`docs/spec.md` §25). */
+export const COLUMN_TYPES = ['text', 'number', 'bool', 'date', 'duration'] as const;
+
+export type ColumnType = (typeof COLUMN_TYPES)[number];
+
+/** A header or title cell, written as any cell is (`docs/spec.md` §3). */
 export interface HeaderCell extends SpecNode, CellFacets {}
 
 /** A conditional format over one column's body, which takes no `at`. */
@@ -120,13 +132,38 @@ export type GroupOrder =
   | { readonly kind: 'listed'; readonly values: readonly ScalarValue[] };
 
 /**
- * An override's `at:` given by meaning: a named layout's column, in the one
- * row whose input columns hold `where`, or the body's `row`th (`docs/spec.md` §25).
+ * A cell given by meaning, for an override, a note or a link: a named layout's
+ * column in the row `finds` names, or with no column its title (`docs/spec.md` §25).
  */
 export interface ByMeaning {
   readonly kind: 'layout';
   readonly layout: string;
-  readonly column: string;
-  readonly where: readonly (readonly [string, ScalarValue])[] | null;
-  readonly row: number | null;
+  readonly column: string | null;
+  readonly finds: Finder;
+}
+
+/** Which row a cell by meaning is in: the body row `where` matches, or one counted from 1 within a part. */
+export type Finder =
+  | { readonly kind: 'where'; readonly pairs: readonly (readonly [string, ScalarValue])[] }
+  | { readonly kind: 'row' | 'header'; readonly count: number }
+  | { readonly kind: 'footer'; readonly count: number | 'last' }
+  | { readonly kind: 'title' };
+
+/** The parts of a layout a `rows:` band may name (`docs/spec.md` §4). */
+export const LAYOUT_PARTS = ['title', 'header', 'body', 'footer'] as const;
+
+export type LayoutPart = (typeof LAYOUT_PARTS)[number];
+
+/** A `rows:` band's `at: { layout, part }`: those rows of a named layout on the sheet. */
+export interface PartOf {
+  readonly kind: 'part';
+  readonly layout: string;
+  readonly part: LayoutPart;
+}
+
+/** `freeze: { layout, columns }`: above a named layout's body, and through its first `columns`. */
+export interface FreezeAt {
+  readonly kind: 'layout';
+  readonly layout: string;
+  readonly columns: number;
 }

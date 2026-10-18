@@ -1,14 +1,22 @@
 import type { Entry, Node, Path } from '@yxl-vscode/cst';
 import type { Saying } from '@yxl-vscode/diag';
 import { type Link, type LinkTarget, MODELED_KEYS } from '@yxl-vscode/spec';
+import { readListed } from './anchor';
 import { CODE } from './codes';
 import { type Ctx, identify, keyOf, reject } from './ctx';
-import { expectText, findEntry, openEntries, rejectUnknownKey } from './read';
+import { expectText, findEntry, type Opened, openEntries, rejectUnknownKey } from './read';
 import { ADDRESS, readTextAs } from './template';
 import { about, entryOf, say, under } from './text';
 
-/** A sheet's `links:` mapping: one link per addressed cell (`docs/spec.md` §10). */
+/** A sheet's `links:`: one link per addressed cell, or a list whose entries carry their own `at:` (`docs/spec.md` §10). */
 export function readLinks(ctx: Ctx, node: Node, path: Path): Link[] {
+  if (node.kind === 'seq') {
+    return readListed(ctx, node, path, about('link', ''), MODELED_KEYS.listedLink, (opened, at) => {
+      const written = fromEntries(opened, about('link', ''));
+      return written === null ? null : { at, listed: true, ...written };
+    });
+  }
+
   const opened = openEntries(ctx, node, path, '`links`');
   if (opened === null) return [];
 
@@ -30,33 +38,33 @@ function readLink(ctx: Ctx, entry: Entry, path: Path): Link | null {
 
   if (entry.value.kind !== 'map') {
     const url = expectText(ctx, entry.value, what);
-    return url === null ? null : { ...site, at, target: { kind: 'url', text: url }, tip: null };
+    return url === null
+      ? null
+      : { ...site, at, listed: false, target: { kind: 'url', text: url }, tip: null };
   }
 
-  const written = expanded(ctx, entry.value, what);
-  return written === null ? null : { ...site, at, ...written };
-}
-
-/** The `{ url:, to:, tip: }` form; exactly one of the two targets (`docs/spec.md` §10). */
-function expanded(
-  ctx: Ctx,
-  node: Node,
-  what: Saying,
-): { target: LinkTarget; tip: string | null } | null {
-  const opened = openEntries(ctx, node, [], what);
+  const opened = openEntries(ctx, entry.value, [], what);
   if (opened === null) return null;
-
-  const here = opened.ctx;
-  for (const entry of opened.entries) {
-    if (!MODELED_KEYS.link.has(keyOf(entry))) {
-      rejectUnknownKey(here, entry, what, MODELED_KEYS.link);
+  for (const one of opened.entries) {
+    if (!MODELED_KEYS.link.has(keyOf(one))) {
+      rejectUnknownKey(opened.ctx, one, what, MODELED_KEYS.link);
     }
   }
 
+  const written = fromEntries(opened, what);
+  return written === null ? null : { ...site, at, listed: false, ...written };
+}
+
+/** The `{ url:, to:, tip: }` form; exactly one of the two targets (`docs/spec.md` §10). */
+function fromEntries(
+  opened: Opened,
+  what: Saying,
+): { target: LinkTarget; tip: string | null } | null {
+  const here = opened.ctx;
   const out = findEntry(opened.entries, 'url');
   const inside = findEntry(opened.entries, 'to');
   if (out !== undefined && inside !== undefined) {
-    reject(here, CODE.conflictingKeys, say('loader.link-two-targets', { what }), node.span);
+    reject(here, CODE.conflictingKeys, say('loader.link-two-targets', { what }), opened.node.span);
     return null;
   }
 
