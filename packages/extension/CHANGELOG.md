@@ -4,6 +4,19 @@ Every release names the `yxl` it was built against: the schema is not frozen
 until yxl's v1.0, so the pinned compiler is part of what a version means
 (`ROADMAP.md` §8 Q6).
 
+## Unreleased
+
+Targets **yxl 0.7.2**, which this moves to from 0.7.1. It builds the same
+workbook from the same spec; an older yxl is offered the update, as before.
+
+- **A long sheet scrolls without redrawing at every row.** Near column A, or
+  near row 1 scrolling sideways, each scroll rebuilt the whole grid.
+- **A row keeps its height whichever columns are on screen.** A row is fitted
+  to its tallest cell anywhere along it, as Excel fits a row without a height,
+  and Japanese text no longer makes a row taller than its 15pt.
+- **`Cmd`+`↓` and the other jumps arrive where they go**, and stop below the
+  headings and frozen panes rather than under them.
+
 ## 0.5.0 — 2026-10-19
 
 Targets **yxl 0.7.1**, which this release moves to from 0.6.2: an older yxl is
