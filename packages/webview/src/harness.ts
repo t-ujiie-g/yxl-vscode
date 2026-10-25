@@ -101,6 +101,7 @@ export function sheet(of: Partial<DrawnSheet> = {}): DrawnSheet {
     of: { rows: of.rows ?? 2, columns: of.columns ?? 2 },
     widths: [],
     heights: [],
+    tall: [],
     cells: [],
     merges: [],
     problems: [],

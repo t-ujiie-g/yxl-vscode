@@ -1,7 +1,8 @@
 import type { StyleValues } from '@yxl-vscode/spec';
-import type { DrawnCell } from './protocol';
+import { drawCell } from './cell';
+import type { DrawnCell, DrawnSheet } from './protocol';
 import { shown } from './shown';
-import { PADDING } from './window';
+import { PADDING, widthOf } from './window';
 
 /** How wide a string is drawn in a font — the browser's own answer, injected so it can be stood in for. */
 export type Ruler = (text: string, font: string) => number;
@@ -51,3 +52,53 @@ export function widest(cells: readonly DrawnCell[], rule: Ruler): number | null 
 
   return wide;
 }
+
+/**
+ * How tall each row a sheet's `tall` cells sit on has to be, in pixels: each
+ * cell drawn at its column's width off the page and measured, as Excel fits a row.
+ */
+export function tallest(sheet: DrawnSheet, into: HTMLElement): Map<number, number> {
+  const rows = new Map<number, number>();
+  const taking = (row: number, height: number) => {
+    if (height > (rows.get(row) ?? 0)) rows.set(row, height);
+  };
+
+  const box = document.createElement('div');
+  box.className = 'measuring';
+  const pending: { row: number; key: string; line: HTMLElement }[] = [];
+  for (const cell of sheet.tall) {
+    const wide = widthOf(sheet, cell.col);
+    if (wide === 0) continue;
+
+    const key = `${wide}:${JSON.stringify({ ...cell, row: 0, col: 0 })}`;
+    const known = measured.get(key);
+    if (known !== undefined) {
+      taking(cell.row, known);
+      continue;
+    }
+
+    const table = document.createElement('table');
+    table.className = 'grid';
+    table.style.width = `${wide}px`;
+    const line = document.createElement('tr');
+    line.append(drawCell(cell, undefined, 0, sheet.protect !== null));
+    table.append(line);
+    box.append(table);
+    pending.push({ row: cell.row, key, line });
+  }
+  if (pending.length === 0) return rows;
+
+  into.append(box);
+  if (measured.size + pending.length > REMEMBERED) measured.clear();
+  for (const { row, key, line } of pending) {
+    measured.set(key, line.offsetHeight);
+    taking(row, line.offsetHeight);
+  }
+  box.remove();
+
+  return rows;
+}
+
+const measured = new Map<string, number>();
+
+const REMEMBERED = 50_000;

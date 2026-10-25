@@ -1069,7 +1069,7 @@ describe('looking for something in the sheet', () => {
     expect(seen).toEqual([{ at: '2:2', how: { block: 'nearest', inline: 'nearest' } }]);
   });
 
-  it('asks for the window where what it found is past the one drawn', () => {
+  it('asks for a window around what it found past the one drawn', () => {
     const { into, sent, told } = view();
 
     told({
@@ -1080,7 +1080,7 @@ describe('looking for something in the sheet', () => {
     told({ kind: 'found', sheet: 'Sales', text: '', cells: [{ row: 300, col: 2 }] });
 
     expect(sent.filter((one) => one.kind === 'window')).toEqual([
-      { kind: 'window', sheet: 'Sales', row: 300, col: 2 },
+      { kind: 'window', sheet: 'Sales', row: 299, col: 1 },
     ]);
   });
 

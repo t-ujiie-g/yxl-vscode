@@ -27,7 +27,7 @@ import {
   type Showing,
 } from './showing';
 import { headed } from './table';
-import { sizeOf } from './window';
+import { around, sizeOf } from './window';
 
 /** The bridge VS Code puts in a webview, and the only way out of one. */
 declare function acquireVsCodeApi(): Host;
@@ -186,7 +186,11 @@ export function wire(into: HTMLElement, host: Host): (message: ToView) => void {
 
     if (!inside) {
       going = at;
-      host.postMessage({ kind: 'window', sheet: named(), row: at.row, col: at.col });
+      host.postMessage({
+        kind: 'window',
+        sheet: named(),
+        ...(of === undefined ? at : around(of, at)),
+      });
       return;
     }
 

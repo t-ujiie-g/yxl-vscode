@@ -2,6 +2,7 @@ import { findBar, formulaBar, told } from './boxes';
 import { floats, hangs } from './float';
 import { heldBy, keyboard } from './keyboard';
 import { takingAll, wearing } from './keys';
+import { tallest } from './measure';
 import { fit } from './menus';
 import { gutterOf } from './outline';
 import {
@@ -30,7 +31,7 @@ import {
 } from './showing';
 import { grid, headed, pinned } from './table';
 import { toolbar } from './toolbar';
-import { across, down, heightOf, pixelsOf, type Where, wanted } from './window';
+import { across, down, grow, heightOf, pixelsOf, type Where, wanted } from './window';
 import { chrome } from './worded';
 
 /**
@@ -64,6 +65,10 @@ export function draw(into: HTMLElement, showing: Showing, asks: Asks): void {
 
   const sheet = drawing.sheets[Math.min(showing.sheet, drawing.sheets.length - 1)];
   if (sheet !== undefined) {
+    if (!fitted.has(sheet)) {
+      fitted.add(sheet);
+      grow(sheet, tallest(sheet, into));
+    }
     const box = scroller(sheet, showing, asks);
     into.append(box);
     // Only once it is in the page: an element with no layout box cannot scroll,
@@ -89,6 +94,8 @@ export function draw(into: HTMLElement, showing: Showing, asks: Asks): void {
   // keys, and the question is appended above.
   keyboard(into, showing, held);
 }
+
+const fitted = new WeakSet<DrawnSheet>();
 
 /** The question a refusal asks, over the panel; the one already open stays, so a redraw takes no keyboard back. */
 function asking(into: HTMLElement, showing: Showing, asks: Asks): void {
@@ -220,6 +227,9 @@ function scroller(sheet: DrawnSheet, showing: Showing, asks: Asks): HTMLElement 
   const box = document.createElement('div');
   box.className = 'scroller';
   box.setAttribute('data-of', looking(showing));
+  // What stays put covers the scroller's edge, so a cell brought into view stops short of it.
+  box.style.scrollPaddingTop = `${gutterOf(sheet, 'column') + HEADING + down(sheet, sheet.freeze?.row ?? 1)}px`;
+  box.style.scrollPaddingLeft = `${gutterOf(sheet, 'row') + GUTTER + across(sheet, sheet.freeze?.col ?? 1)}px`;
   const drawn = document.createElement('div');
   drawn.className = 'sheet';
   drawn.append(grid(sheet, showing, asks), ...layers([...printed(sheet), ...floats(sheet, asks)]));
@@ -229,7 +239,11 @@ function scroller(sheet: DrawnSheet, showing: Showing, asks: Asks): HTMLElement 
   if (bars !== null) box.append(bars);
 
   box.addEventListener('scroll', () => {
-    const at = wanted(sheet, { top: box.scrollTop, left: box.scrollLeft });
+    const at = wanted(
+      sheet,
+      { top: box.scrollTop, left: box.scrollLeft },
+      { height: box.clientHeight, width: box.clientWidth },
+    );
     if (at !== null) asks.showWindow(at.row, at.col);
   });
 

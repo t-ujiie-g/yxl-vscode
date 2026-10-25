@@ -235,6 +235,31 @@ describe('a drawn spec', () => {
     expect([sheet.at.row, sheet.rows]).toEqual([241, 200]);
   });
 
+  it('hands over the cells that may fit a row taller, past the window as well', () => {
+    const source = `${SALES}    columns:\n      - at: CZ\n        style: { align: { wrap: true } }\n    cells:\n      A1: plain\n      CZ1: wraps where the column is narrow\n      A2: "two\\nlines"\n      A3: { value: big, style: { font: { size: 20 } } }\n      A4: { value: small, style: { font: { size: 9 } } }\n`;
+    const sheet = drawn(source);
+
+    expect(sheet.columns).toBe(50);
+    expect(sheet.tall.map((one) => [one.row, one.col])).toEqual([
+      [1, 104],
+      [2, 1],
+      [3, 1],
+    ]);
+  });
+
+  it('hands over one large-font cell a row and size, since one line is as tall as its font', () => {
+    const source = `${SALES}    cells:\n      A1: { value: one, style: { font: { size: 20 } } }\n      B1: { value: two, style: { font: { size: 20 } } }\n      C1: { value: three, style: { font: { size: 24 } } }\n`;
+
+    expect(drawn(source).tall.map((one) => one.col)).toEqual([1, 3]);
+  });
+
+  it('hands over nothing from a row that declares its height, or from a merge (#196)', () => {
+    const wraps = '{ value: wraps where the column is narrow, style: { align: { wrap: true } } }';
+    const source = `${SALES}    rows:\n      - at: 1\n        height: 30\n      - at: 3\n        hidden: true\n    merges: [A2:B2]\n    cells:\n      A1: ${wraps}\n      A2: ${wraps}\n      A3: ${wraps}\n      A4: ${wraps}\n`;
+
+    expect(drawn(source).tall.map((one) => one.row)).toEqual([4]);
+  });
+
   it('draws every cell of one column, which is what a fit is measured on', () => {
     const source = `${SALES}    cells:\n      A1: Region\n      B1: Revenue\n      A9: Total\n`;
     const sheet = project(source, FILE, read).grid?.sheets[0];

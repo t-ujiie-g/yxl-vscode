@@ -175,6 +175,7 @@ function drawSheet(
     widths: sizedRuns(sheet.columns),
     heights: sizedRuns(sheet.rows),
     cells: drawCells(sheet, windowOf(sheet, { at, rows, columns, freeze }), evaluation, grid),
+    tall: tallIn(sheet, evaluation, grid),
     merges: sheet.merges.map(
       (merge): DrawnMerge => ({
         top: merge.rect.top,
@@ -279,6 +280,54 @@ function windowOf(sheet: CompiledSheet, drawing: Drawn): Place[] {
   }
 
   return places;
+}
+
+/** The point size Excel's default row is fitted to, which a smaller font cannot grow. */
+const FONT_SIZE = 11;
+
+const talls = new WeakMap<
+  CompiledSheet,
+  { readonly evaluation: Evaluation | null; readonly cells: DrawnCell[] }
+>();
+
+/** Every cell, past the window too, that may fit an unsized row taller: a wrap, a break, a larger font once a row and size. */
+function tallIn(
+  sheet: CompiledSheet,
+  evaluation: Evaluation | null,
+  grid: CompiledGrid | null,
+): DrawnCell[] {
+  const had = talls.get(sheet);
+  if (had !== undefined && had.evaluation === evaluation) return had.cells;
+
+  const sized = sizedRuns(sheet.rows).filter((run) => run.size !== null || run.hidden);
+  const places: Place[] = [];
+  const lines = new Set<string>();
+
+  for (const at of addressesIn(sheet, REACH)) {
+    const place = cellOf(at);
+    if (sized.some((run) => run.first <= place.row && place.row <= run.last)) continue;
+    // Excel leaves a merge out of a row's fit (#196).
+    if (sheet.merges.some((merge) => within(place, merge.rect))) continue;
+
+    const cell = cellAt(sheet, at);
+    if (cell === null) continue;
+
+    const style = settled(resolve(styleAt(sheet, at)));
+    const breaks = typeof cell.value === 'string' && cell.value.includes('\n');
+    if (cell.rich !== null || breaks || style['align.wrap'] === true) {
+      places.push(place);
+      continue;
+    }
+
+    const size = style['font.size'];
+    if (size === undefined || size <= FONT_SIZE || lines.has(`${place.row}:${size}`)) continue;
+    lines.add(`${place.row}:${size}`);
+    places.push(place);
+  }
+
+  const cells = drawCells(sheet, places, evaluation, grid);
+  talls.set(sheet, { evaluation, cells });
+  return cells;
 }
 
 /** Every cell of a rectangle, as the places a run or a copy is drawn from. */

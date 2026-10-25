@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { sheet as drawnSheet } from './harness';
 import type { DrawnSheet } from './protocol';
-import { across, down, heightOf, sizeOf, wanted, widthOf } from './window';
+import { across, around, down, grow, heightOf, landing, sizeOf, wanted, widthOf } from './window';
 
 /** A sheet far larger than its window, which is what a scroll is measured against. */
 function sheet(of: Partial<DrawnSheet> = {}): DrawnSheet {
@@ -31,6 +31,48 @@ describe('how big a sheet is on the page', () => {
     expect(
       across(sheet({ widths: [{ first: 1, last: 2, size: 10, hidden: false, group: null }] }), 3),
     ).toBe(150);
+  });
+});
+
+describe('a row fitted to what it holds', () => {
+  it('is as tall as it was measured, and every row below it moves down by as much', () => {
+    const fitted = sheet();
+    grow(fitted, new Map([[3, 61]]));
+
+    expect([heightOf(fitted, 3), down(fitted, 4), down(fitted, 11)]).toEqual([61, 101, 241]);
+  });
+
+  it('keeps Excel default height where it was measured shorter than that', () => {
+    const fitted = sheet();
+    grow(fitted, new Map([[3, 12]]));
+
+    expect(heightOf(fitted, 3)).toBe(20);
+  });
+
+  it('keeps the height a row declares, and a hidden row stays hidden', () => {
+    const fitted = sheet({
+      heights: [
+        { first: 2, last: 2, size: 30, hidden: false, group: null },
+        { first: 3, last: 3, size: null, hidden: true, group: null },
+      ],
+    });
+    grow(
+      fitted,
+      new Map([
+        [2, 99],
+        [3, 99],
+      ]),
+    );
+
+    expect([heightOf(fitted, 2), heightOf(fitted, 3)]).toEqual([40, 0]);
+  });
+
+  it('is where a point down the sheet lands, as tall as it was drawn', () => {
+    const fitted = sheet();
+    grow(fitted, new Map([[1, 100]]));
+
+    expect(landing(fitted, { top: 99, left: 0 }).row).toBe(1);
+    expect(landing(fitted, { top: 100, left: 0 }).row).toBe(2);
   });
 });
 
@@ -73,6 +115,33 @@ describe('the window a scrolled view wants', () => {
   it('wants a window sideways as well, which a wide sheet scrolls', () => {
     const drawn = sheet({ at: { row: 1, col: 1 } });
     expect(wanted(drawn, { top: 0, left: across(drawn, 100) })).toEqual({ row: 1, col: 75 });
+  });
+  it('leaves the rows alone while scrolling sideways near the top, and the columns going down', () => {
+    // Near one edge is not near the other: at row 1 every column scrolled used
+    // to ask for the same rows again, and every row at column A the same columns.
+    const drawn = sheet({ at: { row: 1, col: 1 } });
+
+    expect(wanted(drawn, { top: down(drawn, 30), left: 0 })).toBeNull();
+    expect(wanted(drawn, { top: 0, left: across(drawn, 20) })).toBeNull();
+  });
+
+  it('wants a window once the bottom of what the reader sees nears the end of the drawn one', () => {
+    const drawn = sheet({ at: { row: 1, col: 1 } });
+    const seen = { height: 50 * 20, width: 0 };
+
+    expect(wanted(drawn, { top: down(drawn, 120), left: 0 }, seen)).toBeNull();
+    expect(wanted(drawn, { top: down(drawn, 140), left: 0 }, seen)).toEqual({ row: 65, col: 1 });
+  });
+});
+
+describe('the window around a cell', () => {
+  it('has the cell at its middle', () => {
+    expect(around(sheet(), { row: 500, col: 100 })).toEqual({ row: 400, col: 75 });
+  });
+
+  it('stays inside the sheet at either end', () => {
+    expect(around(sheet(), { row: 3, col: 3 })).toEqual({ row: 1, col: 1 });
+    expect(around(sheet(), { row: 1000, col: 200 })).toEqual({ row: 801, col: 151 });
   });
 });
 
