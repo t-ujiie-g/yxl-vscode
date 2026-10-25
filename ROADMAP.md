@@ -4080,6 +4080,14 @@ than widening it silently.
 
 ## 11. Living changelog
 
+### 2026-10-25 — The pin moves to yxl 0.7.2
+
+yxl 0.7.2 is a toolchain release: its backend moves to `mbtexcel@0.3.1`, and a
+spec builds the same workbook as in 0.7.1. `docs/spec.md`, the examples and the
+shipped schema are byte-identical to 0.7.1's, so nothing in the projection
+changes. The pin, the READMEs and the changelog follow; Tiers 3 and 4 pass
+against the 0.7.2 binary.
+
 ### 2026-10-25 — A long sheet scrolls, and a row keeps its height
 
 From a reader's report on a long sheet (Phase 23).
