@@ -6,15 +6,15 @@ beside its text, and translates grid gestures back into edits on the spec — no
 into a workbook.
 
 > **Status: published, and the everyday gestures write back.**
-> [**`t-ujiie-g.yxl-vscode`**][listing] 0.5.0, targeting yxl 0.7.1; `main`
-> targets yxl 0.7.2. *yxl: Open the Grid Beside the Spec* draws a spec as a grid
-> next to the text and redraws it as you type. Under it: YAML parses into a
-> span-carrying tree, edits apply as minimal byte patches that leave every
-> untouched byte alone, a whole spec — `$include`, `csv:`, and all — reads into
-> a model of itself, and that model projects to a grid where every value and
-> every property of every look says which line of which file it came from. It is
-> checked on every commit against the compiler that will build it. `ROADMAP.md`
-> holds the design and the phase plan.
+> [**`t-ujiie-g.yxl-vscode`**][listing] 0.5.1, targeting yxl 0.7.2. *yxl: Open
+> the Grid Beside the Spec* draws a spec as a grid next to the text and redraws
+> it as you type. Under it: YAML parses into a span-carrying tree, edits apply
+> as minimal byte patches that leave every untouched byte alone, a whole spec —
+> `$include`, `csv:`, and all — reads into a model of itself, and that model
+> projects to a grid where every value and every property of every look says
+> which line of which file it came from. It is checked on every commit against
+> the compiler that will build it. `ROADMAP.md` holds the design and the phase
+> plan.
 
 [listing]: https://marketplace.visualstudio.com/items?itemName=t-ujiie-g.yxl-vscode
 

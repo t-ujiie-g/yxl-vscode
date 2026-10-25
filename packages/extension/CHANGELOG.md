@@ -4,10 +4,10 @@ Every release names the `yxl` it was built against: the schema is not frozen
 until yxl's v1.0, so the pinned compiler is part of what a version means
 (`ROADMAP.md` §8 Q6).
 
-## Unreleased
+## 0.5.1 — 2026-10-25
 
-Targets **yxl 0.7.2**, which this moves to from 0.7.1. It builds the same
-workbook from the same spec; an older yxl is offered the update, as before.
+Targets **yxl 0.7.2**, which this release moves to from 0.7.1. It builds the
+same workbook from the same spec; an older yxl is offered the update, as before.
 
 - **A long sheet scrolls without redrawing at every row.** Near column A, or
   near row 1 scrolling sideways, each scroll rebuilt the whole grid.
