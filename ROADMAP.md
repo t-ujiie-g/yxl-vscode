@@ -2153,6 +2153,34 @@ reference; ADR-057 is how they project.
       [yxl#137](https://github.com/t-ujiie-g/yxl/issues/137), fixed in yxl
       0.7.1 and followed here with the pin *(2026-10-19)*
 
+### Phase 23 — A long sheet, scrolled
+Opened 2026-10-25 from a reader's report: scrolling a long sheet stuttered, a
+row grew when the columns scrolled into view held something taller, and
+`Cmd`+`↓` on a long sheet sometimes stopped short of where it went. All three
+were one cause — the page measured a row by the columns drawn, and counted its
+scroll by the rows declared — and one bug that made it expensive.
+
+- [x] **A row is as tall as its tallest cell anywhere along it** (ADR-063):
+      the host hands the view every cell of the sheet that may fit an unsized
+      row taller — a wrap, a line break, runs, a larger font — and the view
+      measures them off the page, so a row is the same height whichever
+      columns are drawn *(2026-10-25)*
+- [x] A line of text is as tall whatever font a glyph falls back to: under
+      `line-height: normal` kana alone made a 15pt row 26px *(2026-10-25)*
+- [x] The window moves an axis only when the reader nears that axis's edge,
+      and counts the rows they *see*, not the one at the top: at column A
+      every row scrolled asked for a new window and redrew the grid
+      *(2026-10-25)*
+- [x] A jump asks for the window around where it lands, not one starting
+      there, and stops short of the headings and frozen panes rather than
+      under them *(2026-10-25)*
+- [x] Row and column edges summed once per drawing, not once per question
+      *(2026-10-25)*
+- [ ] *Proposed:* a window sized to the panel rather than 200 × 50, so a
+      redraw builds what is near the reader
+- [ ] *Proposed:* a window moved by drawing only the rows and columns it
+      gained, rather than the whole grid again
+
 ### Taken out (2026-08-23)
 Two phases that were here are not any more, and not because they were hard:
 
@@ -3717,6 +3745,21 @@ cell carries are those of the last construct that gave a look; the bands under
 the cell are still laid under it, per attribute, as §4 says. ADR-005's layer
 list is unchanged in kind: it is shorter where a look was replaced.
 
+### ADR-063 — A row a spec leaves unsized is fitted to the whole row
+**Accepted** 2026-10-25.
+
+Excel fits a row without a height to its tallest cell, merges aside (#196).
+The view used to let the browser do it, which fits a row to the cells the
+window happens to draw: a row grew when a wrapped column scrolled in, and the
+scroll arithmetic, which counted declared heights, lost track of where the
+reader was. Now the host sends `tall` — every cell, drawn or not, that may make
+an unsized row taller — and the view measures each one at its column's width,
+off the page, before it draws; `heightOf` answers with that height, so the rows
+drawn, the pads, the floats and `wanted()` all count the same pixels. A line is
+`line-height: 1.15`, which holds 11pt in 20px whatever font a glyph falls back
+to, so a cell needs measuring only where its text can take more than one line
+or its font is larger. The heights are the view's alone and are never written.
+
 ## 8. Open questions
 
 - **Q1 — `cells:` A1 keys and row insertion.** ✅ *Answered 2026-08-23.*
@@ -4036,6 +4079,28 @@ If the task is not on the active phase's list, **stop and discuss scope** rather
 than widening it silently.
 
 ## 11. Living changelog
+
+### 2026-10-25 — A long sheet scrolls, and a row keeps its height
+
+From a reader's report on a long sheet (Phase 23).
+
+- **Scrolling no longer redraws at every row.** Near column A, or near row 1
+  scrolling sideways, every scroll event asked for a new window and the whole
+  grid was rebuilt: in a 3000 × 80 test sheet, 120 steps of scrolling made 127
+  redraws and took 22 s in headless Chrome; now none, in 2.5 s. Each axis
+  moves on its own edge, and the edge is the last row the reader sees.
+- **A row keeps its height whichever columns are drawn** (ADR-063). A wrapped
+  cell past the window made its row grow on scrolling to it, and Japanese text
+  in the default font grew a row from 20 to 26px. Rows are fitted to the whole
+  row before drawing, and a line is as tall whatever font a glyph falls back to.
+- **`Cmd`+`↓` arrives.** A jump asks for the window around its target, and the
+  rows counted by the scroll are the rows drawn, so the window asked for after
+  it no longer lands somewhere else. A cell brought into view stops below the
+  headings and frozen rows, and right of the row numbers, instead of under them.
+- Checked in headless Chrome on the built view fed by the real projection: row
+  heights before and after scrolling sideways, and eleven jumps landing in view.
+- 2911 → 2926 tests. Comment shape: export 1060 / 2284 (avg 2.2), private
+  698 / 698 (1.0), inline 155 / 241 (1.6), 0 over.
 
 ### 2026-10-19 — The pin moves to yxl 0.7.1
 

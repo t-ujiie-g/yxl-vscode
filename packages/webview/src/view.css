@@ -667,6 +667,9 @@ body {
   color: #000000;
   font-family: Calibri, Aptos, "Segoe UI", system-ui, sans-serif;
   font-size: 11pt;
+  /* A line as tall whatever font a glyph falls back to, so 11pt text fits
+     Excel's 15pt row: under `normal`, kana alone made a row 26px tall. */
+  line-height: 1.15;
 }
 
 .grid th,
@@ -688,6 +691,13 @@ body {
 
 .grid td {
   position: relative;
+}
+
+.measuring {
+  position: absolute;
+  top: 0;
+  left: -100000px;
+  visibility: hidden;
 }
 
 /* The rows' height less the cell's 1px padding either side and its gridline. */

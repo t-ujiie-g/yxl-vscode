@@ -373,6 +373,27 @@ describe('the switches over the grid', () => {
   });
 });
 
+describe('the scroller', () => {
+  it('brings a cell into view below the headings and right of the row numbers', () => {
+    const into = shown({
+      drawing: drawing({ sheets: [sheet({ of: { rows: 40, columns: 20 } })] }),
+    });
+    const box = into.querySelector<HTMLElement>('.scroller');
+
+    expect([box?.style.scrollPaddingTop, box?.style.scrollPaddingLeft]).toEqual(['24px', '44px']);
+  });
+
+  it('brings it below and right of the frozen panes as well', () => {
+    const frozen = sheet({ of: { rows: 40, columns: 20 }, freeze: { row: 3, col: 2 } });
+    const box = shown({ drawing: drawing({ sheets: [frozen] }) }).querySelector<HTMLElement>(
+      '.scroller',
+    );
+
+    expect(box?.style.scrollPaddingTop).toBe('64px');
+    expect(Math.round(Number.parseFloat(box?.style.scrollPaddingLeft ?? '0'))).toBe(108);
+  });
+});
+
 describe('where the paper falls', () => {
   const roomy = { of: { rows: 40, columns: 20 } };
 

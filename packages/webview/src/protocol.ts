@@ -32,9 +32,9 @@ export interface DrawnParam {
 }
 
 /**
- * One sheet: the window drawn (`at`, `rows`, `columns`) out of how far the
- * sheet reaches (`of`), so the grid never holds more than a page however large
- * the sheet. `freeze` is the first cell that scrolls (`docs/spec.md` §2).
+ * One sheet: the window drawn (`at`, `rows`, `columns`) out of how far it reaches (`of`), so the
+ * grid never holds more than a page. `freeze` is the first cell that scrolls (`docs/spec.md` §2),
+ * and `tall` every cell, drawn or not, that may fit an unsized row taller.
  */
 export interface DrawnSheet {
   readonly name: string;
@@ -45,6 +45,7 @@ export interface DrawnSheet {
   readonly widths: readonly Sized[];
   readonly heights: readonly Sized[];
   readonly cells: readonly DrawnCell[];
+  readonly tall: readonly DrawnCell[];
   readonly merges: readonly DrawnMerge[];
   readonly problems: readonly MarkedCell[];
   readonly freeze: { readonly row: number; readonly col: number } | null;

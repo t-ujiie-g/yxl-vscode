@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 
-import { describe, expect, it } from 'vitest';
-import { cell } from './harness';
-import { ruler, widest } from './measure';
+import { afterEach, describe, expect, it } from 'vitest';
+import { cell, sheet } from './harness';
+import { ruler, tallest, widest } from './measure';
 import { PADDING } from './window';
 
 /** A ruler that counts characters, so a test asserts on what was measured rather than on a font. */
@@ -77,5 +77,45 @@ describe('how wide a column has to be', () => {
 describe('the ruler the view measures with', () => {
   it('is nothing where the view has no canvas to measure on, which jsdom has not', () => {
     expect(ruler()).toBeNull();
+  });
+});
+
+describe('how tall a row has to be', () => {
+  /** A layout that makes a row a pixel taller per character, so a test asserts on what was measured. */
+  const laying = (): HTMLElement => {
+    Object.defineProperty(HTMLElement.prototype, 'offsetHeight', {
+      configurable: true,
+      get(this: HTMLElement) {
+        return this.isConnected ? (this.textContent?.length ?? 0) : 0;
+      },
+    });
+    const into = document.createElement('div');
+    document.body.append(into);
+    return into;
+  };
+
+  afterEach(() => {
+    Reflect.deleteProperty(HTMLElement.prototype, 'offsetHeight');
+    document.body.replaceChildren();
+  });
+
+  it('is its tallest cell, measured off the page and taken away again', () => {
+    const into = laying();
+    const drawn = sheet({
+      tall: [cell(2, 1, { value: 'x'.repeat(30) }), cell(2, 2, { value: 'x'.repeat(45) })],
+    });
+
+    expect([...tallest(drawn, into)]).toEqual([[2, 45]]);
+    expect(into.children).toHaveLength(0);
+  });
+
+  it('leaves out a cell in a hidden column, which is drawn nowhere', () => {
+    const into = laying();
+    const drawn = sheet({
+      widths: [{ first: 1, last: 1, size: null, hidden: true, group: null }],
+      tall: [cell(3, 1, { value: 'x'.repeat(31) })],
+    });
+
+    expect(tallest(drawn, into).size).toBe(0);
   });
 });
